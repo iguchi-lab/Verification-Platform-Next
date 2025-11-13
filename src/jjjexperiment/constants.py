@@ -1,4 +1,4 @@
-from jjjexperiment.options import *
+from jjjexperiment.inputs.options import *
 
 def version_info() -> str:
   """ 最終編集日をバージョン管理に使用します
@@ -6,12 +6,6 @@ def version_info() -> str:
   # NOTE: subprocessモジュールによるコミット履歴からの生成は \
   # ipynb 環境では正常に動作しないことを確認しました(returned no-zero exit status 128.)
   return '_20250325'
-
-# FIXME: PROCESS_TYPE の置き場はこのファイル以外で最適な場所があれば移動する
-PROCESS_TYPE_1 = 'ダクト式セントラル空調機'
-PROCESS_TYPE_2 = 'ルームエアコンディショナ活用型全館空調（旧：現行省エネ法ルームエアコンモデル）'
-PROCESS_TYPE_3 = 'ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）'
-PROCESS_TYPE_4 = '電中研モデル'
 
 Theta_hs_out_max_H_d_t_limit: float = 45
 """最大暖房出力時の熱源機の出口における空気温度の最大値の上限値"""
@@ -149,10 +143,9 @@ P_fan_C_d_t_a0: float = 50
 # 過剰熱量の持ち越し計算
 
 # 標準住戸の情報
-A_HCZ_R_i = [29.81, 16.56, 13.25, 10.76, 10.77]
-"""暖冷房区画i毎の標準住戸における居室の床面積 [m2]"""
 A_NR_R = 38.93
 """標準住戸における非居室の床面積 [m2]"""
+# FIXME: 新たに定義せず既存モジュールから利用したいが簡単に取得できるコードが見つかっていない
 
 # CHECK: 空間・什器と同じ数字と仮定したもの
 Alpha_HCZ_i = [12.6, 12.6, 12.6, 12.6, 12.6]
@@ -236,8 +229,9 @@ def set_constants(input: dict):
   if 'carry_over_heat' in input:
     global carry_over_heat
     carry_over_heat = int(input['carry_over_heat'])
-  # 床下空調新ロジック > AppConfigへ移動
-  # R_g > AppConfigへ移動
+  if 'R_g' in input:
+    global R_g
+    R_g = float(input['R_g'])
 
   #以下、潜熱評価モデル追加対応
   if 'H_A' in input:

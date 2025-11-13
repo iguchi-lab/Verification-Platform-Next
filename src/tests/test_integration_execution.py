@@ -5,21 +5,25 @@ import warnings
 
 from jjjexperiment.main import calc
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger
-from jjjexperiment.options import *
+from jjjexperiment.inputs.options import *
 
 from test_utils.utils import *
 
 class Test統合テスト_デフォルト入力時:
 
-    _inputs1: dict = json.load(open(INPUT_SAMPLE_TYPE1_PATH, 'r'))
-    _inputs2: dict = json.load(open(INPUT_SAMPLE_TYPE2_PATH, 'r'))
-    _inputs3: dict = json.load(open(INPUT_SAMPLE_TYPE3_PATH, 'r'))
-    _inputs4: dict = json.load(open(INPUT_SAMPLE_TYPE4_PATH, 'r'))
+    with open(INPUT_SAMPLE_TYPE1_PATH, 'r') as f:
+        _inputs1: dict = json.load(f)
+    with open(INPUT_SAMPLE_TYPE2_PATH, 'r') as f:
+        _inputs2: dict = json.load(f)
+    with open(INPUT_SAMPLE_TYPE3_PATH, 'r') as f:
+        _inputs3: dict = json.load(f)
+    with open(INPUT_SAMPLE_TYPE4_PATH, 'r') as f:
+        _inputs4: dict = json.load(f)
 
     def test_インプットデータ_前提確認(self, expected_inputs):
         """ テストコードが想定しているインプットデータかどうか確認
         """
-        result = calc(self._inputs1, test_mode=True)
+        result = calc(self._inputs2, test_mode=True)
 
         assert result['TInput'].q_rtd_C == expected_inputs.q_rtd_C
         assert result['TInput'].q_rtd_H == expected_inputs.q_rtd_H
@@ -203,17 +207,17 @@ def change_testmode_exploded_Q_UT(inputs: dict):
     fixtures = {
         "H_A": {
             "input": 2,
-            "q_hs_rtd_H": 5000,
-            "P_hs_rtd_H": 900,
-            "V_fan_rtd_H": 1377,
-            "P_fan_rtd_H": 204,
+            "q_hs_rtd": 5000,
+            "P_hs_rtd": 900,
+            "V_fan_rtd": 1377,
+            "P_fan_rtd": 204,
         },
         "C_A": {
             "input": 2,
-            "q_hs_rtd_C": 4000,
-            "P_hs_rtd_C": 800,
-            "V_fan_rtd_C": 1377,
-            "P_fan_rtd_C": 204.3,
+            "q_hs_rtd": 4000,
+            "P_hs_rtd": 800,
+            "V_fan_rtd": 1377,
+            "P_fan_rtd": 204.3,
         },
     }
     # 複製しないと別テストで矛盾する

@@ -7,7 +7,6 @@
 import numpy as np
 
 from functools import lru_cache
-from injector import Injector
 
 import datetime
 
@@ -57,10 +56,8 @@ from pyhees.section11_6 import \
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.common import *
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
-from jjjexperiment.options import *
-from jjjexperiment.di_container import *
-import jjjexperiment.underfloor_ac as jjj_ufac
-from jjjexperiment.app_config import *
+from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.di_container import *
 
 @jjj_cloned
 # 未処理負荷と機器の計算に必要な変数を取得
@@ -1107,7 +1104,7 @@ def get_Q_hs_max_H_d_t_2024(type, q_hs_rtd_H, C_df_H_d_t, input_C_af_H):
     Q_hs_max_H_d_t = np.zeros(24 * 365)
 
     if q_hs_rtd_H is not None:
-        if type == jjj_consts.PROCESS_TYPE_3:  # ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）
+        if type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:  # ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）
             C_af_H = get_C_af_H(input_C_af_H)
             Q_hs_max_H_d_t = q_hs_rtd_H * alpha_max_H * C_df_H_d_t * C_af_H * 3600 * 10 ** -6
         else:
@@ -1209,7 +1206,7 @@ def get_Q_hs_max_C_d_t_2024(type, q_hs_rtd_C, input_C_af_C):
     Q_hs_max_C_d_t = np.zeros(24 * 365)
 
     if q_hs_rtd_C is not None:
-        if type == jjj_consts.PROCESS_TYPE_3:  # ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）
+        if type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:  # ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）
             C_af_C = get_C_af_C(input_C_af_C)
             Q_hs_max_C_d_t = q_hs_rtd_C * alpha_max_C * C_af_C * 3600 * 10 ** -6
         else:
@@ -1340,7 +1337,6 @@ def get_V_hs_supply_d_t(V_supply_d_t_i):
     return np.sum(V_supply_d_t_i[:5, :], axis=0)
 
 
-@jjj_cloned
 def get_V_hs_vent_d_t(V_vent_g_i, general_ventilation):
     """(35-1)(35-2)
 
@@ -1528,7 +1524,6 @@ def get_Q_hs_rtd_C(q_hs_rtd_C):
     else:
         return None
 
-# NOTE: jjj_V_min_input.get_V_hs_min でデコレートしたのでそちらを使用する
 def get_V_hs_min(V_vent_g_i):
     """(39)
 
@@ -2433,9 +2428,11 @@ l_duct_R_i = np.array([
 # ============================================================================
 
 # ダクトiの線熱損失係数 [W/mK]
+@jjj_mod
 def get_phi_i():
     """ """
-    return np.array([jjj_consts.phi_i] * 5)
+    phi_i = getattr(jjj_consts, 'phi_i', 0.49)
+    return np.array([phi_i] * 5)
 
 
 # ============================================================================
@@ -2469,6 +2466,7 @@ def get_Theta_SAT_d_t(Theta_ex_d_t, J_d_t):
 # 13.2.2 間仕切り
 # ============================================================================
 
+@log_res(['get_A_prt_i'])
 def get_A_prt_i(A_HCZ_i, r_env, A_MR, A_NR, A_OR):
     """(60-1)(60-2)
 
