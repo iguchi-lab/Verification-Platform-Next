@@ -754,7 +754,7 @@ def calc_Q_UT_A(
             V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                         , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
             V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
-                                                        , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C)
+                                                        , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
 
             # (41)　暖冷房区画𝑖の吹き出し温度
             Theta_supply_d_t_i = dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
@@ -1049,7 +1049,7 @@ def calc_Q_UT_A(
         V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                     , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
         V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
-                                                    , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C)
+                                                    , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
 
         # (41)　暖冷房区画𝑖の吹き出し温度
         Theta_supply_d_t_i = dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
