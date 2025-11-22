@@ -37,8 +37,6 @@ change_supply_volume_before_vav_adjust: int = VAVありなしの吹出風量.数
 """VAV調整前の吹き出し風量の式を変更"""
 change_heat_source_outlet_required_temperature: int = 1
 """熱源機の出口における空気温度"""
-carry_over_heat: int = 過剰熱量繰越計算.行わない.value
-"""過剰熱量を次の時刻に持ち越す"""
 
 #以下、潜熱評価モデル追加対応(暖房)
 A_f_hex_small_H: float = 0.2
@@ -221,9 +219,6 @@ def set_constants(input: dict):
   if 'change_heat_source_outlet_required_temperature' in input:
     global change_heat_source_outlet_required_temperature
     change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
-  if 'carry_over_heat' in input:
-    global carry_over_heat
-    carry_over_heat = int(input['carry_over_heat'])
   if 'R_g' in input:
     global R_g
     R_g = float(input['R_g'])

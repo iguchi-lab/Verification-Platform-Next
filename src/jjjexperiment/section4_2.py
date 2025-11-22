@@ -24,9 +24,6 @@ import pyhees.section4_2_a as dc_a
 from jjjexperiment.common import *
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
-
-import jjjexperiment.carryover_heat as jjj_carryover_heat
-import jjjexperiment.ac_min_volume_input as jjj_V_min_input
 from jjjexperiment.inputs.options import *
 # データクラス
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin
@@ -37,16 +34,20 @@ from jjjexperiment.inputs.di_container import ClimateFile, CaseName
 # ドメインサービス
 from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
-
 # F23-1 Vサプライの上限キャップ変更
 from jjjexperiment.v_supply_cap.inputs.v_supply_cap_dto import VSupplyCapDto
 import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
+# F24-4 過剰熱量繰越
+from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
+import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 新床下空調
 from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, calc_delta_L_room2uf_i, get_r_A_uf_i, calc_Theta_uf, calc_delta_L_uf2outdoor, calc_delta_L_uf2gnd
 from jjjexperiment.underfloor_ac.section3_1_e import calc_Theta_uf_d_t_2023
 from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
+# F25-1 最小風量・最低電力直接入力
+import jjjexperiment.ac_min_volume_input as jjj_V_min_input
 
 @dataclass
 class Load_DTI:
@@ -89,6 +90,7 @@ def calc_Q_UT_A(
         V_hs_dsgn_H: VHS_DSGN_H,
         V_hs_dsgn_C: VHS_DSGN_C,
         v_supply_cap_dto: VSupplyCapDto,
+        carryover_heat_dto: CarryoverHeatDto,
         load: Load_DTI):
     """未処理負荷と機器の計算に必要な変数を取得"""
 
@@ -556,13 +558,9 @@ def calc_Q_UT_A(
 
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
-    if jjj_consts.carry_over_heat == 過剰熱量繰越計算.行う.value:
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
 
-        # NOTE: 過剰熱繰越と併用しないオプションはここで実行を拒否します
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            raise PermissionError("この操作は実行に時間がかかるため併用できません。[過剰熱繰越と床下空調ロジック変更]")
-            # NOTE: 過剰熱繰越の8760ループと床下空調ロジック変更の8760ループが合わさると
-            # 一時間を超える実行時間になることを確認したため回避しています(2024/02)
+        # NOTE: 過剰熱繰越と併用しないオプションはインプットデータクラスの段階で強制オフしている
 
         # インデックス順に更新対象
         L_star_CS_d_t_i = np.zeros((5, 24 * 365))
@@ -1181,7 +1179,6 @@ def calc_Q_UT_A(
     ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
-
     _logger.NDdebug("Theta_HBR_d_t_1", Theta_HBR_d_t_i[0])
     _logger.NDdebug("Theta_HBR_d_t_2", Theta_HBR_d_t_i[1])
     _logger.NDdebug("Theta_HBR_d_t_3", Theta_HBR_d_t_i[2])
@@ -1189,7 +1186,7 @@ def calc_Q_UT_A(
     _logger.NDdebug("Theta_HBR_d_t_5", Theta_HBR_d_t_i[4])
     _logger.NDdebug("Theta_NR_d_t", Theta_NR_d_t)
 
-    if jjj_consts.carry_over_heat == 過剰熱量繰越計算.行う.value:
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
         df_carryover_output = df_carryover_output.assign(
             carryovers_i_1 = carryovers[0],
             carryovers_i_2 = carryovers[1],
