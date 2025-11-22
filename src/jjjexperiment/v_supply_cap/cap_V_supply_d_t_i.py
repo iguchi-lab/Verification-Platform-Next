@@ -4,7 +4,7 @@ import pyhees.section4_2 as dc
 from .inputs.v_supply_cap_dto import VSupplyCapDto
 from jjjexperiment.inputs.options import Vサプライの上限キャップ
 
-# NOTE: 過剰熱量ループ内で使用しているため
+# NOTE: 過剰熱量ループ内でも使用しているため
 # @log_res(['V_supply_d_t_i'])
 def cap_V_supply_d_t_i(
         V_supply_cap_dto: VSupplyCapDto,
