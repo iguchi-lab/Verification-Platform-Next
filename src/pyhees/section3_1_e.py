@@ -443,6 +443,10 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
     # 助走計算用床下温度
     Theta_uf_runup = get_Theta_uf_d_t_runup(underfloor_insulation, Theta_ex_d_t)
 
+    #260112 IGUCHI
+    Theta_uf_runup = np.array([27.69] * 2664 + [25.62] * 3721 + [27.69] * 2375, dtype=float)
+
+                   
     Theta_in_H = 20
     Theta_in_C = 27
     # NOTE: 既存コードにあったものを、新床下空調時 目標 Theta_uf の実行可否の閾値に再利用しています
