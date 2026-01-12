@@ -162,12 +162,7 @@ def calc_delta_L_uf2gnd(
         Theta_g_avg: 地盤の不易層温度 [℃]
     """
     # CHECK: θ'g_surf_A_d_t の値に不一致アリ
-    #delta_Theta = Theta_uf - sum_Theta_dash_g_surf_A_m - Theta_g_avg
-
-    #260112 20℃の助走では損失が大きいため、27.69℃で助走し
-    #sum_Theta_dash_g_surf_A_m = 11.2224とする
-    delta_Theta = Theta_uf - 11.2224 - Theta_g_avg
-    
+    delta_Theta = Theta_uf - sum_Theta_dash_g_surf_A_m - Theta_g_avg 
         
     # 暖冷房期 判別
     match(q_hs_rtd_H, q_hs_rtd_C):
