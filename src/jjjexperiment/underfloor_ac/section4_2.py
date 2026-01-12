@@ -116,7 +116,11 @@ def calc_delta_L_room2uf_i(
     assert delta_Theta >= 0, "温度差は正を前提に計算"
 
     H_floor = 0.7  # 床下空調でなく意図しない熱移動の分なので通常の遮蔽係数(0.7)となる
-    delta_L_uf2room =  U_s_vert * A_s_ufac_i * delta_Theta * H_floor  \
+    #delta_L_uf2room =  U_s_vert * A_s_ufac_i * delta_Theta * H_floor  \
+    #    * 3.6 / 1000  # [W] -> [MJ/h]
+
+    #260112 IGUCHI 床下空間へ逃げる熱は、床断熱（U=0.41）の床の損失であるため修正
+    delta_L_uf2room =  0.41 * A_s_ufac_i * delta_Theta * H_floor  \
         * 3.6 / 1000  # [W] -> [MJ/h]
     # NOTE: L_H_d_t_i, L_CS_d_t_i に含まれている通常(非床下空調)の床下ロス部分(室内→床下→屋外)
     # 下記の補正を追加する前にコチラを引くことでイコールフッティングできます
@@ -158,8 +162,13 @@ def calc_delta_L_uf2gnd(
         Theta_g_avg: 地盤の不易層温度 [℃]
     """
     # CHECK: θ'g_surf_A_d_t の値に不一致アリ
-    delta_Theta = Theta_uf - sum_Theta_dash_g_surf_A_m - Theta_g_avg
+    #delta_Theta = Theta_uf - sum_Theta_dash_g_surf_A_m - Theta_g_avg
 
+    #260112 20℃の助走では損失が大きいため、27.69℃で助走し
+    #sum_Theta_dash_g_surf_A_m = 11.2224とする
+    delta_Theta = Theta_uf - 11.2224 - Theta_g_avg
+    
+        
     # 暖冷房期 判別
     match(q_hs_rtd_H, q_hs_rtd_C):
         case (None, None):
