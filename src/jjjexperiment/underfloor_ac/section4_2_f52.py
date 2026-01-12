@@ -50,7 +50,7 @@ def get_Theta_star_NR(
 
     #k2 = U_s * A_NR * np.abs(Theta_uf - Theta_NR)
     #260112 式のミスを修正、非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    k2 = U_s * A_NR + 0.404
+    k2 = U_s * A_NR * 0.404
     # NOTE: abs しないとバグる
 
     match HCM:
