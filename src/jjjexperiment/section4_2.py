@@ -390,8 +390,7 @@ def calc_Q_UT_A(
         assert delta_L_room2uf_d_t_i.ndim == 2
         Q_hat_hs_d_t -= np.sum(delta_L_room2uf_d_t_i, axis=0)
         #260112 IGUCHI デバッグ用
-        print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
-        
+        print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
         
         # 2. 床下 -> 外気 (逃げ方向)
         # 一階負荷 暖冷房
@@ -418,6 +417,10 @@ def calc_Q_UT_A(
                     V_dash_supply_flr1st_d_t[t]
                 ) for t in range(24*365)
             ])
+        
+        #260112 IGUCHI デバッグ用
+        print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
+        
         L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
         climate = ClimateService(house.region, new_ufac)
         phi = climate.get_phi(skin.Q)
@@ -427,7 +430,11 @@ def calc_Q_UT_A(
             = delta_L_uf2outdoor_d_t(phi, L_uf, (Theta_uf_d_t - Theta_ex_d_t))
         assert np.shape(delta_L_uf2outdoor_d_t) == (24 * 365,)
         Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
-
+        
+        #260112 IGUCHI デバッグ用
+        print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
+        print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
+        
         # 3. 床下 -> 地盤 (逃げ方向)
         # 吸熱応答係数の初項 定数取得クラスを作成するか
         Phi_A_0 = 0.025504994
@@ -449,7 +456,11 @@ def calc_Q_UT_A(
             delta_L_uf2gnd_d_t(q_hs_rtd_H(), q_hs_rtd_C(),
                 A_s_ufac_A, jjj_consts.R_g, Phi_A_0, Theta_uf_d_t, sum_Theta_dash_g_surf_A_m, Theta_g_avg)
         Q_hat_hs_d_t += delta_L_uf2gnd_d_t
-
+        
+        #260112 IGUCHI デバッグ用
+        print("delta_L_uf2gnd_d_t[0] 床下⇒地盤: ", delta_L_uf2gnd_d_t[0])
+        print("Q_hat_hs_d_t[0] 床下⇒地盤を足す: ", Q_hat_hs_d_t[0])
+        
         # 補正完了した Q^hs を使って V'supply を再計算する
         should_be_adjusted_Q_hat_hs_d_t = False
 
@@ -515,7 +526,7 @@ def calc_Q_UT_A(
                 Theta_uf = Theta_uf_d_t,  # (8760,)
                 HCM = HCM  # (8760,)
             )
-        print("Theta_star_NR_d_t[4848]", Theta_star_NR_d_t[4848])
+        print("Theta_star_NR_d_t[0]", Theta_star_NR_d_t[0])
     else:
         Theta_star_NR_d_t = \
             dc.get_Theta_star_NR_d_t(
