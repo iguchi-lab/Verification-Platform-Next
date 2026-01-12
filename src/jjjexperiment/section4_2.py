@@ -419,6 +419,13 @@ def calc_Q_UT_A(
             ])
         
         #260112 IGUCHI デバッグ用
+        print("L_d_t_flr1st[0]":, L_d_t_flr1st[0])
+        print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
+        print("U_s_vert:", U_s_vert)
+        print("Theta_in_d_t[0]:", Theta_in_d_t[0])
+        print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
+        print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
+        
         print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
         
         L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
