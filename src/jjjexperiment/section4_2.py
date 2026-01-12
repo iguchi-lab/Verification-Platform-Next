@@ -374,7 +374,9 @@ def calc_Q_UT_A(
 
         # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
         # 1. 床下 -> 居室全体 (目標方向の熱移動)
-        U_s_vert = ClimateService(house.region).get_U_s_vert(skin.Q)  # 床の熱貫流率 [W/m2K]
+        #U_s_vert = ClimateService(house.region).get_U_s_vert(skin.Q)  # 床の熱貫流率 [W/m2K]
+        #260112 IGUCHI ***要修正*** 床の熱貫流率は、入力値を使う！
+        U_s_vert = 2.223
         A_s_ufac_i, r_A_s_ufac = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
         #260112 IGUCHI デバッグ用
         print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
