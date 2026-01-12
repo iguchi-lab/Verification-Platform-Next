@@ -376,7 +376,8 @@ def calc_Q_UT_A(
         # 1. 床下 -> 居室全体 (目標方向の熱移動)
         U_s_vert = ClimateService(house.region).get_U_s_vert(skin.Q)  # 床の熱貫流率 [W/m2K]
         A_s_ufac_i, r_A_s_ufac = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
-
+        #260112 IGUCHI デバッグ用
+        print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
         assert A_s_ufac_i.ndim == 2
         delta_L_room2uf_d_t_i  \
             = np.hstack([
@@ -388,7 +389,10 @@ def calc_Q_UT_A(
             ])
         assert delta_L_room2uf_d_t_i.ndim == 2
         Q_hat_hs_d_t -= np.sum(delta_L_room2uf_d_t_i, axis=0)
-
+        #260112 IGUCHI デバッグ用
+        print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
+        
+        
         # 2. 床下 -> 外気 (逃げ方向)
         # 一階負荷 暖冷房
         match ac_setting:
@@ -480,20 +484,20 @@ def calc_Q_UT_A(
         HCM = np.array(ClimateService(house.region).get_HCM_d_t())
 
         #デバッグ用 250501 IGUCHI
-        print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
+        print("Theta_in_d_t[0]", Theta_in_d_t[0])
         print("Q", skin.Q)
         print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
+        print("V_vent_l_NR_d_t[0]", V_vent_l_NR_d_t[0])
+        print("V_dash_supply_A[0]", V_dash_supply_d_t_A[0])
         print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
+        print("V_vent_l_NR_d_t[0]", V_vent_l_NR_d_t[0])
+        print("V_dash_supply_A[0]", V_dash_supply_d_t_A[0])
         print("U_prt", U_prt)
         print("A_prt_A", A_prt_A)
-        print("L_H_NR_A[4848]", L_H_NR_d_t_A[4848])
-        print("L_CS_NR_A[4848]", L_CS_NR_d_t_A[4848])
-        print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
-        print("HCM[4848]", HCM[4848])
+        print("L_H_NR_A[0]", L_H_NR_d_t_A[0])
+        print("L_CS_NR_A[0]", L_CS_NR_d_t_A[0])
+        print("Theta_uf_d_t[0]", Theta_uf_d_t[0])
+        print("HCM[0]", HCM[0])
 
         Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
         Theta_star_NR_d_t = \
