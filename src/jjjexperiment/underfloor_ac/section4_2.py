@@ -79,7 +79,9 @@ def calc_Theta_uf(
     b = ro_air * c_p_air * V_flr1st + U_s_vert * A_s_ufvnt * 3.6
     #260112 IGUCHI デバッグ用
     a2 = 0.41 * A_s_ufvnt * np.maximum(Theta_in - Theta_ex, 0) * H_floor * 3.6
-    print("L_flr1st[0], a2[0], b[0]:", L_flr1st[0], a2[0], b[0])
+    print("L_flr1st[0]:", L_flr1st[0])
+    print("a2[0]:", a2[0])
+    print("b[0]:", b[0])
             
     match (q_hs_rtd_H, q_hs_rtd_C):
         case (None, None):
