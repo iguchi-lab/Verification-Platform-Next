@@ -431,9 +431,9 @@ def calc_Q_UT_A(
         # NOTE: 実際には Theta_uf_d_t と共に後に算出される
         match ac_setting:
             case HeatingAcSetting():
-                sum_Theta_dash_g_surf_A_m = 4.138
+                sum_Theta_dash_g_surf_A_m = 11.2224 #260112 IGUCHI 27.69℃で助走（暫定値）
             case CoolingAcSetting():
-                sum_Theta_dash_g_surf_A_m = 9.824
+                sum_Theta_dash_g_surf_A_m = 9.15940 #260112 IGUCHI 25.62℃で助走（暫定値）
             case _:
                 raise ValueError
 
