@@ -503,22 +503,6 @@ def calc_Q_UT_A(
         A_prt_A = np.sum(A_prt_i)
         HCM = np.array(ClimateService(house.region).get_HCM_d_t())
 
-        #デバッグ用 250501 IGUCHI
-        print("Theta_in_d_t[0]", Theta_in_d_t[0])
-        print("Q", skin.Q)
-        print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[0]", V_vent_l_NR_d_t[0])
-        print("V_dash_supply_A[0]", V_dash_supply_d_t_A[0])
-        print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[0]", V_vent_l_NR_d_t[0])
-        print("V_dash_supply_A[0]", V_dash_supply_d_t_A[0])
-        print("U_prt", U_prt)
-        print("A_prt_A", A_prt_A)
-        print("L_H_NR_A[0]", L_H_NR_d_t_A[0])
-        print("L_CS_NR_A[0]", L_CS_NR_d_t_A[0])
-        print("Theta_uf_d_t[0]", Theta_uf_d_t[0])
-        print("HCM[0]", HCM[0])
-
         Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
         Theta_star_NR_d_t = \
             Theta_star_NR_d_t(
@@ -535,7 +519,17 @@ def calc_Q_UT_A(
                 Theta_uf = Theta_uf_d_t,  # (8760,)
                 HCM = HCM  # (8760,)
             )
-        print("Theta_star_NR_d_t[0]", Theta_star_NR_d_t[0])
+        print("Theta_star_HBR[0]: ", Theta_star_HBR[0])
+        print("Q: ", Q)
+        print("V_vent_l_NR[0]: ", V_vent_l_NR[0])
+        print("V_dash_supply_A[0]: ", V_dash_supply_A[0])
+        print("U_prt; ", U_prt)
+        print("A_prt_A: ", A_prt_A)
+        print("L_H_NR_A[0]: ", L_H_NR_A[0])
+        print("L_CS_NR_A[0]: ", L_CS_NR_A[0])
+        print("Theta_NR[0]: ", Theta_NR[0])
+        print("Theta_uf[0]: ", Theta_uf[0])
+        print("HCM[0]: ", HCM[0])
     else:
         Theta_star_NR_d_t = \
             dc.get_Theta_star_NR_d_t(
