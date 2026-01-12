@@ -850,7 +850,7 @@ def calc_Q_UT_A(
             # 部屋→床下への熱移動分が戻ってくるため負荷控除する
             delta_L_uf2room_d_t_i = np.hstack([
                 calc_delta_L_room2uf_i(
-                    U_s_vert,
+                    U_s,
                     A_s_ufac_i,
                     np.abs(Theta_star_HBR_d_t[t] - Theta_ex_d_t[t])
                 ) for t in range(24*365)
