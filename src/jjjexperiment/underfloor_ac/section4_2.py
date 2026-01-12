@@ -78,7 +78,8 @@ def calc_Theta_uf(
     # TODO: sympy の方程式で記述できればコードの意味が理解しやすくなる
     b = ro_air * c_p_air * V_flr1st + U_s_vert * A_s_ufvnt * 3.6
     #260112 IGUCHI デバッグ用
-    print("L_flr1st[0], a2[0], b[0]:", L_flr1st, (0.41 * A_s_ufvnt * max(Theta_in - Theta_ex, 0) * H_floor * 3.6)[0], b[0])
+    a2 = 0.41 * A_s_ufvnt * np.maximum(Theta_in - Theta_ex, 0) * H_floor * 3.6
+    print("L_flr1st[0], a2[0], b[0]:", L_flr1st[0], a2[0], b[0])
             
     match (q_hs_rtd_H, q_hs_rtd_C):
         case (None, None):
