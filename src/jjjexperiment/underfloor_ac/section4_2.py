@@ -77,7 +77,9 @@ def calc_Theta_uf(
 
     # TODO: sympy の方程式で記述できればコードの意味が理解しやすくなる
     b = ro_air * c_p_air * V_flr1st + U_s_vert * A_s_ufvnt * 3.6
-
+    #260112 IGUCHI デバッグ用
+    print("L_flr1st[0], a2[0], b[0]:", L_flr1st, 0.41 * A_s_ufvnt * delta_Theta * H_floor * 3.6[0], b[0])
+            
     match (q_hs_rtd_H, q_hs_rtd_C):
         case (None, None):
             raise Exception("どちらかのみを前提")
@@ -93,7 +95,7 @@ def calc_Theta_uf(
 
         case (None, _):  # 冷房期
             delta_Theta = max(Theta_ex - Theta_in, 0)
-            a2 = U_s_vert * A_s_ufvnt * delta_Theta * H_floor * 3.6
+            #a2 = U_s_vert * A_s_ufvnt * delta_Theta * H_floor * 3.6
             #260112 IGUCHI 差し引く負荷は床断熱（U=0.41）
             a2 = 0.41 * A_s_ufvnt * delta_Theta * H_floor * 3.6            
             assert L_flr1st <= 0, "冷房期の負荷は負の値"
