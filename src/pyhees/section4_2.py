@@ -1710,13 +1710,12 @@ def get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_
       L_star_CS_d_t_i: 日付dの時刻tにおける暖冷房区画iの1時間当たりの熱取得を含む負荷バランス時の冷房顕熱負荷（MJ/h）
       Theta_sur_d_t_i: 日付dの時刻tにおけるダクトiの周囲の空気温度（℃）
       l_duct_i: ダクトiの長さ（m）
-      Theta_HBR_d_t: 日付dの時刻tにおける負荷バランス時の居室の室温（℃）
+      Theta_star_HBR_d_t: 日付dの時刻tにおける負荷バランス時の居室の室温（℃）
       V_vent_g_i: 暖冷房区画iの全般換気量（m3/h）
       V_dash_supply_d_t_i: 日付dの時刻tにおける暖冷房区画iのVAV調整前の吹き出し風量（m3/h）
       VAV: VAV
       region: 地域区分
       Theta_hs_out_d_t: 日付dの時刻tにおける熱源機の出口における空気温度（℃）
-      Theta_star_HBR_d_t: returns: 日付dの時刻tにおける暖冷房区画iの吹き出し風量（m3/h）
 
     Returns:
       日付dの時刻tにおける暖冷房区画iの吹き出し風量（m3/h）
