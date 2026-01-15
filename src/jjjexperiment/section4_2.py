@@ -86,7 +86,7 @@ def calc_Q_UT_A(
         new_ufac: UnderfloorAc,
         new_ufac_df: UfVarsDataFrame,
         v_min_heat_input: jjj_V_min_input.inputs.heating.InputMinVolumeInput,
-        v_min_cool_input: jjj_V_min_input.inputs.heating.InputMinVolumeInput,
+        v_min_cool_input: jjj_V_min_input.inputs.cooling.InputMinVolumeInput,
         V_hs_dsgn_H: VHS_DSGN_H,
         V_hs_dsgn_C: VHS_DSGN_C,
         v_supply_cap_dto: VSupplyCapDto,
@@ -277,12 +277,12 @@ def calc_Q_UT_A(
     # (39)　熱源機の最低風量
     match ac_setting:
         case HeatingAcSetting():
-            if v_min_heat_input.input_V_hs_min == 最低風量直接入力.入力する.value:
+            if v_min_heat_input.input_V_hs_min == 最低風量直接入力.入力する:
                 V_hs_min = v_min_heat_input.V_hs_min
             else:
                 V_hs_min = dc.get_V_hs_min(V_vent_g_i)  # 従来式
         case CoolingAcSetting():
-            if v_min_cool_input.input_V_hs_min == 最低風量直接入力.入力する.value:
+            if v_min_cool_input.input_V_hs_min == 最低風量直接入力.入力する:
                 V_hs_min = v_min_cool_input.V_hs_min
             else:
                 V_hs_min = dc.get_V_hs_min(V_vent_g_i)  # 従来式
