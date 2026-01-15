@@ -85,7 +85,7 @@ def calc_Q_UT_A(
         new_ufac: UnderfloorAc,
         new_ufac_df: UfVarsDataFrame,
         v_min_heat_input: jjj_V_min_input.inputs.heating.InputMinVolumeInput,
-        v_min_cool_input: jjj_V_min_input.inputs.heating.InputMinVolumeInput,
+        v_min_cool_input: jjj_V_min_input.inputs.cooling.InputMinVolumeInput,
         V_hs_dsgn_H: VHS_DSGN_H,
         V_hs_dsgn_C: VHS_DSGN_C,
         v_supply_cap_dto: VSupplyCapDto,
