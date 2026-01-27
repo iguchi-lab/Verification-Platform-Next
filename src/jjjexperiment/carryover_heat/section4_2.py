@@ -123,7 +123,7 @@ def get_L_star_CS_i_2024(
 # デメリットは、クライアントコードに知識が必要になる(時点の選択)
 
 def get_Theta_HBR_i_2023(
-        isFirst: bool, H: bool, C: bool, M: bool,
+        H: bool, C: bool, M: bool,
         Theta_star_HBR: float,
         V_supply_i: Array5x1,
         Theta_supply_i: Array5x1,
@@ -172,12 +172,6 @@ def get_Theta_HBR_i_2023(
     # 熱容量(居室) [J/K]
     cbri = jjj_carryover_heat.get_C_BR_i(A_HCZ_i)
 
-    # NOTE: 250625 梅本様より絶対値を外すよう指摘に対応しました
-    carryover_theta_diff = Theta_HBR_before_i - Theta_star_HBR
-
-    # 熱繰越による熱容量[J] (1/1/0:00 なしとする)
-    carryover_capacity = 0 if isFirst else cbri * carryover_theta_diff
-
     # 熱容量(空調空気) [J/(K・h)]
     c_ac_air = dc.get_c_p_air() * dc.get_rho_air() * V_supply_i
 
@@ -189,14 +183,14 @@ def get_Theta_HBR_i_2023(
     elif H:  # 暖房期 (46-1)
         load_capacity = L_star_H_i * 10**6  # [MJ/h] -> [J/h]
         Theta_HBR_i = Theta_star_HBR \
-                    + (ac_capacity + carryover_capacity - load_capacity) \
+                    + (ac_capacity - load_capacity) \
                     / (c_ac_air + c_prt + heat_loss + cbri)
         # NOTE: 負荷バランス時の居室の室温で下限を設定 -> しない
         # Theta_HBR_i = np.clip(Theta_HBR_i, Theta_star_HBR, None)
     elif C:  # 冷房期 (46-2)
         load_capacity = L_star_CS_i * 10**6  # [MJ/h] -> [J/h]
         Theta_HBR_i = Theta_star_HBR \
-                    -1 * (ac_capacity + carryover_capacity - load_capacity) \
+                    -1 * (ac_capacity - load_capacity) \
                     / (c_ac_air + c_prt + heat_loss + cbri)
         # NOTE: 負荷バランス時の居室の室温で下限を設定 -> しない
         # Theta_HBR_i = np.clip(Theta_HBR_i, None, Theta_star_HBR)
