@@ -8,9 +8,11 @@
 
 本プロジェクトは 3 つのリポジトリで構成されています。
 
+```
 BRI-EES-House/pyhees: 建築研究所
 ┣ iguchi-lab/pyhees: 井口研究室
 ┗ izumi-system-development/pyhees: イズミコンサルティング
+```
 
 ## 開発からリリースの流れ
 
