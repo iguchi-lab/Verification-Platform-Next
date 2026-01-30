@@ -1,8 +1,8 @@
-# バージョンアップにおける Git ブランチ戦略
+# Git ブランチ戦略 建研VerUp追従フロー
 
 ## 概要
 
-本リポジトリは `BRI-EES-House/pyhees` からフォークしており、upstream のバージョンアップに追従する必要があります。
+本リポジトリは建築研究所の `BRI-EES-House/pyhees` から派生して開発しているため、upstream のバージョンアップに追従する必要があります。
 更新追従方法は、下記の2種類のブランチ戦略からバージョンアップの内容に応じて使い分けます。
 
 ## 追従方法
@@ -17,17 +17,18 @@
 
 ```mermaid
 gitGraph
-    commit id: "v3.8" tag: "upstream"
-    branch jjj-experiment-v3.8
-    checkout jjj-experiment-v3.8
-    commit id: "custom-1"
-    commit id: "custom-2"
-    checkout main
-    commit id: "v3.9" tag: "upstream更新"
-    checkout jjj-experiment-v3.8
-    branch jjj-experiment-v3.9
-    merge main tag: "マージ追従"
-    commit id: "custom-3"
+
+commit id: "v3.8" tag: "upstream"
+branch jjj-experiment-v3.8
+checkout jjj-experiment-v3.8
+commit id: "custom-1"
+commit id: "custom-2"
+checkout main
+commit id: "v3.9" tag: "upstream更新"
+checkout jjj-experiment-v3.8
+branch jjj-experiment-v3.9
+merge main tag: "マージ追従"
+commit id: "custom-3"
 ```
 
 ### 2. リベースアップデート追従
@@ -41,19 +42,20 @@ gitGraph
 
 ```mermaid
 gitGraph
-    commit id: "v3.8" tag: "upstream"
-    branch jjj-experiment-v3.8
-    checkout jjj-experiment-v3.8
-    commit id: "custom-1"
-    commit id: "custom-2"
-    checkout main
-    commit id: "v3.9-update-1" tag: "upstream更新"
-    commit id: "v3.9-update-2"
-    branch jjj-experiment-v3.9
-    checkout jjj-experiment-v3.9
-    commit id: "rebase: custom-1" type: HIGHLIGHT
-    commit id: "rebase: custom-2" type: HIGHLIGHT
-    commit id: "reorganized customs" type: REVERSE
+
+commit id: "v3.8" tag: "upstream"
+branch jjj-experiment-v3.8
+checkout jjj-experiment-v3.8
+commit id: "custom-1"
+commit id: "custom-2"
+checkout main
+commit id: "v3.9-update-1" tag: "upstream更新"
+commit id: "v3.9-update-2"
+branch jjj-experiment-v3.9
+checkout jjj-experiment-v3.9
+commit id: "rebase: custom-1" type: HIGHLIGHT
+commit id: "rebase: custom-2" type: HIGHLIGHT
+commit id: "reorganized customs" type: REVERSE
 ```
 
 ## ブランチ命名規則
