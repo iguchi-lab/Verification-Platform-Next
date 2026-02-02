@@ -266,18 +266,6 @@ def calc_main(
             case 最低風量直接入力.入力する:
                 print(最低風量直接入力.入力する)
 
-                V_hs_min_H = v_min_heating_input.V_hs_min
-                H = np.array([hcm == JJJ_HCM.H for hcm in HCM])
-                match heat_ac_setting.general_ventilation:
-                    case True:
-                        print(全般換気機能.あり)
-                        V_hs_vent_d_t[H] = np.maximum(V_hs_min_H, np.sum(V_vent_g_i))
-                    case False:
-                        print(全般換気機能.なし)
-                        V_hs_vent_d_t[H] = V_hs_min_H
-                    case _:
-                        raise ValueError
-
                 match v_min_heating_input.input_E_E_fan_min:
                     case 最低電力直接入力.入力しない:
                         print(最低電力直接入力.入力しない)
@@ -497,18 +485,6 @@ def calc_main(
 
             case 最低風量直接入力.入力する:
                 print(最低風量直接入力.入力する)
-
-                V_hs_min_C = v_min_cooling_input.V_hs_min
-                C = np.array([hcm == JJJ_HCM.C for hcm in HCM])
-                match cool_ac_setting.general_ventilation:
-                    case True:
-                        print(全般換気機能.あり)
-                        V_hs_vent_d_t[C] = np.maximum(V_hs_min_C, np.sum(V_vent_g_i))
-                    case False:
-                        print(全般換気機能.なし)
-                        V_hs_vent_d_t[C] = V_hs_min_C
-                    case _:
-                        raise ValueError
 
                 match v_min_cooling_input.input_E_E_fan_min:
                     case 最低電力直接入力.入力しない:
