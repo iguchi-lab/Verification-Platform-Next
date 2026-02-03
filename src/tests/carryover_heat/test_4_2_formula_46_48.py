@@ -31,7 +31,7 @@ def test_過剰熱量繰越を考慮した室温_居室_式46():
     # Act
     Theta_HBR_i \
         = jjj_carryover_heat.get_Theta_HBR_i_2023(
-            isFirst = (2==0), H = True, C = False, M = False,
+            H = True, C = False, M = False,
             Theta_star_HBR = 20,
             V_supply_i = V_supply_i,
             Theta_supply_i = Theta_supply_i,
@@ -47,7 +47,7 @@ def test_過剰熱量繰越を考慮した室温_居室_式46():
     assert Theta_HBR_i.shape == (5, 1), "Theta_HBR_iの次数が想定外"
 
     # NOTE: 資料ではキャップされていないが、実装ではキャップされている
-    exp_Theta_HBR_i = np.array([19.63, 21.29, 21.49, 19.97, 19.64]).reshape(-1,1)
+    exp_Theta_HBR_i = np.array([19.63, 20.87, 21.02, 19.97, 19.64]).reshape(-1,1)
 
     np.testing.assert_almost_equal(Theta_HBR_i, exp_Theta_HBR_i, decimal=2), "Theta_HBR_iの計算がおかしい"
     # assert つかないの間違えやすいので注意

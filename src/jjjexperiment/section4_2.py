@@ -48,6 +48,7 @@ from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 # F25-1 最小風量・最低電力直接入力
 import jjjexperiment.ac_min_volume_input as jjj_V_min_input
+from jjjexperiment.ac_min_volume_input.section4_2 import get_V_vent_g_i_with_V_hs_min
 
 @dataclass
 class Load_DTI:
@@ -219,7 +220,18 @@ def calc_Q_UT_A(
     )
 
     # (62)　全般換気量
-    V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
+    match ac_setting:
+        case HeatingAcSetting():
+            if v_min_heat_input.input_V_hs_min == 最低風量直接入力.入力する:
+                V_vent_g_i = get_V_vent_g_i_with_V_hs_min(A_HCZ_i, A_HCZ_R_i, v_min_heat_input.V_hs_min)
+            else:
+                V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
+        case CoolingAcSetting():
+            if v_min_cool_input.input_V_hs_min == 最低風量直接入力.入力する:
+                V_vent_g_i = get_V_vent_g_i_with_V_hs_min(A_HCZ_i, A_HCZ_R_i, v_min_cool_input.V_hs_min)
+            else:
+                V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
+        case _: raise ValueError
     df_output2['V_vent_g_i'] = V_vent_g_i
 
     # (61)　間仕切の熱貫流率
@@ -275,18 +287,7 @@ def calc_Q_UT_A(
     df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
 
     # (39)　熱源機の最低風量
-    match ac_setting:
-        case HeatingAcSetting():
-            if v_min_heat_input.input_V_hs_min == 最低風量直接入力.入力する:
-                V_hs_min = v_min_heat_input.V_hs_min
-            else:
-                V_hs_min = dc.get_V_hs_min(V_vent_g_i)  # 従来式
-        case CoolingAcSetting():
-            if v_min_cool_input.input_V_hs_min == 最低風量直接入力.入力する:
-                V_hs_min = v_min_cool_input.V_hs_min
-            else:
-                V_hs_min = dc.get_V_hs_min(V_vent_g_i)  # 従来式
-        case _: raise ValueError
+    V_hs_min = dc.get_V_hs_min(V_vent_g_i)
     df_output3['V_hs_min'] = [V_hs_min]
 
     ####################################################################################################################
@@ -784,7 +785,7 @@ def calc_Q_UT_A(
             # (46)　暖冷房区画𝑖の実際の居室の室温
             Theta_HBR_d_t_i[:, t:t+1] \
                 = jjj_carryover_heat.get_Theta_HBR_i_2023(
-                    isFirst, H[t], C[t], M[t],
+                    H[t], C[t], M[t],
                     Theta_star_HBR_d_t[t],
                     V_supply_d_t_i[:, t:t+1],  # (5,1)
                     Theta_supply_d_t_i[:, t:t+1],  # (5,1)
