@@ -3,7 +3,7 @@ import numpy as np
 from jjjexperiment.common import *
 
 
-def normalize_V_vent_g_i(
+def rescale_V_vent_g_i(
         V_vent_g_i: np.ndarray,
         V_hs_min: float
     ) -> np.ndarray:
@@ -14,7 +14,7 @@ def normalize_V_vent_g_i(
         V_hs_min: 最低風量 [m3/h]
 
     Returns:
-        正規化された全般換気量 [m3/h]
+        最低風量を満たすよう調整された全般換気量 [m3/h]
     """
 
     """事前条件"""
