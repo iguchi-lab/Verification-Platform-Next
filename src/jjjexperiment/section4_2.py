@@ -1376,6 +1376,13 @@ def calc_Q_UT_A(
     )
     # (5)　間仕切りの熱損失を含む実際の暖房負荷
     L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
+
+    # 過剰熱量繰越をするときは、L_dashが負になる場合は0として扱う
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CL_d_t_i = np.clip(L_dash_CL_d_t_i, 0, None)
+        L_dash_CS_d_t_i = np.clip(L_dash_CS_d_t_i, 0, None)
+        L_dash_H_d_t_i = np.clip(L_dash_H_d_t_i, 0, None)
+
     df_output = df_output.assign(
         L_dash_H_d_t_1 = L_dash_H_d_t_i[0],
         L_dash_H_d_t_2 = L_dash_H_d_t_i[1],
