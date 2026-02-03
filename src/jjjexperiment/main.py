@@ -48,7 +48,7 @@ from jjjexperiment.common import *
 import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 
 # [F25-01] 最低風量の直接入力
-import jjjexperiment.ac_min_volume_input as jjj_V_min_input
+import jjjexperiment.v_min_input as jjj_V_min_input
 
 def calc(input_data: dict, test_mode=False):
     case_name = input_data.get('case_name', 'default')
@@ -287,7 +287,7 @@ def calc_main(
                         E_E_fan_min_H = v_min_heating_input.E_E_fan_min
                         E_E_fan_logic = v_min_heating_input.E_E_fan_logic
 
-                        from jjjexperiment.ac_min_volume_input.section4_2_a import get_E_E_fan_d_t
+                        from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
                         E_E_fan_H_d_t = get_E_E_fan_d_t(
                                 E_E_fan_logic
                                 # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
@@ -507,7 +507,7 @@ def calc_main(
                         E_E_fan_min_C = v_min_cooling_input.E_E_fan_min
                         E_E_fan_logic = v_min_cooling_input.E_E_fan_logic
 
-                        from jjjexperiment.ac_min_volume_input.section4_2_a import get_E_E_fan_d_t
+                        from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
                         E_E_fan_C_d_t = get_E_E_fan_d_t(
                                 E_E_fan_logic
                                 # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
