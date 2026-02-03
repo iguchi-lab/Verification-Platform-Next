@@ -788,7 +788,7 @@ def calc_Q_UT_A(
             # (46)　暖冷房区画𝑖の実際の居室の室温
             Theta_HBR_d_t_i[:, t:t+1] \
                 = jjj_carryover_heat.get_Theta_HBR_i_2023(
-                    isFirst, H[t], C[t], M[t],
+                    H[t], C[t], M[t],
                     Theta_star_HBR_d_t[t],
                     V_supply_d_t_i[:, t:t+1],  # (5,1)
                     Theta_supply_d_t_i[:, t:t+1],  # (5,1)
