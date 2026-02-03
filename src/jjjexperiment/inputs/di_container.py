@@ -11,6 +11,8 @@ import jjjexperiment.denchu.inputs.heating as denchu_heating_input
 import jjjexperiment.denchu.inputs.cooling as denchu_cooling_input
 # F23-01 Vサプライの上限キャップ変更
 from jjjexperiment.v_supply_cap.inputs.v_supply_cap_dto import VSupplyCapDto
+# F24-04 過剰熱量繰越
+from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
 # F24-05 新床下空調
 import jjjexperiment.underfloor_ac.inputs.common as ufac_input
 # F25-01 最小風量・最低電力 直接入力
@@ -85,21 +87,38 @@ class JJJExperimentModule(Module):
         new_ufac_flg = self._input.get('change_underfloor_temperature', None)
         old_ufac_flg = self._input.get('underfloor_air_conditioning_air_supply', None)
         if new_ufac_flg is not None and int(new_ufac_flg) == 床下空調ロジック.変更する.value:
+            print("新・床下空調ロジックを使用")
             # 新床下空調
             self._input['r_A_ufac'] = 100.0  # [%] WG資料より
+            print("r_A_ufac = 100.0 [%]")
             self._input['underfloor_air_conditioning_air_supply'] = 2  # 従来床下空調を含む
+            print("空調空気を床下を通して給気する")
             # 後はデータクラス内で > 床下換気ナシ & 床下断熱状態
         elif old_ufac_flg is not None and int(old_ufac_flg) == 2:
+            print("従来床下空調ロジックを使用")
             # 従来の床下空調
             self._input['r_A_ufac'] = common_input.OuterSkin.YUCACO_r_A_ufvnt * 100.0  # [%]
+            print("YUCACO_r_A_ufvnt を使用")
             self._input['underfloor_air_conditioning_air_supply'] = 2
+            print("空調空気を床下を通して給気する")
             # 後はデータクラス内で > 床下換気ナシ & 床下断熱状態
         else:
+            print("床下空調を使用しない")
             # 非床下空調
             if 'r_A_ufvnt' in self._input:
                 self._input['r_A_ufac'] = self._input.get('r_A_ufvnt', None)
             else:
                 raise KeyError('r_A_ufvnt が設定されていません')
+
+        # NOTE: 過剰熱繰越と併用しないオプションはここで強制オフしている
+        carry_over_heat = self._input.get('carry_over_heat', None)
+        if carry_over_heat is not None and int(carry_over_heat) == 過剰熱量繰越計算.行う.value:
+            print("過剰熱量繰越を行う")
+
+            # NOTE: 過剰熱繰越の8760ループと床下空調ロジック変更の8760ループが合わさると
+            # 一時間を超える実行時間になることを確認したため回避しています(2024/02)
+            self._input['change_underfloor_temperature'] = 床下空調ロジック.変更しない.value
+            print("床下空調ロジック変更を強制オフ")
 
     # NOTE: プロバイダーについて
     # 現在はDI解決用データクラスのみを提供しています
@@ -187,6 +206,12 @@ class JJJExperimentModule(Module):
     @provider
     def provide_v_supply_cap_dto(self) -> VSupplyCapDto:
         return VSupplyCapDto.from_dict(self._input if self._input is not None else {})
+
+    # F24-04 過剰熱量繰越
+    @singleton
+    @provider
+    def provide_carryover_heat_dto(self) -> CarryoverHeatDto:
+        return CarryoverHeatDto.from_dict(self._input if self._input is not None else {})
 
     # F24-05 新・床下空調
     @singleton
