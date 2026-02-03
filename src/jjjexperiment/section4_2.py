@@ -47,7 +47,7 @@ from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 # F25-1 最小風量・最低電力直接入力
-from jjjexperiment.v_min_input.section4_2 import normalize_V_vent_g_i
+from jjjexperiment.v_min_input.logic import normalize_V_vent_g_i
 import jjjexperiment.v_min_input as jjj_V_min_input
 
 @dataclass
