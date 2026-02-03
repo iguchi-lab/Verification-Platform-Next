@@ -47,8 +47,8 @@ from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 # F25-1 最小風量・最低電力直接入力
+from jjjexperiment.ac_min_volume_input.section4_2 import normalize_V_vent_g_i
 import jjjexperiment.ac_min_volume_input as jjj_V_min_input
-from jjjexperiment.ac_min_volume_input.section4_2 import get_V_vent_g_i_with_V_hs_min
 
 @dataclass
 class Load_DTI:
@@ -220,18 +220,16 @@ def calc_Q_UT_A(
     )
 
     # (62)　全般換気量
+    V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式で計算
+
     match ac_setting:
-        case HeatingAcSetting():
-            if v_min_heat_input.input_V_hs_min == 最低風量直接入力.入力する:
-                V_vent_g_i = get_V_vent_g_i_with_V_hs_min(A_HCZ_i, A_HCZ_R_i, v_min_heat_input.V_hs_min)
-            else:
-                V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
-        case CoolingAcSetting():
-            if v_min_cool_input.input_V_hs_min == 最低風量直接入力.入力する:
-                V_vent_g_i = get_V_vent_g_i_with_V_hs_min(A_HCZ_i, A_HCZ_R_i, v_min_cool_input.V_hs_min)
-            else:
-                V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
+        case HeatingAcSetting(): v_min_input = v_min_heat_input
+        case CoolingAcSetting(): v_min_input = v_min_cool_input
         case _: raise ValueError
+
+    if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:  # ダックタイピング
+        # 最低風量指定あるなら正規化
+        V_vent_g_i = normalize_V_vent_g_i(V_vent_g_i, v_min_input.V_hs_min)
     df_output2['V_vent_g_i'] = V_vent_g_i
 
     # (61)　間仕切の熱貫流率

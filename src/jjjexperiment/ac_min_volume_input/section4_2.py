@@ -1,21 +1,32 @@
-from pyhees.section4_2 import get_V_vent_g_i
+import numpy as np
+# JJJ
+from jjjexperiment.common import *
 
 
-# 暖冷房区画iの全般換気量（最低風量を反映）
-def get_V_vent_g_i_with_V_hs_min(A_HCZ_i, A_HCZ_R_i, V_hs_min):
-    """(62)
+def normalize_V_vent_g_i(
+        V_vent_g_i: Array5x1,
+        V_hs_min: float
+    ) -> Array5x1:
+    """暖冷房区画iごとの全般換気量の比率を維持したまま、合計を最低風量に調整する。
 
     Args:
-      A_HCZ_i: 暖冷房区画iの床面積 (m2)
-      A_HCZ_R_i: 標準住戸における暖冷房区画iの床面積（m2）
-      V_hs_min: 最低風量 (m3/h)
+        V_vent_g_i: 正規化前の全般換気量 [m3/h]
+        V_hs_min: 最低風量 [m3/h]
 
     Returns:
-      ndarray[5]: 暖冷房区画iの機械換気量 (m3/h)
-
+        正規化された全般換気量 [m3/h]
     """
-    # 既存ロジックの暖冷房区画iの全般換気量 [m3/h]
-    V_vent_g_i_before = get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
 
-    # 全般換気量の暖冷房区画iごとの比率を維持したまま、合計を最低風量にする
-    return V_hs_min * V_vent_g_i_before / V_vent_g_i_before.sum()
+    """事前条件"""
+    # 1. 配列の形状チェック
+    assert isinstance(V_vent_g_i, np.ndarray) and V_vent_g_i.shape == (5, 1)  \
+      , f"配列の形状が想定外: type={type(V_vent_g_i)}, shape={getattr(V_vent_g_i, 'shape', 'N/A')}"
+    # 2. 全般換気量は非負値
+    assert np.all(V_vent_g_i >= 0), "全般換気量は非負値である必要があります"
+    # 3. 最低風量は正の値
+    assert V_hs_min > 0, "最低風量は正の値である必要があります"
+    # 4. ゼロ除算を防ぐ
+    total = V_vent_g_i.sum()
+    assert total > 0, f"全般換気量の合計が0です: {V_vent_g_i}"
+
+    return V_hs_min * V_vent_g_i / total
