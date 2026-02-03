@@ -48,6 +48,7 @@ def test_過剰熱量繰越を考慮した室温_居室_式46():
 
     # NOTE: 資料ではキャップされていないが、実装ではキャップされている
     exp_Theta_HBR_i = np.array([19.63, 20.87, 21.02, 19.97, 19.64]).reshape(-1,1)
+    # NOTE: 260201 ARAI 過剰熱量繰越における重複項除外による変更 [〃, 21.29 → 20.87, 21.49 → 21.02, 〃, 〃]
 
     np.testing.assert_almost_equal(Theta_HBR_i, exp_Theta_HBR_i, decimal=2), "Theta_HBR_iの計算がおかしい"
     # assert つかないの間違えやすいので注意
