@@ -1357,7 +1357,12 @@ def calc_Q_UT_A(
 
     """ まとめ - 実際の暖冷房負荷 """
     # (7)　間仕切りの熱取得を含む実際の冷房潜熱負荷
-    L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region)
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CL_d_t_i = np.clip(
+            dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region), # 従来式
+            0, None)
+    else:
+        L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_CL_d_t_1 = L_dash_CL_d_t_i[0],
         L_dash_CL_d_t_2 = L_dash_CL_d_t_i[1],
@@ -1366,7 +1371,12 @@ def calc_Q_UT_A(
         L_dash_CL_d_t_5 = L_dash_CL_d_t_i[4]
     )
     # (6)　間仕切りの熱取得を含む実際の冷房顕熱負荷
-    L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CS_d_t_i = np.clip(
+            dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
+            0, None)
+    else:
+        L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_CS_d_t_1 = L_dash_CS_d_t_i[0],
         L_dash_CS_d_t_2 = L_dash_CS_d_t_i[1],
@@ -1375,7 +1385,12 @@ def calc_Q_UT_A(
         L_dash_CS_d_t_5 = L_dash_CS_d_t_i[4]
     )
     # (5)　間仕切りの熱損失を含む実際の暖房負荷
-    L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_H_d_t_i = np.clip(
+            dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
+            0, None)
+    else:
+        L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_H_d_t_1 = L_dash_H_d_t_i[0],
         L_dash_H_d_t_2 = L_dash_H_d_t_i[1],
