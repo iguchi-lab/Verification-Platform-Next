@@ -47,8 +47,8 @@ from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 # F25-1 最小風量・最低電力直接入力
-import jjjexperiment.ac_min_volume_input as jjj_V_min_input
-from jjjexperiment.ac_min_volume_input.section4_2 import get_V_vent_g_i_with_V_hs_min
+from jjjexperiment.v_min_input.logic import rescale_V_vent_g_i
+import jjjexperiment.v_min_input as jjj_V_min_input
 
 @dataclass
 class Load_DTI:
@@ -219,19 +219,19 @@ def calc_Q_UT_A(
         V_vent_l_d_t = V_vent_l_d_t
     )
 
-    # (62)　全般換気量
     match ac_setting:
-        case HeatingAcSetting():
-            if v_min_heat_input.input_V_hs_min == 最低風量直接入力.入力する:
-                V_vent_g_i = get_V_vent_g_i_with_V_hs_min(A_HCZ_i, A_HCZ_R_i, v_min_heat_input.V_hs_min)
-            else:
-                V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
-        case CoolingAcSetting():
-            if v_min_cool_input.input_V_hs_min == 最低風量直接入力.入力する:
-                V_vent_g_i = get_V_vent_g_i_with_V_hs_min(A_HCZ_i, A_HCZ_R_i, v_min_cool_input.V_hs_min)
-            else:
-                V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
+        case HeatingAcSetting(): v_min_input = v_min_heat_input
+        case CoolingAcSetting(): v_min_input = v_min_cool_input
         case _: raise ValueError
+
+    # (62)　全般換気量
+    if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:  # ダックタイピング
+        # 最低風量指定を満たすように調整
+        V_vent_g_i = rescale_V_vent_g_i(
+            dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i),  # 従来式
+            v_min_input.V_hs_min)
+    else:
+        V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
     df_output2['V_vent_g_i'] = V_vent_g_i
 
     # (61)　間仕切の熱貫流率
@@ -1357,7 +1357,12 @@ def calc_Q_UT_A(
 
     """ まとめ - 実際の暖冷房負荷 """
     # (7)　間仕切りの熱取得を含む実際の冷房潜熱負荷
-    L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region)
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CL_d_t_i = np.clip(
+            dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region), # 従来式
+            0, None)
+    else:
+        L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_CL_d_t_1 = L_dash_CL_d_t_i[0],
         L_dash_CL_d_t_2 = L_dash_CL_d_t_i[1],
@@ -1366,7 +1371,12 @@ def calc_Q_UT_A(
         L_dash_CL_d_t_5 = L_dash_CL_d_t_i[4]
     )
     # (6)　間仕切りの熱取得を含む実際の冷房顕熱負荷
-    L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CS_d_t_i = np.clip(
+            dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
+            0, None)
+    else:
+        L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_CS_d_t_1 = L_dash_CS_d_t_i[0],
         L_dash_CS_d_t_2 = L_dash_CS_d_t_i[1],
@@ -1375,7 +1385,12 @@ def calc_Q_UT_A(
         L_dash_CS_d_t_5 = L_dash_CS_d_t_i[4]
     )
     # (5)　間仕切りの熱損失を含む実際の暖房負荷
-    L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_H_d_t_i = np.clip(
+            dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
+            0, None)
+    else:
+        L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_H_d_t_1 = L_dash_H_d_t_i[0],
         L_dash_H_d_t_2 = L_dash_H_d_t_i[1],

@@ -16,8 +16,8 @@ from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeat
 # F24-05 新床下空調
 import jjjexperiment.underfloor_ac.inputs.common as ufac_input
 # F25-01 最小風量・最低電力 直接入力
-import jjjexperiment.ac_min_volume_input.inputs.heating as v_min_heating_input
-import jjjexperiment.ac_min_volume_input.inputs.cooling as v_min_cooling_input
+import jjjexperiment.v_min_input.inputs.heating as v_min_heating_input
+import jjjexperiment.v_min_input.inputs.cooling as v_min_cooling_input
 
 # NOTE: Injector はフルパスでクラス名を判別するためファイル自体が同名でも問題ない
 
