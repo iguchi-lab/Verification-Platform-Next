@@ -11,6 +11,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # バージョン情報を自動更新
+      - name: Update version
+        run: |
+          DATE=$(date +%Y%m%d)
+          sed -i "s/return '_[0-9]*'/return '_$DATE'/" src/jjjexperiment/constants.py
+
       # NOTE: Poetry仮想環境を使用している時であってもバージョン指定する場合には必要
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,3 +55,13 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           junit_files: artifacts/**/*.xml
+
+      # バージョン更新をコミットしてプッシュ
+      - name: Commit and push version update
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/jjjexperiment/constants.py
+          git commit -m "chore: auto-update version" || echo "No changes to commit"
+          git push
