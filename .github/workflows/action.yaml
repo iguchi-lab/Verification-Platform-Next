@@ -16,7 +16,7 @@ jobs:
       # バージョン情報を自動更新
       - name: Update version
         run: |
-          DATE=$(date +%Y%m%d)
+          DATE=$(TZ='Asia/Tokyo' date +%Y%m%d)
           sed -i "s/return '_[0-9]*'/return '_$DATE'/" src/jjjexperiment/constants.py
 
       # NOTE: Poetry仮想環境を使用している時であってもバージョン指定する場合には必要
