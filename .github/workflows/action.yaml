@@ -54,7 +54,7 @@ jobs:
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          junit_files: artifacts/**/*.xml
+          files: artifacts/**/*.xml
 
       # バージョン更新をコミットしてプッシュ
       - name: Commit and push version update
