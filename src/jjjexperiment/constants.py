@@ -1,7 +1,7 @@
 from jjjexperiment.inputs.options import *
 
 def version_info() -> str:
-  """ 最終編集日をバージョン管理に使用します
+  """ 最終編集日(プッシュ日)をバージョン管理に使用します
   """
   # NOTE: GitHub Actions 経由でプッシュされた日で上書きしています
   # 本ファイル名に変更があれば 設定更新すること

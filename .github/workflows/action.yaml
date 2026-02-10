@@ -4,6 +4,8 @@ on: [push]
 
 jobs:
   pytest:
+    # アクションのループを防止
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
