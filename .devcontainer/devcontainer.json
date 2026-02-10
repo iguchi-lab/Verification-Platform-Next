@@ -7,10 +7,10 @@
 	// NOTE: google colab にインポートして使用するのでバージョンを合わせる
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {
+	// 	"ghcr.io/devcontainers/features/aws-cli:1": {}
+	// },
   	// NOTE: bedrock 利用設定は必須ではありません
-	"features": {
-		"ghcr.io/devcontainers/features/aws-cli:1": {}
-	},
   	"mounts": [
   	  "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind"
   	],

@@ -1,5 +1,4 @@
 {
-  "awsAuthRefresh": "aws sso login",
   "permissions": {
       "deny": [
       "Read(**/.env*)"
