@@ -5,7 +5,7 @@ def version_info() -> str:
   """
   # NOTE: subprocessモジュールによるコミット履歴からの生成は \
   # ipynb 環境では正常に動作しないことを確認しました(returned no-zero exit status 128.)
-  return '_20250325'
+  return '_20260210'
 
 Theta_hs_out_max_H_d_t_limit: float = 45
 """最大暖房出力時の熱源機の出口における空気温度の最大値の上限値"""
