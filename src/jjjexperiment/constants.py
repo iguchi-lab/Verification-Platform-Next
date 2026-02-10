@@ -3,8 +3,8 @@ from jjjexperiment.inputs.options import *
 def version_info() -> str:
   """ 最終編集日をバージョン管理に使用します
   """
-  # NOTE: subprocessモジュールによるコミット履歴からの生成は \
-  # ipynb 環境では正常に動作しないことを確認しました(returned no-zero exit status 128.)
+  # NOTE: GitHub Actions 経由でプッシュされた日で上書きしています
+  # 本ファイル名に変更があれば 設定更新すること
   return '_20260210'
 
 Theta_hs_out_max_H_d_t_limit: float = 45
