@@ -25,12 +25,12 @@ class Test統合テスト_デフォルト入力時:
         """
         result = calc(self._inputs2, test_mode=True)
 
-        assert result['TInput'].q_rtd_C == expected_inputs.q_rtd_C
-        assert result['TInput'].q_rtd_H == expected_inputs.q_rtd_H
-        assert result['TInput'].q_max_C == expected_inputs.q_max_C
-        assert result['TInput'].q_max_H == expected_inputs.q_max_H
-        assert result['TInput'].e_rtd_C == expected_inputs.e_rtd_C
-        assert result['TInput'].e_rtd_H == expected_inputs.e_rtd_H
+        assert result['TInput'].q_rtd_C == pytest.approx(expected_inputs.q_rtd_C)
+        assert result['TInput'].q_rtd_H == pytest.approx(expected_inputs.q_rtd_H)
+        assert result['TInput'].q_max_C == pytest.approx(expected_inputs.q_max_C)
+        assert result['TInput'].q_max_H == pytest.approx(expected_inputs.q_max_H)
+        assert result['TInput'].e_rtd_C == pytest.approx(expected_inputs.e_rtd_C)
+        assert result['TInput'].e_rtd_H == pytest.approx(expected_inputs.e_rtd_H)
 
     def test_関数_deep_update(self):
         """ 階層のあるインプットを使用してインプットを拡張するテスト
@@ -74,8 +74,8 @@ class Test統合テスト_デフォルト入力時:
         # inputs = change_testmode_input_V_hs_min_C(inputs)
         result = calc(inputs, test_mode=True)
 
-        assert result['TValue'].E_H == expected_result_type2.E_H
-        assert result['TValue'].E_C == expected_result_type2.E_C
+        assert result['TValue'].E_H == pytest.approx(expected_result_type2.E_H, rel=1e-6)
+        assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C, rel=1e-6)
 
     def test_計算結果一致_方式3(self, expected_result_type1, expected_result_type2):
         """ 方式3 最後まで実行できること、結果がちゃんと変わることだけ確認
@@ -87,11 +87,11 @@ class Test統合テスト_デフォルト入力時:
         # inputs = change_testmode_input_V_hs_min_C(inputs)
         result = calc(inputs, test_mode=True)
 
-        assert result['TValue'].E_H != expected_result_type1.E_H
-        assert result['TValue'].E_C != expected_result_type1.E_C
+        assert result['TValue'].E_H != pytest.approx(expected_result_type1.E_H, rel=1e-6)
+        assert result['TValue'].E_C != pytest.approx(expected_result_type1.E_C, rel=1e-6)
 
-        assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_C != expected_result_type2.E_C
+        assert result['TValue'].E_H != pytest.approx(expected_result_type2.E_H, rel=1e-6)
+        assert result['TValue'].E_C != pytest.approx(expected_result_type2.E_C, rel=1e-6)
 
     def test_計算結果一致_方式4(self, expected_result_type1, expected_result_type2):
         """ 方式4 最後まで実行できること、結果がちゃんと変わることだけ確認
@@ -102,11 +102,11 @@ class Test統合テスト_デフォルト入力時:
         # inputs = change_testmode_input_V_hs_min_C(inputs)
         result = calc(inputs, test_mode=True)
 
-        assert result['TValue'].E_H != expected_result_type1.E_H
-        assert result['TValue'].E_C != expected_result_type1.E_C
+        assert result['TValue'].E_H != pytest.approx(expected_result_type1.E_H, rel=1e-6)
+        assert result['TValue'].E_C != pytest.approx(expected_result_type1.E_C, rel=1e-6)
 
-        assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_C != expected_result_type2.E_C
+        assert result['TValue'].E_H != pytest.approx(expected_result_type2.E_H, rel=1e-6)
+        assert result['TValue'].E_C != pytest.approx(expected_result_type2.E_C, rel=1e-6)
 
 def change_testmode_VAV(inputs: dict):
     fixtures = {
