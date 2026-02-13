@@ -11,20 +11,18 @@
 	// 	"ghcr.io/devcontainers/features/aws-cli:1": {}
 	// },
 
-	// NOTE: Bedrock 用設定です. 利用しない人ではスルーされます
+	// NOTE: マウント失敗時にコンテナビルドエラーとなるためオプショナルなファイルには使用できない
   	"mounts": [
-  	  "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind",
-	  // ユーザー設定をプロジェクトにマウント (ignore 済)
-	  // NOTE: claude 拡張はグローバル設定を参照しないため
-  	  "source=${localEnv:HOME}/.claude/settings.local.json,target=/workspaces/pyhees-jjj/.claude/settings.local.json,type=bind"
+		// Bedrock 利用設定
+		// "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind",
+		// "source=${localEnv:HOME}/.claude/settings.local.json,target=/workspaces/pyhees-jjj/.claude/settings.local.json,type=bind"
   	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "sh .devcontainer/post-create.sh",
 	// NOTE: .gitconfig 設定を記述すると WSLからのコピーが実行されなくなる
+	"postCreateCommand": "sh .devcontainer/post-create.sh",
 
 	// NOTE: .gitconfig 設定は postStart に記述する
 	"postStartCommand": "sh .devcontainer/post-start.sh",
@@ -48,6 +46,9 @@
 	// Configure tool-specific properties.
 	// "customizations": {},
 
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	// NOTE: VS Code接続時のユーザー(デフォルト vscode)
+	// "remoteUser": "root",
+
+	// NOTE: postCreateCommand等のスクリプトを実行するユーザー
+	// "containerUser": "vscode"
 }
