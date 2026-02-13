@@ -5,9 +5,6 @@ import pandas as pd
 from datetime import datetime
 from injector import inject
 
-from pyhees.section11_1 import calc_h_ex, load_climate, get_Theta_ex, get_X_ex, get_climate_df
-from pyhees.section11_2 import calc_I_s_d_t
-
 # エアーコンディショナー
 import pyhees.section4_3 as rac
 # 床下
@@ -15,6 +12,7 @@ import pyhees.section3_1 as ld
 import pyhees.section3_1_d as uf
 import pyhees.section3_1_e as algo
 # ダクト式セントラル空調機
+from pyhees.section4_1 import get_alpha_UT_H_A
 import pyhees.section4_2 as dc
 import pyhees.section4_2_a as dc_a
 
@@ -128,23 +126,15 @@ def calc_Q_UT_A(
     df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
 
     # 気象条件
-    if climateFile == '-':
-        climate = load_climate(house.region)
-    else:
-        climate = pd.read_csv(climateFile, nrows=24 * 365, encoding="SHIFT-JIS")
-    Theta_ex_d_t = np.array(get_Theta_ex(climate))
-    X_ex_d_t = get_X_ex(climate)
-
-
-    J_d_t = calc_I_s_d_t(0, 0, get_climate_df(climate))
-    h_ex_d_t = calc_h_ex(X_ex_d_t, Theta_ex_d_t)
+    climate = ClimateService(house.region, new_ufac, climateFile)
+    Theta_ex_d_t = climate.get_Theta_ex_d_t()
+    X_ex_d_t = climate.get_X_ex_d_t()
+    J_d_t = climate.get_J_d_t()
+    h_ex_d_t = climate.get_h_ex_d_t()
 
     df_output['Theta_ex_d_t']  = Theta_ex_d_t
     df_output['X_ex_d_t']      = X_ex_d_t
-
-    h_ex_d_t = calc_h_ex(X_ex_d_t, Theta_ex_d_t)
-
-    df_output['J_d_t']    = J_d_t.to_numpy()
+    df_output['J_d_t']    = J_d_t
     df_output['h_ex_d_t'] = h_ex_d_t
 
     #主たる居室・その他居室・非居室の面積
@@ -375,7 +365,7 @@ def calc_Q_UT_A(
 
         # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
         # 1. 床下 -> 居室全体 (目標方向の熱移動)
-        U_s_vert = ClimateService(house.region).get_U_s_vert(skin.Q)  # 床の熱貫流率 [W/m2K]
+        U_s_vert = climate.get_U_s_vert(skin.Q)  # 床の熱貫流率 [W/m2K]
         A_s_ufac_i, r_A_s_ufac = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
 
         assert A_s_ufac_i.ndim == 2
@@ -416,7 +406,6 @@ def calc_Q_UT_A(
                 ) for t in range(24*365)
             ])
         L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
-        climate = ClimateService(house.region, new_ufac)
         phi = climate.get_phi(skin.Q)
 
         delta_L_uf2outdoor_d_t = np.vectorize(calc_delta_L_uf2outdoor)
@@ -478,7 +467,7 @@ def calc_Q_UT_A(
 
         assert A_prt_i.shape == (5,)
         A_prt_A = np.sum(A_prt_i)
-        HCM = np.array(ClimateService(house.region).get_HCM_d_t())
+        HCM = np.array(climate.get_HCM_d_t())
 
         #デバッグ用 250501 IGUCHI
         print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
@@ -874,8 +863,8 @@ def calc_Q_UT_A(
             Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
             # (25)
             Q_hs_max_CS_d_t = dc.get_Q_hs_max_CS_d_t(Q_hs_max_C_d_t, SHF_dash_d_t)
-            # (24)
-            C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
+            # (24) デフロストに関する暖房出力補正係数
+            C_df_H_d_t = climate.get_C_df_H_d_t()
             # (23)
             Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, q_hs_rtd_H(), C_df_H_d_t, heat_CRAC.input_C_af)
 
@@ -884,7 +873,7 @@ def calc_Q_UT_A(
                 計算モデル.電中研モデル
             ]:
             # (24)　デフロストに関する暖房出力補正係数
-            C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
+            C_df_H_d_t = climate.get_C_df_H_d_t()
             _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
 
             # 最大暖房能力比
@@ -1126,7 +1115,7 @@ def calc_Q_UT_A(
 
         # (46) 暖冷房区画𝑖の実際の居室の室温
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            HCM = np.array(ClimateService(house.region).get_HCM_d_t())
+            HCM = np.array(climate.get_HCM_d_t())
             A_s_ufac_i, _ = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
             Theta_HBR_d_t_i = np.hstack([
                 get_Theta_HBR_i(
@@ -1429,9 +1418,19 @@ def calc_Q_UT_A(
     )
 
     """ まとめ - 一次エネルギー """
-    # (1)　冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値
-    E_C_UT_d_t = dc.get_E_C_UT_d_t(Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, house.region)
-    df_output['E_C_UT_d_t'] = E_C_UT_d_t
+    match ac_setting:
+        case HeatingAcSetting():
+            # 暖房: 未処理暖房負荷の設計一次エネルギー消費量相当値
+            alpha_UT_H_A: float = get_alpha_UT_H_A(house.region)
+            Q_UT_H_A_d_t: np.ndarray = np.sum(Q_UT_H_d_t_i, axis=0)
+            E_UT_d_t = Q_UT_H_A_d_t * alpha_UT_H_A
+            df_output['E_UT_H_d_t'] = E_UT_d_t
+        case CoolingAcSetting():
+            # (1)　冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値
+            E_UT_d_t = dc.get_E_C_UT_d_t(Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, house.region)
+            df_output['E_UT_C_d_t'] = E_UT_d_t
+        case _:
+            raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
 
     # 床下空調新ロジック調査用変数の出力
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
@@ -1453,6 +1452,6 @@ def calc_Q_UT_A(
         case(_, _):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
 
-    return E_C_UT_d_t, Q_UT_H_d_t_i, Q_UT_CS_d_t_i, Q_UT_CL_d_t_i,  \
-            Theta_hs_out_d_t, Theta_hs_in_d_t, Theta_ex_d_t,  \
-            X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t, V_vent_g_i, C_df_H_d_t
+    return E_UT_d_t, \
+            Theta_hs_out_d_t, Theta_hs_in_d_t, \
+            X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t

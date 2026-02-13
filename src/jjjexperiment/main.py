@@ -97,6 +97,7 @@ def calc_main(
     _logger.info(f"e_rtd_H [-]: {heat_CRAC.e_rtd}")
 
     # ドメインサービス
+    climate = ClimateService(house.region, ufac, climateFile)
     heat_quantity = HeatQuantityService(heat_ac_setting, house.region, house.A_A)
     cool_quantity = CoolQuantityService(cool_ac_setting, house.region, house.A_A)
 
@@ -202,9 +203,9 @@ def calc_main(
 
     injector.binder.bind(jjj_dc.ActiveAcSetting, to=heat_ac_setting)  # 暖房負荷アクティブ
 
-    Q_UT_H_d_t_i: np.ndarray
-    """暖房設備機器等の未処理暖房負荷(MJ/h)"""
-    _, Q_UT_H_d_t_i, _, _, Theta_hs_out_d_t, Theta_hs_in_d_t, Theta_ex_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t, V_vent_g_i, C_df_H_d_t = \
+    E_UT_H_d_t: np.ndarray
+    """暖房設備の未処理暖房負荷の設計一次エネルギー消費量相当値(MJ/h)"""
+    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t = \
         injector.call_with_injection(jjj_dc.calc_Q_UT_A)
     _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
     _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
@@ -226,10 +227,9 @@ def calc_main(
 
     # (3) 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力(W)
     q_hs_H_d_t = \
-        dc_a.get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, C_df_H_d_t, house.region)
+        dc_a.get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, climate.get_C_df_H_d_t(), house.region)
     # NOTE: 消費電力量計算に広く使用されており、広いスコープで定義してよいことを確認済
 
-    climate = ClimateService(house.region)
     HCM = climate.get_HCM_d_t()
 
     E_E_fan_H_d_t: Array8760
@@ -318,7 +318,7 @@ def calc_main(
                 q_hs_H_d_t = q_hs_H_d_t,
                 Theta_hs_out_d_t = Theta_hs_out_d_t,
                 Theta_hs_in_d_t = Theta_hs_in_d_t,
-                Theta_ex_d_t = Theta_ex_d_t,  # 空気温度
+                Theta_ex_d_t = climate.get_Theta_ex_d_t(),  # 空気温度
                 V_hs_supply_d_t = V_hs_supply_d_t,  # 風量
                 q_hs_rtd_C = cool_quantity.q_hs_rtd,  # 定格冷房能力※
 
@@ -367,22 +367,15 @@ def calc_main(
     else:
         raise Exception("暖房方式が不正です。")
 
-    alpha_UT_H_A: float = get_alpha_UT_H_A(house.region)
-    """未処理暖房負荷を未処理暖房負荷の設計一次エネルギー消費量相当値に換算するための係数"""
-    Q_UT_H_A_d_t: np.ndarray = np.sum(Q_UT_H_d_t_i, axis=0)
-    """未処理暖房負荷の全機器合計(MJ/h)"""
-    E_UT_H_d_t: np.ndarray = Q_UT_H_A_d_t * alpha_UT_H_A
-    """未処理暖房負荷の設計一次エネルギー消費量相当値(MJ/h)"""
     _logger.NDdebug("E_UT_H_d_t", E_UT_H_d_t)
 
     df_output2 = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
-    df_output2['Q_UT_H_d_A_t [MJ/h]']        = Q_UT_H_A_d_t
     df_output2['Theta_hs_H_out_d_t [℃]']    = Theta_hs_out_d_t
     df_output2['Theta_hs_H_in_d_t [℃]']     = Theta_hs_in_d_t
-    df_output2['Theta_ex_d_t [℃]']          = Theta_ex_d_t
+    df_output2['Theta_ex_d_t [℃]']          = climate.get_Theta_ex_d_t()
     df_output2['V_hs_supply_H_d_t [m3/h]']  = V_hs_supply_d_t
     df_output2['V_hs_vent_H_d_t [m3/h]']    = V_hs_vent_d_t
-    df_output2['C_df_H_d_t [-]']            = C_df_H_d_t
+    df_output2['C_df_H_d_t [-]']            = climate.get_C_df_H_d_t()
 
     ##### 冷房消費電力の計算（kWh/h）
     print("冷房消費電力の計算")
@@ -434,9 +427,9 @@ def calc_main(
     """定格冷房能力運転時の送風機の消費電力(W)"""
     _logger.info(f"P_rac_fan_rtd_C [W]: {P_rac_fan_rtd_C}")
 
-    E_C_UT_d_t: np.ndarray
+    E_UT_C_d_t: np.ndarray  # NOTE: ベースプログラムでは E_UT_C, E_C_UT が統一されていない
     """冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値(MJ/h)"""
-    E_C_UT_d_t, _, _, _, Theta_hs_out_d_t, Theta_hs_in_d_t, Theta_ex_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t, V_vent_g_i, _ = \
+    E_UT_C_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = \
         injector.call_with_injection(jjj_dc.calc_Q_UT_A)
     _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
     _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
@@ -537,7 +530,7 @@ def calc_main(
             E_E_fan_C_d_t = E_E_fan_C_d_t,
             Theta_hs_out_d_t = Theta_hs_out_d_t,
             Theta_hs_in_d_t = Theta_hs_in_d_t,
-            Theta_ex_d_t = Theta_ex_d_t,
+            Theta_ex_d_t = climate.get_Theta_ex_d_t(),
             V_hs_supply_d_t = V_hs_supply_d_t,
             X_hs_out_d_t = X_hs_out_d_t,
             X_hs_in_d_t = X_hs_in_d_t,
@@ -587,9 +580,8 @@ def calc_main(
     ##### 計算結果のまとめ
 
     f_prim: float       = get_f_prim()                              # 電気の量 1kWh を熱量に換算する係数(kJ/kWh)
-    # CHECK: E_C_UT_d_t, E_H_UT_d_t 変数名表現の統一
     E_H_d_t: np.ndarray = E_E_H_d_t * f_prim / 1000 + E_UT_H_d_t    #1 時間当たりの暖房設備の設計一次エネルギー消費量(MJ/h)
-    E_C_d_t: np.ndarray = E_E_C_d_t * f_prim / 1000 + E_C_UT_d_t    #1 時間当たりの冷房設備の設計一次エネルギー消費量(MJ/h)
+    E_C_d_t: np.ndarray = E_E_C_d_t * f_prim / 1000 + E_UT_C_d_t    #1 時間当たりの冷房設備の設計一次エネルギー消費量(MJ/h)
     E_H                 = np.sum(E_H_d_t)                           #1 年当たりの暖房設備の設計一次エネルギー消費量(MJ/年)
     E_C                 = np.sum(E_C_d_t)                           #1 年当たりの冷房設備の設計一次エネルギー消費量(MJ/年)
 
@@ -605,7 +597,7 @@ def calc_main(
 
     df_output2['Theta_hs_C_out_d_t [℃]']    = Theta_hs_out_d_t
     df_output2['Theta_hs_C_in_d_t [℃]']     = Theta_hs_in_d_t
-    df_output2['Theta_ex_d_t [℃]']          = Theta_ex_d_t
+    df_output2['Theta_ex_d_t [℃]']          = climate.get_Theta_ex_d_t()
     df_output2['V_hs_supply_C_d_t [m3/h]']  = V_hs_supply_d_t
     df_output2['V_hs_vent_C_d_t [m3/h]']    = V_hs_vent_d_t
     df_output2['E_H_d_t [MJ/h]']            = E_H_d_t
@@ -613,7 +605,7 @@ def calc_main(
     df_output2['E_E_H_d_t [kWh/h]']         = E_E_H_d_t
     df_output2['E_E_C_d_t [kWh/h]']         = E_E_C_d_t
     df_output2['E_UT_H_d_t [MJ/h]']         = E_UT_H_d_t
-    df_output2['E_UT_C_d_t [MJ/h]']         = E_C_UT_d_t
+    df_output2['E_UT_C_d_t [MJ/h]']         = E_UT_C_d_t
     df_output2['L_H_d_t [MJ/h]']            = L_H_d_t
     df_output2['L_CS_d_t [MJ/h]']           = L_CS_d_t
     df_output2['L_CL_d_t [MJ/h]']           = L_CL_d_t
