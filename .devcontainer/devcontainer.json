@@ -10,9 +10,13 @@
 	// "features": {
 	// 	"ghcr.io/devcontainers/features/aws-cli:1": {}
 	// },
-  	// NOTE: bedrock 利用設定は必須ではありません
+
+	// NOTE: Bedrock 用設定です. 利用しない人ではスルーされます
   	"mounts": [
-  	  "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind"
+  	  "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind",
+	  // ユーザー設定をプロジェクトにマウント (ignore 済)
+	  // NOTE: claude 拡張はグローバル設定を参照しないため
+  	  "source=${localEnv:HOME}/.claude/settings.local.json,target=/workspaces/pyhees-jjj/.claude/settings.local.json,type=bind"
   	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -29,12 +33,14 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"amazonwebservices.aws-toolkit-vscode",
 				"mhutchie.git-graph",
 				"shardulm94.trailing-spaces",
 				"mechatroner.rainbow-csv",
 				"takumii.markdowntable",
-				"shd101wyy.markdown-preview-enhanced"
+				"shd101wyy.markdown-preview-enhanced",
+				// NOTE: 必要な人が各自でインストールする
+				// "amazonwebservices.aws-toolkit-vscode",
+				// "anthropic.claude-code"
 			]
 		}
 	}
