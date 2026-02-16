@@ -7,9 +7,10 @@
 	// NOTE: google colab にインポートして使用するのでバージョンを合わせる
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {
-	// 	"ghcr.io/devcontainers/features/aws-cli:1": {}
-	// },
+	"features": {
+		// NOTE: Bedrock 利用者限定だが 必須のため追加させてもらう
+		"ghcr.io/devcontainers/features/aws-cli:1": {}
+	},
 
 	// NOTE: マウント失敗時にコンテナビルドエラーとなるためオプショナルなファイルには使用できない
   	"mounts": [
@@ -36,8 +37,7 @@
 				"mechatroner.rainbow-csv",
 				"takumii.markdowntable",
 				"shd101wyy.markdown-preview-enhanced",
-				// NOTE: 必要な人が各自でインストールする
-				// "amazonwebservices.aws-toolkit-vscode",
+				// NOTE: 以降は必要な人が各自でインストールする
 				// "anthropic.claude-code"
 			]
 		}
