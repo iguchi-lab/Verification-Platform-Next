@@ -38,3 +38,6 @@ addopts = "-n auto" # pytest-xdistによる並列実行
 
 [tool.ruff]
 src = ["src"]
+
+[tool.pyright]
+extraPaths = ["src"]
