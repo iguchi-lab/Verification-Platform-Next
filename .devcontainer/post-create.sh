@@ -7,6 +7,8 @@ pip install -U pip
 pip install poetry
 
 # プロジェクトのルートに仮想環境を作成
+# 重要: この設定により .venv が /workspaces/pyhees-jjj/.venv に生成されます
+# VS Code の Python インタプリタ選択で "poetry ./.venv/bin/python" を選択してください
 poetry config virtualenvs.in-project true
 
 # NOTE: poetry lock を実行しないで下さい
