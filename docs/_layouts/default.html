@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if page.title %}{{ page.title }} – {% endif %}{{ site.title | default: site.github.repository_name }}</title>
+    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+
+    <!-- Mermaid Diagram Support -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({ startOnLoad: true, theme: 'default' });
+      mermaid.contentLoaded();
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <section class="page-header">
+        <h1 class="project-name">{{ site.title | default: site.github.repository_name }}</h1>
+        <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
+        {% if site.github.is_project_page %}
+          <a href="{{ site.github.repository_url }}" class="btn">GitHubで表示</a>
+        {% endif %}
+      </section>
+
+      <section class="main-content">
+        {{ content }}
+
+        <footer class="site-footer">
+          {% if site.github.is_project_page %}
+            <span class="site-footer-owner"><a href="{{ site.github.repository_url }}">{{ site.github.repository_name }}</a> は <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a> により管理されています。</span>
+          {% endif %}
+          <span class="site-footer-credits">このページは <a href="https://pages.github.com">GitHub Pages</a> により生成されました。</span>
+        </footer>
+      </section>
+    </div>
+  </body>
+</html>
