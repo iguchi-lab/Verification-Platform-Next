@@ -2,12 +2,12 @@
 # see: https://developers.google.com/idx/guides/customize-idx-env
 { pkgs, lib, ... }: {
   # Which nixpkgs channel to use.
-  channel = "stable-24.11"; # or "unstable"
+  channel = "stable-25.05"; # or "unstable"
 
   # Use https://search.nixos.org/packages to find packages
   packages = [
-    pkgs.python311
-    (let ruff = pkgs.callPackage ./ruff-0.10.0.nix {}; in ruff)
+    pkgs.python312
+    pkgs.ruff
     pkgs.poetry
     # for libraries written in C/C++ such as numpy and pandas, installed by poetry
     pkgs.libz
@@ -54,7 +54,7 @@
     workspace = {
       # Runs when a workspace is first created
       onCreate = {
-        poetry-install = "poetry install";
+        poetry-install = "VIRTUAL_ENV=./.venv poetry install";
       };
       # Runs when the workspace is (re)started
       onStart = {
