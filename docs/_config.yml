@@ -1,11 +1,5 @@
 title: pyhees Documentation
 description: Energy consumption calculation program documentation
 theme: jekyll-theme-minimal
-
-# Mermaid support
 markdown: kramdown
-
-# GitHub Pages で Mermaid を使用するために追加設定が必要だった
-head_includes:
-  - <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-  - <script>mermaid.initialize({ startOnLoad: true }); mermaid.contentLoaded();</script>
+lang: ja
