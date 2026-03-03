@@ -1,14 +1,15 @@
-# pyhees Documentation
+# 自立循環型住宅 全館暖冷房委員会 検証用プラットフォーム 計算ライブラリ
 
-Welcome to the pyhees project documentation.
+全館暖冷房委員会 検証用プラットフォームの計算ライブラリです。
 
-## Documentation
+## ドキュメント
 
 - [ステークホルダーマップ](ステークホルダーマップ.md)
 - [ブランチ戦略 - カスタム機能追加フロー](ブランチ戦略_カスタム機能追加フロー.md)
 - [ブランチ戦略 - 建研VerUp追従フロー](ブランチ戦略_建研VerUp追従フロー.md)
-- [プロセスモデル - 消費電力計算（標準）](プロセスモデル_消費電力計算_標準.md)
+- [計算フロー - タイプ1、タイプ2](計算フロー_タイプ1・2.md)
 
 ---
 
-For more information, visit the [main repository](https://github.com/BRI-EES-House/pyhees)
+[pyhees](https://github.com/BRI-EES-House/pyhees)（[エネルギー消費性能の算定⽅法](https://www.kenken.go.jp/becc/house.html)
+に基づく計算ファイル）をベースにして、一部計算方法を追加・変更しています。
