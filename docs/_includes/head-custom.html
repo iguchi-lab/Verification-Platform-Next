@@ -1,0 +1,71 @@
+<!-- Mermaid Support -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  /* Make wrapper responsive to full browser width */
+  .wrapper {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* Make main content section responsive to browser width */
+  section {
+    width: calc(100% - 300px) !important;
+    max-width: none !important;
+    margin-left: 300px !important;
+    float: none !important;
+    display: block !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+  }
+
+  .mermaid {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 20px 0;
+  }
+
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Responsive for smaller screens */
+  @media (max-width: 768px) {
+    section {
+      width: 100% !important;
+      margin-left: 0 !important;
+    }
+  }
+</style>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: true
+      }
+    });
+
+    // Find all code blocks with language-mermaid class
+    document.querySelectorAll('pre code.language-mermaid').forEach(function(block) {
+      const pre = block.parentElement;
+      const code = block.textContent;
+
+      // Create a div for mermaid
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = code;
+
+      // Replace the pre tag with the mermaid div
+      pre.parentNode.replaceChild(div, pre);
+    });
+
+    // Now render all mermaid divs
+    mermaid.run();
+  });
+</script>
