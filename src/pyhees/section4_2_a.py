@@ -243,6 +243,7 @@ def get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, C_df_H_d_
     return q_hs_H_d_t
 
 
+@jjj_mod
 def get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t,V_hs_supply_d_t, region):
     """(4a-1)(4b-1)(4c-1)(4a-2)(4b-2)(4c-2)(4a-3)(4b-3)(4c-3)
 
@@ -279,6 +280,7 @@ def get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t,
 
     return q_hs_CS_d_t, q_hs_CL_d_t
 
+
 # ============================================================================
 # A.4 圧縮機
 # ============================================================================
@@ -287,6 +289,7 @@ def get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t,
 # A.4.1 消費電力量
 # ============================================================================
 
+@jjj_mod
 def get_E_E_comp_H_d_t(q_hs_H_d_t, e_hs_H_d_t):
     """(5)
 
@@ -1353,6 +1356,7 @@ def get_alpha_c_hex_C(type, V_fan_x_C, X_hs_in, q_hs_rtd_C):
 # ============================================================================
 
 # コイル特性
+@jjj_mod
 def get_A_f_hex(type, q_hs_rtd_C):
     """ 室内機熱交換器の前面面積のうち熱交換に有効な面積 (m2)
 
@@ -1370,6 +1374,7 @@ def get_A_f_hex(type, q_hs_rtd_C):
       return 0.23559
 
 # 室内機熱交換器の表面積のうち熱交換に有効な面積 (m2)
+@jjj_mod
 def get_A_e_hex(type, q_hs_rtd_C):
     """ 室内機熱交換器の表面積のうち熱交換に有効な面積 (m2)
 
@@ -1498,6 +1503,7 @@ def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, 
 
 
 # 全般換気設備の比消費電力（W/(m3/h)）
+@jjj_mod
 def get_f_SFP(f_SFP):
     """ """
     if f_SFP is not None:
