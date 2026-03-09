@@ -167,7 +167,8 @@ def get_E_E_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t,  X_hs_out_d_t, X_hs_in_d_t,
     Theta_ex_d_t = get_Theta_ex(climate)
 
     # (4)
-    q_hs_C_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_CS_d_t, q_hs_CL_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
     # (38)
     E_E_fan_C_d_t = get_E_E_fan_C_d_t(type, P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t)
@@ -274,41 +275,7 @@ def get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t,
 
     q_hs_CL_d_t[Cf] = np.clip(L_wtr * rho_air * (X_hs_in_d_t[Cf] - X_hs_out_d_t[Cf]) * (V_hs_supply_d_t[Cf] / 3600) * 10 ** 3, 0, None)
 
-    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
-
-    return q_hs_C_d_t
-
-def get_q_hs_C_d_t_2(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region):
-    """ (4a-1)(4b-1)(4c-1)(4a-2)(4b-2)(4c-2)(4a-3)(4b-3)(4c-3)
-
-    Args:
-        Theta_hs_out_d_t:日付dの時刻tにおける熱源機の出口における空気温度 (℃)
-        Theta_hs_in_d_t:日付dの時刻tにおける熱源機の入口における空気温度 (℃)
-        X_hs_out_d_t:日付dの時刻tにおける熱源機の出口における絶対湿度 (kg/kg(DA))
-        X_hs_in_d_t:日付dの時刻tにおける熱源機の入口における絶対湿度 (kg/kg(DA))
-        V_hs_supply_d_t:日付dの時刻tにおける熱源機の風量 (m3/h)
-        region:地域区分
-
-    Returns:
-        日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力 (W)
-
-    """
-    H, C, M = get_season_array_d_t(region)
-    c_p_air = get_c_p_air()
-    rho_air = get_rho_air()
-    L_wtr = get_L_wtr()
-
-    # 暖房期および中間期 (4a-1)(4b-1)(4c-1)(4a-3)(4b-3)(4c-3)
-    q_hs_C_d_t = np.zeros(24 * 365)
-    q_hs_CS_d_t = np.zeros(24 * 365)
-    q_hs_CL_d_t = np.zeros(24 * 365)
-
-    # 冷房期 (4a-2)(4b-2)(4c-2)
-    q_hs_CS_d_t[C] = np.clip(c_p_air * rho_air * (Theta_hs_in_d_t[C] - Theta_hs_out_d_t[C]) * (V_hs_supply_d_t[C] / 3600), 0, None)
-
-    Cf = np.logical_and(C, q_hs_CS_d_t > 0)
-
-    q_hs_CL_d_t[Cf] = np.clip(L_wtr * rho_air * (X_hs_in_d_t[Cf] - X_hs_out_d_t[Cf]) * (V_hs_supply_d_t[Cf] / 3600) * 10 ** 3, 0, None)
+    # q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
     return q_hs_CS_d_t, q_hs_CL_d_t
 

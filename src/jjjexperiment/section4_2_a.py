@@ -165,7 +165,8 @@ def calc_E_E_C_d_t_type1_and_type3(
     assert type in [計算モデル.ダクト式セントラル空調機, 計算モデル.RAC活用型全館空調_潜熱評価モデル], "type1,3 専用ロジック"
 
     # (4) 潜熱/顕熱を使用せずに全熱負荷を再計算する
-    q_hs_C_d_t = dc_a.get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_CS_d_t, q_hs_CL_d_t = dc_a.get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
     """ e_th: ヒートポンプサイクルの理論効率(-) """
     # (22) 中間冷房能力運転時
