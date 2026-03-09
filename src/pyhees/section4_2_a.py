@@ -369,22 +369,8 @@ def get_e_hs_C_d_t(e_th_C_d_t, e_r_C_d_t):
 # A.4.3.1 エネルギー消費量の算定におけるヒートポンプサイクルの理論効率に対する熱源機の効率の比
 # ==============================================================================================
 
-@jjj_cloned
 @log_res(['e_r_H_d_t'])
-def get_e_r_H_d_t_2023(q_hs_H_d_t):
-    """(9-1)(9-2)(9-3)(9-4) ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）対応_コンプレッサ効率特性
-
-    Args:
-      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（W）
-    Returns:
-      日付dの時刻tにおける暖房時のヒートポンプサイクルの理論効率に対する熱源機の効率の比（-）
-    """
-    x = q_hs_H_d_t / 1000
-    e_r_H_d_t = jjj_consts.a_r_H_t_t_a4 * x**4 + jjj_consts.a_r_H_t_t_a3 * x**3 + jjj_consts.a_r_H_t_t_a2 * x**2 + jjj_consts.a_r_H_t_t_a1 * x + jjj_consts.a_r_H_t_t_a0
-
-    return e_r_H_d_t
-
-@log_res(['e_r_H_d_t'])
+@jjj_cloned  # 潜熱評価モデル
 def get_e_r_H_d_t(q_hs_H_d_t, q_hs_rtd_H, q_hs_min_H, q_hs_mid_H, e_r_mid_H, e_r_min_H, e_r_rtd_H):
     """(9-1)(9-2)(9-3)(9-4)
 
@@ -429,19 +415,7 @@ def get_e_r_H_d_t(q_hs_H_d_t, q_hs_rtd_H, q_hs_min_H, q_hs_mid_H, e_r_mid_H, e_r
 
     return e_r_H_d_t
 
-@jjj_cloned
-def get_e_r_C_d_t_2023(q_hs_C_d_t):
-    """(10-1)(10-2)(10-3)(10-4) _コンプレッサ効率特性
-    Args:
-      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（W）
-    Returns:
-      日付dの時刻tにおける冷房時のヒートポンプサイクルの理論効率に対する熱源機の効率の比（-）
-    """
-    x = q_hs_C_d_t / 1000
-    e_r_C_d_t = jjj_consts.a_r_C_t_t_a4 * x**4 + jjj_consts.a_r_C_t_t_a3 * x**3 + jjj_consts.a_r_C_t_t_a2 * x**2 + jjj_consts.a_r_C_t_t_a1 * x + jjj_consts.a_r_C_t_t_a0
-
-    return e_r_C_d_t
-
+@jjj_cloned  # 潜熱評価モデル
 def get_e_r_C_d_t(q_hs_C_d_t, q_hs_rtd_C, q_hs_min_C, q_hs_mid_C, e_r_mid_C, e_r_min_C, e_r_rtd_C):
     """(10-1)(10-2)(10-3)(10-4)
 
@@ -1310,6 +1284,7 @@ def get_alpha_c_hex_H(type, V_fan_x_H, q_hs_rtd_C):
 
     return alpha_c_hex_H
 
+@jjj_mod
 def get_alpha_c_hex_C(type, V_fan_x_C, X_hs_in, q_hs_rtd_C):
     """(36)
 
