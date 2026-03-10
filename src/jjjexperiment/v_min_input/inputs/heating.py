@@ -23,8 +23,6 @@ class InputMinVolumeInput:
     def from_dict(cls, data: dict) -> 'InputMinVolumeInput':
         """JSON辞書からインスタンスを作成"""
         kwargs = {}
-        if 'subtract_ventilation_power' in data:
-            kwargs['subtract_ventilation_power'] = ファン消費電力から換気分を引く(int(data['subtract_ventilation_power']))
 
         if 'input_V_hs_min' in data:
             kwargs['input_V_hs_min'] = 最低風量直接入力(int(data['input_V_hs_min']))
@@ -48,4 +46,9 @@ class InputMinVolumeInput:
                         if 'E_E_fan_logic' not in data:
                             raise Exception('E_E_fan_logic ファン消費電力算定方法の指定がありません.')
                         kwargs['E_E_fan_logic'] = ファン消費電力算定方法(int(data['E_E_fan_logic']))
+            else:
+                # 最低風量直接入力しない時の既存モデリングの挙動を修正
+                if 'subtract_ventilation_power' in data:
+                    kwargs['subtract_ventilation_power'] = ファン消費電力から換気分を引く(int(data['subtract_ventilation_power']))
+
         return cls(**kwargs)
