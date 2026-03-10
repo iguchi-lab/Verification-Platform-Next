@@ -19,7 +19,7 @@ def _calc_E_E_fan_d_t(q_hs_d_t, V_hs_vent_d_t, f_SFP, coeffs):
     return E_E_fan_d_t
 
 @jjj_cloning
-def get_e_r_H_d_t_2023(q_hs_H_d_t):
+def get_e_r_H_d_t(q_hs_H_d_t):
     """(9-1)(9-2)(9-3)(9-4) ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）対応_コンプレッサ効率特性
 
     Args:
@@ -32,7 +32,7 @@ def get_e_r_H_d_t_2023(q_hs_H_d_t):
     return e_r_H_d_t
 
 @jjj_cloning
-def get_e_r_C_d_t_2023(q_hs_C_d_t):
+def get_e_r_C_d_t(q_hs_C_d_t):
     """(10-1)(10-2)(10-3)(10-4) _コンプレッサ効率特性
 
     Args:
