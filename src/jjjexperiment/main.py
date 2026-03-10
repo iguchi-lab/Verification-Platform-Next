@@ -260,7 +260,7 @@ def calc_main(
                         , V_hs_dsgn_H
                         , q_hs_H_d_t  # W
                         , heat_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
-                        , v_min_heating_input.subtract_ventilation_power)
+                        , heat_ac_setting.subtract_ventilation_power)
 
             case 最低風量直接入力.入力する:
                 print(最低風量直接入力.入力する)
@@ -467,7 +467,7 @@ def calc_main(
                         , V_hs_dsgn_C
                         , q_hs_C_d_t  # W
                         , cool_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
-                        , v_min_cooling_input.subtract_ventilation_power)
+                        , cool_ac_setting.subtract_ventilation_power)
 
             case 最低風量直接入力.入力する:
                 print(最低風量直接入力.入力する)
