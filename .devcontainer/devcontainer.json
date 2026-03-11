@@ -9,7 +9,11 @@
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		// NOTE: Bedrock 利用者限定だが 必須のため追加させてもらう
-		"ghcr.io/devcontainers/features/aws-cli:1": {}
+		"ghcr.io/devcontainers/features/aws-cli:1": {},
+		// NOTE: GitHub MCP サーバー利用のために追加
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		}
 	},
 
 	// NOTE: マウント失敗時にコンテナビルドエラーとなるためオプショナルなファイルには使用できない

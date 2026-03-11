@@ -10,6 +10,7 @@ from jjjexperiment.common import *
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res  # デバッグ用ロガー
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.inputs.options import *
+import jjjexperiment.latent_load.section4_2_a as jjj_latent
 
 from jjjexperiment.denchu.inputs.heating import DenchuCatalogSpecification as H_CatalogSpec, RealInnerCondition as H_RealInnerCondition
 from jjjexperiment.denchu.inputs.cooling import DenchuCatalogSpecification as C_CatalogSpec, RealInnerCondition as C_RealInnerCondition
@@ -43,7 +44,7 @@ def calc_E_E_H_d_t_type1_and_type3(
     """ e_r: ヒートポンプサイクルの理論効率に対する熱源機の効率の比(-) """
     if type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:  #コンプレッサ効率特性
         # 日付dの時刻tにおける暖房時
-        e_r_H_d_t = dc_a.get_e_r_H_d_t_2023(q_hs_H_d_t)
+        e_r_H_d_t = jjj_latent.get_e_r_H_d_t(q_hs_H_d_t)
     else:
         # (11) 定格暖房能力運転時
         e_r_rtd_H = dc_a.get_e_r_rtd_H(e_th_rtd_H, q_hs_rtd_H, P_hs_rtd_H, P_fan_rtd_H)
@@ -165,7 +166,8 @@ def calc_E_E_C_d_t_type1_and_type3(
     assert type in [計算モデル.ダクト式セントラル空調機, 計算モデル.RAC活用型全館空調_潜熱評価モデル], "type1,3 専用ロジック"
 
     # (4) 潜熱/顕熱を使用せずに全熱負荷を再計算する
-    q_hs_C_d_t = dc_a.get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_CS_d_t, q_hs_CL_d_t = dc_a.get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
     """ e_th: ヒートポンプサイクルの理論効率(-) """
     # (22) 中間冷房能力運転時
@@ -187,7 +189,7 @@ def calc_E_E_C_d_t_type1_and_type3(
         e_r_C_d_t = dc_a.get_e_r_C_d_t(q_hs_C_d_t, q_hs_rtd_C, q_hs_min_C, q_hs_mid_C, e_r_mid_C, e_r_min_C, e_r_rtd_C)
     elif type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:  #コンプレッサ効率特性
         # TODO: 潜熱評価モデルが 潜熱(q_hs_CL) ではなく 全熱(q_hs_C) を使用してOKか確認
-        e_r_C_d_t = dc_a.get_e_r_C_d_t_2023(q_hs_C_d_t)  # 日付dの時刻tにおける冷房時
+        e_r_C_d_t = jjj_latent.get_e_r_C_d_t(q_hs_C_d_t)  # 日付dの時刻tにおける冷房時
     else:
         raise Exception('冷房設備機器の種類の入力が不正です。')
 

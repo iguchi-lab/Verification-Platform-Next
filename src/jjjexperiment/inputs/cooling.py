@@ -55,7 +55,5 @@ class CRACSpecification:
             input_C_af['dedicated_chamber'] = int(data.get(f'dedicated_chamber{suffix}', 1)) == 2
             input_C_af['fixed_fin_direction'] = int(data.get(f'fixed_fin_direction{suffix}', 1)) == 2
 
-        return cls(
-            q_rtd=q_rtd, q_max=q_max, e_rtd=e_rtd,
-            dualcompressor=dualcompressor, input_C_af=input_C_af
-        )
+        return cls(q_rtd=q_rtd, q_max=q_max, e_rtd=e_rtd,
+                   dualcompressor=dualcompressor, input_C_af=input_C_af)

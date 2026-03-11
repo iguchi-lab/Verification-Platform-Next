@@ -108,7 +108,7 @@ class Test冷房負荷計算:
         region = 6  # 地域区分
 
         # Act
-        result = get_q_hs_C_d_t(
+        q_hs_CS_d_t, q_hs_CL_d_t = get_q_hs_C_d_t(
             Theta_hs_out_d_t=Theta_hs_out_d_t,
             Theta_hs_in_d_t=Theta_hs_in_d_t,
             X_hs_out_d_t=X_hs_out_d_t,
@@ -116,6 +116,7 @@ class Test冷房負荷計算:
             V_hs_supply_d_t=V_hs_supply_d_t,
             region=region
         )
+        result = q_hs_CS_d_t + q_hs_CL_d_t
 
         # Assert
         assert isinstance(result, np.ndarray)
@@ -142,7 +143,7 @@ class Test冷房負荷計算:
         region = 6
 
         # Act
-        result = get_q_hs_C_d_t(
+        q_hs_CS_d_t, q_hs_CL_d_t = get_q_hs_C_d_t(
             Theta_hs_out_d_t=Theta_hs_out_d_t,
             Theta_hs_in_d_t=Theta_hs_in_d_t,
             X_hs_out_d_t=X_hs_out_d_t,
@@ -150,6 +151,7 @@ class Test冷房負荷計算:
             V_hs_supply_d_t=V_hs_supply_d_t,
             region=region
         )
+        result = q_hs_CS_d_t + q_hs_CL_d_t
 
         # Assert
         assert result[summer_index] == 0.0  # 温度・湿度差がゼロの場合、冷房能力もゼロになること
@@ -172,7 +174,7 @@ class Test冷房負荷計算:
         region = 6
 
         # Act
-        result = get_q_hs_C_d_t(
+        q_hs_CS_d_t, q_hs_CL_d_t = get_q_hs_C_d_t(
             Theta_hs_out_d_t=Theta_hs_out_d_t,
             Theta_hs_in_d_t=Theta_hs_in_d_t,
             X_hs_out_d_t=X_hs_out_d_t,
@@ -180,6 +182,7 @@ class Test冷房負荷計算:
             V_hs_supply_d_t=V_hs_supply_d_t,
             region=region
         )
+        result = q_hs_CS_d_t + q_hs_CL_d_t
 
         # Assert
         assert result[summer_index] > 0  # 湿度差がある場合、潜熱負荷も含めて正の値になること
@@ -229,7 +232,7 @@ class Test暖冷房負荷比較:
             region=region
         )
 
-        cooling_result = get_q_hs_C_d_t(
+        q_hs_CS_d_t, q_hs_CL_d_t = get_q_hs_C_d_t(
             Theta_hs_out_d_t=Theta_hs_out_C,
             Theta_hs_in_d_t=Theta_hs_in_C,
             X_hs_out_d_t=X_hs_out_C,
@@ -237,6 +240,7 @@ class Test暖冷房負荷比較:
             V_hs_supply_d_t=V_hs_supply_C,
             region=region
         )
+        cooling_result = q_hs_CS_d_t + q_hs_CL_d_t
 
         # Assert
         assert heating_result[winter_index] > 0  # 冬期は暖房負荷が発生

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 # JJJ
-from .options import 全般換気機能, 機器仕様手動入力タイプ, 暖房方式, 冷房方式, 計算モデル
+from .options import 全般換気機能, 機器仕様手動入力タイプ, 暖房方式, 冷房方式, 計算モデル, ファン消費電力から換気分を引く
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 @dataclass
@@ -25,6 +25,9 @@ class AcSetting:
     """設計風量 [m3/h]"""
     f_SFP: float = 0.4 * 0.36
     """ファンの比消費電力"""
+    # NOTE: オリジナルロジックそのまま
+    subtract_ventilation_power: ファン消費電力から換気分を引く = ファン消費電力から換気分を引く.換気分を引く
+    """ファン消費電力から換気分を引くかどうかのフラグ"""
 
     # 機器仕様入力フィールド (初期値None)
     q_hs_rtd_input: Optional[float] = None
@@ -61,6 +64,9 @@ class AcSetting:
                 kwargs['duct_insulation'] = '全て断熱区画内である'
             else:
                 raise ValueError('ダクトが通過する空間の入力が不正です。')
+
+        if 'subtract_ventilation_power' in data:
+            kwargs['subtract_ventilation_power'] = ファン消費電力から換気分を引く(int(data['subtract_ventilation_power']))
 
         if 'input_f_SFP' in data and data['input_f_SFP'] == 2:
             kwargs['f_SFP'] = float(data['f_SFP'])

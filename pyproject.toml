@@ -41,3 +41,4 @@ src = ["src"]
 
 [tool.pyright]
 extraPaths = ["src"]
+ignore = ["src/pyhees"]

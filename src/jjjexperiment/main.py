@@ -260,7 +260,7 @@ def calc_main(
                         , V_hs_dsgn_H
                         , q_hs_H_d_t  # W
                         , heat_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
-                        , v_min_heating_input.subtract_ventilation_power)
+                        , heat_ac_setting.subtract_ventilation_power)
 
             case 最低風量直接入力.入力する:
                 print(最低風量直接入力.入力する)
@@ -436,17 +436,8 @@ def calc_main(
     _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
 
     # (4) 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力(-)
-    q_hs_CS_d_t, q_hs_CL_d_t = dc_a.get_q_hs_C_d_t_2(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, house.region)
-
-    if cool_ac_setting.type in [
-        計算モデル.ダクト式セントラル空調機,
-        計算モデル.RAC活用型全館空調_潜熱評価モデル
-    ]:
-        # (4) 潜熱/顕熱を使用せずに全熱負荷を再計算する
-        q_hs_C_d_t = dc_a.get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, house.region)
-    else:
-        # 潜熱/顕熱を使用する
-        q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
+    q_hs_CS_d_t, q_hs_CL_d_t = dc_a.get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, house.region)
+    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
     if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
         print(cool_ac_setting.type)
@@ -476,7 +467,7 @@ def calc_main(
                         , V_hs_dsgn_C
                         , q_hs_C_d_t  # W
                         , cool_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
-                        , v_min_cooling_input.subtract_ventilation_power)
+                        , cool_ac_setting.subtract_ventilation_power)
 
             case 最低風量直接入力.入力する:
                 print(最低風量直接入力.入力する)
