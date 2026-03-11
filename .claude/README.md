@@ -22,20 +22,18 @@ GitHub > Settings > Developer settings > Personal access tokens > Generate new t
 
 必要なスコープ: `repo`, `read:org`
 
-**2. `.env` ファイルを作成してトークンを設定**
+**2. `.mcp.json` をサンプルから作成してトークンを設定**
 
 ```bash
-cp .env.sample .env
+cp .mcp.sample.json .mcp.json
 ```
 
-作成した `.env` 内の `your_token_here` を実際のトークンに書き換えてください。
-
-MCP サーバーの設定は `.mcp.json`（リポジトリルート）に記載されており、変更不要です。
+作成した `.mcp.json` 内の `your_github_pat_here` を実際のトークンに書き換えてください。
 
 **3. Claude Code を再起動**して設定を反映させます。
 
 ### 注意事項
 
-- `.env` は gitignore 済みのため、トークンがコミットされることはありません
-- `.mcp.json` はリポジトリに含まれるプロジェクト共通設定です
+- `.mcp.json` は gitignore 済みのため、トークンがコミットされることはありません
+- `.mcp.sample.json` がリポジトリに含まれるプロジェクト共通のサンプルです
 - この設定は任意です。設定しない開発者には影響しません
