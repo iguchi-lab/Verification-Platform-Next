@@ -110,13 +110,15 @@ class JJJExperimentModule(Module):
             else:
                 raise KeyError('r_A_ufvnt が設定されていません')
 
-        # NOTE: 最小風量直接入力しない場合はsubtract_ventilation_powerはデフォルト値
+        # NOTE: 最小風量直接入力が有効な場合は subtract は無意味なので強制オフ
+        # デフォルト値（換気分を引く）は各データクラス側で保持する
         for ha_key in ['H_A', 'C_A']:
             if self._input is not None and ha_key in self._input:
                 v_min = self._input[ha_key].get('input_V_hs_min', None)
-                if v_min is None or 最低風量直接入力(int(v_min)) != 最低風量直接入力.入力する:
-                    self._input[ha_key]['subtract_ventilation_power'] = ファン消費電力から換気分を引く.換気分を引く.value
-                    print(f"{ha_key}: subtract_ventilation_power をデフォルト値に設定")
+                v_min_input_enabled = v_min is not None and 最低風量直接入力(int(v_min)) == 最低風量直接入力.入力する
+                if v_min_input_enabled:
+                    self._input[ha_key]['subtract_ventilation_power'] = ファン消費電力から換気分を引く.換気分を引かない.value
+                    print(f"{ha_key}: subtract_ventilation_power を強制オフ (最低風量直接入力有効)")
 
         # NOTE: 過剰熱繰越と併用しないオプションはここで強制オフしている
         carry_over_heat = self._input.get('carry_over_heat', None)

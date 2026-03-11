@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from jjjexperiment.inputs.options import ファン消費電力から換気分を引く
 
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
@@ -16,6 +17,8 @@ class CRACSpecification:
     """小能力時高効率型コンプレッサー"""
     input_C_af: dict = None
     """室内機吹き出し風量に関する出力補正係数の入力"""
+    subtract_ventilation_power: ファン消費電力から換気分を引く = ファン消費電力から換気分を引く.換気分を引く
+    """ファン消費電力から換気分を引くかどうかのフラグ"""
 
     @classmethod
     def from_dict(cls, data: dict, q_rtd_C: float, q_max_C: float, e_rtd_C: float) -> 'CRACSpecification':
@@ -49,7 +52,10 @@ class CRACSpecification:
             input_C_af['dedicated_chamber'] = int(data.get(f'dedicated_chamber{suffix}', 1)) == 2
             input_C_af['fixed_fin_direction'] = int(data.get(f'fixed_fin_direction{suffix}', 1)) == 2
 
-        return cls(
-            q_rtd=q_rtd, q_max=q_max, e_rtd=e_rtd,
-            dualcompressor=dualcompressor, input_C_af=input_C_af
-        )
+        subtract_ventilation_power = ファン消費電力から換気分を引く(
+            int(data['subtract_ventilation_power'])
+        ) if 'subtract_ventilation_power' in data else ファン消費電力から換気分を引く.換気分を引く
+
+        return cls(q_rtd=q_rtd, q_max=q_max, e_rtd=e_rtd,
+                   dualcompressor=dualcompressor, input_C_af=input_C_af,
+                   subtract_ventilation_power=subtract_ventilation_power)
