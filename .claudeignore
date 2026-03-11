@@ -1,0 +1,3 @@
+# Personal settings containing secrets — Claude should not read these
+.claude/settings.local.json
+.env
