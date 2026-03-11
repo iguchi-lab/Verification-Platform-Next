@@ -45,7 +45,7 @@ from scipy import optimize
 # JJJ_EXPERIMENT ADD
 from jjjexperiment.common import *
 import jjjexperiment.constants as jjj_consts
-from jjjexperiment.inputs.options import 計算モデル
+from jjjexperiment.inputs.options import 計算モデル, ファン消費電力から換気分を引く
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
 
 # ============================================================================
@@ -95,7 +95,7 @@ def calc_E_E_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent
     q_hs_H_d_t = get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, C_df_H_d_t, region)
 
     # (37)
-    E_E_fan_H_d_t = get_E_E_fan_H_d_t(type, P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t)
+    E_E_fan_H_d_t = get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t)
 
     # (20)
     e_th_mid_H = calc_e_th_mid_H(type, V_fan_mid_H, q_hs_mid_H, q_hs_rtd_C)
@@ -167,7 +167,8 @@ def get_E_E_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t,  X_hs_out_d_t, X_hs_in_d_t,
     Theta_ex_d_t = get_Theta_ex(climate)
 
     # (4)
-    q_hs_C_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_CS_d_t, q_hs_CL_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
     # (38)
     E_E_fan_C_d_t = get_E_E_fan_C_d_t(type, P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t)
@@ -242,6 +243,7 @@ def get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, C_df_H_d_
     return q_hs_H_d_t
 
 
+@jjj_mod
 def get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t,V_hs_supply_d_t, region):
     """(4a-1)(4b-1)(4c-1)(4a-2)(4b-2)(4c-2)(4a-3)(4b-3)(4c-3)
 
@@ -274,43 +276,10 @@ def get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t,
 
     q_hs_CL_d_t[Cf] = np.clip(L_wtr * rho_air * (X_hs_in_d_t[Cf] - X_hs_out_d_t[Cf]) * (V_hs_supply_d_t[Cf] / 3600) * 10 ** 3, 0, None)
 
-    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
-
-    return q_hs_C_d_t
-
-def get_q_hs_C_d_t_2(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region):
-    """ (4a-1)(4b-1)(4c-1)(4a-2)(4b-2)(4c-2)(4a-3)(4b-3)(4c-3)
-
-    Args:
-        Theta_hs_out_d_t:日付dの時刻tにおける熱源機の出口における空気温度 (℃)
-        Theta_hs_in_d_t:日付dの時刻tにおける熱源機の入口における空気温度 (℃)
-        X_hs_out_d_t:日付dの時刻tにおける熱源機の出口における絶対湿度 (kg/kg(DA))
-        X_hs_in_d_t:日付dの時刻tにおける熱源機の入口における絶対湿度 (kg/kg(DA))
-        V_hs_supply_d_t:日付dの時刻tにおける熱源機の風量 (m3/h)
-        region:地域区分
-
-    Returns:
-        日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力 (W)
-
-    """
-    H, C, M = get_season_array_d_t(region)
-    c_p_air = get_c_p_air()
-    rho_air = get_rho_air()
-    L_wtr = get_L_wtr()
-
-    # 暖房期および中間期 (4a-1)(4b-1)(4c-1)(4a-3)(4b-3)(4c-3)
-    q_hs_C_d_t = np.zeros(24 * 365)
-    q_hs_CS_d_t = np.zeros(24 * 365)
-    q_hs_CL_d_t = np.zeros(24 * 365)
-
-    # 冷房期 (4a-2)(4b-2)(4c-2)
-    q_hs_CS_d_t[C] = np.clip(c_p_air * rho_air * (Theta_hs_in_d_t[C] - Theta_hs_out_d_t[C]) * (V_hs_supply_d_t[C] / 3600), 0, None)
-
-    Cf = np.logical_and(C, q_hs_CS_d_t > 0)
-
-    q_hs_CL_d_t[Cf] = np.clip(L_wtr * rho_air * (X_hs_in_d_t[Cf] - X_hs_out_d_t[Cf]) * (V_hs_supply_d_t[Cf] / 3600) * 10 ** 3, 0, None)
+    # q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
     return q_hs_CS_d_t, q_hs_CL_d_t
+
 
 # ============================================================================
 # A.4 圧縮機
@@ -320,6 +289,7 @@ def get_q_hs_C_d_t_2(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_
 # A.4.1 消費電力量
 # ============================================================================
 
+@jjj_mod
 def get_E_E_comp_H_d_t(q_hs_H_d_t, e_hs_H_d_t):
     """(5)
 
@@ -399,22 +369,8 @@ def get_e_hs_C_d_t(e_th_C_d_t, e_r_C_d_t):
 # A.4.3.1 エネルギー消費量の算定におけるヒートポンプサイクルの理論効率に対する熱源機の効率の比
 # ==============================================================================================
 
-@jjj_cloned
 @log_res(['e_r_H_d_t'])
-def get_e_r_H_d_t_2023(q_hs_H_d_t):
-    """(9-1)(9-2)(9-3)(9-4) ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）対応_コンプレッサ効率特性
-
-    Args:
-      q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（W）
-    Returns:
-      日付dの時刻tにおける暖房時のヒートポンプサイクルの理論効率に対する熱源機の効率の比（-）
-    """
-    x = q_hs_H_d_t / 1000
-    e_r_H_d_t = jjj_consts.a_r_H_t_t_a4 * x**4 + jjj_consts.a_r_H_t_t_a3 * x**3 + jjj_consts.a_r_H_t_t_a2 * x**2 + jjj_consts.a_r_H_t_t_a1 * x + jjj_consts.a_r_H_t_t_a0
-
-    return e_r_H_d_t
-
-@log_res(['e_r_H_d_t'])
+@jjj_cloned  # 潜熱評価モデル
 def get_e_r_H_d_t(q_hs_H_d_t, q_hs_rtd_H, q_hs_min_H, q_hs_mid_H, e_r_mid_H, e_r_min_H, e_r_rtd_H):
     """(9-1)(9-2)(9-3)(9-4)
 
@@ -459,19 +415,7 @@ def get_e_r_H_d_t(q_hs_H_d_t, q_hs_rtd_H, q_hs_min_H, q_hs_mid_H, e_r_mid_H, e_r
 
     return e_r_H_d_t
 
-@jjj_cloned
-def get_e_r_C_d_t_2023(q_hs_C_d_t):
-    """(10-1)(10-2)(10-3)(10-4) _コンプレッサ効率特性
-    Args:
-      q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（W）
-    Returns:
-      日付dの時刻tにおける冷房時のヒートポンプサイクルの理論効率に対する熱源機の効率の比（-）
-    """
-    x = q_hs_C_d_t / 1000
-    e_r_C_d_t = jjj_consts.a_r_C_t_t_a4 * x**4 + jjj_consts.a_r_C_t_t_a3 * x**3 + jjj_consts.a_r_C_t_t_a2 * x**2 + jjj_consts.a_r_C_t_t_a1 * x + jjj_consts.a_r_C_t_t_a0
-
-    return e_r_C_d_t
-
+@jjj_cloned  # 潜熱評価モデル
 def get_e_r_C_d_t(q_hs_C_d_t, q_hs_rtd_C, q_hs_min_C, q_hs_mid_C, e_r_mid_C, e_r_min_C, e_r_rtd_C):
     """(10-1)(10-2)(10-3)(10-4)
 
@@ -1340,6 +1284,7 @@ def get_alpha_c_hex_H(type, V_fan_x_H, q_hs_rtd_C):
 
     return alpha_c_hex_H
 
+@jjj_mod
 def get_alpha_c_hex_C(type, V_fan_x_C, X_hs_in, q_hs_rtd_C):
     """(36)
 
@@ -1386,6 +1331,7 @@ def get_alpha_c_hex_C(type, V_fan_x_C, X_hs_in, q_hs_rtd_C):
 # ============================================================================
 
 # コイル特性
+@jjj_mod
 def get_A_f_hex(type, q_hs_rtd_C):
     """ 室内機熱交換器の前面面積のうち熱交換に有効な面積 (m2)
 
@@ -1403,6 +1349,7 @@ def get_A_f_hex(type, q_hs_rtd_C):
       return 0.23559
 
 # 室内機熱交換器の表面積のうち熱交換に有効な面積 (m2)
+@jjj_mod
 def get_A_e_hex(type, q_hs_rtd_C):
     """ 室内機熱交換器の表面積のうち熱交換に有効な面積 (m2)
 
@@ -1429,8 +1376,9 @@ def get_A_e_hex(type, q_hs_rtd_C):
 # ============================================================================
 
 @jjj_cloned  # 潜熱評価モデル, 最低風量・最低電力 直接入力
-@jjj_mod  # SFP あるなら使う用にだけ変更
-def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t, f_SFP=None):
+@jjj_mod  # SFP あるなら使う用にだけ変更。また、消費電力から換気分を引くかどうか設定可能にする。
+def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t,
+                      f_SFP=None, subtract_ventilation_power=ファン消費電力から換気分を引く.換気分を引く):
     """(37)
 
     Args:
@@ -1447,7 +1395,17 @@ def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, 
     f_SFP = get_f_SFP(f_SFP)
     E_E_fan_H_d_t = np.zeros(24 * 365)
 
-    a = (P_fan_rtd_H - f_SFP * V_hs_vent_d_t) \
+    # 換気分のファン消費電力
+    match subtract_ventilation_power:
+        case ファン消費電力から換気分を引く.換気分を引く:
+            # 従来式
+            P_fan_vent_d_t = f_SFP * V_hs_vent_d_t
+        case ファン消費電力から換気分を引く.換気分を引かない:
+            P_fan_vent_d_t = 0
+        case _:
+            raise ValueError
+
+    a = (P_fan_rtd_H - P_fan_vent_d_t) \
         * ((V_hs_supply_d_t - V_hs_vent_d_t) / (V_hs_dsgn_H - V_hs_vent_d_t)) * 10 ** (-3)
 
     E_E_fan_H_d_t[q_hs_H_d_t > 0] = np.clip(a[q_hs_H_d_t > 0], 0, None)
@@ -1482,8 +1440,9 @@ def get_e_rtd_C():
     return e_rtd_C
 
 @jjj_cloned  # 潜熱評価モデル, 最低風量・最低電力 直接入力
-@jjj_mod  # SFP あるなら使う用にだけ変更
-def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t, f_SFP=None):
+@jjj_mod  # SFP あるなら使う用にだけ変更。また、消費電力から換気分を引くかどうか設定可能にする。
+def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t,
+                      f_SFP=None, subtract_ventilation_power=ファン消費電力から換気分を引く.換気分を引く):
     """(38)
 
     Args:
@@ -1500,7 +1459,17 @@ def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, 
     f_SFP = get_f_SFP(f_SFP)
     E_E_fan_C_d_t = np.zeros(24 * 365)
 
-    a = (P_fan_rtd_C - f_SFP * V_hs_vent_d_t) \
+    # 換気分のファン消費電力
+    match subtract_ventilation_power:
+        case ファン消費電力から換気分を引く.換気分を引く:
+            # 従来式
+            P_fan_vent_d_t = f_SFP * V_hs_vent_d_t
+        case ファン消費電力から換気分を引く.換気分を引かない:
+            P_fan_vent_d_t = 0
+        case _:
+            raise ValueError
+
+    a = (P_fan_rtd_C - P_fan_vent_d_t) \
         * ((V_hs_supply_d_t - V_hs_vent_d_t) / (V_hs_dsgn_C - V_hs_vent_d_t)) * 10 ** (-3)
 
     E_E_fan_C_d_t[q_hs_C_d_t > 0] = np.clip(a[q_hs_C_d_t > 0], 0, None)
@@ -1509,6 +1478,7 @@ def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, 
 
 
 # 全般換気設備の比消費電力（W/(m3/h)）
+@jjj_mod
 def get_f_SFP(f_SFP):
     """ """
     if f_SFP is not None:

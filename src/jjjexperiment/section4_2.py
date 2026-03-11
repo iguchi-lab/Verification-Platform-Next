@@ -46,7 +46,8 @@ from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 # F25-1 最小風量・最低電力直接入力
 from jjjexperiment.v_min_input.logic import rescale_V_vent_g_i
-import jjjexperiment.v_min_input as jjj_V_min_input
+from jjjexperiment.v_min_input.inputs.heating import InputMinVolumeInput as HeatMinVolumeInput
+from jjjexperiment.v_min_input.inputs.cooling import InputMinVolumeInput as CoolMinVolumeInput
 
 @dataclass
 class Load_DTI:
@@ -84,8 +85,8 @@ def calc_Q_UT_A(
         cool_CRAC: CoolCRACSpec,
         new_ufac: UnderfloorAc,
         new_ufac_df: UfVarsDataFrame,
-        v_min_heat_input: jjj_V_min_input.inputs.heating.InputMinVolumeInput,
-        v_min_cool_input: jjj_V_min_input.inputs.cooling.InputMinVolumeInput,
+        v_min_heat_input: HeatMinVolumeInput,
+        v_min_cool_input: CoolMinVolumeInput,
         V_hs_dsgn_H: VHS_DSGN_H,
         V_hs_dsgn_C: VHS_DSGN_C,
         v_supply_cap_dto: VSupplyCapDto,

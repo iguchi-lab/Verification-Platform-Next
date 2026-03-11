@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from jjjexperiment.latent_load.section4_2_a import get_E_E_fan_H_d_t, get_E_E_fan_C_d_t
 
 class Test暖房送風機消費電力:
@@ -12,7 +13,13 @@ class Test暖房送風機消費電力:
         f_SFP = 0.4  # ファンの比消費電力 [W/(m3・h)]
 
         V_hs_vent_d_t[0] = 50.0    # 全般換気分風量 [m3/h] - 暖房期
-        q_hs_H_d_t[0] = 1000.0     # 平均暖房能力 [W] - 暖房期
+        q_hs_H_d_t[0] = 1000.0     # 平均暖房能力 [W] - 暖房期 (1.0 kW)
+
+        # Expected calculation
+        # x = 1.0 kW
+        # P_fan = 1.4675 * 1^3 - 8.5886 * 1^2 + 20.217 * 1 + 50 = 1.4675 - 8.5886 + 20.217 + 50 = 63.0959 [W]
+        # P_fan_vent = f_SFP * V_hs_vent = 0.4 * 50 = 20.0 [W]
+        # result = (63.0959 - 20.0) * 1e-3 = 43.0959 * 1e-3 = 0.0430959 [kW]
 
         # Act
         result = get_E_E_fan_H_d_t(
@@ -25,7 +32,7 @@ class Test暖房送風機消費電力:
         assert isinstance(result, np.ndarray)
         assert len(result) == 8760
         assert all(result >= 0)  # 消費電力は非負値であること
-        assert result[0] > 0     # 暖房期では正の値になること
+        assert result[0] == pytest.approx(0.0430959)
 
     def test_境界値_ゼロ負荷(self):
         """暖房負荷がゼロの場合の送風機消費電力テスト"""

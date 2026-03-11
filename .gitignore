@@ -28,3 +28,7 @@ dist/
 
 # Claude private settings
 .claude/settings.local.json
+.mcp.json
+
+# JetBrains IDE specific
+/.idea/

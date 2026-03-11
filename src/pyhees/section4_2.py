@@ -3235,7 +3235,8 @@ if __name__ == '__main__':
         q_hs_H_d_t = get_q_hs_H_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, C_df_H_d_t, region)
 
         # 1時間当たりの熱源機の平均冷房能力
-        q_hs_C_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+        q_hs_CS_d_t, q_hs_CL_d_t = get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, region)
+        q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
 
         # 未処理暖房負荷の一次エネ相当
         E_UT_H_d_t = calc_E_UT_H_d_t(region, A_A, A_MR, A_OR, r_env, mu_H, mu_C, Q, mode_H, H_A, spec_MR, spec_OR, spec_HS,

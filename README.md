@@ -1,49 +1,98 @@
-# pyhees
+# 自立循環型住宅 全館暖冷房委員会 検証用プラットフォーム
 
-This calculation programe based on [the documents of the evaluation of energy consumption performance](https://www.kenken.go.jp/becc/house.html) is released for the purpose of confirming the calculation process and using it for research and study. 
+[自立循環プロジェクト](https://www.jjj-design.org/) の全館暖冷房委員会で開発している検証用プラットフォームの計算プログラムです。
 
-計算過程の確認及び調査研究等に活⽤することを⽬的として、[エネルギー消費性能の算定⽅法](https://www.kenken.go.jp/becc/house.html) に基づく計算ファイルを公開しています。 
+[pyhees](https://github.com/BRI-EES-House/pyhees)（[エネルギー消費性能の算定⽅法](https://www.kenken.go.jp/becc/house.html) に基づく計算ファイル）をベースにして、一部計算方法を追加・変更しています。
 
-The calculation method was developed by the Energy Conservation Performance Evaluation Method Study Committee established within [the Institute for Building Environment and Energy Conservation (IBEC)](https://www.ibec.or.jp/) and [the Japan Sustainable Building Council (JSBC)](https://www.jsbc.or.jp/), and has been published as a calculation method for energy consumption performance on [the website of the Building Research Institute](https://www.kenken.go.jp/becc/house.html) with the technical cooperation of [the Building Research Institute (BRI)](https://www.kenken.go.jp/) and [the National Institute for Land and Infrastructure Management (NILIM)](http://www.nilim.go.jp/).
+# ディレクトリ構成
 
-エネルギー消費性能の算定方法は、[建築環境・省エネルギー機構（IBEC）](https://www.ibec.or.jp/)及び[日本サステナブル建築協会（JSBC）](https://www.jsbc.or.jp/)内に設置された省エネルギー性能評価法検討委員会により開発され、[建築研究所](https://www.kenken.go.jp/)および[国土技術政策総合研究所](http://www.nilim.go.jp/)の技術的協力のもと、[建築研究所内のホームページ]( https://www.kenken.go.jp/becc/house.html)にて公開されています。
-
-Based on this calculation method, an evaluation program for the Building Energy Conservation Law ( https://house.lowenergy.jp/ ) has been developed. Therefore, it can be said that, in principle, the evaluation program published publicly and the calculation file published here are the same calculation method.
-
-この算定方法に基づき、建築物省エネ法における評価プログラム（ https://house.lowenergy.jp/ ）が開発されています。従って公開されている評価プログラムと、ここで公開する計算ファイルは原則として同じ算定方法であるといえます。
-
-
-## Sponsors
-
-This programe is developed as a part of the activities of the progmae SWG (residential) in the energy saving performance evaluation development comittie established in Institue for Building Environment and Energy Conservation (IBEC) and Japan Sustainable Building Consortium (JSBC).
-
-本プログラムは建築環境・省エネルギー機構（IBEC）及び日本サステナブル建築協会（JSBC）内に設置された省エネルギー性能評価法検討委員会におけるプログラムSWG（住宅）の活動の一環として開発されています。
-
-
-## Requirement
-
-Python 3.12.11+
-
-## Quick Start
+計算ロジックの変更、検証に必要なディレクトリ構成は、以下の通りです。
 
 ```
-pip3 install git+https://github.com/BRI-EES-House/pyhees.git
+.
+├── src
+│   ├── jjjexperiment     # 検証用PF独自のコード。入力パラメータの定義と処理、検証用PF独自の計算ロジックはこちらに追加します。
+│   │   ├── carryover_heat     # 【独自ロジック】過剰熱量繰越
+│   │   ├── denchu             # 【独自ロジック】電中研モデル
+│   │   ├── latent_load        # 【独自ロジック】潜熱評価モデル
+│   │   ├── underfloor_ac      # 【独自ロジック】床下空調新ロジック
+│   │   ├── v_min_input        # 【独自ロジック】最低風量
+│   │   ├── v_supply_cap       # 【独自ロジック】風量上限キャップ
+│   │   ├── inputs             # 【共通】入力パラメータの定義、処理
+│   │   │   ├── ac_setting.py  # 【共通】空調（暖房、冷房）の入力項目
+│   │   │   └── common.py      # 【共通】地域区分、床面積、外皮性能等のその他の入力項目
+│   │   ├── main.py            # 【共通】モジュール利用時 最初に呼び出される関数
+│   │   └── section4_2.py      # 【共通】改変ロジックのメインとなる 未処理負荷計算
+│   └── pyhees            # 元のpyhees由来のコード。軽微なロジック追加・変更の場合、こちらのコードを変更します。
+├── README.md             # このファイルです。
+├── pyproject.toml        # プロジェクトの設定ファイルです。ライブラリを追加・変更する際に編集します。
+└── poetry.lock           # Poetryの依存関係の管理ファイルです。ライブラリを追加・変更した際に `poetry lock` コマンドで更新します。
 ```
 
-## Examples
-see examples [here](https://github.com/BRI-EES-House/pyhees_example)
+# 機能変更をする際の手順
 
-## Authors
+## 入力パラメータの追加方法
 
-This has been developed by the programe SWG (residential) since 2021. The members are:
-- [Habara Hiromi](https://github.com/HiromiHabara) ([BRI](http://www.kenken.go.jp/))
-- [Miura Hisahi](https://github.com/HisashiMiura) ([BRI](https://www.kenken.go.jp/))
-- [Kumakura Eiko](https://github.com/kkkuma) ([NILIM](http://www.nilim.go.jp/))
-- [Uda Wataru](https://github.com/udawtr) ([Youworks Co.,Ltd](https://youworks.jp/))
-- [Aikoh Mayumi](https://github.com/MayumiAikoh) ([Youworks Co.,Ltd](https://youworks.jp/))
-- [Mizutani Suguru](https://github.com/SMizutani) ([JYUKANKYO RESEARCH INSTITUTE INC.](https://www.jyuri.co.jp/))
-- Takayama Azusa ([JYUKANKYO RESEARCH INSTITUTE INC.](https://www.jyuri.co.jp/))
+1. 検証用PFのColabファイルに、入力パラメータを追加
 
-## License
+2. inputsフォルダ以下に、入力パラメータを入れるクラス（DTO）を作成
 
-Distributed under the MIT License. See `LICENSE` for more information.
+    ```python
+    @dataclass
+    class MaxPowerConsumption:
+        max: float  # デフォルト値を指定することもできる
+        """電力の最大値"""
+
+        @classmethod
+        def from_dict(cls, data: dict) -> 'MaxPowerConsumption':
+            # 対応する JSON のキーを指定
+            cls(max = data['max_power_consumption'])
+    ```
+
+3. jjjexperiment/inputs/di_container.py に、データを登録する
+
+    ```python
+    @singleton  # 必須のおまじない
+    @provider   # 必須のおまじない
+    # 関数名は任意
+    def create_max_power_consumption(self) -> MaxPowerConsumption:  # 戻り値の型として上記を指定
+        return MaxPowerConsumption.from_dict(self._input if self._input is not None else {})
+    ```
+
+4. データを取得する
+
+   トップで呼び出している下記関数の定義に、型指定した引数を追加する必要があります。
+
+    ```python
+    # ファイル main.py > calc_main()
+    def calc_main(
+        ...
+        max_power_consumption: MaxPowerConsumption  # 追加
+    ) -> dict | None:
+
+    # ファイル section4_2.py > calc_Q_UT_A()
+    @jjj_cloning
+    @inject
+    def calc_Q_UT_A(
+        ...
+        max_power_consumption: MaxPowerConsumption  # 追加
+    ):
+    ```
+
+    これ以降の関数では、通常通り引数に渡す 呼び出しコードになります。
+
+## 従来ロジックの軽微な変更
+
+WEBPROのロジックを軽微に変更する場合、`src/pyhees` フォルダ以下のコードを直接編集します。
+該当する関数に引数や戻り値を追加する場合、呼び出し元のコードも変更する必要があります。
+
+## 新規ロジックの追加
+
+検証用プラットフォーム独自の計算ロジックを追加する場合、`src/jjjexperiment` フォルダ以下にソースコードファイルを作成します。
+これまでに追加したものが[ディレクトリ構成](#ディレクトリ構成)にありますので、参考にしてください。
+
+# 無視して良いコード
+
+* `@jjj_cloning` ... pyheesのコードをコピーした上で、変更をしていることの目印です。この印は、計算に影響はありません。
+* `@log_res(...)` ... イズミが検証時にログを出力するためのものです。計算に影響はありません。
+
