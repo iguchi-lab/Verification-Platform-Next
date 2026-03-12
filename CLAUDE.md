@@ -8,6 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The original calculation methodology is published by the Building Research Institute (BRI): https://www.kenken.go.jp/becc/house.html
 
+### Companion Form Application: ISP_Verification-Platform
+
+**[ISP_Verification-Platform](https://github.com/izumi-system-development/ISP_Verification-Platform)** is a separate Google Colab-based Jupyter Notebook (`Verification_Platform_default.ipynb`) that serves as the **user-facing input form UI** for this library.
+
+Key integration points:
+- The notebook imports `jjjexperiment.main` and calls `jjjexperiment.main.calc(input_data)` directly
+- Input form fields are defined with `#@param` decorators (Google Colab Forms), collecting values into an `input_data` dict
+- Form variables map 1-to-1 onto the dict keys consumed by `InputMinVolumeInput.from_dict()` and sibling dataclasses (e.g., `H_A_V_hs_min` → `H_A["V_hs_min"]`)
+- **Renaming input keys, changing Enum integer values, or altering `from_dict()` parsing in this repo will break the form app** — treat the public API of `inputs/` modules as stable
+
 ## Common Development Commands
 
 ### Environment Setup
