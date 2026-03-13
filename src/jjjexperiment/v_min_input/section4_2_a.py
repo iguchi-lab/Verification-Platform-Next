@@ -1,6 +1,8 @@
 # JJJ
 from jjjexperiment.common import *
 from jjjexperiment.inputs.options import *
+from pyhees.section4_2 import get_season_array_d_t
+
 
 # ============================================================================
 # A.6 送風機
@@ -13,8 +15,9 @@ def get_E_E_fan_d_t(
         V_hs_vent_d_t: Array8760,  # NOTE: V_hs_vent として V_hs_min が入る
         V_hs_supply_d_t: Array8760,
         V_hs_dsgn: float,
-        q_hs_d_t: Array8760,
-        E_E_fan_min: float
+        E_E_fan_min: float,
+        region: int,
+        for_cooling: bool
         ) -> Array8760:
     """(37)改 日付dの時刻tにおける1時間当たり 送風機の消費電力量のうちの暖房設備への付加分 [kWh/h]
 
@@ -24,18 +27,14 @@ def get_E_E_fan_d_t(
         V_hs_vent_d_t: 日付dの時刻tにおける熱源機の風量のうちの全般換気分 [m3/h]
         V_hs_supply_d_t: 日付dの時刻tにおける熱源機の風量 [m3/h]
         V_hs_dsgn: 設計風量 [m3/h]
-        q_hs_d_t: 単時点 熱源機の平均能力 [W]
         E_E_fan_min: 最低電力直接入力値 [W]
+        region: 地域区分
+        for_cooling: 冷房計算の場合はTrue、暖房の場合はFalse
 
     Returns:
         単時点 送風機の消費電力量のうちの暖冷房設備への付加分 [kWh/h]
     """
     # NOTE: 本式の利用は 最低風量・最低電力 ともに直接入力ありに限られる
-
-    # サーモOFFの時 V_hs_vent_d_t (V_hs_min) に置き換え
-    V_hs_supply_d_t = np.where(q_hs_d_t <= 0,
-                        V_hs_vent_d_t,
-                        np.maximum(V_hs_supply_d_t, V_hs_vent_d_t))
 
     # 最低
     x1_d_t = V_hs_vent_d_t
@@ -44,8 +43,9 @@ def get_E_E_fan_d_t(
     x2 = V_hs_dsgn
     y2 = P_fan_rtd
 
-    # 消費電力が発生する時間。従来ロジックと同じ条件でフィルタする。
-    f = q_hs_d_t > 0
+    # 冷房期と中間期のファン消費電力は冷房消費電力、暖房期のファン消費電力は暖房消費電力とする
+    H, C, M = get_season_array_d_t(region)
+    f = (C | M) if for_cooling else H
 
     match E_E_fan_logic:
         case ファン消費電力算定方法.直線近似法:
