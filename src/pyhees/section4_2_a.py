@@ -1415,7 +1415,7 @@ def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, 
             if region is None:
                 raise ValueError("ファン消費電力から換気分を引かない場合、 region は必須です。")
             H, _, _ = get_season_array_d_t(region)
-            E_E_fan_H_d_t[H] = (a + P_fan_vent_d_t * 10 ** (-3))[H] # 中間期のファン消費電力は冷房消費電力とするため、ここでは切り捨てる。
+            E_E_fan_H_d_t[H] = np.clip(a + P_fan_vent_d_t * 10 ** (-3), 0, None)[H] # 中間期のファン消費電力は冷房消費電力とするため、ここでは切り捨てる。
         case _:
             raise ValueError
 
@@ -1488,7 +1488,7 @@ def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, 
             if region is None:
                 raise ValueError("ファン消費電力から換気分を引かない場合、 region は必須です。")
             _, C, M = get_season_array_d_t(region)
-            E_E_fan_C_d_t[C | M] = (a + P_fan_vent_d_t * 10 ** (-3))[C | M] # 中間期のファン消費電力は、冷房消費電力として扱う
+            E_E_fan_C_d_t[C | M] = np.clip(a + P_fan_vent_d_t * 10 ** (-3), 0, None)[C | M] # 中間期のファン消費電力は、冷房消費電力として扱う
         case _:
             raise ValueError
 
