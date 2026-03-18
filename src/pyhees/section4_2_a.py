@@ -1378,7 +1378,7 @@ def get_A_e_hex(type, q_hs_rtd_C):
 @jjj_cloned  # 潜熱評価モデル, 最低風量・最低電力 直接入力
 @jjj_mod  # SFP あるなら使う用にだけ変更。また、消費電力から換気分を引くかどうか設定可能にする。
 def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t,
-                      f_SFP=None, subtract_ventilation_power=ファン消費電力から換気分を引く.換気分を引く):
+                      region=None, f_SFP=None, subtract_ventilation_power=ファン消費電力から換気分を引く.換気分を引く):
     """(37)
 
     Args:
@@ -1387,6 +1387,9 @@ def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, 
       V_hs_supply_d_t: param V_hs_dsgn_H:暖房時の設計風量（m3/h）
       q_hs_H_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力（-）
       V_hs_dsgn_H: returns: 日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
+      region: 地域区分
+      f_SFP: SFP係数
+      subtract_ventilation_power: ファン消費電力から換気分を引くかどうか
 
     Returns:
       日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
@@ -1396,19 +1399,25 @@ def get_E_E_fan_H_d_t(P_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, 
     E_E_fan_H_d_t = np.zeros(24 * 365)
 
     # 換気分のファン消費電力
-    match subtract_ventilation_power:
-        case ファン消費電力から換気分を引く.換気分を引く:
-            # 従来式
-            P_fan_vent_d_t = f_SFP * V_hs_vent_d_t
-        case ファン消費電力から換気分を引く.換気分を引かない:
-            P_fan_vent_d_t = 0
-        case _:
-            raise ValueError
+    P_fan_vent_d_t = f_SFP * V_hs_vent_d_t
 
+    # 従来式によるファン消費電力
     a = (P_fan_rtd_H - P_fan_vent_d_t) \
         * ((V_hs_supply_d_t - V_hs_vent_d_t) / (V_hs_dsgn_H - V_hs_vent_d_t)) * 10 ** (-3)
 
-    E_E_fan_H_d_t[q_hs_H_d_t > 0] = np.clip(a[q_hs_H_d_t > 0], 0, None)
+    match subtract_ventilation_power:
+        case ファン消費電力から換気分を引く.換気分を引く:
+            # 従来ロジックでは、サーモOFF時はファン消費電力を0とする
+            E_E_fan_H_d_t[q_hs_H_d_t > 0] = np.clip(a[q_hs_H_d_t > 0], 0, None)
+        case ファン消費電力から換気分を引く.換気分を引かない:
+            # 換気分を引かない。つまり、従来式のファン消費電力に換気分を足す。
+            # サーモOFF時もファン消費電力を0としない。代わりに、暖房期以外の消費電力は0とする（中間期と冷房期は、冷房消費電力として扱う）
+            if region is None:
+                raise ValueError("ファン消費電力から換気分を引かない場合、 region は必須です。")
+            H, _, _ = get_season_array_d_t(region)
+            E_E_fan_H_d_t[H] = np.clip(a + P_fan_vent_d_t * 10 ** (-3), 0, None)[H] # 中間期のファン消費電力は冷房消費電力とするため、ここでは切り捨てる。
+        case _:
+            raise ValueError
 
     return E_E_fan_H_d_t
 
@@ -1442,7 +1451,7 @@ def get_e_rtd_C():
 @jjj_cloned  # 潜熱評価モデル, 最低風量・最低電力 直接入力
 @jjj_mod  # SFP あるなら使う用にだけ変更。また、消費電力から換気分を引くかどうか設定可能にする。
 def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t,
-                      f_SFP=None, subtract_ventilation_power=ファン消費電力から換気分を引く.換気分を引く):
+                      region=None, f_SFP=None, subtract_ventilation_power=ファン消費電力から換気分を引く.換気分を引く):
     """(38)
 
     Args:
@@ -1451,6 +1460,9 @@ def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, 
       V_hs_supply_d_t: param V_hs_dsgn_C:冷房時の設計風量（m3/h）
       q_hs_C_d_t: 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力（-）
       V_hs_dsgn_C: returns: 日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
+      region: 地域区分
+      f_SFP: SFP係数
+      subtract_ventilation_power: ファン消費電力から換気分を引くかどうか
 
     Returns:
       日付dの時刻tにおける1時間当たりの送風機の消費電力量のうちの暖房設備への付加分（kWh/h）
@@ -1460,19 +1472,25 @@ def get_E_E_fan_C_d_t(P_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, 
     E_E_fan_C_d_t = np.zeros(24 * 365)
 
     # 換気分のファン消費電力
-    match subtract_ventilation_power:
-        case ファン消費電力から換気分を引く.換気分を引く:
-            # 従来式
-            P_fan_vent_d_t = f_SFP * V_hs_vent_d_t
-        case ファン消費電力から換気分を引く.換気分を引かない:
-            P_fan_vent_d_t = 0
-        case _:
-            raise ValueError
+    P_fan_vent_d_t = f_SFP * V_hs_vent_d_t
 
+    # 従来式によるファン消費電力
     a = (P_fan_rtd_C - P_fan_vent_d_t) \
         * ((V_hs_supply_d_t - V_hs_vent_d_t) / (V_hs_dsgn_C - V_hs_vent_d_t)) * 10 ** (-3)
 
-    E_E_fan_C_d_t[q_hs_C_d_t > 0] = np.clip(a[q_hs_C_d_t > 0], 0, None)
+    match subtract_ventilation_power:
+        case ファン消費電力から換気分を引く.換気分を引く:
+            # 従来ロジックでは、サーモOFF時はファン消費電力を0とする
+            E_E_fan_C_d_t[q_hs_C_d_t > 0] = np.clip(a[q_hs_C_d_t > 0], 0, None)
+        case ファン消費電力から換気分を引く.換気分を引かない:
+            # 換気分を引かない。つまり、従来式のファン消費電力に換気分を足す。
+            # サーモOFF時もファン消費電力を0としない。代わりに、暖房期の消費電力は0とする（中間期と冷房期は、冷房消費電力として扱う）
+            if region is None:
+                raise ValueError("ファン消費電力から換気分を引かない場合、 region は必須です。")
+            _, C, M = get_season_array_d_t(region)
+            E_E_fan_C_d_t[C | M] = np.clip(a + P_fan_vent_d_t * 10 ** (-3), 0, None)[C | M] # 中間期のファン消費電力は、冷房消費電力として扱う
+        case _:
+            raise ValueError
 
     return E_E_fan_C_d_t
 
