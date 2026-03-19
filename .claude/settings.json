@@ -1,5 +1,5 @@
 {
   "permissions": {
-    "deny": ["Read(.env*)", "Read(.mcp.json)"]
+    "deny": ["Read(**/.env*)", "Read(**/.mcp.json)", "Read(.claude/settings.local.json)"]
   }
 }
