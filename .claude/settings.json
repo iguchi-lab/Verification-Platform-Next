@@ -1,8 +1,5 @@
-// 利用時には settings.local.json を別途配置 .gitignore 済み
 {
   "permissions": {
-      "deny": [
-      "Read(**/.env*)"
-      ]
+    "deny": ["Read(.env*)", "Read(.mcp.json)"]
   }
 }

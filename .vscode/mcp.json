@@ -1,0 +1,11 @@
+{
+	"servers": {
+		"github": {
+			"command": "bash",
+			"args": [
+				"-c",
+				"set -a && source ${workspaceFolder}/.env && npx -y @modelcontextprotocol/server-github"
+			]
+		}
+	}
+}
