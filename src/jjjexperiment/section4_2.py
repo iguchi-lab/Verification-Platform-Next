@@ -376,7 +376,7 @@ def calc_Q_UT_A(
         delta_L_room2uf_d_t_i  \
             = np.hstack([
                 calc_delta_L_room2uf_i(
-                    U_s_input,
+                    new_ufac.U_s_floor_ins,
                     A_s_ufac_i,
                     np.abs(Theta_ex_d_t[t] - Theta_in_d_t[t])
                 ) for t in range(24*365)  # 各要素が shape(12,1)
@@ -407,11 +407,12 @@ def calc_Q_UT_A(
                     L_d_t_flr1st[t],
                     np.sum(A_s_ufac_i),
                     U_s_input,
+                    new_ufac.U_s_floor_ins,
                     Theta_in_d_t[t], Theta_ex_d_t[t],
                     V_dash_supply_flr1st_d_t[t]
                 ) for t in range(24*365)
             ])
-        
+
         #260112 IGUCHI デバッグ用
         print("L_d_t_flr1st[0]:", L_d_t_flr1st[0])
         print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
@@ -419,9 +420,9 @@ def calc_Q_UT_A(
         print("Theta_in_d_t[0]:", Theta_in_d_t[0])
         print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
         print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
-        
+
         print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
-        
+
         L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
         phi = climate.get_phi(skin.Q)
 
@@ -430,11 +431,11 @@ def calc_Q_UT_A(
             = delta_L_uf2outdoor_d_t(phi, L_uf, (Theta_uf_d_t - Theta_ex_d_t))
         assert np.shape(delta_L_uf2outdoor_d_t) == (24 * 365,)
         Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
-        
+
         #260112 IGUCHI デバッグ用
         print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
         print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
-        
+
         # 3. 床下 -> 地盤 (逃げ方向)
         # 吸熱応答係数の初項 定数取得クラスを作成するか
         Phi_A_0 = 0.025504994
@@ -456,11 +457,11 @@ def calc_Q_UT_A(
             delta_L_uf2gnd_d_t(q_hs_rtd_H(), q_hs_rtd_C(),
                 A_s_ufac_A, jjj_consts.R_g, Phi_A_0, Theta_uf_d_t, sum_Theta_dash_g_surf_A_m, Theta_g_avg)
         Q_hat_hs_d_t += delta_L_uf2gnd_d_t
-        
+
         #260112 IGUCHI デバッグ用
         print("delta_L_uf2gnd_d_t[0] 床下⇒地盤: ", delta_L_uf2gnd_d_t[0])
         print("Q_hat_hs_d_t[0] 床下⇒地盤を足す: ", Q_hat_hs_d_t[0])
-        
+
         # 補正完了した Q^hs を使って V'supply を再計算する
         should_be_adjusted_Q_hat_hs_d_t = False
 
@@ -852,7 +853,7 @@ def calc_Q_UT_A(
             # 部屋→床下への熱移動分が戻ってくるため負荷控除する
             delta_L_uf2room_d_t_i = np.hstack([
                 calc_delta_L_room2uf_i(
-                    U_s_input,
+                    new_ufac.U_s_floor_ins,
                     A_s_ufac_i,
                     np.abs(Theta_star_HBR_d_t[t] - Theta_ex_d_t[t])
                 ) for t in range(24*365)

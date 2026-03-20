@@ -196,11 +196,10 @@ class Test_床下空調時_式8補正:
         _logger.debug(f"A_s_ufac_i: {A_s_ufac_i}")
         _logger.debug(f"r_A_s_ufac: {r_A_s_ufac}")
 
-        U_s_vert = climate.get_U_s_vert(environment.get_Q())
-        _logger.debug(f"U_s_vert: {U_s_vert}")
+        _logger.debug(f"U_s_floor_ins: {new_ufac.U_s_floor_ins}")
         delta_L_uf2room_d_t_i = np.hstack([
             calc_delta_L_room2uf_i(
-                U_s_vert, A_s_ufac_i,
+                new_ufac.U_s_floor_ins, A_s_ufac_i,
                 np.abs(Theta_star_HBR_d_t[tt] - Theta_ex_d_t[tt]))
             for tt in range(24*365)
         ])

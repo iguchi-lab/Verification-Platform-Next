@@ -90,7 +90,7 @@ class Test_床下空調時_式40:
 
         Theta_uf  \
             = calc_Theta_uf(1, None,  # 暖房期
-                L_H_d_t_flr1st[t], A_s_ufvnt, U_s_vert, Theta_in_d_t[t], Theta_ex_d_t[t], V_dash_supply_flr1st)
+                L_H_d_t_flr1st[t], A_s_ufvnt, U_s_vert, new_ufac.U_s_floor_ins, Theta_in_d_t[t], Theta_ex_d_t[t], V_dash_supply_flr1st)
 
         # Assert
         assert Theta_uf == pytest.approx(23.20, abs=1e-2)
@@ -142,7 +142,7 @@ class Test_床下空調時_式40:
 
         delta_L_uf2room \
             = calc_delta_L_room2uf_i(
-                U_s_vert, A_s_ufac_i, Theta_in_d_t[t] - Theta_ex_d_t[t])
+                new_ufac.U_s_floor_ins, A_s_ufac_i, Theta_in_d_t[t] - Theta_ex_d_t[t])
 
         # Assert
         assert np.shape(delta_L_uf2room) == (12, 1)

@@ -79,3 +79,5 @@ def get_Theta_star_NR(
             # (52-3)
             Theta_star_NR = Theta_star_HBR
             return Theta_star_NR
+
+        case _: raise ValueError('HCMの値が不正です')

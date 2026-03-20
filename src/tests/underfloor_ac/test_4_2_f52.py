@@ -22,7 +22,8 @@ class Test式52負荷バランス時非居室室温:
             L_CS_NR_A=0.0,          # 非居室冷房負荷
             Theta_NR=20.0,          # 非居室温度
             Theta_uf=31.2,          # 床下空調温度
-            HCM=JJJ_HCM.H           # 暖冷房区画の熱容量
+            HCM=JJJ_HCM.H,          # 暖冷房区画の熱容量
+            r_A_NR_1F_excl_bath=get_r_A_NR_uf_1F_excl_bath()
         )
         # Assert
         assert result == pytest.approx(25.4, abs=1e-1)
@@ -43,7 +44,8 @@ class Test式52負荷バランス時非居室室温:
             L_CS_NR_A=0.0,          # 非居室冷房負荷
             Theta_NR=20.0,          # 非居室温度
             Theta_uf=23.2,          # 床下空調温度
-            HCM=JJJ_HCM.H           # 暖冷房区画の熱容量
+            HCM=JJJ_HCM.H,          # 暖冷房区画の熱容量
+            r_A_NR_1F_excl_bath=get_r_A_NR_uf_1F_excl_bath()
         )
         # Assert
         assert result == pytest.approx(19.4, abs=1e-1)
@@ -64,7 +66,8 @@ class Test式52負荷バランス時非居室室温:
             L_CS_NR_A=0.495,        # 冷房負荷
             Theta_NR=27.0,          # 非居室温度
             Theta_uf=24.3,          # 床下空調温度
-            HCM=JJJ_HCM.C           # 暖冷房区画の熱容量
+            HCM=JJJ_HCM.C,          # 暖冷房区画の熱容量
+            r_A_NR_1F_excl_bath=get_r_A_NR_uf_1F_excl_bath()
         )
         # Assert
         assert result == pytest.approx(26.3, abs=1e-1)

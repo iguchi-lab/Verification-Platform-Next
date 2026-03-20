@@ -64,6 +64,7 @@ class Test_床下空調時_式46_式48:
         # Arrange
 
         # Act
+        from jjjexperiment.inputs.house_service import get_r_A_NR_uf_1F_excl_bath
         Theta_NR = get_Theta_NR(
             Theta_star_NR = 19.40,
             Theta_star_HBR = 20.0,
@@ -76,7 +77,8 @@ class Test_床下空調時_式46_式48:
             U_prt = 2.17,
             A_prt_i = np.array([32.92, 24.02, 19.22, 15.61, 15.61]).reshape(-1, 1),
             Q = 2.6472,
-            Theta_uf = 24.89
+            Theta_uf = 24.89,
+            r_A_NR_1F_excl_bath = get_r_A_NR_uf_1F_excl_bath()
         )
         # Assert
         assert Theta_NR == pytest.approx(20.65, abs=1e-2)
