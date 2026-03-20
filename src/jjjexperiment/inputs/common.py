@@ -164,7 +164,8 @@ class HEX:
 
     def to_dict(self) -> dict:
         if not self.hex:
-            return None
+            # デフォルト値で誤計算させないため空の辞書を返す
+            return dict()
         return {
             'hex': self.hex,
             'etr_t': self.etr_t,
