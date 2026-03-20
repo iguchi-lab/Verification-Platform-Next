@@ -105,9 +105,10 @@ def get_Theta_NR(
     # NOTE: VAVなしのとき V',supply=V,supply -> k',prt,i=k,prt,i
 
     # (48b) [J/(K・s)]
-    #k_evp = (Q - 0.35 * 0.5 * 2.4) * A_NR + c_p_air * rho_air * (V_vent_l_NR / 3600)
-    #床下から非居室に貫流する面積は1階のみ　A_NR * r_A_NR_1F_excl_bath
-    k_evp = (Q - 0.35 * 0.5 * 2.4) * A_NR * r_A_NR_1F_excl_bath + c_p_air * rho_air * (V_vent_l_NR / 3600)
+    #IGUCHI: 床下から非居室に貫流する面積は1階のみ
+    A_NR_1F = A_NR * r_A_NR_1F_excl_bath
+
+    k_evp = (Q - 0.35 * 0.5 * 2.4) * A_NR_1F + c_p_air * rho_air * (V_vent_l_NR / 3600)
     # (48a)
     U_s = dc.get_U_s()  # U_s_vert でないチェック済み
 
@@ -119,16 +120,16 @@ def get_Theta_NR(
     #    / (k_evp
     #       + U_s * A_NR
     #       + k_prt_A)
-            
+
     #床下から非居室に貫流する面積は1階のみ　A_NR * r_A_NR_1F_excl_bath
     Theta_NR  \
         = ((k_evp + k_prt_A) * Theta_star_NR  \
-            + U_s * A_NR * r_A_NR_1F_excl_bath * Theta_uf  \
+            + U_s * A_NR_1F * Theta_uf  \
             - k_dash_prt_A * (Theta_star_HBR - Theta_star_NR)  \
             + np.sum(k_prt_i * (Theta_HBR_i - Theta_star_NR)))  \
         / (k_evp
-           + U_s * A_NR * r_A_NR_1F_excl_bath
+           + U_s * A_NR_1F
            + k_prt_A)
-            
+
     # NOTE: 非床下空調の式は定義しない(オリジナルを使用)
     return Theta_NR

@@ -42,17 +42,18 @@ def get_Theta_star_NR(
     c_p_air = dc.get_c_p_air()
     rho_air = dc.get_rho_air()
     U_s = dc.get_U_s()  # U_s_vert でないチェック済み
-            
+
     #260112 非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    k1 = (Q - 0.35 * 0.5 * 2.4) * A_NR * r_A_NR_1F_excl_bath \
+    A_NR_1F = A_NR * r_A_NR_1F_excl_bath
+
+    k1 = (Q - 0.35 * 0.5 * 2.4) * A_NR_1F \
         + c_p_air * rho_air * V_vent_l_NR / 3600  \
         + c_p_air * rho_air * V_dash_supply_A / 3600  \
         + U_prt * A_prt_A
 
-    #k2 = U_s * A_NR * np.abs(Theta_uf - Theta_NR)
     #260112 式のミスを修正、非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    k2 = U_s * A_NR * r_A_NR_1F_excl_bath
-    # NOTE: abs しないとバグる
+    #[OLD] k2 = U_s * A_NR * np.abs(Theta_uf - Theta_NR)
+    k2 = U_s * A_NR_1F
 
     match HCM:
         case JJJ_HCM.H:
