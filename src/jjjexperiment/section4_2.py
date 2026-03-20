@@ -524,7 +524,8 @@ def calc_Q_UT_A(
                 L_CS_NR_A = L_CS_NR_d_t_A,  # (8760,)
                 Theta_NR = Theta_in_d_t,  # この時点では仮置きの値を使用⇒夏期は27℃とする必要がある　250501 井口
                 Theta_uf = Theta_uf_d_t,  # (8760,)
-                HCM = HCM  # (8760,)
+                HCM = HCM,  # (8760,)
+                r_A_NR_1F_excl_bath = skin.r_A_NR_uf_1F_excl_bath
             )
         print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
         print("Q: ", skin.Q)
@@ -1190,7 +1191,8 @@ def calc_Q_UT_A(
                     U_prt = U_prt,
                     A_prt_i = A_prt_i.reshape(-1,1),
                     Q = skin.Q,
-                    Theta_uf = Theta_uf_d_t[t]
+                    Theta_uf = Theta_uf_d_t[t],
+                    r_A_NR_1F_excl_bath = skin.r_A_NR_uf_1F_excl_bath
                 ) for t in range(24*365)
             ])
         else:

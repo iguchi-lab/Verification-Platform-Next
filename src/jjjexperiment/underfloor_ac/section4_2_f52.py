@@ -16,7 +16,8 @@ def get_Theta_star_NR(
         L_CS_NR_A: float,
         Theta_NR: float,
         Theta_uf: float,
-        HCM: JJJ_HCM  # regionの代替
+        HCM: JJJ_HCM,  # regionの代替
+        r_A_NR_1F_excl_bath: float  # 非居室の1F(浴室除く)面積比 [-]
     ) -> float:
     """(52-1)(52-2)(52-3)
     Args:
@@ -43,14 +44,14 @@ def get_Theta_star_NR(
     U_s = dc.get_U_s()  # U_s_vert でないチェック済み
             
     #260112 非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    k1 = (Q - 0.35 * 0.5 * 2.4) * A_NR * 0.404 \
+    k1 = (Q - 0.35 * 0.5 * 2.4) * A_NR * r_A_NR_1F_excl_bath \
         + c_p_air * rho_air * V_vent_l_NR / 3600  \
         + c_p_air * rho_air * V_dash_supply_A / 3600  \
         + U_prt * A_prt_A
 
     #k2 = U_s * A_NR * np.abs(Theta_uf - Theta_NR)
     #260112 式のミスを修正、非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    k2 = U_s * A_NR * 0.404
+    k2 = U_s * A_NR * r_A_NR_1F_excl_bath
     # NOTE: abs しないとバグる
 
     match HCM:

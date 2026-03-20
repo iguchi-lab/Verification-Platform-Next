@@ -82,6 +82,7 @@ def get_Theta_NR(
         A_prt_i: Array5x1,
         Q: float,
         Theta_uf: float,
+        r_A_NR_1F_excl_bath: float  # 非居室の1F(浴室除く)面積比 [-]
     ) -> float:
     """単時点版 (48a)(48b) 床下空調 補正アリ
     """
@@ -105,8 +106,8 @@ def get_Theta_NR(
 
     # (48b) [J/(K・s)]
     #k_evp = (Q - 0.35 * 0.5 * 2.4) * A_NR + c_p_air * rho_air * (V_vent_l_NR / 3600)
-    #床下から非居室に貫流する面積は1階のみ　A_NR * 0.404
-    k_evp = (Q - 0.35 * 0.5 * 2.4) * A_NR * 0.404 + c_p_air * rho_air * (V_vent_l_NR / 3600)
+    #床下から非居室に貫流する面積は1階のみ　A_NR * r_A_NR_1F_excl_bath
+    k_evp = (Q - 0.35 * 0.5 * 2.4) * A_NR * r_A_NR_1F_excl_bath + c_p_air * rho_air * (V_vent_l_NR / 3600)
     # (48a)
     U_s = dc.get_U_s()  # U_s_vert でないチェック済み
 
@@ -119,14 +120,14 @@ def get_Theta_NR(
     #       + U_s * A_NR
     #       + k_prt_A)
             
-    #床下から非居室に貫流する面積は1階のみ　A_NR * 0.404
+    #床下から非居室に貫流する面積は1階のみ　A_NR * r_A_NR_1F_excl_bath
     Theta_NR  \
         = ((k_evp + k_prt_A) * Theta_star_NR  \
-            + U_s * A_NR * 0.404 * Theta_uf  \
+            + U_s * A_NR * r_A_NR_1F_excl_bath * Theta_uf  \
             - k_dash_prt_A * (Theta_star_HBR - Theta_star_NR)  \
             + np.sum(k_prt_i * (Theta_HBR_i - Theta_star_NR)))  \
         / (k_evp
-           + U_s * A_NR * 0.404
+           + U_s * A_NR * r_A_NR_1F_excl_bath
            + k_prt_A)
             
     # NOTE: 非床下空調の式は定義しない(オリジナルを使用)
