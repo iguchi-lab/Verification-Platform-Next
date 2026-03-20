@@ -32,6 +32,7 @@ from jjjexperiment.inputs.di_container import ClimateFile, CaseName
 # ドメインサービス
 from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
+from jjjexperiment.inputs.house_service import get_r_A_NR_uf_1F_excl_bath
 # F23-1 Vサプライの上限キャップ変更
 from jjjexperiment.v_supply_cap.inputs.v_supply_cap_dto import VSupplyCapDto
 import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
@@ -525,7 +526,7 @@ def calc_Q_UT_A(
                 Theta_NR = Theta_in_d_t,  # この時点では仮置きの値を使用⇒夏期は27℃とする必要がある　250501 井口
                 Theta_uf = Theta_uf_d_t,  # (8760,)
                 HCM = HCM,  # (8760,)
-                r_A_NR_1F_excl_bath = skin.r_A_NR_uf_1F_excl_bath
+                r_A_NR_1F_excl_bath = get_r_A_NR_uf_1F_excl_bath()
             )
         print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
         print("Q: ", skin.Q)
@@ -1192,7 +1193,7 @@ def calc_Q_UT_A(
                     A_prt_i = A_prt_i.reshape(-1,1),
                     Q = skin.Q,
                     Theta_uf = Theta_uf_d_t[t],
-                    r_A_NR_1F_excl_bath = skin.r_A_NR_uf_1F_excl_bath
+                    r_A_NR_1F_excl_bath = get_r_A_NR_uf_1F_excl_bath()
                 ) for t in range(24*365)
             ])
         else:

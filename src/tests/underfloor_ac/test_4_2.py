@@ -3,7 +3,8 @@ import pytest
 import numpy as np
 # JJJ
 from jjjexperiment.inputs.di_container import create_injector_from_json
-from jjjexperiment.inputs.common import HouseInfo, OuterSkin
+from jjjexperiment.inputs.common import HouseInfo
+from jjjexperiment.inputs.house_service import get_r_A_NR_uf_1F_excl_bath
 from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i
 from test_utils.utils import load_input_yaml
 
@@ -28,17 +29,11 @@ class Test_床下空調時_共通:
 
     def test_非居室1F浴室除く面積比(self):
         """
-        OuterSkin.r_A_NR_uf_1F_excl_bath が標準住戸における
+        get_r_A_NR_uf_1F_excl_bath が標準住戸における
         1F非居室(浴室除く)面積 / 非居室合計面積 ≈ 0.404 を返すこと
         """
-        # Arrange
-        yaml_fullpath = os.path.join(os.path.dirname(__file__), 'test_input.yaml')
-        injector = create_injector_from_json(load_input_yaml(yaml_fullpath))
-
-        skin = injector.get(OuterSkin)
-
         # Act
-        r = skin.r_A_NR_uf_1F_excl_bath
+        r = get_r_A_NR_uf_1F_excl_bath()
 
         # Assert
         # ゾーン6,7,9の有効面積 (3.31+1.66+10.76) / 標準住戸非居室合計 (38.93)
