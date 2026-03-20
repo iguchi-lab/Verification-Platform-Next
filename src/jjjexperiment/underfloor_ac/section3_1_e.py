@@ -4,6 +4,30 @@ import pyhees.section3_1_e as algo
 from jjjexperiment.logger import log_res
 
 
+def get_Theta_uf_d_t_runup_new_ufac() -> np.ndarray:
+    """新床下空調ロジック用の助走計算床下温度 (℃) の時系列を返す
+
+    標準住戸の新床下空調ロジックにおける助走計算に用いる
+    床下温度の代表値を季節区分ごとに並べた定数配列。
+    合計 8760 時間 (= 24 × 365)。
+
+    Returns:
+        ndarray: shape (8760,) の床下温度時系列 [℃]
+    """
+    THETA_UF_WARM = 27.69   # 冬・春・秋期の床下温度 [℃]
+    THETA_UF_COOL = 25.62   # 夏期の床下温度 [℃]
+    N_HOURS_WARM_1 = 2664   # 第1期間（年始〜春）[h]
+    N_HOURS_COOL   = 3721   # 第2期間（夏）[h]
+    N_HOURS_WARM_2 = 2375   # 第3期間（秋〜年末）[h]
+    assert N_HOURS_WARM_1 + N_HOURS_COOL + N_HOURS_WARM_2 == 24 * 365
+    return np.array(
+        [THETA_UF_WARM] * N_HOURS_WARM_1
+        + [THETA_UF_COOL] * N_HOURS_COOL
+        + [THETA_UF_WARM] * N_HOURS_WARM_2,
+        dtype=float
+    )
+
+
 @log_res(['Theta_uf_d_t'])
 def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t):
     """定常状態での床下温度を求める
