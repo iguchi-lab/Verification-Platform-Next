@@ -367,9 +367,8 @@ def calc_Q_UT_A(
 
         # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
         # 1. 床下 -> 居室全体 (目標方向の熱移動)
-        #U_s_vert = ClimateService(house.region).get_U_s_vert(skin.Q)  # 床の熱貫流率 [W/m2K]
-        #260112 IGUCHI ***要修正*** 床の熱貫流率は、入力値を使う！
-        U_s = dc.get_U_s()
+        #260112 IGUCHI 床の熱貫流率は、入力値を使う！
+        U_s_input = new_ufac.U_s_vert  # 床板(床チャンバー上面)の熱貫流率 [W/(m2・K)]
         A_s_ufac_i, r_A_s_ufac = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
         #260112 IGUCHI デバッグ用
         print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
@@ -377,7 +376,7 @@ def calc_Q_UT_A(
         delta_L_room2uf_d_t_i  \
             = np.hstack([
                 calc_delta_L_room2uf_i(
-                    U_s,
+                    U_s_input,
                     A_s_ufac_i,
                     np.abs(Theta_ex_d_t[t] - Theta_in_d_t[t])
                 ) for t in range(24*365)  # 各要素が shape(12,1)
@@ -407,7 +406,7 @@ def calc_Q_UT_A(
                 calc_Theta_uf(q_hs_rtd_H(), q_hs_rtd_C(),
                     L_d_t_flr1st[t],
                     np.sum(A_s_ufac_i),
-                    U_s,
+                    U_s_input,
                     Theta_in_d_t[t], Theta_ex_d_t[t],
                     V_dash_supply_flr1st_d_t[t]
                 ) for t in range(24*365)
@@ -416,7 +415,7 @@ def calc_Q_UT_A(
         #260112 IGUCHI デバッグ用
         print("L_d_t_flr1st[0]:", L_d_t_flr1st[0])
         print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
-        print("U_s:", U_s)
+        print("U_s:", U_s_input)
         print("Theta_in_d_t[0]:", Theta_in_d_t[0])
         print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
         print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
@@ -853,7 +852,7 @@ def calc_Q_UT_A(
             # 部屋→床下への熱移動分が戻ってくるため負荷控除する
             delta_L_uf2room_d_t_i = np.hstack([
                 calc_delta_L_room2uf_i(
-                    U_s,
+                    U_s_input,
                     A_s_ufac_i,
                     np.abs(Theta_star_HBR_d_t[t] - Theta_ex_d_t[t])
                 ) for t in range(24*365)
