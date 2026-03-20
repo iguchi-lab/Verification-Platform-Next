@@ -162,10 +162,10 @@ class HEX:
             kwargs['e_leak'] = 1.0
         return cls(**kwargs)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict | None:
         if not self.hex:
-            # デフォルト値で誤計算させないため空の辞書を返す
-            return dict()
+            # HEX is None の処理が既存モジュールで定義されている
+            return None
         return {
             'hex': self.hex,
             'etr_t': self.etr_t,
