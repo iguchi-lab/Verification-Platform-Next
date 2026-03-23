@@ -259,6 +259,7 @@ def calc_main(
                         , V_hs_supply_d_t
                         , V_hs_dsgn_H
                         , q_hs_H_d_t  # W
+                        , house.region
                         , heat_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
                         , heat_ac_setting.subtract_ventilation_power)
 
@@ -278,6 +279,7 @@ def calc_main(
                                 , V_hs_supply_d_t
                                 , V_hs_dsgn_H
                                 , q_hs_H_d_t  # W
+                                , house.region
                                 , heat_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
                                 , ファン消費電力から換気分を引く.換気分を引かない)  # 最低風量を入力する場合、換気分は引かない
 
@@ -295,8 +297,9 @@ def calc_main(
                                 , V_hs_vent_d_t  # 上書きアリ
                                 , V_hs_supply_d_t
                                 , V_hs_dsgn_H
-                                , q_hs_H_d_t  # W
-                                , E_E_fan_min_H)
+                                , E_E_fan_min_H
+                                , house.region
+                                , for_cooling=False)
                     case _:
                         raise ValueError
             case _:
@@ -466,6 +469,7 @@ def calc_main(
                         , V_hs_supply_d_t
                         , V_hs_dsgn_C
                         , q_hs_C_d_t  # W
+                        , house.region
                         , cool_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
                         , cool_ac_setting.subtract_ventilation_power)
 
@@ -485,6 +489,7 @@ def calc_main(
                                 , V_hs_supply_d_t
                                 , V_hs_dsgn_C
                                 , q_hs_C_d_t  # W
+                                , house.region
                                 , cool_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
                                 , ファン消費電力から換気分を引く.換気分を引かない)  # 最低風量を入力する場合、換気分は引かない
 
@@ -502,8 +507,9 @@ def calc_main(
                                 , V_hs_vent_d_t  # 上書きアリ
                                 , V_hs_supply_d_t
                                 , V_hs_dsgn_C
-                                , q_hs_C_d_t  # W
-                                , E_E_fan_min_C)
+                                , E_E_fan_min_C
+                                , house.region
+                                , for_cooling=True)
                     case _:
                         raise ValueError
             case _:

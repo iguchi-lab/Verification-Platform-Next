@@ -21,6 +21,10 @@ class UnderfloorAc:
     phi: float = 0.846
     """基礎(床チャンバー側面)の線熱貫流率 [W/(m・K)]"""
 
+    # 現在はただの定数としてユーザー入力させていない
+    U_s_floor_ins: float = 0.41
+    """床断熱の熱貫流率 [W/(m2・K)]"""
+
     @classmethod
     def from_dict(cls, data: dict) -> 'UnderfloorAc':
         kwargs = {}

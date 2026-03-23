@@ -39,8 +39,13 @@ import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
 from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 新床下空調
-from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, calc_delta_L_room2uf_i, get_r_A_uf_i, calc_Theta_uf, calc_delta_L_uf2outdoor, calc_delta_L_uf2gnd
-from jjjexperiment.underfloor_ac.section3_1_e import calc_Theta_uf_d_t_2023
+import jjjexperiment.underfloor_ac.section4_2 as jjj_ufac_dc
+from jjjexperiment.underfloor_ac.section3_1_e import (
+    calc_Theta_uf_d_t_2023,
+    calc_sum_Theta_dash_g_surf_A_m_runup,
+    THETA_UF_WARM,
+    THETA_UF_COOL,
+)
 from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
@@ -310,6 +315,20 @@ def calc_Q_UT_A(
         case CoolingAcSetting(): Theta_in_d_t = uf.get_Theta_in_d_t('CS')
         case _: raise ValueError
 
+    # 吸熱応答係数の初項
+    Phi_A_0 = 0.025504994
+    # 地盤の不易層温度と助走計算による吸熱応答成分の合計 (床下→地盤 熱損失計算用)
+    # Theta_ex_d_t に依存するが ループ内では変わらないため事前に計算する
+    Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
+    match ac_setting:
+        # 260112 IGUCHI 指定温度での助走暫定値を使用
+        case HeatingAcSetting():
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)  # 11.2224
+        case CoolingAcSetting():
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)  # 9.15940
+        case _:
+            raise ValueError
+
     # 脱出条件:
     should_be_adjusted_Q_hat_hs_d_t = new_ufac.new_ufac_flg == 床下空調ロジック.変更する
     while True:
@@ -366,20 +385,24 @@ def calc_Q_UT_A(
 
         # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
         # 1. 床下 -> 居室全体 (目標方向の熱移動)
-        U_s_vert = climate.get_U_s_vert(skin.Q)  # 床の熱貫流率 [W/m2K]
-        A_s_ufac_i, r_A_s_ufac = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
-
+        #260112 IGUCHI 床の熱貫流率は、入力値を使う！
+        U_s_input = new_ufac.U_s_vert  # 床板(床チャンバー上面)の熱貫流率 [W/(m2・K)]
+        A_s_ufac_i, r_A_s_ufac = jjj_ufac_dc.get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
+        #260112 IGUCHI デバッグ用
+        #print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
         assert A_s_ufac_i.ndim == 2
         delta_L_room2uf_d_t_i  \
             = np.hstack([
-                calc_delta_L_room2uf_i(
-                    U_s_vert,
+                jjj_ufac_dc.calc_delta_L_room2uf_i(
+                    new_ufac.U_s_floor_ins,
                     A_s_ufac_i,
                     np.abs(Theta_ex_d_t[t] - Theta_in_d_t[t])
                 ) for t in range(24*365)  # 各要素が shape(12,1)
             ])
         assert delta_L_room2uf_d_t_i.ndim == 2
         Q_hat_hs_d_t -= np.sum(delta_L_room2uf_d_t_i, axis=0)
+        #260112 IGUCHI デバッグ用
+        #print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
 
         # 2. 床下 -> 外気 (逃げ方向)
         # 一階負荷 暖冷房
@@ -392,50 +415,56 @@ def calc_Q_UT_A(
             case _:
                 raise ValueError
 
-        mask_uf_i = get_r_A_uf_i() > 0  # 床下空調部屋のみ
+        mask_uf_i = jjj_ufac_dc.get_r_A_uf_i() > 0  # 床下空調部屋のみ
         V_dash_supply_flr1st_d_t  \
             = np.sum(V_dash_supply_d_t_i[mask_uf_i.flatten()[:5], :], axis=0)
 
         Theta_uf_d_t  \
             = np.array([
-                calc_Theta_uf(q_hs_rtd_H(), q_hs_rtd_C(),
+                jjj_ufac_dc.calc_Theta_uf(q_hs_rtd_H(), q_hs_rtd_C(),
                     L_d_t_flr1st[t],
                     np.sum(A_s_ufac_i),
-                    U_s_vert,
+                    U_s_input,
+                    new_ufac.U_s_floor_ins,
                     Theta_in_d_t[t], Theta_ex_d_t[t],
                     V_dash_supply_flr1st_d_t[t]
                 ) for t in range(24*365)
             ])
+
+        #260112 IGUCHI デバッグ用
+        #print("L_d_t_flr1st[0]:", L_d_t_flr1st[0])
+        #print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
+        #print("U_s:", U_s_input)
+        #print("Theta_in_d_t[0]:", Theta_in_d_t[0])
+        #print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
+        #print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
+        #print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
+
         L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
         phi = climate.get_phi(skin.Q)
 
-        delta_L_uf2outdoor_d_t = np.vectorize(calc_delta_L_uf2outdoor)
+        delta_L_uf2outdoor_d_t = np.vectorize(jjj_ufac_dc.calc_delta_L_uf2outdoor)
         delta_L_uf2outdoor_d_t  \
             = delta_L_uf2outdoor_d_t(phi, L_uf, (Theta_uf_d_t - Theta_ex_d_t))
         assert np.shape(delta_L_uf2outdoor_d_t) == (24 * 365,)
         Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
 
+        #260112 IGUCHI デバッグ用
+        #print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
+        #print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
+
         # 3. 床下 -> 地盤 (逃げ方向)
-        # 吸熱応答係数の初項 定数取得クラスを作成するか
-        Phi_A_0 = 0.025504994
-
-        # NOTE: 実際には Theta_uf_d_t と共に後に算出される
-        match ac_setting:
-            case HeatingAcSetting():
-                sum_Theta_dash_g_surf_A_m = 4.138
-            case CoolingAcSetting():
-                sum_Theta_dash_g_surf_A_m = 9.824
-            case _:
-                raise ValueError
-
         A_s_ufac_A = np.sum(A_s_ufac_i)
-        Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
 
-        delta_L_uf2gnd_d_t = np.vectorize(calc_delta_L_uf2gnd)
+        delta_L_uf2gnd_d_t = np.vectorize(jjj_ufac_dc.calc_delta_L_uf2gnd)
         delta_L_uf2gnd_d_t = \
             delta_L_uf2gnd_d_t(q_hs_rtd_H(), q_hs_rtd_C(),
                 A_s_ufac_A, jjj_consts.R_g, Phi_A_0, Theta_uf_d_t, sum_Theta_dash_g_surf_A_m, Theta_g_avg)
         Q_hat_hs_d_t += delta_L_uf2gnd_d_t
+
+        #260112 IGUCHI デバッグ用
+        #print("delta_L_uf2gnd_d_t[0] 床下⇒地盤: ", delta_L_uf2gnd_d_t[0])
+        #print("Q_hat_hs_d_t[0] 床下⇒地盤を足す: ", Q_hat_hs_d_t[0])
 
         # 補正完了した Q^hs を使って V'supply を再計算する
         should_be_adjusted_Q_hat_hs_d_t = False
@@ -470,21 +499,23 @@ def calc_Q_UT_A(
         A_prt_A = np.sum(A_prt_i)
         HCM = np.array(climate.get_HCM_d_t())
 
+        r_A_NR_uf_1F_excl_bath = jjj_ufac_dc.get_r_A_NR_uf_1F_excl_bath()
+
         #デバッグ用 250501 IGUCHI
-        print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
-        print("Q", skin.Q)
-        print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
-        print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
-        print("U_prt", U_prt)
-        print("A_prt_A", A_prt_A)
-        print("L_H_NR_A[4848]", L_H_NR_d_t_A[4848])
-        print("L_CS_NR_A[4848]", L_CS_NR_d_t_A[4848])
-        print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
-        print("HCM[4848]", HCM[4848])
+        #print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
+        #print("Q", skin.Q)
+        #print("A_NR", A_NR)
+        #print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
+        #print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
+        #print("A_NR", A_NR)
+        #print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
+        #print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
+        #print("U_prt", U_prt)
+        #print("A_prt_A", A_prt_A)
+        #print("L_H_NR_A[4848]", L_H_NR_d_t_A[4848])
+        #print("L_CS_NR_A[4848]", L_CS_NR_d_t_A[4848])
+        #print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
+        #print("HCM[4848]", HCM[4848])
 
         Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
         Theta_star_NR_d_t = \
@@ -500,9 +531,20 @@ def calc_Q_UT_A(
                 L_CS_NR_A = L_CS_NR_d_t_A,  # (8760,)
                 Theta_NR = Theta_in_d_t,  # この時点では仮置きの値を使用⇒夏期は27℃とする必要がある　250501 井口
                 Theta_uf = Theta_uf_d_t,  # (8760,)
-                HCM = HCM  # (8760,)
+                HCM = HCM,  # (8760,)
+                r_A_NR_1F_excl_bath = r_A_NR_uf_1F_excl_bath
             )
-        print("Theta_star_NR_d_t[4848]", Theta_star_NR_d_t[4848])
+        #print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
+        #print("Q: ", skin.Q)
+        #print("V_vent_l_NR[0]: ", V_vent_l_NR_d_t[0])
+        #print("V_dash_supply_A[0]: ", V_dash_supply_d_t_A[0])
+        #print("U_prt; ", U_prt)
+        #print("A_prt_A: ", A_prt_A)
+        #print("L_H_NR_A[0]: ", L_H_NR_d_t_A[0])
+        #print("L_CS_NR_A[0]: ", L_CS_NR_d_t_A[0])
+        #print("Theta_NR[0]: ", Theta_in_d_t[0])
+        #print("Theta_uf[0]: ", Theta_uf_d_t[0])
+        #print("HCM[0]: ", HCM[0])
     else:
         Theta_star_NR_d_t = \
             dc.get_Theta_star_NR_d_t(
@@ -816,8 +858,8 @@ def calc_Q_UT_A(
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
             # 部屋→床下への熱移動分が戻ってくるため負荷控除する
             delta_L_uf2room_d_t_i = np.hstack([
-                calc_delta_L_room2uf_i(
-                    U_s_vert,
+                jjj_ufac_dc.calc_delta_L_room2uf_i(
+                    new_ufac.U_s_floor_ins,
                     A_s_ufac_i,
                     np.abs(Theta_star_HBR_d_t[t] - Theta_ex_d_t[t])
                 ) for t in range(24*365)
@@ -1117,7 +1159,7 @@ def calc_Q_UT_A(
         # (46) 暖冷房区画𝑖の実際の居室の室温
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
             HCM = np.array(climate.get_HCM_d_t())
-            A_s_ufac_i, _ = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
+            A_s_ufac_i, _ = jjj_ufac_dc.get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
             Theta_HBR_d_t_i = np.hstack([
                 get_Theta_HBR_i(
                     Theta_star_HBR = Theta_star_HBR_d_t[t],
@@ -1156,7 +1198,8 @@ def calc_Q_UT_A(
                     U_prt = U_prt,
                     A_prt_i = A_prt_i.reshape(-1,1),
                     Q = skin.Q,
-                    Theta_uf = Theta_uf_d_t[t]
+                    Theta_uf = Theta_uf_d_t[t],
+                    r_A_NR_1F_excl_bath = r_A_NR_uf_1F_excl_bath
                 ) for t in range(24*365)
             ])
         else:
