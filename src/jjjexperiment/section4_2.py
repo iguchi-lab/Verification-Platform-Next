@@ -315,6 +315,19 @@ def calc_Q_UT_A(
         case CoolingAcSetting(): Theta_in_d_t = uf.get_Theta_in_d_t('CS')
         case _: raise ValueError
 
+    # 吸熱応答係数の初項
+    Phi_A_0 = 0.025504994
+    # 地盤の不易層温度と助走計算による吸熱応答成分の合計 (床下→地盤 熱損失計算用)
+    # Theta_ex_d_t に依存するが ループ内では変わらないため事前に計算する
+    Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
+    match ac_setting:
+        case HeatingAcSetting():
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)
+        case CoolingAcSetting():
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)
+        case _:
+            raise ValueError
+
     # 脱出条件:
     should_be_adjusted_Q_hat_hs_d_t = new_ufac.new_ufac_flg == 床下空調ロジック.変更する
     while True:
@@ -441,19 +454,7 @@ def calc_Q_UT_A(
         print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
 
         # 3. 床下 -> 地盤 (逃げ方向)
-        # 吸熱応答係数の初項 定数取得クラスを作成するか
-        Phi_A_0 = 0.025504994
-
         A_s_ufac_A = np.sum(A_s_ufac_i)
-        Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
-
-        match ac_setting:
-            case HeatingAcSetting():
-                sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)
-            case CoolingAcSetting():
-                sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)
-            case _:
-                raise ValueError
 
         delta_L_uf2gnd_d_t = np.vectorize(calc_delta_L_uf2gnd)
         delta_L_uf2gnd_d_t = \

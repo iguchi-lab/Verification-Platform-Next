@@ -59,3 +59,72 @@ class Test_床下空調時_共通:
         # 第3期間 [6385, 8759]: 27.69 ℃
         assert arr[6385] == pytest.approx(27.69)
         assert arr[8759] == pytest.approx(27.69)
+
+
+class Test_床下地盤熱損失助走計算:
+    """calc_sum_Theta_dash_g_surf_A_m_runup のテスト
+
+    暫定値（マジックナンバー）は 6地域の気候データを元に手計算されたとみられる。
+    新関数は同一地域で計算した Theta_g_avg を使用するため、
+    数値は近いが完全一致はしない。許容誤差（rel=0.03）を設けて検証する。
+    """
+
+    MAGIC_WARM = 11.2224  # IGUCHI 暖房期 27.69℃の暫定値
+    MAGIC_COOL = 9.15940  # IGUCHI 冷房期 25.62℃の暫定値
+
+    def test_暖房期_旧暫定値と近似一致(self):
+        """THETA_UF_WARM で助走した結果が旧暫定値 11.2224 と 3% 以内に収まること"""
+        from jjjexperiment.underfloor_ac.section3_1_e import (
+            calc_sum_Theta_dash_g_surf_A_m_runup,
+            THETA_UF_WARM,
+        )
+        from pyhees.section3_1_e import get_Theta_g_avg
+        from pyhees.section11_1 import load_climate
+
+        climate = load_climate(6)  # 旧暫定値の導出に使われたとみられる地域
+        Theta_g_avg = get_Theta_g_avg(climate['外気温[℃]'].values)
+
+        result = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)
+
+        assert result == pytest.approx(self.MAGIC_WARM, rel=0.03)
+
+    def test_冷房期_旧暫定値と近似一致(self):
+        """THETA_UF_COOL で助走した結果が旧暫定値 9.15940 と 3% 以内に収まること"""
+        from jjjexperiment.underfloor_ac.section3_1_e import (
+            calc_sum_Theta_dash_g_surf_A_m_runup,
+            THETA_UF_COOL,
+        )
+        from pyhees.section3_1_e import get_Theta_g_avg
+        from pyhees.section11_1 import load_climate
+
+        climate = load_climate(6)
+        Theta_g_avg = get_Theta_g_avg(climate['外気温[℃]'].values)
+
+        result = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)
+
+        assert result == pytest.approx(self.MAGIC_COOL, rel=0.03)
+
+    def test_暖房期は冷房期より大きい(self):
+        """暖房期（高温）の助走結果は冷房期（低温）より大きくなること"""
+        from jjjexperiment.underfloor_ac.section3_1_e import (
+            calc_sum_Theta_dash_g_surf_A_m_runup,
+            THETA_UF_WARM,
+            THETA_UF_COOL,
+        )
+
+        result_warm = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg=15.0)
+        result_cool = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg=15.0)
+
+        assert result_warm > result_cool
+
+    def test_高いTheta_g_avgは結果を小さくする(self):
+        """Theta_g_avg が高いほど sum_Theta_dash_g_surf_A_m が小さくなること"""
+        from jjjexperiment.underfloor_ac.section3_1_e import (
+            calc_sum_Theta_dash_g_surf_A_m_runup,
+            THETA_UF_WARM,
+        )
+
+        result_cold_region = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg=10.0)
+        result_warm_region = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg=20.0)
+
+        assert result_cold_region > result_warm_region
