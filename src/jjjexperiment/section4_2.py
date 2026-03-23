@@ -321,10 +321,11 @@ def calc_Q_UT_A(
     # Theta_ex_d_t に依存するが ループ内では変わらないため事前に計算する
     Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
     match ac_setting:
+        # 260112 IGUCHI 指定温度での助走暫定値を使用
         case HeatingAcSetting():
-            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)  # 11.2224
         case CoolingAcSetting():
-            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)  # 9.15940
         case _:
             raise ValueError
 
