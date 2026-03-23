@@ -1,10 +1,11 @@
 import numpy as np
 import pyhees.section3_1_e as algo
 # JJJ
+from jjjexperiment.common import jjj_cloning
 from jjjexperiment.logger import log_res
 
-
-def get_Theta_uf_d_t_runup_new_ufac() -> np.ndarray:
+@jjj_cloning
+def get_Theta_uf_d_t_runup() -> np.ndarray:
     """新床下空調ロジック用の助走計算床下温度 (℃) の時系列を返す
 
     標準住戸の新床下空調ロジックにおける助走計算に用いる

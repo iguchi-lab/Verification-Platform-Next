@@ -32,7 +32,6 @@ from jjjexperiment.inputs.di_container import ClimateFile, CaseName
 # ドメインサービス
 from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
-from jjjexperiment.inputs.house_service import get_r_A_NR_uf_1F_excl_bath
 # F23-1 Vサプライの上限キャップ変更
 from jjjexperiment.v_supply_cap.inputs.v_supply_cap_dto import VSupplyCapDto
 import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
@@ -40,7 +39,7 @@ import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
 from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 新床下空調
-from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, calc_delta_L_room2uf_i, get_r_A_uf_i, calc_Theta_uf, calc_delta_L_uf2outdoor, calc_delta_L_uf2gnd
+from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath, calc_delta_L_room2uf_i, get_r_A_uf_i, calc_Theta_uf, calc_delta_L_uf2outdoor, calc_delta_L_uf2gnd
 from jjjexperiment.underfloor_ac.section3_1_e import calc_Theta_uf_d_t_2023
 from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR

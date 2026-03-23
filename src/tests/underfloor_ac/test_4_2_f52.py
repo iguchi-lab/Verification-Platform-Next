@@ -1,6 +1,7 @@
 import pytest
 
 from jjjexperiment.common import JJJ_HCM
+from jjjexperiment.underfloor_ac.section4_2 import get_r_A_NR_uf_1F_excl_bath
 from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 
 class Test式52負荷バランス時非居室室温:

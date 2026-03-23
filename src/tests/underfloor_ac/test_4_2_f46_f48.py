@@ -9,7 +9,7 @@ from jjjexperiment.inputs.options import *
 from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.inputs.environment_service import EnvironmentService
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin
-from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i
+from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 
 from test_utils.utils import load_input_yaml
@@ -64,7 +64,6 @@ class Test_床下空調時_式46_式48:
         # Arrange
 
         # Act
-        from jjjexperiment.inputs.house_service import get_r_A_NR_uf_1F_excl_bath
         Theta_NR = get_Theta_NR(
             Theta_star_NR = 19.40,
             Theta_star_HBR = 20.0,
