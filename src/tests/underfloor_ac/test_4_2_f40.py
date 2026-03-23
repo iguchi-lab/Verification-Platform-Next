@@ -16,9 +16,9 @@ from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc
 import jjjexperiment.constants as jjj_consts
 from test_utils.utils import load_input_yaml
 
+@pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
 class Test_床下空調時_式40:
 
-    @pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
     def test_既存関数の計算(self, Q_hat_hs_d_t):
         """
         (40) 熱源機の風量を計算するための熱源機の出力
@@ -30,7 +30,6 @@ class Test_床下空調時_式40:
         assert Q_hat_hs_d_t[t] == pytest.approx(18.53, rel=1e-2)
 
 
-    @pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
     def test_床下温度の計算(self):
         # Arrange
         yaml_fullpath = os.path.join(os.path.dirname(__file__), 'test_input.yaml')
@@ -98,7 +97,6 @@ class Test_床下空調時_式40:
         assert Theta_uf == pytest.approx(23.20, abs=1e-2)  # 23.20 -> 27.69
 
 
-    @pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
     def test_床下空調用の床面積(self):
         """
         床下空調用の床面積 & 面積全体における割合
@@ -116,7 +114,6 @@ class Test_床下空調時_式40:
         assert A_s_ufvnt / house_info.A_A == pytest.approx(0.54, abs=1e-2)
 
 
-    @pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
     def test_床下から床上居室への熱移動(self):
         # Arrange
         yaml_fullpath = os.path.join(os.path.dirname(__file__), 'test_input.yaml')
@@ -153,7 +150,6 @@ class Test_床下空調時_式40:
         assert np.sum(delta_L_uf2room) == pytest.approx(6.37, abs=1e-2)  # 6.37 -> 1.18
 
 
-    @pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
     def test_床下から外気への熱損失(self):
         """
         床下から外気への熱損失
@@ -186,7 +182,6 @@ class Test_床下空調時_式40:
         assert delta_L_uf2outdoor == pytest.approx(2.07, abs=1e-2)
 
 
-    @pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
     def test_床下から地盤への熱損失(self):
 
         # Arrange

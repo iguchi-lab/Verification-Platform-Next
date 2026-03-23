@@ -14,7 +14,7 @@ from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_
 
 from test_utils.utils import load_input_yaml
 
-@pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
+@pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
 class Test_床下空調時_式46_式48:
 
     def test_式46_時点計算例(self):

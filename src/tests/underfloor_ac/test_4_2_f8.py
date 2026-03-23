@@ -24,7 +24,7 @@ from test_utils.utils import *
 # デバッグ用ロガー
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
 
-@pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
+@pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
 class Test_床下空調時_式8補正:
 
     def test_式8_補正計算例(self, Q_hat_hs_d_t):

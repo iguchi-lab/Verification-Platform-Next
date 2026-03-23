@@ -4,7 +4,7 @@ from jjjexperiment.common import JJJ_HCM
 from jjjexperiment.underfloor_ac.section4_2 import get_r_A_NR_uf_1F_excl_bath
 from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 
-@pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
+@pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
 class Test式52負荷バランス時非居室室温:
     """式52 負荷バランス時の非居室の室温計算のテストクラス"""
 
