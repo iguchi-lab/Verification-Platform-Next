@@ -1,5 +1,6 @@
 import numpy as np
 
+from pyhees.section3_1 import get_A_HCZ_R_i
 import pyhees.section3_1_e as algo
 import pyhees.section4_2 as dc
 # JJJ
@@ -11,11 +12,27 @@ from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
 def get_r_A_uf_i() -> Array12x1:
     """暖冷房区画iの床面積のうち床下空間に接する床面積の割合 (-)
     """
-    r_A_uf_i = np.array([
-            algo.get_r_A_uf_i(i) for i in range(1, 13)
-        ]).reshape(-1, 1)
+    r_A_uf_i = np.array([algo.get_r_A_uf_i(i) for i in range(1, 13)])  \
+                .reshape(-1, 1)
     assert r_A_uf_i.shape == (12, 1)
     return r_A_uf_i
+
+
+def get_r_A_NR_uf_1F_excl_bath() -> float:
+    """非居室の床下から貫流する部分の面積の割合 (1F・浴室除く) [-]
+
+    非居室ゾーン(i=6~12)のうち床下空間に接するゾーン(i=6,7,9)の有効面積合計と
+    標準住戸の非居室合計面積の比率。ゾーン8(浴室)は除外する。
+    この値は住戸面積(A_A, A_MR, A_OR)には依存しない構造定数。
+
+    Returns:
+        float: 非居室の1F(浴室除く)面積比 (≈ 0.404)
+    """
+    # 1F NR有効面積 (浴室=ゾーン8 を除く)
+    A_NR_1F_excl_bath = sum(algo.get_r_A_uf_i(i) * get_A_HCZ_R_i(i) for i in [6, 7, 9])
+    # 標準住戸の非居室合計面積
+    A_NR_R = sum(get_A_HCZ_R_i(i) for i in range(6, 13))
+    return A_NR_1F_excl_bath / A_NR_R
 
 
 def get_A_s_ufac_i(
@@ -54,6 +71,7 @@ def calc_Theta_uf(
         L_flr1st: float,
         A_s_ufvnt: float,
         U_s_vert: float,
+        U_s_floor_ins: float,
         Theta_in: float,
         Theta_ex: float,
         V_flr1st: float,
@@ -84,14 +102,18 @@ def calc_Theta_uf(
 
         case (_, None):  # 暖房期
             delta_Theta = max(Theta_in - Theta_ex, 0)
-            a2 = U_s_vert * A_s_ufvnt * delta_Theta * H_floor * 3.6
+            #200112 IGUCHI 差し引く負荷は床断熱 (U=0.41)
+            #[OLD] a2 = U_s_vert * A_s_ufvnt * delta_Theta * H_floor * 3.6
+            a2 = U_s_floor_ins * A_s_ufvnt * delta_Theta * H_floor * 3.6
             assert L_flr1st >= 0, "暖房期の負荷は正の値"
             Theta_uf = (L_flr1st * 1e+3 - a2 + Theta_in * b) / b
             return Theta_uf
 
         case (None, _):  # 冷房期
             delta_Theta = max(Theta_ex - Theta_in, 0)
-            a2 = U_s_vert * A_s_ufvnt * delta_Theta * H_floor * 3.6
+            #200112 IGUCHI 差し引く負荷は床断熱 (U=0.41)
+            #[OLD] a2 = U_s_vert * A_s_ufvnt * delta_Theta * H_floor * 3.6
+            a2 = U_s_floor_ins * A_s_ufvnt * delta_Theta * H_floor * 3.6
             assert L_flr1st <= 0, "冷房期の負荷は負の値"
             Theta_uf = (L_flr1st * 1e+3 + a2 + Theta_in * b) / b
             return Theta_uf
@@ -102,22 +124,25 @@ def calc_Theta_uf(
 
 # vectorizeできなのいのでhstack-broadcastで対応 (A_s_ufac_iが強制でfloatになるため)
 def calc_delta_L_room2uf_i(
-        U_s_vert: float,
+        U_s_floor_ins: float,
         A_s_ufac_i: Array5x1,
         delta_Theta: float
     ) -> Array5x1:
     """床下空間から居室全体への熱損失 [MJ/h]
 
     Args:
-        U_s_vert: 床の熱貫流率 [W/m2・K]
+        U_s_floor_ins: 床断熱の熱貫流率 [W/m2・K]
 
     """
     assert A_s_ufac_i.ndim == 2
     assert delta_Theta >= 0, "温度差は正を前提に計算"
 
     H_floor = 0.7  # 床下空調でなく意図しない熱移動の分なので通常の遮蔽係数(0.7)となる
-    delta_L_uf2room =  U_s_vert * A_s_ufac_i * delta_Theta * H_floor  \
-        * 3.6 / 1000  # [W] -> [MJ/h]
+
+    #200112 IGUCHI 床下空間へ逃げる熱は、床断熱（U=0.41）の床の損失であるため修正
+    #[OLD] delta_L_uf2room = U_s_vert * A_s_ufac_i * delta_Theta * H_floor * 3.6 / 1000  # [W] -> [MJ/h]
+    delta_L_uf2room = U_s_floor_ins * A_s_ufac_i * delta_Theta * H_floor * 3.6 / 1000  # [W] -> [MJ/h]
+
     # NOTE: L_H_d_t_i, L_CS_d_t_i に含まれている通常(非床下空調)の床下ロス部分(室内→床下→屋外)
     # 下記の補正を追加する前にコチラを引くことでイコールフッティングできます
     assert delta_L_uf2room.ndim == 2

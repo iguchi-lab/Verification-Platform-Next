@@ -10,10 +10,9 @@ from functools import lru_cache
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.common import *
 from jjjexperiment.logger import log_res
-# NOTE: pyhees->jjj への依存は可能な限り絞る
-from jjjexperiment.common import get_current_injector
+# NOTE: pyhees->jjj 方向の依存はファイルスコープとしては可能な限り控える
+# インプットデータクラスとロジックを分離しているためデータクラスのみインポート可能
 from jjjexperiment.inputs.options import 床下空調ロジック
-
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 
 # ============================================================================
@@ -440,8 +439,23 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
 
     # ----- 助走計算 -----
 
+    if new_ufac is None or new_ufac_df is None:
+      # 引数で渡されていないときスレッドにセットされていないかチェックする
+      from jjjexperiment.common import get_current_injector
+      thread_injector = get_current_injector()
+      if thread_injector is not None:
+        if new_ufac is None:
+          new_ufac = thread_injector.get(UnderfloorAc)
+        if new_ufac_df is None:
+          new_ufac_df = thread_injector.get(UfVarsDataFrame)
+
     # 助走計算用床下温度
-    Theta_uf_runup = get_Theta_uf_d_t_runup(underfloor_insulation, Theta_ex_d_t)
+    if new_ufac is not None and new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        from jjjexperiment.underfloor_ac.section3_1_e import get_Theta_uf_d_t_runup as jjj_ufac_get_Theta_uf_d_t_runup
+        #260112 IGUCHI 新床下空調用固定値
+        Theta_uf_runup = jjj_ufac_get_Theta_uf_d_t_runup()
+    else:
+        Theta_uf_runup = get_Theta_uf_d_t_runup(underfloor_insulation, Theta_ex_d_t)
 
     Theta_in_H = 20
     Theta_in_C = 27
@@ -549,13 +563,6 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
                 ) * 3.6
           theta_uf = theta_uf_upper / theta_uf_lower
           return theta_uf
-
-        if new_ufac is None:
-          # 引数で渡されていないときスレッドにセットされていないかチェックする
-          thread_injector = get_current_injector()
-          if thread_injector is not None:
-            new_ufac = thread_injector.get(UnderfloorAc)
-            new_ufac_df = thread_injector.get(UfVarsDataFrame)
 
         if new_ufac is not None \
           and new_ufac.new_ufac_flg == 床下空調ロジック.変更する \
@@ -695,7 +702,7 @@ def get_phi_1_A_m(m):
     """
     return get_table_e_7()[m - 1][1]
 
-
+@jjj_cloned  # 床下空調新ロジック
 def get_Theta_uf_d_t_runup(underfloor_insulation, Theta_ex_d_t):
     """<<助走計算>> 当該住戸の床下温度 (℃) (13)
 

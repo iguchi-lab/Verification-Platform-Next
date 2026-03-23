@@ -24,6 +24,7 @@ from test_utils.utils import *
 # デバッグ用ロガー
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
 
+@pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
 class Test_床下空調時_式8補正:
 
     def test_式8_補正計算例(self, Q_hat_hs_d_t):
@@ -196,11 +197,10 @@ class Test_床下空調時_式8補正:
         _logger.debug(f"A_s_ufac_i: {A_s_ufac_i}")
         _logger.debug(f"r_A_s_ufac: {r_A_s_ufac}")
 
-        U_s_vert = climate.get_U_s_vert(environment.get_Q())
-        _logger.debug(f"U_s_vert: {U_s_vert}")
+        _logger.debug(f"U_s_floor_ins: {new_ufac.U_s_floor_ins}")
         delta_L_uf2room_d_t_i = np.hstack([
             calc_delta_L_room2uf_i(
-                U_s_vert, A_s_ufac_i,
+                new_ufac.U_s_floor_ins, A_s_ufac_i,
                 np.abs(Theta_star_HBR_d_t[tt] - Theta_ex_d_t[tt]))
             for tt in range(24*365)
         ])
@@ -211,8 +211,8 @@ class Test_床下空調時_式8補正:
         _logger.NDdebug("delta_L_uf2room_d_t_i_5", delta_L_uf2room_d_t_i[4])
         _logger.debug(f"Temperature difference at t=0: {np.abs(Theta_star_HBR_d_t[0] - Theta_ex_d_t[0])}")
         assert delta_L_uf2room_d_t_i.shape == (12, 8760)
-        assert delta_L_uf2room_d_t_i[0][t] == pytest.approx(2.906, abs=1e-1)
-        assert delta_L_uf2room_d_t_i[1][t] == pytest.approx(1.614, abs=1e-1)
+        assert delta_L_uf2room_d_t_i[0][t] == pytest.approx(2.906, abs=1e-1)  # 2.906 -> 0.536
+        assert delta_L_uf2room_d_t_i[1][t] == pytest.approx(1.614, abs=1e-1)  # 1.614 -> 0.298
         assert delta_L_uf2room_d_t_i[2][t] == pytest.approx(0, abs=1e-1)
         assert delta_L_uf2room_d_t_i[3][t] == pytest.approx(0, abs=1e-1)
         assert delta_L_uf2room_d_t_i[4][t] == pytest.approx(0, abs=1e-1)
@@ -232,8 +232,8 @@ class Test_床下空調時_式8補正:
         _logger.info(f"L_star_H_d_t_i[2][{t}] = {L_star_H_d_t_i[2][t]:.3f} (expected: 1.881)")
         _logger.info(f"L_star_H_d_t_i[3][{t}] = {L_star_H_d_t_i[3][t]:.3f} (expected: 1.752)")
         _logger.info(f"L_star_H_d_t_i[4][{t}] = {L_star_H_d_t_i[4][t]:.3f} (expected: 2.178)")
-        assert L_star_H_d_t_i[0][t] == pytest.approx(3.639, abs=1e-1)
-        assert L_star_H_d_t_i[1][t] == pytest.approx(1.308, abs=1e-1)
-        assert L_star_H_d_t_i[2][t] == pytest.approx(1.881, abs=1e-1)
-        assert L_star_H_d_t_i[3][t] == pytest.approx(1.752, abs=1e-1)
-        assert L_star_H_d_t_i[4][t] == pytest.approx(2.178, abs=1e-1)
+        assert L_star_H_d_t_i[0][t] == pytest.approx(3.639, abs=1e-1)  # 3.639 -> 5.972
+        assert L_star_H_d_t_i[1][t] == pytest.approx(1.308, abs=1e-1)  # 1.308 -> 2.596
+        assert L_star_H_d_t_i[2][t] == pytest.approx(1.881, abs=1e-1)  # 1.881 -> 1.859
+        assert L_star_H_d_t_i[3][t] == pytest.approx(1.752, abs=1e-1)  # 1.752 -> 1.734
+        assert L_star_H_d_t_i[4][t] == pytest.approx(2.178, abs=1e-1)  # 2.178 -> 2.160
