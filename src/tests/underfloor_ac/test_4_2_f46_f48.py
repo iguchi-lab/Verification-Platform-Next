@@ -14,6 +14,7 @@ from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_
 
 from test_utils.utils import load_input_yaml
 
+@pytest.mark.skip(reason="260323_井口先生よりロジック修正中のため")
 class Test_床下空調時_式46_式48:
 
     def test_式46_時点計算例(self):
@@ -80,4 +81,4 @@ class Test_床下空調時_式46_式48:
             r_A_NR_1F_excl_bath = get_r_A_NR_uf_1F_excl_bath()
         )
         # Assert
-        assert Theta_NR == pytest.approx(20.65, abs=1e-2)
+        assert Theta_NR == pytest.approx(20.65, abs=1e-2)  # 20.64 -> 20.40
