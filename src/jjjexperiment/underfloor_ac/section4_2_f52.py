@@ -46,6 +46,9 @@ def get_Theta_star_NR(
     #260112 非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
     A_NR_1F = A_NR * r_A_NR_1F_excl_bath
 
+    # CHECK: k1 の Q 項に A_NR_1F を使っている。
+    # k1 は非居室全体の熱コンダクタンス（外皮・換気・間仕切り）を表すため、
+    # 本来 Q * A_NR（全非居室面積）が正しい可能性がある。
     k1 = (Q - 0.35 * 0.5 * 2.4) * A_NR_1F \
         + c_p_air * rho_air * V_vent_l_NR / 3600  \
         + c_p_air * rho_air * V_dash_supply_A / 3600  \

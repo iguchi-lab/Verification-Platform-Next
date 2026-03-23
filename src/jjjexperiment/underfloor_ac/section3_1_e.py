@@ -1,6 +1,7 @@
 import numpy as np
 import pyhees.section3_1_e as algo
 # JJJ
+import jjjexperiment.constants as jjj_consts
 from jjjexperiment.common import jjj_cloning
 from jjjexperiment.logger import log_res
 
@@ -134,8 +135,7 @@ def calc_sum_Theta_dash_g_surf_A_m_runup(Theta_uf_const: float, Theta_g_avg: flo
     Returns:
         指数項mの吸熱応答の項別成分の合計 sum(Theta_dash_g_surf_A_m) [℃]
     """
-    import jjjexperiment.constants as jjj_consts
-    R_g = getattr(jjj_consts, 'R_g', 0.15)
+    R_g = jjj_consts.R_g
     Phi_A_0 = 0.025504994  # 吸熱応答係数の初項 (pyhees/section3_1_e.py と同値)
     M = 10
 
