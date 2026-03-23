@@ -1182,6 +1182,7 @@ def calc_Q_UT_A(
                     L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
 
         # (48) 実際の非居室の室温
+        r_A_NR_uf_1F_excl_bath = get_r_A_NR_uf_1F_excl_bath()
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
             Theta_NR_d_t = np.array([
                 get_Theta_NR(
@@ -1196,7 +1197,7 @@ def calc_Q_UT_A(
                     A_prt_i = A_prt_i.reshape(-1,1),
                     Q = skin.Q,
                     Theta_uf = Theta_uf_d_t[t],
-                    r_A_NR_1F_excl_bath = get_r_A_NR_uf_1F_excl_bath()
+                    r_A_NR_1F_excl_bath = r_A_NR_uf_1F_excl_bath
                 ) for t in range(24*365)
             ])
         else:

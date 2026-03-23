@@ -439,13 +439,15 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
 
     # ----- 助走計算 -----
 
-    if new_ufac is None:
+    if new_ufac is None or new_ufac_df is None:
       # 引数で渡されていないときスレッドにセットされていないかチェックする
       from jjjexperiment.common import get_current_injector
       thread_injector = get_current_injector()
       if thread_injector is not None:
-        new_ufac = thread_injector.get(UnderfloorAc)
-        new_ufac_df = thread_injector.get(UfVarsDataFrame)
+        if new_ufac is None:
+          new_ufac = thread_injector.get(UnderfloorAc)
+        if new_ufac_df is None:
+          new_ufac_df = thread_injector.get(UfVarsDataFrame)
 
     # 助走計算用床下温度
     if new_ufac is not None and new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
