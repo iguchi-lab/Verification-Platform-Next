@@ -40,7 +40,12 @@ from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeat
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 新床下空調
 from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath, calc_delta_L_room2uf_i, get_r_A_uf_i, calc_Theta_uf, calc_delta_L_uf2outdoor, calc_delta_L_uf2gnd
-from jjjexperiment.underfloor_ac.section3_1_e import calc_Theta_uf_d_t_2023
+from jjjexperiment.underfloor_ac.section3_1_e import (
+    calc_Theta_uf_d_t_2023,
+    calc_sum_Theta_dash_g_surf_A_m_runup,
+    THETA_UF_WARM,
+    THETA_UF_COOL,
+)
 from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
@@ -439,17 +444,16 @@ def calc_Q_UT_A(
         # 吸熱応答係数の初項 定数取得クラスを作成するか
         Phi_A_0 = 0.025504994
 
-        # NOTE: 実際には Theta_uf_d_t と共に後に算出される
-        match ac_setting:
-            case HeatingAcSetting():
-                sum_Theta_dash_g_surf_A_m = 11.2224 #260112 IGUCHI 27.69℃で助走（暫定値）
-            case CoolingAcSetting():
-                sum_Theta_dash_g_surf_A_m = 9.15940 #260112 IGUCHI 25.62℃で助走（暫定値）
-            case _:
-                raise ValueError
-
         A_s_ufac_A = np.sum(A_s_ufac_i)
         Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
+
+        match ac_setting:
+            case HeatingAcSetting():
+                sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)
+            case CoolingAcSetting():
+                sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)
+            case _:
+                raise ValueError
 
         delta_L_uf2gnd_d_t = np.vectorize(calc_delta_L_uf2gnd)
         delta_L_uf2gnd_d_t = \

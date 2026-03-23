@@ -4,6 +4,11 @@ import pyhees.section3_1_e as algo
 from jjjexperiment.common import jjj_cloning
 from jjjexperiment.logger import log_res
 
+# 新床下空調ロジック用の助走計算に使用する代表床下温度 [℃]
+THETA_UF_WARM = 27.69   # 冬・春・秋期の床下温度 [℃]
+THETA_UF_COOL = 25.62   # 夏期の床下温度 [℃]
+
+#260112 IGUCHI 新床下空調用固定値
 @jjj_cloning
 def get_Theta_uf_d_t_runup() -> np.ndarray:
     """新床下空調ロジック用の助走計算床下温度 (℃) の時系列を返す
@@ -112,3 +117,41 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
     Theta_uf_d_t[M] = Theta_ex_d_t[M]
 
     return Theta_uf_d_t
+
+
+def calc_sum_Theta_dash_g_surf_A_m_runup(Theta_uf_const: float, Theta_g_avg: float) -> float:
+    """定数床下温度で1年間の助走計算を行い、吸熱応答の項別成分の合計を返す
+
+    床下→地盤への熱損失計算に必要な sum_Theta_dash_g_surf_A_m を、
+    代表床下温度 (THETA_UF_WARM または THETA_UF_COOL) と地盤の不易層温度から算出する。
+    pyhees/section3_1_e.py の助走計算ループと同一の漸化式を使用する。
+
+    Args:
+        Theta_uf_const: 床下空間の代表温度（定数） [℃]。
+            暖房期には THETA_UF_WARM、冷房期には THETA_UF_COOL を使用する。
+        Theta_g_avg: 地盤の不易層温度 [℃]
+
+    Returns:
+        指数項mの吸熱応答の項別成分の合計 sum(Theta_dash_g_surf_A_m) [℃]
+    """
+    import jjjexperiment.constants as jjj_consts
+    R_g = getattr(jjj_consts, 'R_g', 0.15)
+    Phi_A_0 = 0.025504994  # 吸熱応答係数の初項 (pyhees/section3_1_e.py と同値)
+    M = 10
+
+    phi_1_A_m = np.array([algo.get_phi_1_A_m(m) for m in range(1, M + 1)])
+    r_m = np.array([algo.get_r_m(m) for m in range(1, M + 1)])
+
+    Theta_uf_prev = 0.0
+    Theta_g_surf_prev = 0.0
+    Theta_dash_g_surf_A_m = np.zeros(M)
+
+    for _ in range(24 * 365):
+        q_g_prev = 1.0 / R_g * (Theta_uf_prev - Theta_g_surf_prev)
+        Theta_dash_g_surf_A_m = phi_1_A_m * q_g_prev + r_m * Theta_dash_g_surf_A_m
+        Theta_g_surf = ((Phi_A_0 / R_g) * Theta_uf_const + np.sum(Theta_dash_g_surf_A_m) + Theta_g_avg) \
+                       / (1.0 + (Phi_A_0 / R_g))
+        Theta_uf_prev = Theta_uf_const
+        Theta_g_surf_prev = Theta_g_surf
+
+    return float(np.sum(Theta_dash_g_surf_A_m))
