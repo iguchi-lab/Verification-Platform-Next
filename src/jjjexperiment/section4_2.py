@@ -388,7 +388,7 @@ def calc_Q_UT_A(
         U_s_input = new_ufac.U_s_vert  # 床板(床チャンバー上面)の熱貫流率 [W/(m2・K)]
         A_s_ufac_i, r_A_s_ufac = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
         #260112 IGUCHI デバッグ用
-        print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
+        #print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
         assert A_s_ufac_i.ndim == 2
         delta_L_room2uf_d_t_i  \
             = np.hstack([
@@ -401,8 +401,8 @@ def calc_Q_UT_A(
         assert delta_L_room2uf_d_t_i.ndim == 2
         Q_hat_hs_d_t -= np.sum(delta_L_room2uf_d_t_i, axis=0)
         #260112 IGUCHI デバッグ用
-        print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
-        
+        #print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
+
         # 2. 床下 -> 外気 (逃げ方向)
         # 一階負荷 暖冷房
         match ac_setting:
@@ -431,14 +431,13 @@ def calc_Q_UT_A(
             ])
 
         #260112 IGUCHI デバッグ用
-        print("L_d_t_flr1st[0]:", L_d_t_flr1st[0])
-        print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
-        print("U_s:", U_s_input)
-        print("Theta_in_d_t[0]:", Theta_in_d_t[0])
-        print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
-        print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
-
-        print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
+        #print("L_d_t_flr1st[0]:", L_d_t_flr1st[0])
+        #print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
+        #print("U_s:", U_s_input)
+        #print("Theta_in_d_t[0]:", Theta_in_d_t[0])
+        #print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
+        #print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
+        #print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
 
         L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
         phi = climate.get_phi(skin.Q)
@@ -450,8 +449,8 @@ def calc_Q_UT_A(
         Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
 
         #260112 IGUCHI デバッグ用
-        print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
-        print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
+        #print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
+        #print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
 
         # 3. 床下 -> 地盤 (逃げ方向)
         A_s_ufac_A = np.sum(A_s_ufac_i)
@@ -463,8 +462,8 @@ def calc_Q_UT_A(
         Q_hat_hs_d_t += delta_L_uf2gnd_d_t
 
         #260112 IGUCHI デバッグ用
-        print("delta_L_uf2gnd_d_t[0] 床下⇒地盤: ", delta_L_uf2gnd_d_t[0])
-        print("Q_hat_hs_d_t[0] 床下⇒地盤を足す: ", Q_hat_hs_d_t[0])
+        #print("delta_L_uf2gnd_d_t[0] 床下⇒地盤: ", delta_L_uf2gnd_d_t[0])
+        #print("Q_hat_hs_d_t[0] 床下⇒地盤を足す: ", Q_hat_hs_d_t[0])
 
         # 補正完了した Q^hs を使って V'supply を再計算する
         should_be_adjusted_Q_hat_hs_d_t = False
@@ -500,20 +499,20 @@ def calc_Q_UT_A(
         HCM = np.array(climate.get_HCM_d_t())
 
         #デバッグ用 250501 IGUCHI
-        print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
-        print("Q", skin.Q)
-        print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
-        print("A_NR", A_NR)
-        print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
-        print("U_prt", U_prt)
-        print("A_prt_A", A_prt_A)
-        print("L_H_NR_A[4848]", L_H_NR_d_t_A[4848])
-        print("L_CS_NR_A[4848]", L_CS_NR_d_t_A[4848])
-        print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
-        print("HCM[4848]", HCM[4848])
+        #print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
+        #print("Q", skin.Q)
+        #print("A_NR", A_NR)
+        #print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
+        #print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
+        #print("A_NR", A_NR)
+        #print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
+        #print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
+        #print("U_prt", U_prt)
+        #print("A_prt_A", A_prt_A)
+        #print("L_H_NR_A[4848]", L_H_NR_d_t_A[4848])
+        #print("L_CS_NR_A[4848]", L_CS_NR_d_t_A[4848])
+        #print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
+        #print("HCM[4848]", HCM[4848])
 
         Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
         Theta_star_NR_d_t = \
@@ -532,17 +531,17 @@ def calc_Q_UT_A(
                 HCM = HCM,  # (8760,)
                 r_A_NR_1F_excl_bath = get_r_A_NR_uf_1F_excl_bath()
             )
-        print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
-        print("Q: ", skin.Q)
-        print("V_vent_l_NR[0]: ", V_vent_l_NR_d_t[0])
-        print("V_dash_supply_A[0]: ", V_dash_supply_d_t_A[0])
-        print("U_prt; ", U_prt)
-        print("A_prt_A: ", A_prt_A)
-        print("L_H_NR_A[0]: ", L_H_NR_d_t_A[0])
-        print("L_CS_NR_A[0]: ", L_CS_NR_d_t_A[0])
-        print("Theta_NR[0]: ", Theta_in_d_t[0])
-        print("Theta_uf[0]: ", Theta_uf_d_t[0])
-        print("HCM[0]: ", HCM[0])
+        #print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
+        #print("Q: ", skin.Q)
+        #print("V_vent_l_NR[0]: ", V_vent_l_NR_d_t[0])
+        #print("V_dash_supply_A[0]: ", V_dash_supply_d_t_A[0])
+        #print("U_prt; ", U_prt)
+        #print("A_prt_A: ", A_prt_A)
+        #print("L_H_NR_A[0]: ", L_H_NR_d_t_A[0])
+        #print("L_CS_NR_A[0]: ", L_CS_NR_d_t_A[0])
+        #print("Theta_NR[0]: ", Theta_in_d_t[0])
+        #print("Theta_uf[0]: ", Theta_uf_d_t[0])
+        #print("HCM[0]: ", HCM[0])
     else:
         Theta_star_NR_d_t = \
             dc.get_Theta_star_NR_d_t(
