@@ -1,0 +1,42 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+      - name: Build and push image
+        env:
+          IMAGE_URI: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_ARTIFACT_REPOSITORY }}/verification-platform-next:${{ github.sha }}
+        run: |
+          docker build --tag "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+          echo "IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
+      - name: Deploy
+        run: |
+          gcloud run deploy verification-platform-next \
+            --image "$IMAGE_URI" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --concurrency 1 \
+            --cpu 2 \
+            --memory 4Gi \
+            --timeout 3600 \
+            --set-env-vars GRADIO_SERVER_NAME=0.0.0.0,GRADIO_SERVER_PORT=8080,VERIFICATION_OUTPUT_DIR=/tmp/verification-platform

@@ -1,0 +1,28 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: verification-platform-next
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "3"
+    spec:
+      containerConcurrency: 1
+      timeoutSeconds: 3600
+      containers:
+        - image: IMAGE_URI
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: GRADIO_SERVER_NAME
+              value: 0.0.0.0
+            - name: GRADIO_SERVER_PORT
+              value: "8080"
+            - name: VERIFICATION_OUTPUT_DIR
+              value: /tmp/verification-platform
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi

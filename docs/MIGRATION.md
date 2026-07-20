@@ -43,6 +43,14 @@
 - 計算ログ、グラフ、ダウンロードをサービスへ分離
 - Colabノートブックをインストールと起動だけに縮小
 
+## Cloud Migration Track（完了）
+
+- Gradioアプリをコンテナ化し、Cloud Runの `0.0.0.0:8080` 契約に対応
+- 計算出力を `VERIFICATION_OUTPUT_DIR` 配下へ隔離し、Cloud Runでは一時領域を使用
+- 状態を共有する計算エンジンに合わせ、Cloud RunとGradio双方の同時実行数を1に制限
+- GitHub ActionsのWorkload Identity Federationで、長期サービスアカウント鍵を置かずにデプロイ
+- Cloud Runサービス定義にCPU、メモリ、タイムアウト、最大インスタンス数を明示
+
 ## Phase 4: 計算エンジン履歴移行
 
 `pyhees-jjj` の対象履歴を `packages/pyhees-jjj` へ履歴付きで移行します。推奨手段は `git filter-repo` または `git subtree` です。

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import os
 import threading
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
@@ -44,7 +45,14 @@ class CalculationService:
         try:
             input_data = build_input_data(values)
             with self._lock, redirect_stdout(output), redirect_stderr(output):
-                self._calculate(input_data)
+                workdir = (self._workdir or Path.cwd()).resolve()
+                workdir.mkdir(parents=True, exist_ok=True)
+                previous_cwd = Path.cwd()
+                try:
+                    os.chdir(workdir)
+                    self._calculate(input_data)
+                finally:
+                    os.chdir(previous_cwd)
             files = self._result_files(input_data)
             return CalculationResult(
                 succeeded=True,
@@ -69,7 +77,7 @@ class CalculationService:
 
     def _result_files(self, input_data: Mapping[str, Any]) -> tuple[str, ...]:
         prefix = f"{input_data.get('case_name', 'default')}{self._version_info()}"
-        root = self._workdir or Path.cwd()
+        root = (self._workdir or Path.cwd()).resolve()
         return tuple(
             str(path.resolve()) for path in sorted(root.glob(prefix + "*")) if path.is_file()
         )
