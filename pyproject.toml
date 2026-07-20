@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "verification-platform-next"
+version = "0.1.0"
+description = "Monorepo for the Verification Platform engine, schema, and UI"
+authors = ["iguchi-lab"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.12.11,<3.13"
+verification-core = { path = "packages/verification-core", develop = true }
+verification-platform-app = { path = "apps/gradio", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+ruff = "*"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["packages/verification-core/src", "apps/gradio/src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
