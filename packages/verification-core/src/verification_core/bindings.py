@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from importlib import resources
+from typing import Any, Mapping
 
 from .legacy import LegacyInputInventory, load_legacy_inventory
+from .transforms import ValueTransform, parse_binding_expression
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,10 +27,14 @@ class InputBinding:
     expression: str
     conditions: tuple[BindingCondition, ...]
     source_ids: tuple[str, ...]
+    transform: ValueTransform
 
     @property
     def dotted_target(self) -> str:
         return ".".join(self.target_path)
+
+    def evaluate(self, values: Mapping[str, Any]) -> Any:
+        return self.transform.evaluate(values)
 
 
 @dataclass(frozen=True)
@@ -103,6 +109,10 @@ def load_input_bindings(version: str = "260715") -> InputBindingCatalog:
                 for condition in item["conditions"]
             ),
             source_ids=tuple(item["source_ids"]),
+            transform=parse_binding_expression(
+                item["expression"],
+                tuple(item["source_ids"]),
+            ),
         )
         for item in payload["bindings"]
     )
