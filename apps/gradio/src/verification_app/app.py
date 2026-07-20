@@ -9,6 +9,9 @@ from typing import Any
 import gradio as gr
 import jjjexperiment.main
 from jjjexperiment.constants import version_info
+from verification_core import load_legacy_inventory
+
+_INPUT_INVENTORY = load_legacy_inventory("260715")
 
 _CALCULATION_LOCK = threading.Lock()
 
@@ -38,7 +41,11 @@ def build_app() -> gr.Blocks:
     with gr.Blocks(title="Verification Platform Next") as demo:
         gr.Markdown("# Verification Platform Next")
         gr.Markdown(
-            "移行期間用のJSON実行画面です。222項目のフォームは共通スキーマへの移行後に統合します。"
+            f"移行期間用のJSON実行画面です。共通台帳へ "
+            f"{len(_INPUT_INVENTORY.fields)} 項目を移行済みです。"
+        )
+        gr.Markdown(
+            "次段階で、この台帳から222項目のフォームと input_data 変換を生成します。"
         )
         source = gr.Code(
             value='{"case_name": "default"}',
