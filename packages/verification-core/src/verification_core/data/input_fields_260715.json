@@ -1,0 +1,4276 @@
+{
+  "version": "260715",
+  "source": {
+    "repository": "iguchi-lab/Verification-Platform",
+    "path": "Verification_Platform_260715_Gradio.ipynb",
+    "branch": "feat/gradio-ui-260715",
+    "engine_commit": "0f91ba8381df1b4960557b92b39339385cc9009f"
+  },
+  "field_count": 222,
+  "fields": [
+    {
+      "id": "case_name__0",
+      "source_name": "case_name",
+      "source_occurrence": 0,
+      "label": "計算条件名",
+      "section": "① 計算条件名",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "text",
+      "default": "default",
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "climateFile__0",
+      "source_name": "climateFile",
+      "source_occurrence": 0,
+      "label": "気象データファイル名",
+      "section": "② 外部ファイル名の入力（ある場合のみ）",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "text",
+      "default": "-",
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "loadFile__0",
+      "source_name": "loadFile",
+      "source_occurrence": 0,
+      "label": "暖冷房負荷データファイル名",
+      "section": "② 外部ファイル名の入力（ある場合のみ）",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "text",
+      "default": "-",
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "Theta_hs_out_max_H_d_t_limit__0",
+      "source_name": "Theta_hs_out_max_H_d_t_limit",
+      "source_occurrence": 0,
+      "label": "最大暖房出力時の熱源機の出口における空気温度の最大値の上限値",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 45,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "Theta_hs_out_min_C_d_t_limit__0",
+      "source_name": "Theta_hs_out_min_C_d_t_limit",
+      "source_occurrence": 0,
+      "label": "最大冷房出力時の熱源機の出口における空気温度の最低値の下限値",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 15,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_df_H_d_t_defrost_ductcentral__0",
+      "source_name": "C_df_H_d_t_defrost_ductcentral",
+      "source_occurrence": 0,
+      "label": "デフロストに関する暖房出力補正係数（ダクトセントラル空調機）",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.77,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "defrost_temp_ductcentral__0",
+      "source_name": "defrost_temp_ductcentral",
+      "source_occurrence": 0,
+      "label": "デフロスト発生外気温度（ダクトセントラル空調機）",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 5,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "defrost_humid_ductcentral__0",
+      "source_name": "defrost_humid_ductcentral",
+      "source_occurrence": 0,
+      "label": "デフロスト発生外気相対湿度（ダクトセントラル空調機）",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 80,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "phi_i__0",
+      "source_name": "phi_i",
+      "source_occurrence": 0,
+      "label": "ダクトiの線熱損失係数",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.49,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_V_fan_dsgn_H__0",
+      "source_name": "C_V_fan_dsgn_H",
+      "source_occurrence": 0,
+      "label": "暖房時の送風機の設計風量に関する係数",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.79,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_V_fan_dsgn_C__0",
+      "source_name": "C_V_fan_dsgn_C",
+      "source_occurrence": 0,
+      "label": "冷房時の送風機の設計風量に関する係数",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.79,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_df_H_d_t_defrost_rac__0",
+      "source_name": "C_df_H_d_t_defrost_rac",
+      "source_occurrence": 0,
+      "label": "デフロストに関する暖房出力補正係数（ルームエアコンディショナー）",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.77,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "defrost_temp_rac__0",
+      "source_name": "defrost_temp_rac",
+      "source_occurrence": 0,
+      "label": "デフロスト発生外気温度（ルームエアコンディショナー）",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 5,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "defrost_humid_rac__0",
+      "source_name": "defrost_humid_rac",
+      "source_occurrence": 0,
+      "label": "デフロスト発生外気相対湿度（ルームエアコンディショナー）",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 80,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_hm_C__0",
+      "source_name": "C_hm_C",
+      "source_occurrence": 0,
+      "label": "室内機吸い込み湿度に関する冷房出力補正係数",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 1.15,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "q_rtd_C_limit__0",
+      "source_name": "q_rtd_C_limit",
+      "source_occurrence": 0,
+      "label": "定格冷房能力の最大値(固定:5600)",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "select",
+      "default": 5600,
+      "choices": [
+        5600
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "change_supply_volume_before_vav_adjust__0",
+      "source_name": "change_supply_volume_before_vav_adjust",
+      "source_occurrence": 0,
+      "label": "VAV調整前の吹き出し風量の式を変更",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "change_heat_source_outlet_required_temperature__0",
+      "source_name": "change_heat_source_outlet_required_temperature",
+      "source_occurrence": 0,
+      "label": "熱源機の出口における空気温度",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "change_V_supply_d_t_i_max__0",
+      "source_name": "change_V_supply_d_t_i_max",
+      "source_occurrence": 0,
+      "label": "V_supply_d_t_iの上限キャップを外す",
+      "section": "③ 計算時定数等",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "select",
+      "default": "従来上限を維持",
+      "choices": [
+        "従来上限を維持",
+        "設計風量を上限(各室均一)",
+        "設計風量を上限(風量増の部屋のみ)"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "A_A__0",
+      "source_name": "A_A",
+      "source_occurrence": 0,
+      "label": "面積の合計 [m2]",
+      "section": "④ 基本情報",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 120.08,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "A_MR__0",
+      "source_name": "A_MR",
+      "source_occurrence": 0,
+      "label": "主たる居室の面積 [m2]",
+      "section": "④ 基本情報",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 29.81,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "A_OR__0",
+      "source_name": "A_OR",
+      "source_occurrence": 0,
+      "label": "その他の居室の面積 [m2]",
+      "section": "④ 基本情報",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 51.34,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "region__0",
+      "source_name": "region",
+      "source_occurrence": 0,
+      "label": "地域区分",
+      "section": "④ 基本情報",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "select",
+      "default": 6,
+      "choices": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "A_env__0",
+      "source_name": "A_env",
+      "source_occurrence": 0,
+      "label": "外皮面積 [m2]",
+      "section": "⑤ 外皮条件",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 307.51,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "U_A__0",
+      "source_name": "U_A",
+      "source_occurrence": 0,
+      "label": "外皮平均熱貫流率 UA [W/(m2・K)]",
+      "section": "⑤ 外皮条件",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.87,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "eta_A_C__0",
+      "source_name": "eta_A_C",
+      "source_occurrence": 0,
+      "label": "冷房期平均日射熱取得率ηAC",
+      "section": "⑤ 外皮条件",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 2.8,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "eta_A_H__0",
+      "source_name": "eta_A_H",
+      "source_occurrence": 0,
+      "label": "暖房期平均日射熱取得率ηAH",
+      "section": "⑤ 外皮条件",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 4.3,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "underfloor_ventilation__0",
+      "source_name": "underfloor_ventilation",
+      "source_occurrence": 0,
+      "label": "床下空間を経由して外気を導入する換気方式の利用（☐：評価しない or ☑：評価する）",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "r_A_ufvnt__0",
+      "source_name": "r_A_ufvnt",
+      "source_occurrence": 0,
+      "label": "外気が経由する床下の面積の割合 [%]",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 100,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "underfloor_insulation__0",
+      "source_name": "underfloor_insulation",
+      "source_occurrence": 0,
+      "label": "床下空間の断熱（☐：断熱区画外 or ☑：断熱区画内）",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "hs_CAV__0",
+      "source_name": "hs_CAV",
+      "source_occurrence": 0,
+      "label": "全体風量を固定する （☐：固定しない or ☑：固定する）",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "underfloor_air_conditioning_air_supply__0",
+      "source_name": "underfloor_air_conditioning_air_supply",
+      "source_occurrence": 0,
+      "label": "空調空気を床下を通して給気する （☐：床下を通して給気しない or ☑：床下を通して給気する）",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "change_underfloor_temperature__0",
+      "source_name": "change_underfloor_temperature",
+      "source_occurrence": 0,
+      "label": "床下空調のロジックを変更する",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "R_g__0",
+      "source_name": "R_g",
+      "source_occurrence": 0,
+      "label": "地盤またはそれを覆う基礎の表面熱伝達抵抗 [(m2・K)/W]",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.15,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "input_ufac_consts__0",
+      "source_name": "input_ufac_consts",
+      "source_occurrence": 0,
+      "label": "床下空調に関する定数を上書きする",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "Theta_g_avg__0",
+      "source_name": "Theta_g_avg",
+      "source_occurrence": 0,
+      "label": "地盤内の不易層の温度 [℃]",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 15.7,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "U_s_vert__0",
+      "source_name": "U_s_vert",
+      "source_occurrence": 0,
+      "label": "床板(床チャンバー上面)の熱貫流率 [W/(m2・K)]",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 2.223,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "phi__0",
+      "source_name": "phi",
+      "source_occurrence": 0,
+      "label": "基礎(床チャンバー側面)の線熱貫流率 [W/(m・K)]",
+      "section": "⑥ その他",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 0.846,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "carry_over_heat__0",
+      "source_name": "carry_over_heat",
+      "source_occurrence": 0,
+      "label": "過剰熱量の持ち越し計算を行う",
+      "section": "⑥-1. 過剰熱量持越し",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "c1_BR_R_1__0",
+      "source_name": "c1_BR_R_1",
+      "source_occurrence": 0,
+      "label": "SimHeatモデル熱容量(空間・什器のみ)の変更 [J/K]",
+      "section": "⑥-1. 過剰熱量持越し",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 893676,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "c1_BR_R_2__0",
+      "source_name": "c1_BR_R_2",
+      "source_occurrence": 0,
+      "label": "SimHeatモデル熱容量(空間・什器のみ)の変更 [J/K]",
+      "section": "⑥-1. 過剰熱量持越し",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 500835,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "c1_BR_R_3__0",
+      "source_name": "c1_BR_R_3",
+      "source_occurrence": 0,
+      "label": "SimHeatモデル熱容量(空間・什器のみ)の変更 [J/K]",
+      "section": "⑥-1. 過剰熱量持越し",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 400667,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "c1_BR_R_4__0",
+      "source_name": "c1_BR_R_4",
+      "source_occurrence": 0,
+      "label": "SimHeatモデル熱容量(空間・什器のみ)の変更 [J/K]",
+      "section": "⑥-1. 過剰熱量持越し",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 325488,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "c1_BR_R_5__0",
+      "source_name": "c1_BR_R_5",
+      "source_occurrence": 0,
+      "label": "SimHeatモデル熱容量(空間・什器のみ)の変更 [J/K]",
+      "section": "⑥-1. 過剰熱量持越し",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 325598,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "c1_NR_R__0",
+      "source_name": "c1_NR_R",
+      "source_occurrence": 0,
+      "label": "SimHeatモデル熱容量(空間・什器のみ)の変更 [J/K]",
+      "section": "⑥-1. 過剰熱量持越し",
+      "group": "基本項目",
+      "category": "基本設定",
+      "kind": "integer",
+      "default": 1195534,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_type__0",
+      "source_name": "H_A_type",
+      "source_occurrence": 0,
+      "label": "暖房設備の種類 (1.ﾀﾞｸﾄ式ｾﾝﾄﾗﾙ空調機, 2.ﾙｰﾑｴｱｺﾝﾃﾞｨｼｮﾅ活用型全館空調(現行省ｴﾈ法ﾙｰﾑｴｱｺﾝﾓﾃﾞﾙ), 3.ﾙｰﾑｴｱｺﾝﾃﾞｨｼｮﾅ活用型全館空調(潜熱評価ﾓﾃﾞﾙ), 4.電中研ﾓﾃﾞﾙ)",
+      "section": "⑦ 暖房全般",
+      "group": "基本項目",
+      "category": "暖房",
+      "kind": "select",
+      "default": "ダクト式セントラル空調機",
+      "choices": [
+        "ダクト式セントラル空調機",
+        "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+        "ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+        "電中研モデル"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_duct_insulation__0",
+      "source_name": "H_A_duct_insulation",
+      "source_occurrence": 0,
+      "label": "ダクトが通過する空間　（全てもしくは一部が断熱区画外である or 全て断熱区画内である）",
+      "section": "⑦ 暖房全般",
+      "group": "基本項目",
+      "category": "暖房",
+      "kind": "select",
+      "default": "全てもしくは一部が断熱区画外である",
+      "choices": [
+        "全てもしくは一部が断熱区画外である",
+        "全て断熱区画内である"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_VAV__0",
+      "source_name": "H_A_VAV",
+      "source_occurrence": 0,
+      "label": "VAV方式　（採用しない or 採用する）",
+      "section": "⑦ 暖房全般",
+      "group": "基本項目",
+      "category": "暖房",
+      "kind": "select",
+      "default": "採用しない",
+      "choices": [
+        "採用しない",
+        "採用する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_general_ventilation__0",
+      "source_name": "H_A_general_ventilation",
+      "source_occurrence": 0,
+      "label": "全般換気機能　（あり or なし）",
+      "section": "⑦ 暖房全般",
+      "group": "基本項目",
+      "category": "暖房",
+      "kind": "select",
+      "default": "あり",
+      "choices": [
+        "あり",
+        "なし"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_input_V_hs_dsgn_H__0",
+      "source_name": "H_A_input_V_hs_dsgn_H",
+      "source_occurrence": 0,
+      "label": "設計風量（入力しない or 入力する）",
+      "section": "⑦ 暖房全般",
+      "group": "設計風量",
+      "category": "暖房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_V_hs_dsgn_H__0",
+      "source_name": "H_A_V_hs_dsgn_H",
+      "source_occurrence": 0,
+      "label": "設計風量 [m3/h]（入力する場合のみ）",
+      "section": "⑦ 暖房全般",
+      "group": "設計風量",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 1500,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_subtract_ventilation_power__0",
+      "source_name": "H_A_subtract_ventilation_power",
+      "source_occurrence": 0,
+      "label": "ファン消費電力から換気分を引くか（換気分を引く or 換気分を引かない）",
+      "section": "⑦ 暖房全般",
+      "group": "最低風量",
+      "category": "暖房",
+      "kind": "select",
+      "default": "換気分を引く",
+      "choices": [
+        "換気分を引く",
+        "換気分を引かない"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_input_V_hs_min__0",
+      "source_name": "H_A_input_V_hs_min",
+      "source_occurrence": 0,
+      "label": "最低風量（入力しない or 入力する）",
+      "section": "⑦ 暖房全般",
+      "group": "最低風量",
+      "category": "暖房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_V_hs_min__0",
+      "source_name": "H_A_V_hs_min",
+      "source_occurrence": 0,
+      "label": "最低風量 [m3/h]（入力する場合のみ）",
+      "section": "⑦ 暖房全般",
+      "group": "最低風量",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 1200,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_input_E_E_fan_min__0",
+      "source_name": "H_A_input_E_E_fan_min",
+      "source_occurrence": 0,
+      "label": "最低電力（入力しない or 入力する）",
+      "section": "⑦ 暖房全般",
+      "group": "最低電力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_E_E_fan_logic__0",
+      "source_name": "H_A_E_E_fan_logic",
+      "source_occurrence": 0,
+      "label": "ファン消費電力算定方法",
+      "section": "⑦ 暖房全般",
+      "group": "最低電力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "直線近似法",
+      "choices": [
+        "直線近似法",
+        "風量三乗近似法"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_E_E_fan_min__0",
+      "source_name": "H_A_E_E_fan_min",
+      "source_occurrence": 0,
+      "label": "最低電力 [W]（入力する場合のみ）",
+      "section": "⑦ 暖房全般",
+      "group": "最低電力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 100,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "H_A_input__0",
+      "source_name": "H_A_input",
+      "source_occurrence": 0,
+      "label": "機器仕様の入力（入力しない or 定格能力試験の値を入力する or 定格能力試験と中間能力試験の値を入力する）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "機器仕様の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "定格能力試験の値を入力する",
+        "定格能力試験と中間能力試験の値を入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_hs_rtd_H1__0",
+      "source_name": "H_A_q_hs_rtd_H1",
+      "source_occurrence": 0,
+      "label": "定格暖房能力 [W]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_hs_rtd_H1__0",
+      "source_name": "H_A_P_hs_rtd_H1",
+      "source_occurrence": 0,
+      "label": "定格暖房消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_V_fan_rtd_H1__0",
+      "source_name": "H_A_V_fan_rtd_H1",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_fan_rtd_H1__0",
+      "source_name": "H_A_P_fan_rtd_H1",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_hs_mid_H1__0",
+      "source_name": "H_A_q_hs_mid_H1",
+      "source_occurrence": 0,
+      "label": "中間暖房能力 [W]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_hs_mid_H1__0",
+      "source_name": "H_A_P_hs_mid_H1",
+      "source_occurrence": 0,
+      "label": "中間暖房消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_V_fan_mid_H1__0",
+      "source_name": "H_A_V_fan_mid_H1",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_fan_mid_H1__0",
+      "source_name": "H_A_P_fan_mid_H1",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-1 暖房 ダクト式セントラル空調機",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "H_A_input_C_af_H2__0",
+      "source_name": "H_A_input_C_af_H2",
+      "source_occurrence": 0,
+      "label": "設置方法の入力（設置方法を入力する or 補正係数を直接入力する）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "設置方法を入力する",
+      "choices": [
+        "設置方法を入力する",
+        "補正係数を直接入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_dedicated_chamber2__0",
+      "source_name": "H_A_dedicated_chamber2",
+      "source_occurrence": 0,
+      "label": "専用チャンバーに格納される方式（該当しない or 該当する）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_fixed_fin_direction2__0",
+      "source_name": "H_A_fixed_fin_direction2",
+      "source_occurrence": 0,
+      "label": "フィン向きが中央位置に固定される方式（該当しない or 該当する）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_C_af_H2__0",
+      "source_name": "H_A_C_af_H2",
+      "source_occurrence": 0,
+      "label": "室内機吹き出し風量に関する暖房出力補正係数の入力（入力する場合のみ）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_input_rac_performance__0",
+      "source_name": "H_A_input_rac_performance",
+      "source_occurrence": 0,
+      "label": "暖房能力の入力（面積から能力を算出 or 性能を直接入力）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "暖房能力の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "面積から能力を算出",
+      "choices": [
+        "面積から能力を算出",
+        "性能を直接入力"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_rac_rtd_H__0",
+      "source_name": "H_A_q_rac_rtd_H",
+      "source_occurrence": 0,
+      "label": "暖房定格能力 [W]（入力する場合のみ）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "暖房能力の入力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 2.2,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_rac_max_H__0",
+      "source_name": "H_A_q_rac_max_H",
+      "source_occurrence": 0,
+      "label": "暖房最大能力 [W]（入力する場合のみ）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "暖房能力の入力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 3.3,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "e_rac_rtd_H__0",
+      "source_name": "e_rac_rtd_H",
+      "source_occurrence": 0,
+      "label": "定格エネルギー効率 [-]（入力する場合のみ）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "暖房能力の入力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_dualcompressor__0",
+      "source_name": "H_A_dualcompressor",
+      "source_occurrence": 0,
+      "label": "小能力時高効率型コンプレッサー（評価しない or 搭載する）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "暖房能力の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "評価しない",
+      "choices": [
+        "評価しない",
+        "搭載する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_input_f_SFP_H__0",
+      "source_name": "H_A_input_f_SFP_H",
+      "source_occurrence": 0,
+      "label": "ファンの比消費電力（入力しない or 入力する）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "ファンの消費電力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "f_SFP_H__0",
+      "source_name": "f_SFP_H",
+      "source_occurrence": 0,
+      "label": "ファンの比消費電力W [W / (m3/h)]（入力する場合のみ）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "ファンの消費電力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 0.144,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "H_A_input_C_af_H3__0",
+      "source_name": "H_A_input_C_af_H3",
+      "source_occurrence": 0,
+      "label": "設置方法の入力（設置方法を入力する or 補正係数を直接入力する）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "設置方法を入力する",
+      "choices": [
+        "設置方法を入力する",
+        "補正係数を直接入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_dedicated_chamber3__0",
+      "source_name": "H_A_dedicated_chamber3",
+      "source_occurrence": 0,
+      "label": "専用チャンバーに格納される方式（該当しない or 該当する）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_fixed_fin_direction3__0",
+      "source_name": "H_A_fixed_fin_direction3",
+      "source_occurrence": 0,
+      "label": "フィン向きが中央位置に固定される方式（該当しない or 該当する）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_C_af_H3__0",
+      "source_name": "H_A_C_af_H3",
+      "source_occurrence": 0,
+      "label": "室内機吹き出し風量に関する暖房出力補正係数の入力（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_input__1",
+      "source_name": "H_A_input",
+      "source_occurrence": 1,
+      "label": "機器仕様の入力（入力しない or 定格能力試験の値を入力する or 定格能力試験と中間能力試験の値を入力する）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "機器仕様の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "定格能力試験の値を入力する",
+        "定格能力試験と中間能力試験の値を入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_hs_rtd_H3__0",
+      "source_name": "H_A_q_hs_rtd_H3",
+      "source_occurrence": 0,
+      "label": "定格暖房能力 [W]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_hs_rtd_H3__0",
+      "source_name": "H_A_P_hs_rtd_H3",
+      "source_occurrence": 0,
+      "label": "定格消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_V_fan_rtd_H3__0",
+      "source_name": "H_A_V_fan_rtd_H3",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_fan_rtd_H3__0",
+      "source_name": "H_A_P_fan_rtd_H3",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_hs_mid_H3__0",
+      "source_name": "H_A_q_hs_mid_H3",
+      "source_occurrence": 0,
+      "label": "中間暖房能力 [W]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_hs_mid_H3__0",
+      "source_name": "H_A_P_hs_mid_H3",
+      "source_occurrence": 0,
+      "label": "中間暖房消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_V_fan_mid_H3__0",
+      "source_name": "H_A_V_fan_mid_H3",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_fan_mid_H3__0",
+      "source_name": "H_A_P_fan_mid_H3",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間暖房能力試験",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_f_hex_small_H__0",
+      "source_name": "A_f_hex_small_H",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW未満の場合のA_f,hex",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 0.2,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_e_hex_small_H__0",
+      "source_name": "A_e_hex_small_H",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW未満の場合のA_e,hex",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 6.2,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_f_hex_large_H__0",
+      "source_name": "A_f_hex_large_H",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW以上の場合のA_f,hex",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 0.3,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_e_hex_large_H__0",
+      "source_name": "A_e_hex_large_H",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW以上の場合のA_e,hex",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 10.6,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a4__0",
+      "source_name": "a4",
+      "source_occurrence": 0,
+      "label": "er,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a3__0",
+      "source_name": "a3",
+      "source_occurrence": 0,
+      "label": "er,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a2__0",
+      "source_name": "a2",
+      "source_occurrence": 0,
+      "label": "er,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": -0.0316,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a1__0",
+      "source_name": "a1",
+      "source_occurrence": 0,
+      "label": "er,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 0.2944,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a0__0",
+      "source_name": "a0",
+      "source_occurrence": 0,
+      "label": "er,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "airvolume_minimum_H__0",
+      "source_name": "airvolume_minimum_H",
+      "source_occurrence": 0,
+      "label": "最小風量 [m3/min]",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 14.38995,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "airvolume_maximum_H__0",
+      "source_name": "airvolume_maximum_H",
+      "source_occurrence": 0,
+      "label": "最大風量 [m3/min]",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 24.3824,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a4__1",
+      "source_name": "a4",
+      "source_occurrence": 1,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a3__1",
+      "source_name": "a3",
+      "source_occurrence": 1,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a2__1",
+      "source_name": "a2",
+      "source_occurrence": 1,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a1__1",
+      "source_name": "a1",
+      "source_occurrence": 1,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 1.2946,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a0__1",
+      "source_name": "a0",
+      "source_occurrence": 1,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "暖房",
+      "kind": "number",
+      "default": 12.084,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a4__2",
+      "source_name": "a4",
+      "source_occurrence": 2,
+      "label": "Pfanqhs,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a3__2",
+      "source_name": "a3",
+      "source_occurrence": 2,
+      "label": "Pfanqhs,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 1.4675,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a2__2",
+      "source_name": "a2",
+      "source_occurrence": 2,
+      "label": "Pfanqhs,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "暖房",
+      "kind": "number",
+      "default": -8.5886,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a1__2",
+      "source_name": "a1",
+      "source_occurrence": 2,
+      "label": "Pfanqhs,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 20.217,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a0__2",
+      "source_name": "a0",
+      "source_occurrence": 2,
+      "label": "Pfanqhs,H,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 50,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "H_A_input_C_af_H4__0",
+      "source_name": "H_A_input_C_af_H4",
+      "source_occurrence": 0,
+      "label": "設置方法の入力（設置方法を入力する or 補正係数を直接入力する）",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "設置方法を入力する",
+      "choices": [
+        "設置方法を入力する",
+        "補正係数を直接入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_dedicated_chamber4__0",
+      "source_name": "H_A_dedicated_chamber4",
+      "source_occurrence": 0,
+      "label": "専用チャンバーに格納される方式（該当しない or 該当する）",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_fixed_fin_direction4__0",
+      "source_name": "H_A_fixed_fin_direction4",
+      "source_occurrence": 0,
+      "label": "フィン向きが中央位置に固定される方式（該当しない or 該当する）",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_C_af_H4__0",
+      "source_name": "H_A_C_af_H4",
+      "source_occurrence": 0,
+      "label": "室内機吹き出し風量に関する暖房出力補正係数の入力（入力する場合のみ）",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_rac_pub_min__0",
+      "source_name": "H_A_q_rac_pub_min",
+      "source_occurrence": 0,
+      "label": "最小時 [kW]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 暖房能力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 0.7,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_rac_pub_rtd__0",
+      "source_name": "H_A_q_rac_pub_rtd",
+      "source_occurrence": 0,
+      "label": "定格時 [kW]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 暖房能力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 2.5,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_q_rac_pub_max__0",
+      "source_name": "H_A_q_rac_pub_max",
+      "source_occurrence": 0,
+      "label": "最大時 [kW]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 暖房能力",
+      "category": "暖房",
+      "kind": "number",
+      "default": 5.4,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_rac_pub_min__0",
+      "source_name": "H_A_P_rac_pub_min",
+      "source_occurrence": 0,
+      "label": "最小時 [W]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 消費電力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 95,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_rac_pub_rtd__0",
+      "source_name": "H_A_P_rac_pub_rtd",
+      "source_occurrence": 0,
+      "label": "定格時 [W]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 消費電力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 390,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_P_rac_pub_max__0",
+      "source_name": "H_A_P_rac_pub_max",
+      "source_occurrence": 0,
+      "label": "最大時 [W]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 消費電力",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 1360,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_V_rac_pub_inner__0",
+      "source_name": "H_A_V_rac_pub_inner",
+      "source_occurrence": 0,
+      "label": "室内機 風量 [m3/min]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 風量(強)",
+      "category": "暖房",
+      "kind": "number",
+      "default": 13.1,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_V_rac_pub_outer__0",
+      "source_name": "H_A_V_rac_pub_outer",
+      "source_occurrence": 0,
+      "label": "室外機 風量 [m3/min]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 風量(強)",
+      "category": "暖房",
+      "kind": "number",
+      "default": 25.5,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_Theta_rac_pub_inner__0",
+      "source_name": "H_A_Theta_rac_pub_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 温度 [℃]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 20,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_RH_rac_pub_inner__0",
+      "source_name": "H_A_RH_rac_pub_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 相対湿度 [%]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "暖房",
+      "kind": "number",
+      "default": 58.6,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_Theta_rac_pub_outer__0",
+      "source_name": "H_A_Theta_rac_pub_outer",
+      "source_occurrence": 0,
+      "label": "室外機吸込空気: 温度 [℃]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 7,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_RH_rac_pub_outer__0",
+      "source_name": "H_A_RH_rac_pub_outer",
+      "source_occurrence": 0,
+      "label": "室外機吸込空気: 相対湿度 [%]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "暖房",
+      "kind": "number",
+      "default": 86.7,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_Theta_rac_real_inner__0",
+      "source_name": "H_A_Theta_rac_real_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 温度 [℃]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 機器使用時の実測値",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 20,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "H_A_RH_rac_real_inner__0",
+      "source_name": "H_A_RH_rac_real_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 相対湿度 [%]",
+      "section": "⑦-4 暖房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 機器使用時の実測値",
+      "category": "暖房",
+      "kind": "integer",
+      "default": 60,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "H_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_type__0",
+      "source_name": "C_A_type",
+      "source_occurrence": 0,
+      "label": "冷房設備の種類 (1.ﾀﾞｸﾄ式ｾﾝﾄﾗﾙ空調機, 2.ﾙｰﾑｴｱｺﾝﾃﾞｨｼｮﾅ活用型全館空調(現行省ｴﾈ法ﾙｰﾑｴｱｺﾝﾓﾃﾞﾙ), 3.ﾙｰﾑｴｱｺﾝﾃﾞｨｼｮﾅ活用型全館空調(潜熱評価ﾓﾃﾞﾙ), 4.電中研ﾓﾃﾞﾙ)",
+      "section": "⑧ 冷房全般",
+      "group": "基本項目",
+      "category": "冷房",
+      "kind": "select",
+      "default": "ダクト式セントラル空調機",
+      "choices": [
+        "ダクト式セントラル空調機",
+        "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+        "ルームエアコンディショナ活用型全館空調（新：潜熱評価モデル）",
+        "電中研モデル"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_duct_insulation__0",
+      "source_name": "C_A_duct_insulation",
+      "source_occurrence": 0,
+      "label": "ダクトが通過する空間　（全てもしくは一部が断熱区画外である or 全て断熱区画内である）",
+      "section": "⑧ 冷房全般",
+      "group": "基本項目",
+      "category": "冷房",
+      "kind": "select",
+      "default": "全てもしくは一部が断熱区画外である",
+      "choices": [
+        "全てもしくは一部が断熱区画外である",
+        "全て断熱区画内である"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_VAV__0",
+      "source_name": "C_A_VAV",
+      "source_occurrence": 0,
+      "label": "VAV方式　（採用しない or 採用する）",
+      "section": "⑧ 冷房全般",
+      "group": "基本項目",
+      "category": "冷房",
+      "kind": "select",
+      "default": "採用しない",
+      "choices": [
+        "採用しない",
+        "採用する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_general_ventilation__0",
+      "source_name": "C_A_general_ventilation",
+      "source_occurrence": 0,
+      "label": "全般換気機能　（あり or なし）",
+      "section": "⑧ 冷房全般",
+      "group": "基本項目",
+      "category": "冷房",
+      "kind": "select",
+      "default": "あり",
+      "choices": [
+        "あり",
+        "なし"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_input_V_hs_dsgn_C__0",
+      "source_name": "C_A_input_V_hs_dsgn_C",
+      "source_occurrence": 0,
+      "label": "設計風量（入力しない or 入力する）",
+      "section": "⑧ 冷房全般",
+      "group": "設計風量",
+      "category": "冷房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_V_hs_dsgn_C__0",
+      "source_name": "C_A_V_hs_dsgn_C",
+      "source_occurrence": 0,
+      "label": "設計風量 [m3/h]（入力する場合のみ）",
+      "section": "⑧ 冷房全般",
+      "group": "設計風量",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 1500,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_subtract_ventilation_power__0",
+      "source_name": "C_A_subtract_ventilation_power",
+      "source_occurrence": 0,
+      "label": "ファン消費電力から換気分を引くか（換気分を引く or 換気分を引かない）",
+      "section": "⑧ 冷房全般",
+      "group": "最低風量",
+      "category": "冷房",
+      "kind": "select",
+      "default": "換気分を引く",
+      "choices": [
+        "換気分を引く",
+        "換気分を引かない"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_input_V_hs_min__0",
+      "source_name": "C_A_input_V_hs_min",
+      "source_occurrence": 0,
+      "label": "最低風量（入力しない or 入力する）",
+      "section": "⑧ 冷房全般",
+      "group": "最低風量",
+      "category": "冷房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_V_hs_min__0",
+      "source_name": "C_A_V_hs_min",
+      "source_occurrence": 0,
+      "label": "最低風量 [m3/h]（入力する場合のみ）",
+      "section": "⑧ 冷房全般",
+      "group": "最低風量",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 1200,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_input_E_E_fan_min__0",
+      "source_name": "C_A_input_E_E_fan_min",
+      "source_occurrence": 0,
+      "label": "最低電力（入力しない or 入力する）",
+      "section": "⑧ 冷房全般",
+      "group": "最低電力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_E_E_fan_logic__0",
+      "source_name": "C_A_E_E_fan_logic",
+      "source_occurrence": 0,
+      "label": "ファン消費電力算定方法",
+      "section": "⑧ 冷房全般",
+      "group": "最低電力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "直線近似法",
+      "choices": [
+        "直線近似法",
+        "風量三乗近似法"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_E_E_fan_min__0",
+      "source_name": "C_A_E_E_fan_min",
+      "source_occurrence": 0,
+      "label": "最低電力 [W]（入力する場合のみ）",
+      "section": "⑧ 冷房全般",
+      "group": "最低電力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 100,
+      "choices": null,
+      "enabled_when": null
+    },
+    {
+      "id": "C_A_input__0",
+      "source_name": "C_A_input",
+      "source_occurrence": 0,
+      "label": "機器仕様の入力（入力しない or 定格能力試験の値を入力する or 定格能力試験と中間能力試験の値を入力する）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "機器仕様の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "定格能力試験の値を入力する",
+        "定格能力試験と中間能力試験の値を入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_hs_rtd_C1__0",
+      "source_name": "C_A_q_hs_rtd_C1",
+      "source_occurrence": 0,
+      "label": "定格冷房能力 [W]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_hs_rtd_C1__0",
+      "source_name": "C_A_P_hs_rtd_C1",
+      "source_occurrence": 0,
+      "label": "定格冷房消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_V_fan_rtd_C1__0",
+      "source_name": "C_A_V_fan_rtd_C1",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_fan_rtd_C1__0",
+      "source_name": "C_A_P_fan_rtd_C1",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_hs_mid_C1__0",
+      "source_name": "C_A_q_hs_mid_C1",
+      "source_occurrence": 0,
+      "label": "中間冷房能力 [W]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_hs_mid_C1__0",
+      "source_name": "C_A_P_hs_mid_C1",
+      "source_occurrence": 0,
+      "label": "中間冷房消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_V_fan_mid_C1__0",
+      "source_name": "C_A_V_fan_mid_C1",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_fan_mid_C1__0",
+      "source_name": "C_A_P_fan_mid_C1",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-1 冷房 ダクト式セントラル空調機",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "C_A_input_C_af_C2__0",
+      "source_name": "C_A_input_C_af_C2",
+      "source_occurrence": 0,
+      "label": "設置方法の入力（設置方法を入力する or 補正係数を直接入力する）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "設置方法を入力する",
+      "choices": [
+        "設置方法を入力する",
+        "補正係数を直接入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_dedicated_chamber2__0",
+      "source_name": "C_A_dedicated_chamber2",
+      "source_occurrence": 0,
+      "label": "専用チャンバーに格納される方式（該当しない or 該当する）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_fixed_fin_direction2__0",
+      "source_name": "C_A_fixed_fin_direction2",
+      "source_occurrence": 0,
+      "label": "フィン向きが中央位置に固定される方式（該当しない or 該当する）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_C_af_C2__0",
+      "source_name": "C_A_C_af_C2",
+      "source_occurrence": 0,
+      "label": "室内機吹き出し風量に関する冷房出力補正係数の入力（入力する場合のみ）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_input_mode__0",
+      "source_name": "C_A_input_mode",
+      "source_occurrence": 0,
+      "label": "エネルギー消費効率の入力（入力しない or 入力する）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "エネルギー消費効率の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_mode__0",
+      "source_name": "C_A_mode",
+      "source_occurrence": 0,
+      "label": "エネルギー消費効率（い or ろ or は）（入力する場合のみ）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "エネルギー消費効率の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "は",
+      "choices": [
+        "い",
+        "ろ",
+        "は"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_input_rac_performance__0",
+      "source_name": "C_A_input_rac_performance",
+      "source_occurrence": 0,
+      "label": "冷房能力の入力（面積から能力を算出 or 性能を直接入力）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "冷房能力の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "面積から能力を算出",
+      "choices": [
+        "面積から能力を算出",
+        "性能を直接入力"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_rac_rtd_C__0",
+      "source_name": "C_A_q_rac_rtd_C",
+      "source_occurrence": 0,
+      "label": "冷房定格能力 [W]（入力する場合のみ）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "冷房能力の入力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_rac_max_C__0",
+      "source_name": "C_A_q_rac_max_C",
+      "source_occurrence": 0,
+      "label": "冷房最大能力 [W]（入力する場合のみ）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "冷房能力の入力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "e_rac_rtd_C__0",
+      "source_name": "e_rac_rtd_C",
+      "source_occurrence": 0,
+      "label": "定格エネルギー効率 [-]（入力する場合のみ）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "冷房能力の入力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_dualcompressor__0",
+      "source_name": "C_A_dualcompressor",
+      "source_occurrence": 0,
+      "label": "小能力時高効率型コンプレッサー（評価しない or 搭載する）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "冷房能力の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "評価しない",
+      "choices": [
+        "評価しない",
+        "搭載する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_input_f_SFP_C__0",
+      "source_name": "C_A_input_f_SFP_C",
+      "source_occurrence": 0,
+      "label": "ファンの比消費電力（入力しない or 入力する）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "ファンの消費電力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_f_SFP_C__0",
+      "source_name": "C_A_f_SFP_C",
+      "source_occurrence": 0,
+      "label": "ファンの比消費電力 [W / (m3/h)]（入力する場合のみ）",
+      "section": "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "ファンの消費電力",
+      "category": "冷房",
+      "kind": "number",
+      "default": 0.144,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "C_A_input_C_af_C3__0",
+      "source_name": "C_A_input_C_af_C3",
+      "source_occurrence": 0,
+      "label": "設置方法の入力（設置方法を入力する or 補正係数を直接入力する）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "設置方法を入力する",
+      "choices": [
+        "設置方法を入力する",
+        "補正係数を直接入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_dedicated_chamber3__0",
+      "source_name": "C_A_dedicated_chamber3",
+      "source_occurrence": 0,
+      "label": "専用チャンバーに格納される方式（該当しない or 該当する）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_fixed_fin_direction3__0",
+      "source_name": "C_A_fixed_fin_direction3",
+      "source_occurrence": 0,
+      "label": "フィン向きが中央位置に固定される方式（該当しない or 該当する）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_C_af_C3__0",
+      "source_name": "C_A_C_af_C3",
+      "source_occurrence": 0,
+      "label": "室内機吹き出し風量に関する冷房出力補正係数の入力（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_input3__0",
+      "source_name": "C_A_input3",
+      "source_occurrence": 0,
+      "label": "機器仕様の入力（入力しない or 定格能力試験の値を入力する or 定格能力試験と中間能力試験の値を入力する）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "機器仕様の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": [
+        "入力しない",
+        "定格能力試験の値を入力する",
+        "定格能力試験と中間能力試験の値を入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_hs_rtd_C3__0",
+      "source_name": "C_A_q_hs_rtd_C3",
+      "source_occurrence": 0,
+      "label": "定格冷房能力 [W]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_hs_rtd_C3__0",
+      "source_name": "C_A_P_hs_rtd_C3",
+      "source_occurrence": 0,
+      "label": "定格冷房消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_V_fan_rtd_C3__0",
+      "source_name": "C_A_V_fan_rtd_C3",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_fan_rtd_C3__0",
+      "source_name": "C_A_P_fan_rtd_C3",
+      "source_occurrence": 0,
+      "label": "定格運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "定格冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_hs_mid_C3__0",
+      "source_name": "C_A_q_hs_mid_C3",
+      "source_occurrence": 0,
+      "label": "中間冷房能力 [W]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_hs_mid_C3__0",
+      "source_name": "C_A_P_hs_mid_C3",
+      "source_occurrence": 0,
+      "label": "中間冷房消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_V_fan_mid_C3__0",
+      "source_name": "C_A_V_fan_mid_C3",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の風量 [m3/h]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_fan_mid_C3__0",
+      "source_name": "C_A_P_fan_mid_C3",
+      "source_occurrence": 0,
+      "label": "中間運転時の送風機の消費電力 [W]（入力する場合のみ）",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "中間冷房能力試験",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_f_hex_small_C__0",
+      "source_name": "A_f_hex_small_C",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW未満の場合のA_f,hex",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 0.2,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_e_hex_small_C__0",
+      "source_name": "A_e_hex_small_C",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW未満の場合のA_e,hex",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 6.2,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_f_hex_large_C__0",
+      "source_name": "A_f_hex_large_C",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW以上の場合のA_f,hex",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 0.3,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "A_e_hex_large_C__0",
+      "source_name": "A_e_hex_large_C",
+      "source_occurrence": 0,
+      "label": "定格冷却能力が5.6kW以上の場合のA_e,hex",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コイル特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 10.6,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a4__3",
+      "source_name": "a4",
+      "source_occurrence": 3,
+      "label": "α'c,hex,C = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "熱伝達特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a3__3",
+      "source_name": "a3",
+      "source_occurrence": 3,
+      "label": "α'c,hex,C = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "熱伝達特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a2__3",
+      "source_name": "a2",
+      "source_occurrence": 3,
+      "label": "α'c,hex,C = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "熱伝達特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a1__3",
+      "source_name": "a1",
+      "source_occurrence": 3,
+      "label": "α'c,hex,C = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "熱伝達特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 0.0631,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a0__3",
+      "source_name": "a0",
+      "source_occurrence": 3,
+      "label": "α'c,hex,C = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "熱伝達特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 0.0015,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a4__4",
+      "source_name": "a4",
+      "source_occurrence": 4,
+      "label": "er,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a3__4",
+      "source_name": "a3",
+      "source_occurrence": 4,
+      "label": "er,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a2__4",
+      "source_name": "a2",
+      "source_occurrence": 4,
+      "label": "er,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": -0.0316,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a1__4",
+      "source_name": "a1",
+      "source_occurrence": 4,
+      "label": "er,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 0.2944,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a0__4",
+      "source_name": "a0",
+      "source_occurrence": 4,
+      "label": "er,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "コンプレッサ効率特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "airvolume_minimum_C__0",
+      "source_name": "airvolume_minimum_C",
+      "source_occurrence": 0,
+      "label": "最小風量 [m3/min]",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 14.38995,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "airvolume_maximum_C__0",
+      "source_name": "airvolume_maximum_C",
+      "source_occurrence": 0,
+      "label": "最大風量 [m3/min]",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 24.3824,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a4__5",
+      "source_name": "a4",
+      "source_occurrence": 5,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a3__5",
+      "source_name": "a3",
+      "source_occurrence": 5,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a2__5",
+      "source_name": "a2",
+      "source_occurrence": 5,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a1__5",
+      "source_name": "a1",
+      "source_occurrence": 5,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 2.4855,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a0__5",
+      "source_name": "a0",
+      "source_occurrence": 5,
+      "label": "V'hs,supply,d,t [m3/min] = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "風量特性",
+      "category": "冷房",
+      "kind": "number",
+      "default": 10.209,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a4__6",
+      "source_name": "a4",
+      "source_occurrence": 6,
+      "label": "Pfan,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a3__6",
+      "source_name": "a3",
+      "source_occurrence": 6,
+      "label": "Pfan,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "冷房",
+      "kind": "number",
+      "default": 1.4675,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a2__6",
+      "source_name": "a2",
+      "source_occurrence": 6,
+      "label": "Pfan,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "冷房",
+      "kind": "number",
+      "default": 8.5886,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a1__6",
+      "source_name": "a1",
+      "source_occurrence": 6,
+      "label": "Pfan,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "冷房",
+      "kind": "number",
+      "default": 20.217,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "a0__6",
+      "source_name": "a0",
+      "source_occurrence": 6,
+      "label": "Pfan,C,d,t = a4 x4 + a3 x3 + a2 x2 + a1 x + a0",
+      "section": "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+      "group": "ファン消費電力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 50,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "C_A_input_C_af_C4__0",
+      "source_name": "C_A_input_C_af_C4",
+      "source_occurrence": 0,
+      "label": "設置方法の入力（設置方法を入力する or 補正係数を直接入力する）",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "設置方法を入力する",
+      "choices": [
+        "設置方法を入力する",
+        "補正係数を直接入力する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_dedicated_chamber4__0",
+      "source_name": "C_A_dedicated_chamber4",
+      "source_occurrence": 0,
+      "label": "専用チャンバーに格納される方式（該当しない or 該当する）",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_fixed_fin_direction4__0",
+      "source_name": "C_A_fixed_fin_direction4",
+      "source_occurrence": 0,
+      "label": "フィン向きが中央位置に固定される方式（該当しない or 該当する）",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "select",
+      "default": "該当しない",
+      "choices": [
+        "該当しない",
+        "該当する"
+      ],
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_C_af_C4__0",
+      "source_name": "C_A_C_af_C4",
+      "source_occurrence": 0,
+      "label": "室内機吹き出し風量に関する冷房出力補正係数の入力（入力する場合のみ）",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "設置方法の入力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 0,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_rac_pub_min__0",
+      "source_name": "C_A_q_rac_pub_min",
+      "source_occurrence": 0,
+      "label": "最小時 [kW]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 冷房能力",
+      "category": "冷房",
+      "kind": "number",
+      "default": 0.7,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_rac_pub_rtd__0",
+      "source_name": "C_A_q_rac_pub_rtd",
+      "source_occurrence": 0,
+      "label": "定格時 [kW]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 冷房能力",
+      "category": "冷房",
+      "kind": "number",
+      "default": 2.2,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_q_rac_pub_max__0",
+      "source_name": "C_A_q_rac_pub_max",
+      "source_occurrence": 0,
+      "label": "最大時 [kW]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 冷房能力",
+      "category": "冷房",
+      "kind": "number",
+      "default": 3.3,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_rac_pub_min__0",
+      "source_name": "C_A_P_rac_pub_min",
+      "source_occurrence": 0,
+      "label": "最小時 [W]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 消費電力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 95,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_rac_pub_rtd__0",
+      "source_name": "C_A_P_rac_pub_rtd",
+      "source_occurrence": 0,
+      "label": "定格時 [W]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 消費電力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 395,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_P_rac_pub_max__0",
+      "source_name": "C_A_P_rac_pub_max",
+      "source_occurrence": 0,
+      "label": "最大時 [W]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 消費電力",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 780,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_V_rac_pub_inner__0",
+      "source_name": "C_A_V_rac_pub_inner",
+      "source_occurrence": 0,
+      "label": "室内機 風量 [m3/min]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 風量(強)",
+      "category": "冷房",
+      "kind": "number",
+      "default": 12.1,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_V_rac_pub_outer__0",
+      "source_name": "C_A_V_rac_pub_outer",
+      "source_occurrence": 0,
+      "label": "室外機 風量 [m3/min]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "機器性能 メーカー公表値: 風量(強)",
+      "category": "冷房",
+      "kind": "number",
+      "default": 28.2,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_Theta_rac_pub_inner__0",
+      "source_name": "C_A_Theta_rac_pub_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 温度 [℃]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 27,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_RH_rac_pub_inner__0",
+      "source_name": "C_A_RH_rac_pub_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 相対湿度 [%]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "冷房",
+      "kind": "number",
+      "default": 46.6,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_Theta_rac_pub_outer__0",
+      "source_name": "C_A_Theta_rac_pub_outer",
+      "source_occurrence": 0,
+      "label": "室外機吸込空気: 温度 [℃]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 35,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_RH_rac_pub_outer__0",
+      "source_name": "C_A_RH_rac_pub_outer",
+      "source_occurrence": 0,
+      "label": "室外機吸込空気: 相対湿度 [%]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 メーカー公表値想定 (JIS条件)",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 40,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_Theta_rac_real_inner__0",
+      "source_name": "C_A_Theta_rac_real_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 温度 [℃]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 機器使用時の実測値",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 27,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "C_A_RH_rac_real_inner__0",
+      "source_name": "C_A_RH_rac_real_inner",
+      "source_occurrence": 0,
+      "label": "室内機吸込空気: 相対湿度 [%]",
+      "section": "⑧-4 冷房 電力中央研究所のエアコンモデル",
+      "group": "温熱環境条件 機器使用時の実測値",
+      "category": "冷房",
+      "kind": "integer",
+      "default": 60,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "C_A",
+          "type"
+        ],
+        "allowed_values": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "HEX_install__0",
+      "source_name": "HEX_install",
+      "source_occurrence": 0,
+      "label": "熱交換型換気設備（設置しない or 設置する）",
+      "section": "⑨ 熱交換型換気設備）",
+      "group": "基本項目",
+      "category": "換気",
+      "kind": "select",
+      "default": "設置しない",
+      "choices": [
+        "設置しない",
+        "設置する"
+      ],
+      "enabled_when": null
+    },
+    {
+      "id": "etr_t__0",
+      "source_name": "etr_t",
+      "source_occurrence": 0,
+      "label": "温度交換効率（設置する場合のみ）",
+      "section": "⑨ 熱交換型換気設備）",
+      "group": "基本項目",
+      "category": "換気",
+      "kind": "integer",
+      "default": 40,
+      "choices": null,
+      "enabled_when": null
+    }
+  ]
+}
