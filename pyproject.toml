@@ -21,3 +21,4 @@ pythonpath = ["packages/verification-core/src", "apps/gradio/src"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+extend-exclude = ["packages/pyhees-jjj"]

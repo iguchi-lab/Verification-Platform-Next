@@ -14,8 +14,11 @@ RUN python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 COPY pyproject.toml ./
 COPY apps/gradio/pyproject.toml apps/gradio/pyproject.toml
 COPY packages/verification-core/pyproject.toml packages/verification-core/pyproject.toml
+COPY packages/pyhees-jjj/pyproject.toml packages/pyhees-jjj/pyproject.toml
 COPY apps/gradio/src apps/gradio/src
 COPY packages/verification-core/src packages/verification-core/src
+COPY packages/pyhees-jjj/src packages/pyhees-jjj/src
+COPY packages/pyhees-jjj/LICENSE packages/pyhees-jjj/LICENSE
 
 RUN poetry install --only main --no-interaction --no-ansi
 

@@ -51,11 +51,11 @@
 - GitHub ActionsのWorkload Identity Federationで、長期サービスアカウント鍵を置かずにデプロイ
 - Cloud Runサービス定義にCPU、メモリ、タイムアウト、最大インスタンス数を明示
 
-## Phase 4: 計算エンジン履歴移行
+## Phase 4: 計算エンジン履歴移行（完了）
 
-`pyhees-jjj` の対象履歴を `packages/pyhees-jjj` へ履歴付きで移行します。推奨手段は `git filter-repo` または `git subtree` です。
+`git subtree` を使用して、`pyhees-jjj` の固定コミット `0f91ba8381df1b4960557b92b39339385cc9009f` までの履歴を `packages/pyhees-jjj` へ統合しました。
 
-履歴移行後に、アプリのGit依存をローカルパス依存へ変更します。
+アプリの計算エンジン依存とコンテナビルドを、モノレポ内のローカルパス依存へ変更しました。
 
 ## Phase 5: 回帰確認と切替
 

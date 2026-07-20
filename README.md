@@ -4,7 +4,7 @@
 
 ## 現在の状態
 
-移行 Phase 3（Gradio移行）とクラウド実行基盤の整備が完了し、Phase 4（計算エンジン履歴移行）の準備段階です。
+移行 Phase 4（計算エンジン履歴移行）とクラウド実行基盤の整備が完了し、Phase 5（回帰確認と切替）の準備段階です。
 
 - 共通入力スキーマの型を `verification-core` に追加
 - 現行222項目をバージョン付きJSON台帳へ移行（基本45・暖房84・冷房91・換気2）
@@ -23,8 +23,10 @@
 - Colab版をインストールと起動だけの薄いランチャーへ移行
 - Cloud Run向けDockerfile、サービス定義、GitHub Actionsデプロイを追加
 - 計算出力を実行環境ごとの作業ディレクトリへ隔離
+- `pyhees-jjj` を固定コミットまでの履歴付きで `packages/pyhees-jjj` へ統合
+- Gradioアプリの計算エンジン依存をモノレポ内のローカルパスへ切替
 
-次は、固定コミットで参照中の計算エンジンを履歴付きでモノレポへ移行します。
+次は、代表入力による旧版との出力比較、ローカル・Colab・コンテナの回帰確認を行います。
 
 ## ディレクトリ構成
 
@@ -34,7 +36,7 @@
 │   └── gradio/                 # Web UI
 ├── packages/
 │   ├── verification-core/      # 入力スキーマ・共通契約
-│   └── pyhees-jjj/             # 計算エンジン移行先
+│   └── pyhees-jjj/             # 履歴付きで統合した計算エンジン
 ├── notebooks/
 │   ├── Verification_Platform_Next.ipynb # Colabランチャー
 │   └── legacy/                 # 現行動作版の移行元
@@ -86,7 +88,7 @@ docker run --rm -p 8080:8080 verification-platform-next
 
 - [アーキテクチャ](docs/ARCHITECTURE.md)
 - [段階的移行計画](docs/MIGRATION.md)
-- [計算エンジン移行境界](packages/pyhees-jjj/README.md)
+- [計算エンジン](packages/pyhees-jjj/README.md)
 
 ## 移行元
 

@@ -13,7 +13,7 @@ packages = [{ include = "verification_app", from = "src" }]
 python = ">=3.12.11,<3.13"
 gradio = ">=6,<7"
 verification-core = { path = "../../packages/verification-core", develop = true }
-pyhees-jjj = { git = "https://github.com/iguchi-lab/pyhees-jjj.git", rev = "0f91ba8381df1b4960557b92b39339385cc9009f" }
+pyhees-jjj = { path = "../../packages/pyhees-jjj", develop = true }
 
 [tool.poetry.scripts]
 verification-platform = "verification_app.form_app:main"

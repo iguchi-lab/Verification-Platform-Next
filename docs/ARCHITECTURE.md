@@ -8,7 +8,7 @@
 
 - `apps/gradio`: Gradio Web UIと実行オーケストレーション
 - `packages/verification-core`: 入力項目、表示条件、デフォルト値、検証ルールの正本
-- `packages/pyhees-jjj`: 計算エンジン。履歴移行が完了するまでは外部Git依存
+- `packages/pyhees-jjj`: 固定コミットまでの履歴を保持して統合した計算エンジン
 - `notebooks`: Colab用の薄いランチャー
 - `tests`: パッケージをまたぐ契約・回帰テスト
 
