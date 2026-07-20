@@ -1,0 +1,104 @@
+import numpy as np
+import pandas as pd
+
+import pyhees.section3_1_e as algo
+import pyhees.section4_2 as dc
+import pyhees.section11_1 as rgn
+import pyhees.section11_2 as slr
+# JJJ
+from jjjexperiment.common import *
+from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc
+
+class ClimateService:
+    """ region ごとの気候に関するロジックサービス """
+
+    def __init__(self, region: int, new_ufac: UnderfloorAc = None, climate_file: str = '-'):
+        self.region = region
+        if climate_file == '-':
+            self.climate = rgn.load_climate(region)
+        else:
+            self.climate = pd.read_csv(climate_file, nrows=24 * 365, encoding="SHIFT-JIS")
+        self._new_ufac = new_ufac
+
+    def get_J_d_t(self) -> Array8760:
+        J_d_t = slr.calc_I_s_d_t(0, 0, rgn.get_climate_df(self.climate))
+        return J_d_t.values  # pd.Series -> ndarray
+
+    def get_X_ex_d_t(self) -> Array8760:
+        X_ex_d_t = rgn.get_X_ex(self.climate)
+        return X_ex_d_t
+
+    def get_Theta_ex_d_t(self) -> Array8760:
+        Theta_ex_d_t = rgn.get_Theta_ex(self.climate)
+        return Theta_ex_d_t
+
+    def get_Theta_g_avg(self) -> float:
+        if (ufac := self._new_ufac) and ufac.Theta_g_avg is not None:
+            return self._new_ufac.Theta_g_avg
+        else:
+            return algo.get_Theta_g_avg(self.get_Theta_ex_d_t())
+
+    def get_HCM_d_t(self) -> Array8760:
+        H, C, M = dc.get_season_array_d_t(self.region)
+        HCM = []
+        for i in range(len(H)):
+            if H[i]:
+                HCM.append(JJJ_HCM.H)
+            elif C[i]:
+                HCM.append(JJJ_HCM.C)
+            elif M[i]:
+                HCM.append(JJJ_HCM.M)
+            else:
+                raise ValueError
+        # 事後条件
+        assert len(HCM) == 8760
+
+        return np.array(HCM)
+
+    def get_phi(self, Q: float) -> float:
+        """
+        Ψ値を計算
+        Args:
+            Q: 当該住戸の熱損失係数 [W/m2*K]
+        Returns:
+            phi: 基礎の線熱貫流率 [W/m*K]
+        """
+        if (ufac := self._new_ufac) and ufac.phi is not None:
+            return self._new_ufac.phi
+        else:
+            return algo.get_phi(self.region, Q)
+
+    # NOTE: algo.get_U_s() =定数 と使い分ける
+    # こちらはユーザー入力
+    # TODO: テストコードでは使用できているが実装コードでは利用できていない
+    def get_U_s_vert(self, Q: float) -> float:
+        """
+        暖冷房負荷計算時に想定した床の熱貫流率 [W/m2*K]
+        Args:
+            Q: 当該住戸の熱損失係数 [W/m2*K]
+        Returns:
+            U_s_vert: 暖冷房負荷計算時に想定した床の熱貫流率 [W/m2*K]
+        """
+        if (ufac := self._new_ufac) and ufac.U_s_vert is not None:
+            return self._new_ufac.U_s_vert
+        else:
+            return algo.get_U_s_vert(self.region, Q)
+
+    def get_h_ex_d_t(self) -> Array8760:
+        """
+        外気相対湿度 [%]
+        Returns:
+            h_ex_d_t: 日付dの時刻tにおける外気相対湿度 [%]
+        """
+        h_ex_d_t = dc.calc_h_ex(self.get_X_ex_d_t(), self.get_Theta_ex_d_t())
+        return h_ex_d_t
+
+    def get_C_df_H_d_t(self) -> Array8760:
+        """
+        デフロストに関する暖房出力補正係数 [-]
+        暖房時のみ使用される係数。冷房時は全て1.0を返す。
+        Returns:
+            C_df_H_d_t: 日付dの時刻tにおけるデフロストに関する暖房出力補正係数 [-]
+        """
+        C_df_H_d_t = dc.get_C_df_H_d_t(self.get_Theta_ex_d_t(), self.get_h_ex_d_t())
+        return C_df_H_d_t
