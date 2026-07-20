@@ -1,3 +1,8 @@
+from .legacy import (
+    LegacyFieldDefinition,
+    LegacyInputInventory,
+    load_legacy_inventory,
+)
 from .schema import Condition, FieldDefinition, FieldKind, InputSchema
 
 __all__ = [
@@ -5,4 +10,7 @@ __all__ = [
     "FieldDefinition",
     "FieldKind",
     "InputSchema",
+    "LegacyFieldDefinition",
+    "LegacyInputInventory",
+    "load_legacy_inventory",
 ]
