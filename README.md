@@ -4,7 +4,7 @@
 
 ## 現在の状態
 
-移行 Phase 2（入力スキーマ移行）が完了し、Phase 3（Gradio移行）の準備段階です。
+移行 Phase 3（Gradio移行）が完了し、Phase 4（計算エンジン履歴移行）の準備段階です。
 
 - 共通入力スキーマの型を `verification-core` に追加
 - 現行222項目をバージョン付きJSON台帳へ移行（基本45・暖房84・冷房91・換気2）
@@ -17,8 +17,12 @@
 - 制限付きAST互換ビルダーと型付き宣言的ビルダーを追加
 - 222項目の正規 `InputSchema` と表示条件を追加
 - デフォルト、全暖冷房方式、全boolean・select代替値で旧入力との完全一致を固定
+- 正規 `InputSchema` から222項目のGradioフォームを生成
+- 暖冷房方式に応じた表示切替を、入力値を維持したまま実装
+- 計算ログ、グラフ、ダウンロード収集をUI非依存サービスへ分離
+- Colab版をインストールと起動だけの薄いランチャーへ移行
 
-次は、正規 `InputSchema` から222項目のGradioフォームを生成し、宣言的ビルダーを実行経路へ接続します。
+次は、固定コミットで参照中の計算エンジンを履歴付きでモノレポへ移行します。
 
 ## ディレクトリ構成
 
@@ -30,6 +34,7 @@
 │   ├── verification-core/      # 入力スキーマ・共通契約
 │   └── pyhees-jjj/             # 計算エンジン移行先
 ├── notebooks/
+│   ├── Verification_Platform_Next.ipynb # Colabランチャー
 │   └── legacy/                 # 現行動作版の移行元
 ├── tests/                      # 契約・回帰テスト
 ├── docs/
@@ -38,7 +43,7 @@
 └── pyproject.toml
 ```
 
-## ローカル起動（移行用JSON画面）
+## ローカル起動
 
 Python 3.12.11以上とPoetryを使用します。
 
@@ -47,7 +52,7 @@ poetry install
 poetry run verification-platform
 ```
 
-現在の最小アプリはJSON入力用です。222項目のフォームは、共通スキーマへの移行が完了するまでは `notebooks/legacy` のGradio版を利用してください。
+正規スキーマから生成した222項目のフォームが起動します。Colabでは `notebooks/Verification_Platform_Next.ipynb` を使用してください。
 
 ## 設計資料
 
