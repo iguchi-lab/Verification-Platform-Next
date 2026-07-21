@@ -43,13 +43,21 @@
 - 計算ログ、グラフ、ダウンロードをサービスへ分離
 - Colabノートブックをインストールと起動だけに縮小
 
-## Cloud Migration Track（完了）
+## Codex Cloud Collaboration Track（準備済み）
+
+- GitHubリポジトリを複数PCとCodex Cloudの作業状態の正本として使用
+- Codex Cloud用セットアップスクリプトを追加
+- ルートの `AGENTS.md` に共通の作業手順と検証コマンドを記録
+- PCを切り替える前に作業ブランチをcommit・pushする運用を採用
+
+## Optional Application Deployment Track（準備済み）
 
 - Gradioアプリをコンテナ化し、Cloud Runの `0.0.0.0:8080` 契約に対応
 - 計算出力を `VERIFICATION_OUTPUT_DIR` 配下へ隔離し、Cloud Runでは一時領域を使用
 - 状態を共有する計算エンジンに合わせ、Cloud RunとGradio双方の同時実行数を1に制限
 - GitHub ActionsのWorkload Identity Federationで、長期サービスアカウント鍵を置かずにデプロイ
 - Cloud Runサービス定義にCPU、メモリ、タイムアウト、最大インスタンス数を明示
+- Cloud Runはアプリ公開時だけ手動デプロイし、通常のpushでは実行しない
 
 ## Phase 4: 計算エンジン履歴移行（完了）
 

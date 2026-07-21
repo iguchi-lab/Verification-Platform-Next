@@ -28,6 +28,18 @@
 
 次は、代表入力による旧版との出力比較、ローカル・Colab・コンテナの回帰確認を行います。
 
+## 複数PCとCodex Cloudでの作業
+
+このリポジトリを作業状態の正本とし、PCを切り替える前に作業ブランチをcommit・pushします。Codex Cloudでは、このGitHubリポジトリを接続した環境から同じブランチをチェックアウトして作業します。
+
+Codex Cloud環境のセットアップスクリプトには、次を指定してください。
+
+```bash
+bash scripts/setup-codex-cloud.sh
+```
+
+Pythonは `3.12.11` 以上、`3.13` 未満を使用します。リポジトリ共通の作業手順と検証コマンドは `AGENTS.md` に記載しています。
+
 ## ディレクトリ構成
 
 ```text
@@ -58,11 +70,11 @@ poetry run verification-platform
 
 正規スキーマから生成した222項目のフォームが起動します。Colabでは `notebooks/Verification_Platform_Next.ipynb` を使用してください。
 
-## Cloud Runへのデプロイ
+## Cloud Runへの任意デプロイ
 
-コンテナはCloud RunのHTTP契約に合わせて `0.0.0.0:8080` で起動し、計算出力を一時領域 `/tmp/verification-platform` に保存します。
+Cloud RunはGradioアプリを公開する場合だけ使用する任意機能であり、複数PCやCodex Cloudで開発を継続するためには必要ありません。コンテナはCloud RunのHTTP契約に合わせて `0.0.0.0:8080` で起動し、計算出力を一時領域 `/tmp/verification-platform` に保存します。
 
-GitHubリポジトリに次を設定すると、`main` へのpushまたは手動実行で `.github/workflows/deploy-cloud-run.yml` がビルド、Artifact Registryへのpush、Cloud Runへのデプロイを行います。
+GitHubリポジトリに次を設定したうえで、`.github/workflows/deploy-cloud-run.yml` を手動実行すると、ビルド、Artifact Registryへのpush、Cloud Runへのデプロイを行います。`main` へのpushでは自動デプロイされません。
 
 GitHub Actions variables:
 
