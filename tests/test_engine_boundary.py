@@ -43,7 +43,6 @@ EXPECTED_REVERSE_DEPENDENCIES = {
 # Temporary migration allowlist. Remove modules as their wildcard imports are made explicit.
 EXPECTED_MAIN_WILDCARD_IMPORTS = {
     "jjjexperiment.common",
-    "jjjexperiment.result",
 }
 
 

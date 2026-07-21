@@ -33,6 +33,7 @@
 - [PR #5](https://github.com/iguchi-lab/Verification-Platform-Next/pull/5): 建築研究所由来コードと独自コードの境界を文書化し、逆依存の許可リストと計算エンジンCIを追加しました。
 - [PR #6](https://github.com/iguchi-lab/Verification-Platform-Next/pull/6): 計算時のInjector状態を実行コンテキスト内へ限定し、例外、入れ子、スレッド、非同期タスクの分離をテストしました。
 - [PR #8](https://github.com/iguchi-lab/Verification-Platform-Next/pull/8): `constants.py` のオプションEnum依存を明示importに置き換え、従来の再公開名とVAV既定値を契約テストで固定しました。
+- [PR #10](https://github.com/iguchi-lab/Verification-Platform-Next/pull/10): `main.py` のDIコンテナ由来のワイルドカードimportを廃止し、実際に使用する型とEnumを定義元から明示importしました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 

@@ -46,7 +46,7 @@ from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQu
 
 import jjjexperiment.constants as jjj_consts
 import jjjexperiment.common as jjj_common
-from jjjexperiment.result import *
+from jjjexperiment.result import ResultSummary, SutValues
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
 from jjjexperiment.common import *
 import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
