@@ -1,0 +1,76 @@
+import ast
+from pathlib import Path
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+PYHEES_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "pyhees"
+
+# Temporary migration allowlist. Removing an entry is encouraged; adding one is not.
+# Keep this exact so a dependency cannot be added or removed without an explicit review.
+EXPECTED_REVERSE_DEPENDENCIES = {
+    "section3_1_e.py": {
+        "jjjexperiment.common",
+        "jjjexperiment.constants",
+        "jjjexperiment.inputs.options",
+        "jjjexperiment.logger",
+        "jjjexperiment.underfloor_ac.inputs.common",
+        "jjjexperiment.underfloor_ac.section3_1_e",
+    },
+    "section4_2.py": {
+        "jjjexperiment.common",
+        "jjjexperiment.constants",
+        "jjjexperiment.inputs.di_container",
+        "jjjexperiment.inputs.options",
+        "jjjexperiment.logger",
+    },
+    "section4_2_a.py": {
+        "jjjexperiment.common",
+        "jjjexperiment.constants",
+        "jjjexperiment.inputs.options",
+        "jjjexperiment.logger",
+    },
+    "section4_2_b.py": {"jjjexperiment.constants"},
+    "section4_3.py": {
+        "jjjexperiment.common",
+        "jjjexperiment.constants",
+    },
+    "section4_3_a.py": {"jjjexperiment.constants"},
+}
+
+
+def _jjjexperiment_imports(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    imports: set[str] = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(
+                alias.name
+                for alias in node.names
+                if alias.name == "jjjexperiment" or alias.name.startswith("jjjexperiment.")
+            )
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            if node.module == "jjjexperiment" or node.module.startswith("jjjexperiment."):
+                imports.add(node.module)
+
+    return imports
+
+
+def _find_reverse_dependencies() -> dict[str, set[str]]:
+    result = {}
+    for path in sorted(PYHEES_SOURCE.rglob("*.py")):
+        imports = _jjjexperiment_imports(path)
+        if imports:
+            result[path.relative_to(PYHEES_SOURCE).as_posix()] = imports
+    return result
+
+
+def test_pyhees_reverse_dependencies_match_migration_allowlist():
+    actual = _find_reverse_dependencies()
+
+    assert actual == EXPECTED_REVERSE_DEPENDENCIES, (
+        "The pyhees -> jjjexperiment dependency boundary changed. "
+        "Do not add a reverse dependency. If an existing dependency was removed, "
+        "reduce EXPECTED_REVERSE_DEPENDENCIES in the same refactoring PR.\n"
+        f"expected={EXPECTED_REVERSE_DEPENDENCIES}\nactual={actual}"
+    )

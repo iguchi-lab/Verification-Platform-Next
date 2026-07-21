@@ -75,7 +75,7 @@
 - CSVの文字列・日時・見出しは完全一致、数値は相対誤差 `1e-9`・絶対誤差 `1e-8` で比較
 - 正規入力ビルダーと旧入力ビルダーの完全一致を確認してから計算エンジンを実行
 - ローカル、Colabランチャー、GitHub Actions/Codex Cloudで同じ `scripts/run_phase5_regression.py` を実行可能に統一
-- GitHub Actionsで通常テスト、Phase 5数値回帰、Ruffを必須実行
+- GitHub Actionsで通常テスト、計算エンジン内部テスト、Phase 5数値回帰、Ruffを必須実行
 - このモノレポをUI・入力契約・`jjjexperiment` の開発正本へ切替
 - 旧 `Verification-Platform` と `pyhees-jjj` リポジトリは移行時点の参照用として保持
 
