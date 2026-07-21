@@ -1,5 +1,5 @@
 import json
-from injector import inject
+from injector import Injector, inject
 import pandas as pd
 from datetime import datetime
 
@@ -29,7 +29,12 @@ import jjjexperiment.denchu.inputs.heating as jjj_denchu_heat_ipt
 import jjjexperiment.denchu.inputs.cooling as jjj_denchu_cool_ipt
 
 import jjjexperiment.inputs.di_container as jjj_ipt_di
-from jjjexperiment.inputs.di_container import *
+from jjjexperiment.inputs.options import (
+    ファン消費電力から換気分を引く,
+    最低電力直接入力,
+    最低風量直接入力,
+    計算モデル,
+)
 # データクラス
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin, HEX
 from jjjexperiment.inputs.ac_setting import HeatingAcSetting, CoolingAcSetting
