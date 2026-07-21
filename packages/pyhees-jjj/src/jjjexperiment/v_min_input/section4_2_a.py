@@ -2,7 +2,7 @@ import numpy as np
 
 # JJJ
 from jjjexperiment.common import Array8760, jjj_cloning
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import ファン消費電力算定方法
 from pyhees.section4_2 import get_season_array_d_t
 
 

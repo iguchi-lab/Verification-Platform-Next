@@ -42,6 +42,13 @@ EXPECTED_REVERSE_DEPENDENCIES = {
 # Temporary migration allowlist. Remove modules as their wildcard imports are made explicit.
 EXPECTED_MAIN_WILDCARD_IMPORTS: set[str] = set()
 
+EXPECTED_OPTIONS_WILDCARD_IMPORTERS = {
+    "inputs/di_container.py",
+    "section4_2.py",
+    "section4_2_a.py",
+    "underfloor_ac/inputs/common.py",
+}
+
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -117,4 +124,24 @@ def test_jjjexperiment_common_imports_are_explicit():
     assert not wildcard_importers, (
         "Import names explicitly from jjjexperiment.common; wildcard imports obscure "
         f"the dependency boundary: {sorted(wildcard_importers)}"
+    )
+
+
+def test_options_wildcard_imports_match_migration_allowlist():
+    wildcard_importers = set()
+    for path in sorted(JJJEXPERIMENT_SOURCE.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "jjjexperiment.inputs.options"
+            and any(alias.name == "*" for alias in node.names)
+            for node in ast.walk(tree)
+        ):
+            wildcard_importers.add(path.relative_to(JJJEXPERIMENT_SOURCE).as_posix())
+
+    assert wildcard_importers == EXPECTED_OPTIONS_WILDCARD_IMPORTERS, (
+        "The jjjexperiment.inputs.options wildcard import boundary changed. "
+        "Do not add a wildcard import. If an existing wildcard import was removed, "
+        "reduce EXPECTED_OPTIONS_WILDCARD_IMPORTERS in the same refactoring commit.\n"
+        f"expected={EXPECTED_OPTIONS_WILDCARD_IMPORTERS}\nactual={wildcard_importers}"
     )

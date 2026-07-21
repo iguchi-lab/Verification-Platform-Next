@@ -4,7 +4,6 @@ import pyhees.section4_2 as dc
 # JJJ
 from jjjexperiment.inputs.di_container import *
 from jjjexperiment.common import Array5x1, JJJ_HCM, jjj_cloning
-from jjjexperiment.inputs.options import *
 
 # shape(5,1)の引数があるので hstack & broadcast で利用
 @jjj_cloning
