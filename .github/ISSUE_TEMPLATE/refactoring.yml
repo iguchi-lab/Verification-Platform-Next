@@ -1,0 +1,106 @@
+name: 挙動維持リファクタリング
+description: 計算結果を変えずにコード構造や依存境界を整理する作業
+title: "[Refactor] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        このフォームは、機能追加や計算式変更を含まないリファクタリング専用です。
+        先に `AGENTS.md` と `docs/REFACTORING.md` を確認してください。
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: 目的
+      description: この整理によって何を理解しやすく、変更しやすくするかを記載してください。
+      placeholder: 例：計算時の状態管理を1か所へ集約し、例外時にも状態が残らないようにする。
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_problem
+    attributes:
+      label: 現在の問題
+      description: 対象ファイル、依存関係、副作用など、現在確認できる事実を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 対象範囲
+      description: このIssueで変更するモジュール、責任範囲、依存境界を限定してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: 非対象
+      description: 機能追加、数式変更、上流更新など、このIssueでは行わないことを明記してください。
+      value: |
+        - 機能追加
+        - 計算式と計算結果の変更
+        - 建築研究所由来コードの上流更新
+        - Phase 5基準値と許容誤差の変更
+    validations:
+      required: true
+
+  - type: textarea
+    id: preserved_behavior
+    attributes:
+      label: 保持する挙動
+      description: 入力、出力、例外、ログ、ファイルなど、変更前後で同じであるべき観測可能な挙動を記載してください。
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: 境界確認
+      options:
+        - label: 新しい `pyhees -> jjjexperiment` 依存を追加しない
+          required: true
+        - label: 新しい独自機能を `src/pyhees` へ直接追加しない
+          required: true
+        - label: リファクタリングと機能追加・計算式変更を同じPRに含めない
+          required: true
+        - label: Phase 5基準値を失敗回避のために変更しない
+          required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: 検証計画
+      description: 追加する回帰テストと実行する既存テストを記載してください。
+      value: |
+        - [ ] 変更対象の回帰テスト
+        - [ ] `python -m pytest -q`
+        - [ ] `ruff check .`
+        - [ ] `python scripts/run_phase5_regression.py`
+        - [ ] `cd packages/pyhees-jjj && python -m pytest src/tests -q -o addopts=""`
+    validations:
+      required: true
+
+  - type: textarea
+    id: handoff
+    attributes:
+      label: 引き継ぎ状況
+      description: ブランチ、関連PR、完了済み、次の1操作、実行済みテスト、判断待ちを更新してください。
+      placeholder: |
+        ブランチ：
+        関連PR：
+        完了済み：
+        次の1操作：
+        実行済みテスト：
+        判断待ち：
+
+  - type: checkboxes
+    id: done
+    attributes:
+      label: 完了条件
+      options:
+        - label: 対象と非対象がPRに記載されている
+        - label: 変更前後の挙動をテストで確認した
+        - label: 必須CIが成功した
+        - label: Issueの引き継ぎ状況を最終更新した
