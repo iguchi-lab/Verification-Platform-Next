@@ -21,9 +21,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert component_types["dropdown"] == 52
     assert component_types["checkbox"] == 9
     assert component_types["textbox"] == 4  # three text inputs and the log output
+    assert component_types["plot"] == 5
+    assert component_types["gallery"] == 0
 
     calculation, heating_visibility, cooling_visibility = config["dependencies"]
     assert len(calculation["inputs"]) == 222
-    assert len(calculation["outputs"]) == 5
+    assert len(calculation["outputs"]) == 10
     assert len(heating_visibility["outputs"]) == 72
     assert len(cooling_visibility["outputs"]) == 79
