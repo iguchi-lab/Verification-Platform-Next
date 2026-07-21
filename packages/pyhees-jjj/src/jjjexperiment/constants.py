@@ -1,4 +1,19 @@
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import (
+  VAVありなしの吹出風量,
+  Vサプライの上限キャップ,
+  ファン消費電力から換気分を引く,
+  ファン消費電力算定方法,
+  冷房方式,
+  床下空調ロジック,
+  暖房方式,
+  最低電力直接入力,
+  最低風量直接入力,
+  機器仕様手動入力タイプ,
+  熱源機出口の空気温度,
+  計算モデル,
+  過剰熱量繰越計算,
+  全般換気機能,
+)
 
 def version_info() -> str:
   """ 最終編集日(プッシュ日)をバージョン管理に使用します
