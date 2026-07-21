@@ -1,6 +1,4 @@
 import numpy as np
-# JJJ
-from jjjexperiment.common import *
 
 
 def rescale_V_vent_g_i(

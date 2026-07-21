@@ -2,7 +2,7 @@ import numpy as np
 
 import pyhees.section4_2 as dc
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import Array5, Array5x1
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 from jjjexperiment.logger import log_res
 

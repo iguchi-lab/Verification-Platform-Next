@@ -2,7 +2,7 @@ import numpy as np
 
 import pyhees.section3_1 as ld
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import Array5x1
 import jjjexperiment.constants as jjj_consts
 
 def get_C_BR_i(A_HCZ_i: Array5x1) -> Array5x1:

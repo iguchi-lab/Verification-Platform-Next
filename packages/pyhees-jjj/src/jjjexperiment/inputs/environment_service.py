@@ -5,7 +5,7 @@ import pyhees.section3_2 as gihi
 import pyhees.section4_2 as dc
 import pyhees.section4_2_b as dc_spec
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import Array12, Array5, Array8760
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin
 
 class EnvironmentService:
