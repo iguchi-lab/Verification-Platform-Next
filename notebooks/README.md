@@ -1,5 +1,7 @@
 # Notebooks
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iguchi-lab/Verification-Platform-Next/blob/main/notebooks/Verification_Platform_Next.ipynb)
+
 - `Verification_Platform_Next.ipynb`: アプリのインストールと起動だけを行うColabランチャーです。
 - `legacy/Verification_Platform_260715_Gradio.ipynb`: モノレポ移行開始時点の動作版です。
 
