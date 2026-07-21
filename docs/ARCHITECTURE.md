@@ -11,6 +11,7 @@
 - `packages/pyhees-jjj`: 固定コミットまでの履歴を保持して統合した計算エンジン
 - `notebooks`: Colab用の薄いランチャー
 - `tests`: パッケージをまたぐ契約・回帰テスト
+- `regression/phase5`: 旧版との数値一致を保証する代表ケースと固定基準
 
 ## 依存方向
 
@@ -27,6 +28,12 @@ pyhees-jjj
 ```
 
 UIから計算エンジンの内部モジュールを直接参照せず、公開された計算APIと結果モデルだけを使用します。
+
+## 開発の正本
+
+Phase 5 完了後は、このモノレポがUI、入力契約、計算エンジンの開発正本です。`jjjexperiment` の修正は `packages/pyhees-jjj/src/jjjexperiment` で行い、同じ変更で契約テストとPhase 5数値回帰を実行します。
+
+移行元の `Verification-Platform` と `pyhees-jjj` は履歴確認と比較のための参照用です。建築研究所由来の `pyhees` 更新を取り込む場合も、影響を確認したうえでこのモノレポに反映します。
 
 ## 入力スキーマ
 

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "legacy_form_version": "260715",
+  "engine_commit": "0f91ba8381df1b4960557b92b39339385cc9009f",
+  "engine_version": "_20260323",
+  "tolerances": {
+    "relative": 1e-09,
+    "absolute": 1e-08
+  },
+  "cases": [
+    {
+      "id": "default-duct-central",
+      "description": "Legacy form defaults using the ducted central HVAC model.",
+      "ui_overrides": {
+        "case_name__0": "phase5-default"
+      }
+    },
+    {
+      "id": "rac-whole-house",
+      "description": "Whole-house HVAC using the current energy-code RAC model.",
+      "ui_overrides": {
+        "case_name__0": "phase5-rac",
+        "H_A_type__0": "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+        "C_A_type__0": "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）"
+      }
+    }
+  ]
+}

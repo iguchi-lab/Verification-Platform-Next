@@ -4,7 +4,7 @@
 
 ## 現在の状態
 
-移行 Phase 4（計算エンジン履歴移行）とクラウド実行基盤の整備が完了し、Phase 5（回帰確認と切替）の準備段階です。
+移行 Phase 1〜5 が完了し、このモノレポを開発の正本として使用できる状態です。
 
 - 共通入力スキーマの型を `verification-core` に追加
 - 現行222項目をバージョン付きJSON台帳へ移行（基本45・暖房84・冷房91・換気2）
@@ -25,8 +25,10 @@
 - 計算出力を実行環境ごとの作業ディレクトリへ隔離
 - `pyhees-jjj` を固定コミットまでの履歴付きで `packages/pyhees-jjj` へ統合
 - Gradioアプリの計算エンジン依存をモノレポ内のローカルパスへ切替
+- 旧フォームの代表2ケースについて、入力JSON・年間集計・8760時間CSVの固定回帰基準を追加
+- ローカル、Colab、GitHub Actions/Codex Cloudで共通の回帰コマンドを利用可能に変更
 
-次は、代表入力による旧版との出力比較、ローカル・Colab・コンテナの回帰確認を行います。
+今後の `jjjexperiment` 修正は `packages/pyhees-jjj` で行い、入力契約と数値回帰を同じPull Requestで確認します。
 
 ## 複数PCとCodex Cloudでの作業
 
@@ -70,6 +72,12 @@ poetry run verification-platform
 
 正規スキーマから生成した222項目のフォームが起動します。Colabでは `notebooks/Verification_Platform_Next.ipynb` を使用してください。
 
+Phase 5 の数値回帰だけを実行する場合:
+
+```bash
+poetry run python scripts/run_phase5_regression.py
+```
+
 ## Cloud Runへの任意デプロイ
 
 Cloud RunはGradioアプリを公開する場合だけ使用する任意機能であり、複数PCやCodex Cloudで開発を継続するためには必要ありません。コンテナはCloud RunのHTTP契約に合わせて `0.0.0.0:8080` で起動し、計算出力を一時領域 `/tmp/verification-platform` に保存します。
@@ -107,4 +115,4 @@ docker run --rm -p 8080:8080 verification-platform-next
 - [Verification-Platform](https://github.com/iguchi-lab/Verification-Platform)
 - [pyhees-jjj](https://github.com/iguchi-lab/pyhees-jjj)
 
-移行完了までは、旧リポジトリを削除・アーカイブしません。
+旧リポジトリは移行時点の参照用として残します。今後の通常開発はこのリポジトリで行い、旧リポジトリは明示的な理由がない限り変更しません。
