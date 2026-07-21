@@ -17,6 +17,7 @@ ruff = "*"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["packages/verification-core/src", "apps/gradio/src"]
+markers = ["phase5: full legacy CSV regression tests"]
 
 [tool.ruff]
 target-version = "py312"

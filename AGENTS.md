@@ -29,6 +29,11 @@ python -m pytest -q
 ruff check .
 ```
 
+The Phase 5 numerical gate is included in the full test suite. It can also be
+run directly with `python scripts/run_phase5_regression.py`. Do not replace its
+baselines without reviewing the numerical changes and updating the pinned
+engine commit in `regression/phase5/manifest.json`.
+
 When changing the calculation engine or input mapping, also compare representative
 CSV outputs with the legacy baseline as described in `docs/MIGRATION.md`.
 
