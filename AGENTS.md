@@ -50,3 +50,13 @@ CSV outputs with the legacy baseline as described in `docs/MIGRATION.md`.
 - Preserve the imported history under `packages/pyhees-jjj`.
 - Do not archive or delete the legacy repositories until Phase 5 is complete.
 - Keep generated outputs out of Git; use `outputs/` or a temporary directory.
+
+## Refactoring workflow
+
+Before refactoring calculation code, read `docs/REFACTORING.md` and the linked
+GitHub issue. Keep behavior-preserving refactoring separate from feature work,
+formula changes, upstream synchronization, and regression-baseline updates.
+
+Each refactoring pull request must state its scope, non-goals, preserved
+behavior, and verification evidence. Work on one small boundary at a time, and
+update the issue before handing the branch to another computer or Codex task.
