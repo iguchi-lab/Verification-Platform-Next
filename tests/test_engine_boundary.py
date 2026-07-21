@@ -48,7 +48,6 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS = {
     "section4_2_a.py",
     "underfloor_ac/inputs/common.py",
     "v_min_input/inputs/cooling.py",
-    "v_min_input/inputs/heating.py",
     "v_min_input/section4_2_a.py",
 }
 

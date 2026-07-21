@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 # JJJ
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import (
+    ファン消費電力算定方法,
+    最低電力直接入力,
+    最低風量直接入力,
+)
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 @dataclass
