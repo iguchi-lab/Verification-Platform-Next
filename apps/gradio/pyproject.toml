@@ -12,6 +12,8 @@ packages = [{ include = "verification_app", from = "src" }]
 [tool.poetry.dependencies]
 python = ">=3.12.11,<3.13"
 gradio = ">=6,<7"
+matplotlib = ">=3.9,<4"
+matplotlib-fontja = ">=1.1,<2"
 verification-core = { path = "../../packages/verification-core", develop = true }
 pyhees-jjj = { path = "../../packages/pyhees-jjj", develop = true }
 

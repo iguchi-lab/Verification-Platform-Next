@@ -9,6 +9,7 @@ import gradio as gr
 from verification_core import FieldDefinition, FieldKind
 
 from .form_model import FormField, FormModel, load_form_model
+from .graphs import GRAPH_LABELS
 from .services import CalculationResult, CalculationService
 
 _TYPE_CONTROLS = ("H_A_type__0", "C_A_type__0")
@@ -62,11 +63,8 @@ def build_app(
                     interactive=False,
                 )
             with gr.Tab("グラフ"):
-                graphs = gr.Gallery(
-                    label="生成されたグラフ",
-                    columns=2,
-                    object_fit="contain",
-                )
+                graph_status = gr.Markdown("計算完了後にグラフを表示します。")
+                graphs = [gr.Plot(label=label) for label in GRAPH_LABELS]
             with gr.Tab("出力ファイル", render_children=True):
                 files = gr.File(
                     label="計算出力",
@@ -83,7 +81,7 @@ def build_app(
         run.click(
             calculate,
             inputs=ordered_components,
-            outputs=[status, preview, log, graphs, files],
+            outputs=[status, preview, log, graph_status, *graphs, files],
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -148,11 +146,14 @@ def _chunks(values: tuple[FormField, ...], size: int) -> Iterable[tuple[FormFiel
 
 
 def _result_outputs(result: CalculationResult) -> tuple[Any, ...]:
+    graphs = tuple(result.graphs[: len(GRAPH_LABELS)])
+    graphs += (None,) * (len(GRAPH_LABELS) - len(graphs))
     return (
         result.status,
         result.input_data,
         result.log,
-        list(result.graphs),
+        result.graph_status,
+        *graphs,
         list(result.files),
     )
 
@@ -161,8 +162,15 @@ def _default_service() -> CalculationService:
     import jjjexperiment.main
     from jjjexperiment.constants import version_info
 
+    from .graphs import build_result_graphs
+
     output_dir = Path(os.environ.get("VERIFICATION_OUTPUT_DIR", "outputs"))
-    return CalculationService(jjjexperiment.main.calc, version_info, workdir=output_dir)
+    return CalculationService(
+        jjjexperiment.main.calc,
+        version_info,
+        workdir=output_dir,
+        build_graphs=build_result_graphs,
+    )
 
 
 def main() -> None:

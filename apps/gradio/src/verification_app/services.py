@@ -13,8 +13,7 @@ from verification_core import build_input_data
 
 CalculationFunction = Callable[[dict[str, Any]], Any]
 VersionFunction = Callable[[], str]
-
-_GRAPH_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
+GraphFunction = Callable[[Mapping[str, Any], Path, str], tuple[Any, ...]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +23,8 @@ class CalculationResult:
     input_data: dict[str, Any] | None
     log: str
     files: tuple[str, ...]
-    graphs: tuple[str, ...]
+    graph_status: str
+    graphs: tuple[Any, ...]
 
 
 class CalculationService:
@@ -33,10 +33,12 @@ class CalculationService:
         calculate: CalculationFunction,
         version_info: VersionFunction,
         workdir: Path | None = None,
+        build_graphs: GraphFunction | None = None,
     ) -> None:
         self._calculate = calculate
         self._version_info = version_info
         self._workdir = workdir
+        self._build_graphs = build_graphs
         self._lock = threading.Lock()
 
     def run(self, values: Mapping[str, Any]) -> CalculationResult:
@@ -54,15 +56,28 @@ class CalculationService:
                 finally:
                     os.chdir(previous_cwd)
             files = self._result_files(input_data)
+            graphs: tuple[Any, ...] = ()
+            graph_status = "グラフ生成は設定されていません。"
+            if self._build_graphs is not None:
+                try:
+                    graphs = self._build_graphs(
+                        input_data,
+                        (self._workdir or Path.cwd()).resolve(),
+                        self._version_info(),
+                    )
+                    graph_status = f"✅ {len(graphs)}件のグラフを生成しました。"
+                except Exception:
+                    graph_status = "❌ グラフ生成エラー（計算結果CSVは正常に作成されています）"
+                    output.write("\n===== グラフ生成エラー =====\n")
+                    output.write(traceback.format_exc())
             return CalculationResult(
                 succeeded=True,
                 status="✅ 計算が完了しました。",
                 input_data=input_data,
                 log=output.getvalue(),
                 files=files,
-                graphs=tuple(
-                    path for path in files if Path(path).suffix.lower() in _GRAPH_SUFFIXES
-                ),
+                graph_status=graph_status,
+                graphs=graphs,
             )
         except Exception:
             log = output.getvalue() + traceback.format_exc()
@@ -72,6 +87,7 @@ class CalculationService:
                 input_data=input_data,
                 log=log,
                 files=(),
+                graph_status="計算完了後にグラフを表示します。",
                 graphs=(),
             )
 
