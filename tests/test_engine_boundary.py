@@ -4,6 +4,9 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 PYHEES_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "pyhees"
+JJJEXPERIMENT_MAIN = (
+    REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "jjjexperiment" / "main.py"
+)
 
 # Temporary migration allowlist. Removing an entry is encouraged; adding one is not.
 # Keep this exact so a dependency cannot be added or removed without an explicit review.
@@ -35,6 +38,12 @@ EXPECTED_REVERSE_DEPENDENCIES = {
         "jjjexperiment.constants",
     },
     "section4_3_a.py": {"jjjexperiment.constants"},
+}
+
+# Temporary migration allowlist. Remove modules as their wildcard imports are made explicit.
+EXPECTED_MAIN_WILDCARD_IMPORTS = {
+    "jjjexperiment.common",
+    "jjjexperiment.result",
 }
 
 
@@ -73,4 +82,25 @@ def test_pyhees_reverse_dependencies_match_migration_allowlist():
         "Do not add a reverse dependency. If an existing dependency was removed, "
         "reduce EXPECTED_REVERSE_DEPENDENCIES in the same refactoring PR.\n"
         f"expected={EXPECTED_REVERSE_DEPENDENCIES}\nactual={actual}"
+    )
+
+
+def test_main_wildcard_imports_match_migration_allowlist():
+    tree = ast.parse(
+        JJJEXPERIMENT_MAIN.read_text(encoding="utf-8"),
+        filename=str(JJJEXPERIMENT_MAIN),
+    )
+    actual = {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module
+        and any(alias.name == "*" for alias in node.names)
+    }
+
+    assert actual == EXPECTED_MAIN_WILDCARD_IMPORTS, (
+        "The jjjexperiment.main wildcard import boundary changed. "
+        "Do not add a wildcard import. If an existing wildcard import was removed, "
+        "reduce EXPECTED_MAIN_WILDCARD_IMPORTS in the same refactoring PR.\n"
+        f"expected={EXPECTED_MAIN_WILDCARD_IMPORTS}\nactual={actual}"
     )
