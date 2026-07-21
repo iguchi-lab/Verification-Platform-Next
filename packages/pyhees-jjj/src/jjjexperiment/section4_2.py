@@ -19,7 +19,7 @@ import pyhees.section4_2_a as dc_a
 """ JJJ_EXPERIMENT OVERRIDE """
 
 """ JJJ_EXPERIMENT ORIGINAL """
-from jjjexperiment.common import *
+from jjjexperiment.common import Array5x8760, jjj_cloning
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
 from jjjexperiment.inputs.options import *

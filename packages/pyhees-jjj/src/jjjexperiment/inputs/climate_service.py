@@ -6,7 +6,7 @@ import pyhees.section4_2 as dc
 import pyhees.section11_1 as rgn
 import pyhees.section11_2 as slr
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import Array8760, JJJ_HCM
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc
 
 class ClimateService:

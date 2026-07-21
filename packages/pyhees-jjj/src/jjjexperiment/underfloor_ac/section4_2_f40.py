@@ -1,6 +1,6 @@
 import pyhees.section4_2 as dc
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import JJJ_HCM, jjj_cloning
 
 # NOTE: Q^,hs,d,t は 床下負荷増加分も見込む(2025/03)
 @jjj_cloning

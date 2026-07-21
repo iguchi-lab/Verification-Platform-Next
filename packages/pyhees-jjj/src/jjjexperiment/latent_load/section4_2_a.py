@@ -1,6 +1,8 @@
+import numpy as np
+
 from pyhees.section4_2_a import get_f_SFP
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import jjj_cloning
 import jjjexperiment.constants as jjj_consts
 
 def _calc_polynomial_4th(x, coeffs):

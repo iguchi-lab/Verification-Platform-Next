@@ -4,7 +4,7 @@ from pyhees.section3_1 import get_A_HCZ_R_i
 import pyhees.section3_1_e as algo
 import pyhees.section4_2 as dc
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import Array12x1, Array5x1
 from jjjexperiment.inputs.options import *
 
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res

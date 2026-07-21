@@ -4,9 +4,8 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 PYHEES_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "pyhees"
-JJJEXPERIMENT_MAIN = (
-    REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "jjjexperiment" / "main.py"
-)
+JJJEXPERIMENT_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "jjjexperiment"
+JJJEXPERIMENT_MAIN = JJJEXPERIMENT_SOURCE / "main.py"
 
 # Temporary migration allowlist. Removing an entry is encouraged; adding one is not.
 # Keep this exact so a dependency cannot be added or removed without an explicit review.
@@ -41,9 +40,7 @@ EXPECTED_REVERSE_DEPENDENCIES = {
 }
 
 # Temporary migration allowlist. Remove modules as their wildcard imports are made explicit.
-EXPECTED_MAIN_WILDCARD_IMPORTS = {
-    "jjjexperiment.common",
-}
+EXPECTED_MAIN_WILDCARD_IMPORTS: set[str] = set()
 
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
@@ -102,4 +99,22 @@ def test_main_wildcard_imports_match_migration_allowlist():
         "Do not add a wildcard import. If an existing wildcard import was removed, "
         "reduce EXPECTED_MAIN_WILDCARD_IMPORTS in the same refactoring PR.\n"
         f"expected={EXPECTED_MAIN_WILDCARD_IMPORTS}\nactual={actual}"
+    )
+
+
+def test_jjjexperiment_common_imports_are_explicit():
+    wildcard_importers = set()
+    for path in sorted(JJJEXPERIMENT_SOURCE.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "jjjexperiment.common"
+            and any(alias.name == "*" for alias in node.names)
+            for node in ast.walk(tree)
+        ):
+            wildcard_importers.add(path.relative_to(JJJEXPERIMENT_SOURCE).as_posix())
+
+    assert not wildcard_importers, (
+        "Import names explicitly from jjjexperiment.common; wildcard imports obscure "
+        f"the dependency boundary: {sorted(wildcard_importers)}"
     )

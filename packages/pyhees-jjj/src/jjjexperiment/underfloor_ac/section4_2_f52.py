@@ -1,6 +1,6 @@
 import pyhees.section4_2 as dc
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import JJJ_HCM, jjj_cloning
 
 # NOTE: θ*NR,d,t は、室温の計算時に、床下からの貫流分を考慮(2025/03)
 @jjj_cloning  # section4_2/get_Theta_star_NR_d_t

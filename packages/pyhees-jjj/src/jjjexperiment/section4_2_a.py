@@ -6,7 +6,7 @@ import pyhees.section4_2_a as dc_a
 import pyhees.section4_3
 
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import Array8760
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res  # デバッグ用ロガー
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.inputs.options import *

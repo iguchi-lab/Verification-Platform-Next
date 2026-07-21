@@ -1,4 +1,5 @@
 import json
+import numpy as np
 from injector import Injector, inject
 import pandas as pd
 from datetime import datetime
@@ -48,7 +49,7 @@ import jjjexperiment.constants as jjj_consts
 import jjjexperiment.common as jjj_common
 from jjjexperiment.result import ResultSummary, SutValues
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
-from jjjexperiment.common import *
+from jjjexperiment.common import Array8760
 import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 
 # [F25-01] 最低風量の直接入力
