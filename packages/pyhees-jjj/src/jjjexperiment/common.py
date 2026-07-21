@@ -1,5 +1,7 @@
+from contextlib import contextmanager
+from contextvars import ContextVar
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Annotated, Iterator, Optional
 from injector import Injector
 import numpy as np
 from numpy.typing import NDArray
@@ -44,18 +46,28 @@ def jjj_mod(func):
 # ネストされた関数からの取得用
 # NOTE: injectの連鎖でも到達できない深いネストの時
 # (グローバルDIコンテナーは回避した)
-# ContextManager にする方法もあるが今は簡易性を優先
-import threading
-_current_injector = threading.local()
-def set_current_injector(injector: Injector):
-    """スレッドにDIコンテキストをセット"""
-    _current_injector.value = injector
+_current_injector: ContextVar[Optional[Injector]] = ContextVar(
+    'jjjexperiment_current_injector',
+    default=None,
+)
+
+def set_current_injector(injector: Injector) -> None:
+    """現在の実行コンテキストにDIコンテナをセット"""
+    _current_injector.set(injector)
 
 def get_current_injector() -> Optional[Injector]:
-    """スレッドからDIコンテキストを取得"""
-    return getattr(_current_injector, 'value', None)
+    """現在の実行コンテキストからDIコンテナを取得"""
+    return _current_injector.get()
 
-def clear_current_injector():
-    """スレッドにセットしたDIコンテキストをリセット"""
-    if hasattr(_current_injector, 'value'):
-        delattr(_current_injector, 'value')
+def clear_current_injector() -> None:
+    """現在の実行コンテキストのDIコンテナをリセット"""
+    _current_injector.set(None)
+
+@contextmanager
+def injector_context(injector: Injector) -> Iterator[None]:
+    """計算中だけDIコンテナを公開し、終了時に以前の状態へ戻す。"""
+    token = _current_injector.set(injector)
+    try:
+        yield
+    finally:
+        _current_injector.reset(token)

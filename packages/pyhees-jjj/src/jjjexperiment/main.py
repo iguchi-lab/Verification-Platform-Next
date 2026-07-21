@@ -40,6 +40,7 @@ from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
 
 import jjjexperiment.constants as jjj_consts
+import jjjexperiment.common as jjj_common
 from jjjexperiment.result import *
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
 from jjjexperiment.common import *
@@ -119,34 +120,31 @@ def calc_main(
     L_H_d_t_i: np.ndarray
     """暖房負荷 [MJ/h]"""
 
-    set_current_injector(injector)  # ネスト内からの利用に備える
+    with jjj_common.injector_context(injector):  # ネスト内からの利用に備える
+        # L_dash_H_R_d_t_i, L_dash_CS_R_d_t_iは負荷ファイルから読み取れないため自動計算する。
+        # 読み込んだ負荷と整合性が取れないため、正しい実装ではない。
+        L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = \
+            calc_heating_load(house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C
+                , skin.NV_MR, skin.NV_OR, skin.TS, skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation
+                , heat_ac_setting.mode.name, cool_ac_setting.mode.name, spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC)
+        if loadFile != '-':
+            load = pd.read_csv(loadFile, nrows=24 * 365)
+            L_H_d_t_i = load.iloc[::,:12].T.values
 
-    # L_dash_H_R_d_t_i, L_dash_CS_R_d_t_iは負荷ファイルから読み取れないため自動計算する。
-    # 読み込んだ負荷と整合性が取れないため、正しい実装ではない。
-    L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = \
-        calc_heating_load(house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C
-            , skin.NV_MR, skin.NV_OR, skin.TS, skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation
-            , heat_ac_setting.mode.name, cool_ac_setting.mode.name, spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC)
-    if loadFile != '-':
-        load = pd.read_csv(loadFile, nrows=24 * 365)
-        L_H_d_t_i = load.iloc[::,:12].T.values
+        ##### 冷房負荷の取得（MJ/h）
+        L_CS_d_t_i: np.ndarray
+        """冷房顕熱負荷 [MJ/h]"""
+        L_CL_d_t_i: np.ndarray
+        """冷房潜熱負荷 [MJ/h]"""
 
-    ##### 冷房負荷の取得（MJ/h）
-    L_CS_d_t_i: np.ndarray
-    """冷房顕熱負荷 [MJ/h]"""
-    L_CL_d_t_i: np.ndarray
-    """冷房潜熱負荷 [MJ/h]"""
-
-    if loadFile == '-':
-        L_CS_d_t_i, L_CL_d_t_i = \
-            calc_cooling_load(house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.r_A_ufvnt
-                    , skin.underfloor_insulation, cool_ac_setting.mode.name, heat_ac_setting.mode.name, mode_MR, mode_OR, skin.TS, hex.to_dict())
-    else:
-        load = pd.read_csv(loadFile, nrows=24 * 365)
-        L_CS_d_t_i = load.iloc[::,12:24].T.values
-        L_CL_d_t_i = load.iloc[::,24:].T.values
-
-    clear_current_injector()
+        if loadFile == '-':
+            L_CS_d_t_i, L_CL_d_t_i = \
+                calc_cooling_load(house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.r_A_ufvnt
+                        , skin.underfloor_insulation, cool_ac_setting.mode.name, heat_ac_setting.mode.name, mode_MR, mode_OR, skin.TS, hex.to_dict())
+        else:
+            load = pd.read_csv(loadFile, nrows=24 * 365)
+            L_CS_d_t_i = load.iloc[::,12:24].T.values
+            L_CL_d_t_i = load.iloc[::,24:].T.values
 
     # 負荷をあつめたデータクラス
     injector.binder.bind(jjj_dc.Load_DTI, to=jjj_dc.Load_DTI(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i))
