@@ -24,16 +24,21 @@ verification-core
   └── 標準ライブラリのみ
 
 pyhees-jjj
-  └── pyhees由来コードと計算依存
+  ├── jjjexperiment（検証用プラットフォーム独自コード）
+  └── pyhees（建築研究所由来コード）
 ```
 
 UIから計算エンジンの内部モジュールを直接参照せず、公開された計算APIと結果モデルだけを使用します。
 
+計算エンジン内の目標依存方向は `jjjexperiment -> pyhees` の一方向です。現在は移行前から存在する `pyhees -> jjjexperiment` の逆依存が6ファイルに残っているため、テストの許可リストで固定し、リファクタリングの各PRで段階的に削減します。新しい逆依存は追加しません。
+
 ## 開発の正本
 
-Phase 5 完了後は、このモノレポがUI、入力契約、計算エンジンの開発正本です。`jjjexperiment` の修正は `packages/pyhees-jjj/src/jjjexperiment` で行い、同じ変更で契約テストとPhase 5数値回帰を実行します。
+Phase 5 完了後は、このモノレポがUI、入力契約、計算エンジンの開発正本です。`jjjexperiment` の修正は `packages/pyhees-jjj/src/jjjexperiment` で行い、同じ変更でエンジンテスト、契約テスト、Phase 5数値回帰を実行します。
 
 移行元の `Verification-Platform` と `pyhees-jjj` は履歴確認と比較のための参照用です。建築研究所由来の `pyhees` 更新を取り込む場合も、影響を確認したうえでこのモノレポに反映します。
+
+`packages/pyhees-jjj/src/pyhees` は建築研究所由来コードとして扱います。既存の独自変更を分離するまでは完全な上流コピーではありませんが、新しい独自機能はここへ直接追加せず、`jjjexperiment` または上流接続用のアダプターへ実装します。基準コミットと更新手順は `packages/pyhees-jjj/UPSTREAM.md` を正本とします。
 
 ## 入力スキーマ
 

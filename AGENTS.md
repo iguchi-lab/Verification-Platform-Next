@@ -29,6 +29,14 @@ python -m pytest -q
 ruff check .
 ```
 
+When changing calculation code or its boundaries, also run the engine's
+historical test suite:
+
+```bash
+cd packages/pyhees-jjj
+python -m pytest src/tests -q -o addopts=""
+```
+
 The Phase 5 numerical gate is included in the full test suite. It can also be
 run directly with `python scripts/run_phase5_regression.py`. Do not replace its
 baselines without reviewing the numerical changes and updating the pinned
