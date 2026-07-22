@@ -2074,6 +2074,45 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_carryover_supply_state(
+        v_supply_cap_dto, ac_setting, house, skin, load, X_NR_d_t,
+        X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
+        L_star_CL_d_t_i, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i,
+        L_star_CS_d_t_i, Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
+        Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C,
+        Theta_ex_d_t):
+    """Prepare carryover outlet and supply state with legacy second pass."""
+    X_hs_out_d_t = _get_heat_source_outlet_humidity(
+        X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
+        X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
+    (
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+    ) = _get_heat_source_outlet_temperatures(
+        ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
+        V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+    V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+        v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
+        L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i,
+        Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
+        Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
+    Theta_supply_d_t_i = _get_supply_air_temperatures(
+        house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
+        l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
+    if skin.underfloor_air_conditioning_air_supply:
+        Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
+            ac_setting, house, skin, load, Theta_supply_d_t_i,
+            Theta_ex_d_t, V_dash_supply_d_t_i)
+    return (
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
+        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+    )
+
+
 def _prepare_carryover_outlet_requirements(
         ac_setting, house, skin, load, X_star_hs_in_d_t,
         Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
@@ -2409,24 +2448,22 @@ def calc_Q_UT_A(
             # Theta_NR_d_t = np.zeros(24 * 365)
             # 過剰熱量繰越 利用時には、初期化せず再利用する
 
-            X_hs_out_d_t = _get_heat_source_outlet_humidity(
-                X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
-                L_star_CL_d_t_i, house.region)
-            Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t = _get_heat_source_outlet_temperatures(
-                ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i,
-                Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
-            V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
-                v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i, L_star_CS_d_t_i,
-                Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
-                Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
-            Theta_supply_d_t_i = _get_supply_air_temperatures(
-                house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
-                V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
-            if skin.underfloor_air_conditioning_air_supply:
-                # Carryover heat, second pass: retain its original clipping behavior.
-                Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
-                    ac_setting, house, skin, load, Theta_supply_d_t_i,
-                    Theta_ex_d_t, V_dash_supply_d_t_i)
+            (
+                X_hs_out_d_t,
+                Theta_hs_out_min_C_d_t,
+                Theta_hs_out_max_H_d_t,
+                Theta_hs_out_d_t,
+                V_supply_d_t_i_before,
+                V_supply_d_t_i,
+                Theta_supply_d_t_i,
+            ) = _prepare_carryover_supply_state(
+                v_supply_cap_dto, ac_setting, house, skin, load, X_NR_d_t,
+                X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
+                L_star_CL_d_t_i, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
+                Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i,
+                L_star_CS_d_t_i, Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
+                Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C,
+                Theta_ex_d_t)
 
             # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
             # 0 の扱いは全てのメソッドで考慮されていること

@@ -3235,3 +3235,43 @@ def test_prepare_carryover_outlet_requirements_preserves_first_pass(
         ["requirements", "adjust"] if enabled else ["requirements"])
     if enabled:
         assert events[1][1][4] == skin.YUCACO_r_A_ufvnt
+
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_carryover_supply_state_preserves_second_pass(
+        monkeypatch, enabled):
+    events = []
+    outlet_humidity = object()
+    outlet_temperatures = tuple(object() for _ in range(3))
+    airflows = tuple(object() for _ in range(2))
+    supply_temperature = object()
+    adjusted = object()
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(underfloor_air_conditioning_air_supply=enabled)
+    inputs = [object() for _ in range(22)]
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_humidity",
+        lambda *a: events.append(("humidity", a)) or outlet_humidity)
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_temperatures",
+        lambda *a: events.append(("temperatures", a)) or outlet_temperatures)
+    monkeypatch.setattr(
+        sut, "_get_capped_supply_airflows",
+        lambda *a, **k: events.append(("airflows", a, k)) or airflows)
+    monkeypatch.setattr(
+        sut, "_get_supply_air_temperatures",
+        lambda *a: events.append(("supply", a)) or supply_temperature)
+    monkeypatch.setattr(
+        sut, "_adjust_carryover_underfloor_supply_temperatures",
+        lambda *a: events.append(("adjust", a)) or adjusted)
+
+    result = sut._prepare_carryover_supply_state(
+        inputs[0], inputs[1], house, skin, inputs[2], *inputs[3:])
+
+    assert result == (
+        outlet_humidity, *outlet_temperatures, *airflows,
+        adjusted if enabled else supply_temperature)
+    assert [event[0] for event in events] == (
+        ["humidity", "temperatures", "airflows", "supply", "adjust"]
+        if enabled else ["humidity", "temperatures", "airflows", "supply"])
+    assert events[2][2] == {"print_exec": False}
