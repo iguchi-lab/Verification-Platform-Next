@@ -2768,3 +2768,23 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
         ("write", "Q_hs_rtd_C", [cooling]),
         ("write", "Q_hs_rtd_H", [heating]),
     ]
+
+@pytest.mark.parametrize("enabled", (True, False))
+def test_prepare_underfloor_adjustment_state_preserves_ground_response_and_flag(
+        monkeypatch, enabled):
+    events = []
+    ground = tuple(object() for _ in range(4))
+    setting, theta_ex = object(), object()
+    flag = sut.床下空調ロジック.変更する if enabled else object()
+    monkeypatch.setattr(
+        sut,
+        "_prepare_underfloor_ground_response",
+        lambda *args: events.append(("ground", args)) or ground,
+    )
+
+    result = sut._prepare_underfloor_adjustment_state(
+        setting, SimpleNamespace(new_ufac_flg=flag), theta_ex)
+
+    assert result[:4] == ground
+    assert result[4] is enabled
+    assert events == [("ground", (setting, theta_ex))]

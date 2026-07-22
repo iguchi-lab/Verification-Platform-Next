@@ -1695,6 +1695,23 @@ def _prepare_rated_heat_source_capacity_state(
     df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]
     df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
     return Q_hs_rtd_H, Q_hs_rtd_C
+
+def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
+    """Prepare ground response and whether heat-source output needs adjustment."""
+    (
+        Theta_in_d_t,
+        Phi_A_0,
+        Theta_g_avg,
+        sum_Theta_dash_g_surf_A_m,
+    ) = _prepare_underfloor_ground_response(ac_setting, Theta_ex_d_t)
+    should_adjust = new_ufac.new_ufac_flg == 床下空調ロジック.変更する
+    return (
+        Theta_in_d_t,
+        Phi_A_0,
+        Theta_g_avg,
+        sum_Theta_dash_g_surf_A_m,
+        should_adjust,
+    )
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1825,10 +1842,10 @@ def calc_Q_UT_A(
         Phi_A_0,
         Theta_g_avg,
         sum_Theta_dash_g_surf_A_m,
-    ) = _prepare_underfloor_ground_response(ac_setting, Theta_ex_d_t)
+        should_be_adjusted_Q_hat_hs_d_t,
+    ) = _prepare_underfloor_adjustment_state(
+        ac_setting, new_ufac, Theta_ex_d_t)
 
-    # 脱出条件:
-    should_be_adjusted_Q_hat_hs_d_t = new_ufac.new_ufac_flg == 床下空調ロジック.変更する
     while True:
         V_dash_hs_supply_d_t = _get_heat_source_supply_airflow_before_vav(
             ac_setting,
