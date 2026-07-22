@@ -2037,13 +2037,18 @@ def calc_Q_UT_A(
         Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(
             house, skin, new_ufac, climate, Theta_star_HBR_d_t,
             V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
-            L_star_H_d_t_i, L_star_CS_d_t_i, Theta_uf_d_t)
+            L_star_H_d_t_i, L_star_CS_d_t_i,
+            Theta_uf_d_t
+            if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
         # (48) 実際の非居室の室温
         Theta_NR_d_t = _get_actual_non_room_temperatures_without_carryover(
             skin, new_ufac, Theta_star_NR_d_t, Theta_star_HBR_d_t,
             Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t,
             V_dash_supply_d_t_i, V_supply_d_t_i, U_prt, A_prt_i,
-            Theta_uf_d_t, r_A_NR_uf_1F_excl_bath)
+            Theta_uf_d_t
+            if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None,
+            r_A_NR_uf_1F_excl_bath
+            if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
     ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する

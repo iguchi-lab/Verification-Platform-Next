@@ -90,7 +90,7 @@
 - [PR #48](https://github.com/iguchi-lab/Verification-Platform-Next/pull/48): `calc_Q_UT_A` の繰越あり・なし両経路で、標準/潜熱方式の負荷・能力上限とRAC/電中研方式の暖冷房能力を4境界へ共通化し、評価順、ログ、中間出力を維持したまま関数本体を82行縮小しました。
 - [PR #50](https://github.com/iguchi-lab/Verification-Platform-Next/pull/50): `calc_Q_UT_A` の過剰熱量繰越8760時刻ループから、繰越判定、式(8)/(9)、式(46)、式(48)の4境界を1時刻単位へ分離し、初期値、前時刻スライス、評価順を維持したまま関数本体を53行縮小しました。
 - [PR #52](https://github.com/iguchi-lab/Verification-Platform-Next/pull/52): `calc_Q_UT_A` の床下空調温度補正を、熱繰越の旧方式1st/2nd、新方式1st/2nd、通常計算の旧方式2ndの5境界へ分離し、`np.clip`と`np.where`、逆算フラグ、定格上下限、診断出力順を維持したまま関数本体を131行縮小しました。
-- [PR #54](https://github.com/iguchi-lab/Verification-Platform-Next/pull/54): `calc_Q_UT_A` の通常経路から、新床下空調の式(8)/(9)負荷補正、式(46)居室温度、式(48)非居室温度の3境界を分離し、新方式8760時刻順、従来式の引数列、調査出力順を維持したまま関数本体を65行縮小しました。
+- [PR #54](https://github.com/iguchi-lab/Verification-Platform-Next/pull/54): `calc_Q_UT_A` の通常経路から、新床下空調の式(8)/(9)負荷補正、式(46)居室温度、式(48)非居室温度の3境界を分離し、新方式8760時刻順、従来式の引数列、調査出力順を維持したまま関数本体を60行縮小しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
