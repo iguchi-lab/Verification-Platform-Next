@@ -3101,8 +3101,8 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
         sut, "_adjust_legacy_underfloor_requested_temperatures",
         lambda *a: events.append(("legacy", a)) or np.zeros((5, 8760)))
 
-    result = sut._prepare_no_carryover_outlet_requirements(
-        context[0], house, skin, context[1], new_ufac, *context[2:])
+    result = sut._prepare_no_carryover_outlet_requirements(sut._NoCarryoverOutletRequirementInputs(
+        context[0], house, skin, context[1], new_ufac, *context[2:]))
 
     assert result[:2] == (x_min, x_req)
     assert [e[0] for e in events] == ["requirements"] + ([] if mode == "none" else [mode])
@@ -4042,4 +4042,31 @@ def test_balanced_non_room_temperature_inputs_preserve_field_order():
         "Theta_star_HBR_d_t",
         "Theta_in_d_t",
         "Theta_uf_d_t",
+    )
+
+
+def test_no_carryover_outlet_requirement_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(18))
+    inputs = sut._NoCarryoverOutletRequirementInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "ac_setting",
+        "house",
+        "skin",
+        "load",
+        "new_ufac",
+        "new_ufac_df",
+        "X_star_hs_in_d_t",
+        "Q_hs_max_CL_d_t",
+        "V_dash_supply_d_t_i",
+        "X_star_HBR_d_t",
+        "L_star_CL_d_t_i",
+        "Theta_sur_d_t_i",
+        "Theta_star_HBR_d_t",
+        "L_star_H_d_t_i",
+        "L_star_CS_d_t_i",
+        "l_duct_i",
+        "Theta_ex_d_t",
+        "Theta_in_d_t",
     )
