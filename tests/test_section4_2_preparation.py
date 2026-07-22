@@ -1089,3 +1089,18 @@ def test_heat_source_outlet_requirements_preserve_formula_order(monkeypatch):
             (inputs[5], inputs[6], inputs[2], inputs[7], inputs[8], inputs[9], 6),
         ),
     ]
+
+def test_heat_source_outlet_humidity_preserves_formula_arguments(monkeypatch):
+    inputs = [object() for _ in range(5)]
+    calls = []
+    expected = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_hs_out_d_t",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_heat_source_outlet_humidity(*inputs, 7)
+
+    assert result is expected
+    assert calls == [((*inputs, 7))]

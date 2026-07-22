@@ -430,6 +430,18 @@ def _get_heat_source_outlet_requirements(
 
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 
+def _get_heat_source_outlet_humidity(
+        X_NR_d_t: np.ndarray,
+        X_req_d_t_i: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        X_hs_out_min_C_d_t: np.ndarray,
+        L_star_CL_d_t_i: np.ndarray,
+        region: int,
+    ) -> np.ndarray:
+    """Calculate formula (15) without moving surrounding state updates."""
+    # (15)　熱源機の出口における絶対湿度
+    return dc.get_X_hs_out_d_t(X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i, region)
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1289,9 +1301,14 @@ def calc_Q_UT_A(
             # Theta_NR_d_t = np.zeros(24 * 365)
             # 過剰熱量繰越 利用時には、初期化せず再利用する
 
-            # (15)　熱源機の出口における絶対湿度
-            X_hs_out_d_t = dc.get_X_hs_out_d_t(X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
-
+            X_hs_out_d_t = _get_heat_source_outlet_humidity(
+                X_NR_d_t,
+                X_req_d_t_i,
+                V_dash_supply_d_t_i,
+                X_hs_out_min_C_d_t,
+                L_star_CL_d_t_i,
+                house.region,
+            )
             # (17)　冷房時の熱源機の出口における空気温度の最低値
             Theta_hs_out_min_C_d_t = dc.get_Theta_hs_out_min_C_d_t(Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i)
 
@@ -1588,9 +1605,14 @@ def calc_Q_UT_A(
 
             assert np.shape(Theta_req_d_t_i)==(5, 8760), "想定外の行列数です"
 
-        # (15)　熱源機の出口における絶対湿度
-        X_hs_out_d_t = dc.get_X_hs_out_d_t(X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
-
+        X_hs_out_d_t = _get_heat_source_outlet_humidity(
+            X_NR_d_t,
+            X_req_d_t_i,
+            V_dash_supply_d_t_i,
+            X_hs_out_min_C_d_t,
+            L_star_CL_d_t_i,
+            house.region,
+        )
         # 式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
         Theta_NR_d_t = np.zeros(24 * 365)
 
