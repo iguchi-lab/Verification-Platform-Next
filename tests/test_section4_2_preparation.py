@@ -3796,3 +3796,16 @@ def test_rac_cooling_capacity_result_preserves_tuple_contract():
         "Q_max_CS_d_t",
         "Q_max_CL_d_t",
     )
+
+
+def test_actual_loads_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._ActualLoadsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "L_dash_CL_d_t_i",
+        "L_dash_CS_d_t_i",
+        "L_dash_H_d_t_i",
+    )

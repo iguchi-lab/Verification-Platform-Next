@@ -90,6 +90,11 @@ class _RacCoolingCapacityResult(NamedTuple):
     Q_max_CS_d_t: object
     Q_max_CL_d_t: object
 
+class _ActualLoadsResult(NamedTuple):
+    L_dash_CL_d_t_i: object
+    L_dash_CS_d_t_i: object
+    L_dash_H_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -886,7 +891,11 @@ def _get_actual_loads(
     else:
         L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
 
-    return L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i
+    return _ActualLoadsResult(
+        L_dash_CL_d_t_i,
+        L_dash_CS_d_t_i,
+        L_dash_H_d_t_i,
+    )
 
 def _get_unprocessed_loads(
         L_star_CL_d_t_i: np.ndarray,
