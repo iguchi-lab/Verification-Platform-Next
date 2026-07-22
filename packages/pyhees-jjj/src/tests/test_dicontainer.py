@@ -2,9 +2,7 @@ import pytest
 from injector import Injector
 from jjjexperiment.underfloor_ac.inputs.common import UfVarsDataFrame
 
-from jjjexperiment.inputs.di_container import *
-
-from test_utils.utils import *
+from jjjexperiment.inputs.di_container import JJJExperimentModule
 
 # NOTE: DIコンテナライブラリ Injector 導入の目的:
 # 現時点では、出力用データフレームの操作のみ、行っているが、

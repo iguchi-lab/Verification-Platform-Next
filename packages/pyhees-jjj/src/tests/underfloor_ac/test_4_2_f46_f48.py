@@ -3,9 +3,8 @@ import pytest
 import numpy as np
 
 # JJJ
-from jjjexperiment.common import *
+from jjjexperiment.common import JJJ_HCM
 
-from jjjexperiment.inputs.options import *
 from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.inputs.environment_service import EnvironmentService
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin

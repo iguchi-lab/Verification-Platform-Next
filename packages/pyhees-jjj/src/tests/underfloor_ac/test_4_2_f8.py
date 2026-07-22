@@ -19,7 +19,7 @@ from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQu
 
 from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, calc_delta_L_room2uf_i
 
-from test_utils.utils import *
+from test_utils.utils import load_input_yaml
 
 # デバッグ用ロガー
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res

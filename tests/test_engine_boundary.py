@@ -7,6 +7,9 @@ PYHEES_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "pyhees"
 JJJEXPERIMENT_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "jjjexperiment"
 JJJEXPERIMENT_MAIN = JJJEXPERIMENT_SOURCE / "main.py"
 ENGINE_TEST_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "tests"
+ENGINE_TEST_UTILS_SOURCE = (
+    REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "test_utils"
+)
 DENCHU_TEST_SOURCE = (
     ENGINE_TEST_SOURCE / "denchu"
 )
@@ -55,9 +58,10 @@ EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
-EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS = {
-    "latent_load/test_latent_load_integration.py",
-    "underfloor_ac/test_4_2_f46_f48.py",
+EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS: set[str] = set()
+
+EXPECTED_ENGINE_TEST_WILDCARD_IMPORTS = {
+    ("tests/origin/test_4_2_formula_45.py", "pyhees.section4_2"),
 }
 
 
@@ -221,4 +225,28 @@ def test_options_test_wildcard_imports_match_migration_allowlist():
         "EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS in the same refactoring commit.\n"
         f"expected={EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS}\n"
         f"actual={wildcard_importers}"
+    )
+
+
+def test_engine_test_wildcard_imports_match_migration_allowlist():
+    wildcard_imports = set()
+    source_root = ENGINE_TEST_SOURCE.parent
+
+    for directory in (ENGINE_TEST_SOURCE, ENGINE_TEST_UTILS_SOURCE):
+        for path in sorted(directory.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            wildcard_imports.update(
+                (path.relative_to(source_root).as_posix(), node.module)
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom)
+                and node.module
+                and any(alias.name == "*" for alias in node.names)
+            )
+
+    assert wildcard_imports == EXPECTED_ENGINE_TEST_WILDCARD_IMPORTS, (
+        "Engine tests and their support modules must use explicit imports. Do not "
+        "add a wildcard import. If an existing wildcard import was removed, reduce "
+        "EXPECTED_ENGINE_TEST_WILDCARD_IMPORTS in the same refactoring commit.\n"
+        f"expected={EXPECTED_ENGINE_TEST_WILDCARD_IMPORTS}\n"
+        f"actual={wildcard_imports}"
     )
