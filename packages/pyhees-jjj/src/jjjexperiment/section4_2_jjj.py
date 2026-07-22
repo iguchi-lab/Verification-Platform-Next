@@ -168,6 +168,24 @@ class _SupplyStateResult(NamedTuple):
     V_supply_d_t_i: object
     Theta_supply_d_t_i: object
 
+class _InitialHeatSourceOutputInputs(NamedTuple):
+    df_output: object
+    house: object
+    skin: object
+    V_vent_l_d_t: object
+    V_vent_g_i: object
+    J_d_t: object
+    q_gen_d_t: object
+    n_p_d_t: object
+    q_p_H: object
+    q_p_CS: object
+    q_p_CL: object
+    X_ex_d_t: object
+    w_gen_d_t: object
+    Theta_ex_d_t: object
+    L_wtr: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1841,11 +1859,23 @@ def _prepare_balanced_room_and_duct_state(
 
 
 
-def _prepare_initial_heat_source_output(
-        df_output, house, skin, V_vent_l_d_t, V_vent_g_i, J_d_t,
-        q_gen_d_t, n_p_d_t, q_p_H, q_p_CS, q_p_CL, X_ex_d_t,
-        w_gen_d_t, Theta_ex_d_t, L_wtr):
+def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
     """Calculate the first formula (40) heat-source output in source order."""
+    df_output = inputs.df_output
+    house = inputs.house
+    skin = inputs.skin
+    V_vent_l_d_t = inputs.V_vent_l_d_t
+    V_vent_g_i = inputs.V_vent_g_i
+    J_d_t = inputs.J_d_t
+    q_gen_d_t = inputs.q_gen_d_t
+    n_p_d_t = inputs.n_p_d_t
+    q_p_H = inputs.q_p_H
+    q_p_CS = inputs.q_p_CS
+    q_p_CL = inputs.q_p_CL
+    X_ex_d_t = inputs.X_ex_d_t
+    w_gen_d_t = inputs.w_gen_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    L_wtr = inputs.L_wtr
     Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(
         skin.Q,
         house.A_A,
@@ -2807,7 +2837,7 @@ def calc_Q_UT_A(
     df_output = balanced_room_state.df_output
 
     # (40)-1st　熱源機の風量を計算するための熱源機の出力
-    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(
+    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(_InitialHeatSourceOutputInputs(
         df_output,
         house,
         skin,
@@ -2823,7 +2853,7 @@ def calc_Q_UT_A(
         w_gen_d_t,
         Theta_ex_d_t,
         L_wtr,
-    )
+    ))
     # (39)　熱源機の最低風量
     V_hs_min = _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i)
     Q_hs_rtd_H, Q_hs_rtd_C = _prepare_rated_heat_source_capacity_state(

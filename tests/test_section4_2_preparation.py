@@ -2700,12 +2700,12 @@ def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monke
     house = SimpleNamespace(A_A=120.0, region=6)
     skin = SimpleNamespace(Q=2.4, mu_H=0.08, mu_C=0.05)
     inputs = [object() for _ in range(12)]
-    result = sut._prepare_initial_heat_source_output(
+    result = sut._prepare_initial_heat_source_output(sut._InitialHeatSourceOutputInputs(
         frame,
         house,
         skin,
         *inputs,
-    )
+    ))
 
     assert result == values
     assert [event[0] for event in events] == ["formula", "setitem"]
@@ -3963,4 +3963,28 @@ def test_supply_state_result_preserves_tuple_contract():
         "V_supply_d_t_i_before",
         "V_supply_d_t_i",
         "Theta_supply_d_t_i",
+    )
+
+
+def test_initial_heat_source_output_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(15))
+    inputs = sut._InitialHeatSourceOutputInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "house",
+        "skin",
+        "V_vent_l_d_t",
+        "V_vent_g_i",
+        "J_d_t",
+        "q_gen_d_t",
+        "n_p_d_t",
+        "q_p_H",
+        "q_p_CS",
+        "q_p_CL",
+        "X_ex_d_t",
+        "w_gen_d_t",
+        "Theta_ex_d_t",
+        "L_wtr",
     )
