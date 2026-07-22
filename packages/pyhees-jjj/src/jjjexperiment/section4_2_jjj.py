@@ -1304,6 +1304,49 @@ def _adjust_new_underfloor_balanced_loads(
     })
     return L_star_H_d_t_i, L_star_CS_d_t_i
 
+def _get_actual_room_temperatures_without_carryover(
+        house,
+        skin,
+        new_ufac,
+        climate,
+        Theta_star_HBR_d_t,
+        V_supply_d_t_i,
+        Theta_supply_d_t_i,
+        U_prt,
+        A_prt_i,
+        A_HCZ_i,
+        L_star_H_d_t_i,
+        L_star_CS_d_t_i,
+        Theta_uf_d_t,
+    ):
+    """Calculate formula (46) while preserving the new/legacy branch."""
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        HCM = np.array(climate.get_HCM_d_t())
+        A_s_ufac_i, _ = jjj_ufac_dc.get_A_s_ufac_i(
+            house.A_A, house.A_MR, house.A_OR)
+        return np.hstack([
+            get_Theta_HBR_i(
+                Theta_star_HBR=Theta_star_HBR_d_t[t],
+                V_supply_i=V_supply_d_t_i[:, t:t + 1],
+                Theta_supply_i=Theta_supply_d_t_i[:, t:t + 1],
+                U_prt=U_prt,
+                A_prt_i=A_prt_i.reshape(-1, 1)[:5, :],
+                Q=skin.Q,
+                A_HCZ_i=A_HCZ_i.reshape(-1, 1),
+                L_star_H_i=L_star_H_d_t_i[:, t:t + 1],
+                L_star_CS_i=L_star_CS_d_t_i[:, t:t + 1],
+                HCM=HCM[t],
+                A_s_ufac_i=A_s_ufac_i[:5, :],
+                Theta_uf=Theta_uf_d_t[t],
+            ) for t in range(24 * 365)
+        ])
+
+    # 改変なし元式
+    return dc.get_Theta_HBR_d_t_i(
+        Theta_star_HBR_d_t, V_supply_d_t_i, Theta_supply_d_t_i,
+        U_prt, A_prt_i, skin.Q, A_HCZ_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1951,33 +1994,10 @@ def calc_Q_UT_A(
         _logger.NDdebug("Theta_supply_d_t_5", Theta_supply_d_t_i[4])
 
         # (46) 暖冷房区画𝑖の実際の居室の室温
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            HCM = np.array(climate.get_HCM_d_t())
-            A_s_ufac_i, _ = jjj_ufac_dc.get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
-            Theta_HBR_d_t_i = np.hstack([
-                get_Theta_HBR_i(
-                    Theta_star_HBR = Theta_star_HBR_d_t[t],
-                    V_supply_i = V_supply_d_t_i[:, t:t+1],
-                    Theta_supply_i = Theta_supply_d_t_i[:, t:t+1],
-                    U_prt = U_prt,
-                    A_prt_i = A_prt_i.reshape(-1,1)[:5, :],
-                    Q = skin.Q,
-                    A_HCZ_i = A_HCZ_i.reshape(-1,1),
-                    L_star_H_i = L_star_H_d_t_i[:, t:t+1],
-                    L_star_CS_i = L_star_CS_d_t_i[:, t:t+1],
-                    HCM = HCM[t],
-                    A_s_ufac_i = A_s_ufac_i[:5, :],
-                    Theta_uf = Theta_uf_d_t[t]
-                ) for t in range(24*365)
-            ])
-        else:
-            # 改変なし元式
-            Theta_HBR_d_t_i  \
-                = dc.get_Theta_HBR_d_t_i(
-                    Theta_star_HBR_d_t, V_supply_d_t_i, Theta_supply_d_t_i,
-                    U_prt, A_prt_i, skin.Q, A_HCZ_i,
-                    L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
-
+        Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(
+            house, skin, new_ufac, climate, Theta_star_HBR_d_t,
+            V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
+            L_star_H_d_t_i, L_star_CS_d_t_i, Theta_uf_d_t)
         # (48) 実際の非居室の室温
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
             Theta_NR_d_t = np.array([
