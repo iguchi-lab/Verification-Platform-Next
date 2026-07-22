@@ -142,6 +142,12 @@ class _StandardCapacityLimitsResult(NamedTuple):
     Q_hs_max_H_d_t: object
 
 
+class _RacHeatingCapacityResult(NamedTuple):
+    q_r_max_H: object
+    Q_r_max_H_d_t: object
+    Q_max_H_d_t: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -654,7 +660,11 @@ def _get_rac_heating_capacity(
     if log_intermediates:
         _logger.NDdebug("Q_max_H_d_t", Q_max_H_d_t)
 
-    return q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t
+    return _RacHeatingCapacityResult(
+        q_r_max_H,
+        Q_r_max_H_d_t,
+        Q_max_H_d_t,
+    )
 
 def _get_rac_cooling_capacity(
         cool_CRAC: CoolCRACSpec,
