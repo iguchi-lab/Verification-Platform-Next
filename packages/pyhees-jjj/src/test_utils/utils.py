@@ -1,5 +1,5 @@
 import pytest
-from jjjexperiment.result import *
+from jjjexperiment.result import ResultSummary, SutValues
 import collections.abc
 
 from os import path

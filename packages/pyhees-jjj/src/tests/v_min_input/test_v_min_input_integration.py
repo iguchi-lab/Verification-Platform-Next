@@ -8,7 +8,13 @@ from jjjexperiment.inputs.options import (
     最低風量直接入力,
 )
 
-from test_utils.utils import *
+from test_utils.utils import (
+    INPUT_SAMPLE_TYPE1_PATH,
+    INPUT_SAMPLE_TYPE2_PATH,
+    INPUT_SAMPLE_TYPE3_PATH,
+    INPUT_SAMPLE_TYPE4_PATH,
+    deep_update,
+)
 
 class TestV最低風量入力結合:
     """V最低風量入力 (v_min_input) の結合テスト"""

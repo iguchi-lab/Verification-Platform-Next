@@ -11,7 +11,15 @@ from jjjexperiment.inputs.options import (
     過剰熱量繰越計算,
 )
 
-from test_utils.utils import *
+from test_utils.utils import (
+    INPUT_SAMPLE_TYPE1_PATH,
+    INPUT_SAMPLE_TYPE2_PATH,
+    INPUT_SAMPLE_TYPE3_PATH,
+    INPUT_SAMPLE_TYPE4_PATH,
+    deep_update,
+)
+
+pytest_plugins = ["test_utils.utils"]
 
 class Test統合テスト_デフォルト入力時:
 
