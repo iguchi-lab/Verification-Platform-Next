@@ -52,7 +52,7 @@ from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
     THETA_UF_WARM,
     THETA_UF_COOL,
 )
-from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
+from jjjexperiment.underfloor_ac.section4_2_f52_jjj import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48_jjj import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 # F25-1 最小風量・最低電力直接入力
