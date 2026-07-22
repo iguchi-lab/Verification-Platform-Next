@@ -1502,3 +1502,42 @@ def test_carryover_at_hour_preserves_previous_comparison_and_current_target(
     assert calls[0][:3] == (heating, cooling, area)
     np.testing.assert_array_equal(calls[0][3], rooms[:, 0:1])
     assert calls[0][4] == targets[1]
+
+def test_balanced_loads_at_hour_preserve_formula_order_and_slices(monkeypatch):
+    calls = []
+    heating = np.arange(7 * 3).reshape(7, 3)
+    cooling = heating + 100
+    transfer = heating + 200
+    carryover = object()
+    outputs = (object(), object())
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_L_star_H_i_2024",
+        lambda *args: calls.append(("heating", args)) or outputs[0],
+    )
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_L_star_CS_i_2024",
+        lambda *args: calls.append(("cooling", args)) or outputs[1],
+    )
+
+    result = sut._get_balanced_loads_at_hour(
+        1,
+        np.array([False, True, False]),
+        np.array([False, False, True]),
+        SimpleNamespace(L_H_d_t_i=heating, L_CS_d_t_i=cooling),
+        transfer,
+        carryover,
+    )
+
+    assert result == outputs
+    assert calls[0][0] == "heating"
+    assert calls[0][1][0] is True or calls[0][1][0] == np.bool_(True)
+    np.testing.assert_array_equal(calls[0][1][1], heating[:5, 1:2])
+    np.testing.assert_array_equal(calls[0][1][2], transfer[:5, 1:2])
+    assert calls[0][1][3] is carryover
+    assert calls[1][0] == "cooling"
+    assert calls[1][1][0] is False or calls[1][1][0] == np.bool_(False)
+    np.testing.assert_array_equal(calls[1][1][1], cooling[:5, 1:2])
+    np.testing.assert_array_equal(calls[1][1][2], transfer[:5, 1:2])
+    assert calls[1][1][3] is carryover

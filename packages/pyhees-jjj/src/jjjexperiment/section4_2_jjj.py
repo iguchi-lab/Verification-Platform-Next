@@ -668,6 +668,31 @@ def _get_carryover_at_hour(
         # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う
         return np.zeros((5, 1))
 
+def _get_balanced_loads_at_hour(
+        t: int,
+        H: np.ndarray,
+        C: np.ndarray,
+        load: Load_DTI,
+        Q_star_trs_prt_d_t_i: np.ndarray,
+        carryover: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+    """Calculate formulas (8) and (9) for one hour in their original order."""
+    # (8)　熱損失を含む負荷バランス時の暖房負荷
+    L_star_H_i = jjj_carryover_heat.get_L_star_H_i_2024(
+        H[t],
+        load.L_H_d_t_i[:5, t:t+1],
+        Q_star_trs_prt_d_t_i[:5, t:t+1],
+        carryover)
+
+    # (9)　熱取得を含む負荷バランス時の冷房顕熱負荷
+    L_star_CS_i = jjj_carryover_heat.get_L_star_CS_i_2024(
+        C[t],
+        load.L_CS_d_t_i[:5, t:t+1],
+        Q_star_trs_prt_d_t_i[:5, t:t+1],
+        carryover)
+
+    return L_star_H_i, L_star_CS_i
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1372,22 +1397,11 @@ def calc_Q_UT_A(
                 t, H, C, A_HCZ_i, Theta_HBR_d_t_i, Theta_star_HBR_d_t)
             carryovers[:, t] = carryover[:, 0]  # 確認用
 
-            # (8)　熱損失を含む負荷バランス時の暖房負荷
-            L_star_H_d_t_i[:, t:t+1]  \
-                = jjj_carryover_heat.get_L_star_H_i_2024(
-                    H[t],
-                    load.L_H_d_t_i[:5, t:t+1],
-                    Q_star_trs_prt_d_t_i[:5, t:t+1],
-                    carryover)
-
-            # (9)　熱取得を含む負荷バランス時の冷房顕熱負荷
-            L_star_CS_d_t_i[:, t:t+1]  \
-                = jjj_carryover_heat.get_L_star_CS_i_2024(
-                    C[t],
-                    load.L_CS_d_t_i[:5, t:t+1],
-                    Q_star_trs_prt_d_t_i[:5, t:t+1],
-                    carryover)
-
+            (
+                L_star_H_d_t_i[:, t:t+1],
+                L_star_CS_d_t_i[:, t:t+1],
+            ) = _get_balanced_loads_at_hour(
+                t, H, C, load, Q_star_trs_prt_d_t_i, carryover)
             ####################################################################################################################
             if ac_setting.type in [
                     計算モデル.ダクト式セントラル空調機,
