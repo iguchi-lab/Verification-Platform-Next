@@ -1819,6 +1819,98 @@ def _prepare_pre_vav_airflow_state(
     )
 
 
+
+def _prepare_balanced_non_room_humidity(
+        df_output, house, load, X_star_HBR_d_t, L_wtr,
+        V_vent_l_NR_d_t, V_dash_supply_d_t_i):
+    """Calculate formula (53) and preserve its direct output write."""
+    X_star_NR_d_t = dc.get_X_star_NR_d_t(
+        X_star_HBR_d_t,
+        load.L_CL_d_t_i,
+        L_wtr,
+        V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i,
+        house.region,
+    )
+    df_output['X_star_NR_d_t'] = X_star_NR_d_t
+    return X_star_NR_d_t
+
+def _prepare_balanced_non_room_temperature(
+        df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
+        U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+        Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t):
+    """Calculate formula (52) while preserving the new-underfloor branch."""
+    r_A_NR_uf_1F_excl_bath = None
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
+            _get_new_balanced_non_room_temperature(
+                house,
+                skin,
+                climate,
+                load,
+                A_NR,
+                A_prt_i,
+                U_prt,
+                V_vent_l_NR_d_t,
+                V_dash_supply_d_t_i,
+                Theta_star_HBR_d_t,
+                Theta_in_d_t,
+                Theta_uf_d_t,
+            )
+    else:
+        Theta_star_NR_d_t = dc.get_Theta_star_NR_d_t(
+            Theta_star_HBR_d_t,
+            skin.Q,
+            A_NR,
+            V_vent_l_NR_d_t,
+            V_dash_supply_d_t_i,
+            U_prt,
+            A_prt_i,
+            load.L_H_d_t_i,
+            load.L_CS_d_t_i,
+            house.region,
+        )
+    df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
+    return Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath
+
+def _prepare_actual_humidity_state(
+        df_output, X_star_NR_d_t, X_star_HBR_d_t):
+    """Calculate formulas (49) and (47) in source order."""
+    X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
+    X_HBR_d_t_i, df_output = _get_actual_room_humidities(
+        df_output, X_star_HBR_d_t)
+    return X_NR_d_t, X_HBR_d_t_i, df_output
+
+def _prepare_balanced_load_state(
+        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t,
+        Theta_star_NR_d_t, load, region):
+    """Calculate formulas (11) and (10), preserving DataFrame generations."""
+    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
+        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
+    L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
+        df_output, load, region)
+    return Q_star_trs_prt_d_t_i, L_star_CL_d_t_i, df_output
+
+def _initialize_carryover_hourly_state(region):
+    """Create the carryover loop arrays and season masks in source order."""
+    L_star_CS_d_t_i = np.zeros((5, 24 * 365))
+    L_star_H_d_t_i = np.zeros((5, 24 * 365))
+    Theta_star_hs_in_d_t = np.zeros(24 * 365)
+    Theta_HBR_d_t_i = np.zeros((5, 24 * 365))
+    Theta_NR_d_t = np.zeros(24 * 365)
+    carryovers = np.zeros((5, 24 * 365))
+    H, C, M = dc.get_season_array_d_t(region)
+    return (
+        L_star_CS_d_t_i,
+        L_star_H_d_t_i,
+        Theta_star_hs_in_d_t,
+        Theta_HBR_d_t_i,
+        Theta_NR_d_t,
+        carryovers,
+        H,
+        C,
+        M,
+    )
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1987,64 +2079,42 @@ def calc_Q_UT_A(
     )
 
     # (53)　負荷バランス時の非居室の絶対湿度
-    X_star_NR_d_t = dc.get_X_star_NR_d_t(X_star_HBR_d_t, load.L_CL_d_t_i, L_wtr, V_vent_l_NR_d_t, V_dash_supply_d_t_i, house.region)
-    df_output['X_star_NR_d_t'] = X_star_NR_d_t
-
+    X_star_NR_d_t = _prepare_balanced_non_room_humidity(
+        df_output, house, load, X_star_HBR_d_t, L_wtr,
+        V_vent_l_NR_d_t, V_dash_supply_d_t_i)
     # (52)　負荷バランス時の非居室の室温
-    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
-            _get_new_balanced_non_room_temperature(
-                house, skin, climate, load, A_NR, A_prt_i, U_prt,
-                V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_star_HBR_d_t,
-                Theta_in_d_t, Theta_uf_d_t)
-    else:
-        Theta_star_NR_d_t = \
-            dc.get_Theta_star_NR_d_t(
-                Theta_star_HBR_d_t, skin.Q, A_NR,
-                V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-                U_prt, A_prt_i, load.L_H_d_t_i, load.L_CS_d_t_i, house.region)
-
-    df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
-
-    # (49)　実際の非居室の絶対湿度
-    X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
-
-    # (47)　実際の居室の絶対湿度
-    X_HBR_d_t_i, df_output = _get_actual_room_humidities(
-        df_output, X_star_HBR_d_t)
-
+    Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
+        _prepare_balanced_non_room_temperature(
+            df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
+            U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+            Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t)
+    # (49), (47)　実際の非居室・居室の絶対湿度
+    X_NR_d_t, X_HBR_d_t_i, df_output = _prepare_actual_humidity_state(
+        df_output, X_star_NR_d_t, X_star_HBR_d_t)
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(1) """
-    # (11)　熱損失を含む負荷バランス時の非居室への熱移動
-    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
-        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
-
-    # (10)　熱取得を含む負荷バランス時の冷房潜熱負荷
-    L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
-        df_output, load, house.region)
-
+    # (11), (10)　間仕切熱移動と冷房潜熱負荷
+    Q_star_trs_prt_d_t_i, L_star_CL_d_t_i, df_output = \
+        _prepare_balanced_load_state(
+            df_output, U_prt, A_prt_i, Theta_star_HBR_d_t,
+            Theta_star_NR_d_t, load, house.region)
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
     if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
 
         # NOTE: 過剰熱繰越と併用しないオプションはインプットデータクラスの段階で強制オフしている
 
-        # インデックス順に更新対象
-        L_star_CS_d_t_i = np.zeros((5, 24 * 365))
-        L_star_H_d_t_i = np.zeros((5, 24 * 365))
-
-        # 実際の居室・非居室の室温
-        Theta_star_hs_in_d_t = np.zeros(24 * 365)
-        Theta_HBR_d_t_i = np.zeros((5, 24 * 365))
-        Theta_NR_d_t = np.zeros(24 * 365)
-        # TODO: 空からappendしていくロジックに変更することで
-        # tインデックスの誤用がないことを保証できる
-
-        # 過剰熱繰越の項(確認用)
-        carryovers = np.zeros((5, 24 * 365))
-
-        # 季節から計算の必要性を判断
-        H, C, M = dc.get_season_array_d_t(house.region)
-
+        # 過剰熱繰越ループの配列・季節状態を初期化
+        (
+            L_star_CS_d_t_i,
+            L_star_H_d_t_i,
+            Theta_star_hs_in_d_t,
+            Theta_HBR_d_t_i,
+            Theta_NR_d_t,
+            carryovers,
+            H,
+            C,
+            M,
+        ) = _initialize_carryover_hourly_state(house.region)
         for t in range(0, 24 * 365):
             # TODO: 先頭時の扱いを考慮
             isFirst = (t == 0)

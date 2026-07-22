@@ -2864,3 +2864,142 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     assert heat_calls[0][1][-2] is q_initial
     if should_adjust:
         assert heat_calls[1][1][-2] is q_ground
+
+def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monkeypatch):
+    events = []
+    value = object()
+    frame = _FrameRecorder(events)
+    house = SimpleNamespace(region=6)
+    load = SimpleNamespace(L_CL_d_t_i=object())
+    inputs = [object() for _ in range(4)]
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_star_NR_d_t",
+        lambda *args: events.append(("formula", args)) or value,
+    )
+
+    result = sut._prepare_balanced_non_room_humidity(
+        frame, house, load, *inputs)
+
+    assert result is value
+    assert events[0] == (
+        "formula",
+        (inputs[0], load.L_CL_d_t_i, inputs[1], inputs[2], inputs[3], 6),
+    )
+    assert events[1] == ("setitem", 0, "X_star_NR_d_t", value)
+
+@pytest.mark.parametrize("enabled", (True, False))
+def test_prepare_balanced_non_room_temperature_preserves_formula_52_branch(
+        monkeypatch, enabled):
+    events = []
+    frame = _FrameRecorder(events)
+    theta, ratio = object(), object()
+    flag = sut.床下空調ロジック.変更する if enabled else object()
+    new_ufac = SimpleNamespace(new_ufac_flg=flag)
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(Q=2.4)
+    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
+    inputs = [object() for _ in range(8)]
+    monkeypatch.setattr(
+        sut,
+        "_get_new_balanced_non_room_temperature",
+        lambda *args: events.append(("new", args)) or (theta, ratio),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_star_NR_d_t",
+        lambda *args: events.append(("legacy", args)) or theta,
+    )
+
+    result = sut._prepare_balanced_non_room_temperature(
+        frame, new_ufac, house, skin, object(), load, *inputs)
+
+    assert result == (theta, ratio if enabled else None)
+    assert [event[0] for event in events] == [
+        "new" if enabled else "legacy", "setitem"
+    ]
+    assert events[-1] == ("setitem", 0, "Theta_star_NR_d_t", theta)
+    if not enabled:
+        assert events[0][1] == (
+            inputs[5], 2.4, inputs[0], inputs[3], inputs[4], inputs[2],
+            inputs[1], load.L_H_d_t_i, load.L_CS_d_t_i, 6,
+        )
+
+def test_prepare_actual_humidity_state_preserves_formula_49_47_order(monkeypatch):
+    events = []
+    frame, next_frame = object(), object()
+    x_nr, x_hbr = object(), object()
+    star_nr, star_hbr = object(), object()
+    monkeypatch.setattr(
+        sut,
+        "_get_actual_non_room_humidity",
+        lambda *args: events.append(("non_room", args)) or x_nr,
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_actual_room_humidities",
+        lambda *args: events.append(("room", args)) or (x_hbr, next_frame),
+    )
+
+    result = sut._prepare_actual_humidity_state(frame, star_nr, star_hbr)
+
+    assert result == (x_nr, x_hbr, next_frame)
+    assert events == [
+        ("non_room", (frame, star_nr)),
+        ("room", (frame, star_hbr)),
+    ]
+
+def test_prepare_balanced_load_state_preserves_formula_11_10_generations(monkeypatch):
+    events = []
+    first_frame, second_frame, final_frame = object(), object(), object()
+    transfer, latent = object(), object()
+    inputs = [object() for _ in range(6)]
+    monkeypatch.setattr(
+        sut,
+        "_get_partition_heat_transfers",
+        lambda *args: events.append(("transfer", args)) or (transfer, second_frame),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_balanced_latent_cooling_loads",
+        lambda *args: events.append(("latent", args)) or (latent, final_frame),
+    )
+
+    result = sut._prepare_balanced_load_state(first_frame, *inputs)
+
+    assert result == (transfer, latent, final_frame)
+    assert events == [
+        ("transfer", (first_frame, *inputs[:4])),
+        ("latent", (second_frame, inputs[4], inputs[5])),
+    ]
+
+def test_initialize_carryover_hourly_state_preserves_shapes_and_season_order(monkeypatch):
+    events = []
+    arrays = []
+    seasons = tuple(object() for _ in range(3))
+
+    def zeros(shape):
+        value = object()
+        arrays.append(value)
+        events.append(("zeros", shape))
+        return value
+
+    monkeypatch.setattr(sut.np, "zeros", zeros)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_season_array_d_t",
+        lambda region: events.append(("season", region)) or seasons,
+    )
+
+    result = sut._initialize_carryover_hourly_state(6)
+
+    assert result == (*arrays, *seasons)
+    assert events == [
+        ("zeros", (5, 24 * 365)),
+        ("zeros", (5, 24 * 365)),
+        ("zeros", 24 * 365),
+        ("zeros", (5, 24 * 365)),
+        ("zeros", 24 * 365),
+        ("zeros", (5, 24 * 365)),
+        ("season", 6),
+    ]
