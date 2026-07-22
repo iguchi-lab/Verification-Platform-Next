@@ -1990,6 +1990,12 @@ def _prepare_no_carryover_capacity_state(
         SHF_L_min_c,
         SHF_dash_d_t,
     )
+
+def _prepare_balanced_heat_source_inlet_state(X_star_NR_d_t, Theta_star_NR_d_t):
+    """Calculate formulas (20) and (19) in source order."""
+    X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
+    Theta_star_hs_in_d_t = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
+    return X_star_hs_in_d_t, Theta_star_hs_in_d_t
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2314,12 +2320,10 @@ def calc_Q_UT_A(
             ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
             Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
 
-        # (20)　負荷バランス時の熱源機の入口における絶対湿度
-        X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
-
-        # (19)　負荷バランス時の熱源機の入口における空気温度
-        Theta_star_hs_in_d_t = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
-
+        # (20), (19)　負荷バランス時の熱源機入口状態
+        X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
+            _prepare_balanced_heat_source_inlet_state(
+                X_star_NR_d_t, Theta_star_NR_d_t)
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = _get_heat_source_outlet_requirements(
             X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
             L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,

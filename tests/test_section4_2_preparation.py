@@ -3058,3 +3058,16 @@ def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch,
     assert result[:4] == ((standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
                       if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
     assert [e[0] for e in events] == (["loads", "standard"] if standard else ["defrost", "log", "rac_heat", "rac_cool"])
+
+def test_prepare_balanced_heat_source_inlet_state_preserves_formula_20_19_order(monkeypatch):
+    events = []
+    humidity, temperature = object(), object()
+    star_humidity, star_temperature = object(), object()
+    monkeypatch.setattr(sut.dc, "get_X_star_hs_in_d_t", lambda x: events.append(("humidity", x)) or humidity)
+    monkeypatch.setattr(sut.dc, "get_Theta_star_hs_in_d_t", lambda x: events.append(("temperature", x)) or temperature)
+
+    result = sut._prepare_balanced_heat_source_inlet_state(
+        star_humidity, star_temperature)
+
+    assert result == (humidity, temperature)
+    assert events == [("humidity", star_humidity), ("temperature", star_temperature)]
