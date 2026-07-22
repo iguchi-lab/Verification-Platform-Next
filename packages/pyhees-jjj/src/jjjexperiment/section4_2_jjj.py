@@ -2923,16 +2923,27 @@ def calc_Q_UT_A(
                 L_star_CS_d_t_i[:, t:t+1],
             ) = _get_balanced_loads_at_hour(
                 t, H, C, load, Q_star_trs_prt_d_t_i, carryover)
-            (
-                Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-                Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
-                L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-                Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-                L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
-                SHF_L_min_c, SHF_dash_d_t,
-            ) = _prepare_carryover_capacity_state(
+            capacity_state = _prepare_carryover_capacity_state(
                 ac_setting, house, heat_CRAC, cool_CRAC, load,
                 Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
+            Q_hs_max_C_d_t = capacity_state.Q_hs_max_C_d_t
+            Q_hs_max_CL_d_t = capacity_state.Q_hs_max_CL_d_t
+            Q_hs_max_CS_d_t = capacity_state.Q_hs_max_CS_d_t
+            Q_hs_max_H_d_t = capacity_state.Q_hs_max_H_d_t
+            L_star_CL_d_t = capacity_state.L_star_CL_d_t
+            L_star_CS_d_t = capacity_state.L_star_CS_d_t
+            L_star_dash_CL_d_t = capacity_state.L_star_dash_CL_d_t
+            L_star_dash_C_d_t = capacity_state.L_star_dash_C_d_t
+            C_df_H_d_t = capacity_state.C_df_H_d_t
+            Q_r_max_H_d_t = capacity_state.Q_r_max_H_d_t
+            Q_r_max_C_d_t = capacity_state.Q_r_max_C_d_t
+            L_max_CL_d_t = capacity_state.L_max_CL_d_t
+            L_dash_CL_d_t = capacity_state.L_dash_CL_d_t
+            L_dash_C_d_t = capacity_state.L_dash_C_d_t
+            q_r_max_H = capacity_state.q_r_max_H
+            q_r_max_C = capacity_state.q_r_max_C
+            SHF_L_min_c = capacity_state.SHF_L_min_c
+            SHF_dash_d_t = capacity_state.SHF_dash_d_t
 
             # (20), (19)　負荷バランス時の熱源機入口状態
             X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
@@ -2987,16 +2998,27 @@ def calc_Q_UT_A(
         L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(
             house, new_ufac, new_ufac_df, load, A_s_ufac_i,
             Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i)
-        (
-            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-            Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
-            L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-            Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-            L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
-            SHF_L_min_c, SHF_dash_d_t,
-        ) = _prepare_no_carryover_capacity_state(
+        capacity_state = _prepare_no_carryover_capacity_state(
             ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
             Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
+        Q_hs_max_C_d_t = capacity_state.Q_hs_max_C_d_t
+        Q_hs_max_CL_d_t = capacity_state.Q_hs_max_CL_d_t
+        Q_hs_max_CS_d_t = capacity_state.Q_hs_max_CS_d_t
+        Q_hs_max_H_d_t = capacity_state.Q_hs_max_H_d_t
+        L_star_CL_d_t = capacity_state.L_star_CL_d_t
+        L_star_CS_d_t = capacity_state.L_star_CS_d_t
+        L_star_dash_CL_d_t = capacity_state.L_star_dash_CL_d_t
+        L_star_dash_C_d_t = capacity_state.L_star_dash_C_d_t
+        C_df_H_d_t = capacity_state.C_df_H_d_t
+        Q_r_max_H_d_t = capacity_state.Q_r_max_H_d_t
+        Q_r_max_C_d_t = capacity_state.Q_r_max_C_d_t
+        L_max_CL_d_t = capacity_state.L_max_CL_d_t
+        L_dash_CL_d_t = capacity_state.L_dash_CL_d_t
+        L_dash_C_d_t = capacity_state.L_dash_C_d_t
+        q_r_max_H = capacity_state.q_r_max_H
+        q_r_max_C = capacity_state.q_r_max_C
+        SHF_L_min_c = capacity_state.SHF_L_min_c
+        SHF_dash_d_t = capacity_state.SHF_dash_d_t
 
         # (20), (19)　負荷バランス時の熱源機入口状態
         X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
