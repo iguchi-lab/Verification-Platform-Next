@@ -1676,6 +1676,12 @@ def _prepare_initial_heat_source_output(
     )
     df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
     return Q_hat_hs_d_t, Q_hat_hs_CS_d_t
+
+def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
+    """Calculate formula (39) and preserve its direct output write."""
+    V_hs_min = dc.get_V_hs_min(V_vent_g_i)
+    df_output3['V_hs_min'] = [V_hs_min]
+    return V_hs_min
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1793,9 +1799,7 @@ def calc_Q_UT_A(
         L_wtr,
     )
     # (39)　熱源機の最低風量
-    V_hs_min = dc.get_V_hs_min(V_vent_g_i)
-    df_output3['V_hs_min'] = [V_hs_min]
-
+    V_hs_min = _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i)
     ####################################################################################################################
     Q_hs_rtd_H, Q_hs_rtd_C = _get_rated_heat_source_capacities(
         ac_setting,

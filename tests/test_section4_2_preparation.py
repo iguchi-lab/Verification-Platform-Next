@@ -2721,3 +2721,26 @@ def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monke
     )
     assert events[1][2] == "Q_hat_hs_d_t"
     assert events[1][3] is values[0]
+
+def test_prepare_minimum_heat_source_airflow_preserves_formula_39_write(monkeypatch):
+    events = []
+    value = object()
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("write", key, item))
+
+    ventilation = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_hs_min",
+        lambda arg: events.append(("formula", arg)) or value,
+    )
+
+    result = sut._prepare_minimum_heat_source_airflow(Frame(), ventilation)
+
+    assert result is value
+    assert events == [
+        ("formula", ventilation),
+        ("write", "V_hs_min", [value]),
+    ]
