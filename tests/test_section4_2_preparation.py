@@ -3387,3 +3387,42 @@ def test_export_carryover_diagnostics_preserves_columns_and_filename(
             f"carryovers_i_{i}" for i in range(1, 6))
         assert events[1] == (
             "csv", "case_version" + suffix, {"encoding": "cp932"})
+
+
+def test_record_capacity_state_outputs_preserves_frame_generations_and_order():
+    events = []
+
+    class Frame:
+        def __init__(self, name):
+            self.name = name
+
+        def assign(self, **values):
+            events.append((self.name, "assign", tuple(values), values))
+            return self
+
+        def __setitem__(self, key, value):
+            events.append((self.name, "setitem", key, value))
+
+    output = Frame("output")
+    output3 = Frame("output3")
+    values = [object() for _ in range(17)]
+
+    result = sut._record_capacity_state_outputs(output, output3, *values)
+
+    assert result == (output, output3)
+    assert [(event[0], event[1]) for event in events] == [
+        ("output", "assign"),
+        ("output3", "assign"),
+        ("output", "setitem"),
+        ("output", "assign"),
+    ]
+    assert events[0][2] == (
+        "L_star_CL_d_t", "L_star_CS_d_t", "L_star_dash_CL_d_t",
+        "L_star_dash_C_d_t", "C_df_H_d_t", "Q_r_max_H_d_t",
+        "Q_r_max_C_d_t", "L_max_CL_d_t", "L_dash_CL_d_t",
+        "L_dash_C_d_t")
+    assert events[1][2] == ("q_r_max_H", "q_r_max_C", "SHF_L_min_c")
+    assert events[1][3]["q_r_max_H"] is None
+    assert events[3][2] == (
+        "Q_hs_max_C_d_t", "Q_hs_max_CL_d_t",
+        "Q_hs_max_CS_d_t", "Q_hs_max_H_d_t")

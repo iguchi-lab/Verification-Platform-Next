@@ -2074,6 +2074,42 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _record_capacity_state_outputs(
+        df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
+        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
+        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
+        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_C, SHF_L_min_c,
+        SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t, Q_hs_max_H_d_t):
+    """Record maximum capacity outputs without changing frame generations."""
+    df_output = df_output.assign(
+        L_star_CL_d_t=L_star_CL_d_t,
+        L_star_CS_d_t=L_star_CS_d_t,
+        L_star_dash_CL_d_t=L_star_dash_CL_d_t,
+        L_star_dash_C_d_t=L_star_dash_C_d_t,
+        C_df_H_d_t=C_df_H_d_t,
+        Q_r_max_H_d_t=Q_r_max_H_d_t,
+        Q_r_max_C_d_t=Q_r_max_C_d_t,
+        L_max_CL_d_t=L_max_CL_d_t,
+        L_dash_CL_d_t=L_dash_CL_d_t,
+        L_dash_C_d_t=L_dash_C_d_t,
+    )
+    df_output3 = df_output3.assign(
+        # Preserve the legacy misspelled locals check: this column was None.
+        q_r_max_H=None,
+        q_r_max_C=q_r_max_C,
+        SHF_L_min_c=SHF_L_min_c,
+    )
+    df_output['SHF_dash_d_t'] = SHF_dash_d_t
+    df_output = df_output.assign(
+        Q_hs_max_C_d_t=Q_hs_max_C_d_t,
+        Q_hs_max_CL_d_t=Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t=Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t=Q_hs_max_H_d_t,
+    )
+    return df_output, df_output3
+
+
 def _export_carryover_diagnostics(
         case_name, ac_setting, house, carryover_heat_dto,
         df_carryover_output, carryovers):
@@ -2625,34 +2661,13 @@ def calc_Q_UT_A(
         L_star_H_d_t_i,
     )
     """ 最大暖冷房能力 """
-    df_output = df_output.assign(
-        # NOTE: タイプ毎に出力する変数の数を変えないようIFなどの分岐はしない
-        # 以下タイプ(1, 3)
-        L_star_CL_d_t = L_star_CL_d_t if "L_star_CL_d_t" in locals() else None,  # (33)
-        L_star_CS_d_t = L_star_CS_d_t if "L_star_CS_d_t" in locals() else None,  # (32)
-        L_star_dash_CL_d_t = L_star_dash_CL_d_t if "L_star_dash_CL_d_t" in locals() else None,  # (30)
-        L_star_dash_C_d_t = L_star_dash_C_d_t if "L_star_dash_C_d_t" in locals() else None,   # (29)
-        # 以下タイプ(2, 4)
-        C_df_H_d_t = C_df_H_d_t if "C_df_H_d_t" in locals() else None,  # (24)
-        Q_r_max_H_d_t = Q_r_max_H_d_t if "Q_r_max_H_d_t" in locals() else None,
-        Q_r_max_C_d_t = Q_r_max_C_d_t if "Q_r_max_C_d_t" in locals() else None,
-        L_max_CL_d_t = L_max_CL_d_t if "L_max_CL_d_t" in locals() else None,
-        L_dash_CL_d_t = L_dash_CL_d_t if "L_dash_CL_d_t" in locals() else None,
-        L_dash_C_d_t  = L_dash_C_d_t if "L_dash_C_d_t" in locals() else None,
-    )
-    df_output3 = df_output3.assign(
-        # 以下タイプ(2, 4)
-        q_r_max_H = q_r_max_H if "q_r_max_+H" in locals() else None,
-        q_r_max_C = q_r_max_C if "q_r_max_C" in locals() else None,
-        SHF_L_min_c = SHF_L_min_c if "SHF_L_min_c" in locals() else None,
-    )
-    df_output['SHF_dash_d_t'] = SHF_dash_d_t
-    df_output = df_output.assign(
-        Q_hs_max_C_d_t  = Q_hs_max_C_d_t,
-        Q_hs_max_CL_d_t = Q_hs_max_CL_d_t,
-        Q_hs_max_CS_d_t = Q_hs_max_CS_d_t,
-        Q_hs_max_H_d_t  = Q_hs_max_H_d_t,
-    )
+    df_output, df_output3 = _record_capacity_state_outputs(
+        df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
+        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
+        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
+        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_C, SHF_L_min_c,
+        SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t, Q_hs_max_H_d_t)
 
     """ 熱源機の出口 - 負荷バランス時 / 熱源機の出口 """
     df_output = _record_heat_source_outlet_outputs(
