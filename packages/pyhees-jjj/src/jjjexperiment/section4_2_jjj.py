@@ -1347,6 +1347,46 @@ def _get_actual_room_temperatures_without_carryover(
         U_prt, A_prt_i, skin.Q, A_HCZ_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
 
+def _get_actual_non_room_temperatures_without_carryover(
+        skin,
+        new_ufac,
+        Theta_star_NR_d_t,
+        Theta_star_HBR_d_t,
+        Theta_HBR_d_t_i,
+        A_NR,
+        V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i,
+        V_supply_d_t_i,
+        U_prt,
+        A_prt_i,
+        Theta_uf_d_t,
+        r_A_NR_uf_1F_excl_bath,
+    ):
+    """Calculate formula (48) while preserving the new/legacy branch."""
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        return np.array([
+            get_Theta_NR(
+                Theta_star_NR=Theta_star_NR_d_t[t],
+                Theta_star_HBR=Theta_star_HBR_d_t[t],
+                Theta_HBR_i=Theta_HBR_d_t_i[:, t:t + 1],
+                A_NR=A_NR,
+                V_vent_l_NR=V_vent_l_NR_d_t[t],
+                V_dash_supply_i=V_dash_supply_d_t_i[:, t:t + 1],
+                V_supply_i=V_supply_d_t_i[:, t:t + 1],
+                U_prt=U_prt,
+                A_prt_i=A_prt_i.reshape(-1, 1),
+                Q=skin.Q,
+                Theta_uf=Theta_uf_d_t[t],
+                r_A_NR_1F_excl_bath=r_A_NR_uf_1F_excl_bath,
+            ) for t in range(24 * 365)
+        ])
+
+    # 改変なし元式
+    return dc.get_Theta_NR_d_t(
+        Theta_star_NR_d_t, Theta_star_HBR_d_t, Theta_HBR_d_t_i,
+        A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i, V_supply_d_t_i,
+        U_prt, A_prt_i, skin.Q)
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1999,31 +2039,11 @@ def calc_Q_UT_A(
             V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
             L_star_H_d_t_i, L_star_CS_d_t_i, Theta_uf_d_t)
         # (48) 実際の非居室の室温
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            Theta_NR_d_t = np.array([
-                get_Theta_NR(
-                    Theta_star_NR = Theta_star_NR_d_t[t],
-                    Theta_star_HBR = Theta_star_HBR_d_t[t],
-                    Theta_HBR_i = Theta_HBR_d_t_i[:, t:t+1],
-                    A_NR = A_NR,
-                    V_vent_l_NR = V_vent_l_NR_d_t[t],
-                    V_dash_supply_i = V_dash_supply_d_t_i[:, t:t+1],
-                    V_supply_i = V_supply_d_t_i[:, t:t+1],
-                    U_prt = U_prt,
-                    A_prt_i = A_prt_i.reshape(-1,1),
-                    Q = skin.Q,
-                    Theta_uf = Theta_uf_d_t[t],
-                    r_A_NR_1F_excl_bath = r_A_NR_uf_1F_excl_bath
-                ) for t in range(24*365)
-            ])
-        else:
-            # 改変なし元式
-            Theta_NR_d_t  \
-                = dc.get_Theta_NR_d_t(
-                    Theta_star_NR_d_t, Theta_star_HBR_d_t, Theta_HBR_d_t_i,
-                    A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i, V_supply_d_t_i,
-                    U_prt, A_prt_i, skin.Q)
-
+        Theta_NR_d_t = _get_actual_non_room_temperatures_without_carryover(
+            skin, new_ufac, Theta_star_NR_d_t, Theta_star_HBR_d_t,
+            Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t,
+            V_dash_supply_d_t_i, V_supply_d_t_i, U_prt, A_prt_i,
+            Theta_uf_d_t, r_A_NR_uf_1F_excl_bath)
     ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
