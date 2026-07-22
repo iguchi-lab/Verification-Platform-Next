@@ -186,6 +186,32 @@ class _InitialHeatSourceOutputInputs(NamedTuple):
     L_wtr: object
 
 
+class _PreVavAirflowInputs(NamedTuple):
+    df_output: object
+    df_output2: object
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    new_ufac: object
+    climate: object
+    A_HCZ_i: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    V_hs_min: object
+    Q_hs_rtd_H: object
+    Q_hs_rtd_C: object
+    Q_hat_hs_d_t: object
+    Q_hat_hs_CS_d_t: object
+    V_vent_g_i: object
+    Theta_in_d_t: object
+    Theta_ex_d_t: object
+    Phi_A_0: object
+    Theta_g_avg: object
+    sum_Theta_dash_g_surf_A_m: object
+    should_adjust: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1937,13 +1963,31 @@ def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
     )
 
 
-def _prepare_pre_vav_airflow_state(
-        df_output, df_output2, ac_setting, house, skin, load, new_ufac,
-        climate, A_HCZ_i, V_hs_dsgn_H, V_hs_dsgn_C, V_hs_min,
-        Q_hs_rtd_H, Q_hs_rtd_C, Q_hat_hs_d_t, Q_hat_hs_CS_d_t,
-        V_vent_g_i, Theta_in_d_t, Theta_ex_d_t, Phi_A_0, Theta_g_avg,
-        sum_Theta_dash_g_surf_A_m, should_adjust):
+def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
     """Prepare pre-VAV airflow, including the optional underfloor recalculation."""
+    df_output = inputs.df_output
+    df_output2 = inputs.df_output2
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    new_ufac = inputs.new_ufac
+    climate = inputs.climate
+    A_HCZ_i = inputs.A_HCZ_i
+    V_hs_dsgn_H = inputs.V_hs_dsgn_H
+    V_hs_dsgn_C = inputs.V_hs_dsgn_C
+    V_hs_min = inputs.V_hs_min
+    Q_hs_rtd_H = inputs.Q_hs_rtd_H
+    Q_hs_rtd_C = inputs.Q_hs_rtd_C
+    Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
+    Q_hat_hs_CS_d_t = inputs.Q_hat_hs_CS_d_t
+    V_vent_g_i = inputs.V_vent_g_i
+    Theta_in_d_t = inputs.Theta_in_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    Phi_A_0 = inputs.Phi_A_0
+    Theta_g_avg = inputs.Theta_g_avg
+    sum_Theta_dash_g_surf_A_m = inputs.sum_Theta_dash_g_surf_A_m
+    should_adjust = inputs.should_adjust
     A_s_ufac_i = None
     Theta_uf_d_t = None
     while True:
@@ -2872,7 +2916,7 @@ def calc_Q_UT_A(
     ) = _prepare_underfloor_adjustment_state(
         ac_setting, new_ufac, Theta_ex_d_t)
 
-    pre_vav_state = _prepare_pre_vav_airflow_state(
+    pre_vav_state = _prepare_pre_vav_airflow_state(_PreVavAirflowInputs(
         df_output,
         df_output2,
         ac_setting,
@@ -2896,7 +2940,7 @@ def calc_Q_UT_A(
         Theta_g_avg,
         sum_Theta_dash_g_surf_A_m,
         should_be_adjusted_Q_hat_hs_d_t,
-    )
+    ))
     A_s_ufac_i = pre_vav_state.A_s_ufac_i
     Theta_uf_d_t = pre_vav_state.Theta_uf_d_t
     r_supply_des_i = pre_vav_state.r_supply_des_i

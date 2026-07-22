@@ -2840,7 +2840,7 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
 
     context = [object() for _ in range(18)]
     q_sensible = object()
-    result = sut._prepare_pre_vav_airflow_state(
+    result = sut._prepare_pre_vav_airflow_state(sut._PreVavAirflowInputs(
         df_output,
         Output2(),
         *context[:12],
@@ -2848,7 +2848,7 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
         q_sensible,
         *context[12:],
         should_adjust,
-    )
+    ))
 
     expected_names = ["heat_airflow", "setitem", "supply_airflow"]
     if should_adjust:
@@ -3987,4 +3987,36 @@ def test_initial_heat_source_output_inputs_preserve_field_order():
         "w_gen_d_t",
         "Theta_ex_d_t",
         "L_wtr",
+    )
+
+
+def test_pre_vav_airflow_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(23))
+    inputs = sut._PreVavAirflowInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "df_output2",
+        "ac_setting",
+        "house",
+        "skin",
+        "load",
+        "new_ufac",
+        "climate",
+        "A_HCZ_i",
+        "V_hs_dsgn_H",
+        "V_hs_dsgn_C",
+        "V_hs_min",
+        "Q_hs_rtd_H",
+        "Q_hs_rtd_C",
+        "Q_hat_hs_d_t",
+        "Q_hat_hs_CS_d_t",
+        "V_vent_g_i",
+        "Theta_in_d_t",
+        "Theta_ex_d_t",
+        "Phi_A_0",
+        "Theta_g_avg",
+        "sum_Theta_dash_g_surf_A_m",
+        "should_adjust",
     )
