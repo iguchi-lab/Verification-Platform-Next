@@ -1215,3 +1215,19 @@ def test_capped_supply_airflows_preserve_call_order_and_diagnostics(
             {"print_exec": print_exec},
         ),
     ]
+
+def test_supply_air_temperatures_preserve_formula_arguments(monkeypatch):
+    calls = []
+    house = SimpleNamespace(region=7)
+    inputs = [object() for _ in range(7)]
+    expected = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Thata_supply_d_t_i",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_supply_air_temperatures(house, *inputs)
+
+    assert result is expected
+    assert calls == [((*inputs, 7))]

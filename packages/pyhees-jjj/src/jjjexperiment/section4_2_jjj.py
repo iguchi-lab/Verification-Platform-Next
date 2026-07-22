@@ -494,6 +494,21 @@ def _get_capped_supply_airflows(
 
     return V_supply_d_t_i_before, V_supply_d_t_i
 
+def _get_supply_air_temperatures(
+        house: HouseInfo,
+        Theta_sur_d_t_i: np.ndarray,
+        Theta_hs_out_d_t: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+        l_duct_i: np.ndarray,
+        V_supply_d_t_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+    ) -> np.ndarray:
+    """Calculate formula (41) without moving later underfloor corrections."""
+    # (41)　暖冷房区画𝑖の吹き出し温度
+    return dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
+                                   V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1396,10 +1411,16 @@ def calc_Q_UT_A(
                 V_hs_dsgn_C,
                 print_exec=False,
             )
-            # (41)　暖冷房区画𝑖の吹き出し温度
-            Theta_supply_d_t_i = dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
-                                                       V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
-
+            Theta_supply_d_t_i = _get_supply_air_temperatures(
+                house,
+                Theta_sur_d_t_i,
+                Theta_hs_out_d_t,
+                Theta_star_HBR_d_t,
+                l_duct_i,
+                V_supply_d_t_i,
+                L_star_H_d_t_i,
+                L_star_CS_d_t_i,
+            )
             if skin.underfloor_air_conditioning_air_supply:
                 for i in range(2):  # i=0,1
                     Theta_uf_d_t, Theta_g_surf_d_t, *others  \
@@ -1720,9 +1741,16 @@ def calc_Q_UT_A(
             V_hs_dsgn_C,
             print_exec=True,
         )
-        # (41)　暖冷房区画𝑖の吹き出し温度
-        Theta_supply_d_t_i = dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
-                                                       V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
+        Theta_supply_d_t_i = _get_supply_air_temperatures(
+            house,
+            Theta_sur_d_t_i,
+            Theta_hs_out_d_t,
+            Theta_star_HBR_d_t,
+            l_duct_i,
+            V_supply_d_t_i,
+            L_star_H_d_t_i,
+            L_star_CS_d_t_i,
+        )
         _logger.NDdebug("Theta_supply_d_t_1", Theta_supply_d_t_i[0])
         _logger.NDdebug("Theta_supply_d_t_2", Theta_supply_d_t_i[1])
         _logger.NDdebug("Theta_supply_d_t_3", Theta_supply_d_t_i[2])
