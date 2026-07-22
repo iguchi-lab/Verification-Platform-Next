@@ -1890,6 +1890,27 @@ def _prepare_balanced_load_state(
     L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
         df_output, load, region)
     return Q_star_trs_prt_d_t_i, L_star_CL_d_t_i, df_output
+
+def _initialize_carryover_hourly_state(region):
+    """Create the carryover loop arrays and season masks in source order."""
+    L_star_CS_d_t_i = np.zeros((5, 24 * 365))
+    L_star_H_d_t_i = np.zeros((5, 24 * 365))
+    Theta_star_hs_in_d_t = np.zeros(24 * 365)
+    Theta_HBR_d_t_i = np.zeros((5, 24 * 365))
+    Theta_NR_d_t = np.zeros(24 * 365)
+    carryovers = np.zeros((5, 24 * 365))
+    H, C, M = dc.get_season_array_d_t(region)
+    return (
+        L_star_CS_d_t_i,
+        L_star_H_d_t_i,
+        Theta_star_hs_in_d_t,
+        Theta_HBR_d_t_i,
+        Theta_NR_d_t,
+        carryovers,
+        H,
+        C,
+        M,
+    )
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2106,23 +2127,18 @@ def calc_Q_UT_A(
 
         # NOTE: 過剰熱繰越と併用しないオプションはインプットデータクラスの段階で強制オフしている
 
-        # インデックス順に更新対象
-        L_star_CS_d_t_i = np.zeros((5, 24 * 365))
-        L_star_H_d_t_i = np.zeros((5, 24 * 365))
-
-        # 実際の居室・非居室の室温
-        Theta_star_hs_in_d_t = np.zeros(24 * 365)
-        Theta_HBR_d_t_i = np.zeros((5, 24 * 365))
-        Theta_NR_d_t = np.zeros(24 * 365)
-        # TODO: 空からappendしていくロジックに変更することで
-        # tインデックスの誤用がないことを保証できる
-
-        # 過剰熱繰越の項(確認用)
-        carryovers = np.zeros((5, 24 * 365))
-
-        # 季節から計算の必要性を判断
-        H, C, M = dc.get_season_array_d_t(house.region)
-
+        # 過剰熱繰越ループの配列・季節状態を初期化
+        (
+            L_star_CS_d_t_i,
+            L_star_H_d_t_i,
+            Theta_star_hs_in_d_t,
+            Theta_HBR_d_t_i,
+            Theta_NR_d_t,
+            carryovers,
+            H,
+            C,
+            M,
+        ) = _initialize_carryover_hourly_state(house.region)
         for t in range(0, 24 * 365):
             # TODO: 先頭時の扱いを考慮
             isFirst = (t == 0)

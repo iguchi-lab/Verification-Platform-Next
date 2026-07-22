@@ -2972,3 +2972,34 @@ def test_prepare_balanced_load_state_preserves_formula_11_10_generations(monkeyp
         ("transfer", (first_frame, *inputs[:4])),
         ("latent", (second_frame, inputs[4], inputs[5])),
     ]
+
+def test_initialize_carryover_hourly_state_preserves_shapes_and_season_order(monkeypatch):
+    events = []
+    arrays = []
+    seasons = tuple(object() for _ in range(3))
+
+    def zeros(shape):
+        value = object()
+        arrays.append(value)
+        events.append(("zeros", shape))
+        return value
+
+    monkeypatch.setattr(sut.np, "zeros", zeros)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_season_array_d_t",
+        lambda region: events.append(("season", region)) or seasons,
+    )
+
+    result = sut._initialize_carryover_hourly_state(6)
+
+    assert result == (*arrays, *seasons)
+    assert events == [
+        ("zeros", (5, 24 * 365)),
+        ("zeros", (5, 24 * 365)),
+        ("zeros", 24 * 365),
+        ("zeros", (5, 24 * 365)),
+        ("zeros", 24 * 365),
+        ("zeros", (5, 24 * 365)),
+        ("season", 6),
+    ]
