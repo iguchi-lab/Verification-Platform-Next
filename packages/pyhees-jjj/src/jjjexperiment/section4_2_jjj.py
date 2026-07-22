@@ -2021,6 +2021,63 @@ def _prepare_no_carryover_outlet_requirements(
             Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
         assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数です"
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
+
+def _prepare_no_carryover_supply_state(
+        v_supply_cap_dto, ac_setting, house, skin, load, new_ufac,
+        new_ufac_df, X_NR_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        V_dash_supply_d_t_i,
+        X_hs_out_min_C_d_t, L_star_CL_d_t_i, Theta_star_hs_in_d_t,
+        Q_hs_max_CS_d_t, Q_hs_max_H_d_t, L_star_H_d_t_i,
+        L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
+        V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C, Theta_ex_d_t):
+    """Prepare no-carryover outlet and supply state with the second floor pass."""
+    X_hs_out_d_t = _get_heat_source_outlet_humidity(
+        X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
+        X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
+    Theta_NR_d_t = np.zeros(24 * 365)
+    (
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+    ) = _get_heat_source_outlet_temperatures(
+        ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
+        V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+    V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+        v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
+        L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
+        V_vent_g_i, V_dash_supply_d_t_i, Theta_hs_out_d_t,
+        V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
+    Theta_supply_d_t_i = _get_supply_air_temperatures(
+        house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
+        l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
+    _log_supply_temperatures(Theta_supply_d_t_i)
+
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        Theta_supply_d_t_i = _get_new_underfloor_supply_temperatures(
+            house, skin, load, new_ufac, new_ufac_df,
+            Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
+            V_dash_supply_d_t_i)
+    elif skin.underfloor_air_conditioning_air_supply == True:
+        Theta_supply_d_t_i = _adjust_legacy_underfloor_supply_temperatures(
+            ac_setting, house, skin, load, Theta_supply_d_t_i,
+            Theta_ex_d_t, V_dash_supply_d_t_i)
+    _log_supply_temperatures(Theta_supply_d_t_i)
+    return (
+        X_hs_out_d_t,
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+        V_supply_d_t_i_before,
+        V_supply_d_t_i,
+        Theta_supply_d_t_i,
+    )
+
+
+def _log_supply_temperatures(Theta_supply_d_t_i):
+    """Preserve the five diagnostic writes around underfloor adjustment."""
+    for i in range(5):
+        _logger.NDdebug(f"Theta_supply_d_t_{i + 1}", Theta_supply_d_t_i[i])
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2356,47 +2413,22 @@ def calc_Q_UT_A(
                 X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
                 Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
                 l_duct_i, Theta_ex_d_t, Theta_in_d_t)
-        X_hs_out_d_t = _get_heat_source_outlet_humidity(
-            X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
-            L_star_CL_d_t_i, house.region)
-        # 式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
-        Theta_NR_d_t = np.zeros(24 * 365)
-
-        Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t = _get_heat_source_outlet_temperatures(
-            ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i,
-            Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
-        V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
-            v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i, L_star_CS_d_t_i,
-            Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
-            Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
-        Theta_supply_d_t_i = _get_supply_air_temperatures(
-            house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
-            V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
-        _logger.NDdebug("Theta_supply_d_t_1", Theta_supply_d_t_i[0])
-        _logger.NDdebug("Theta_supply_d_t_2", Theta_supply_d_t_i[1])
-        _logger.NDdebug("Theta_supply_d_t_3", Theta_supply_d_t_i[2])
-        _logger.NDdebug("Theta_supply_d_t_4", Theta_supply_d_t_i[3])
-        _logger.NDdebug("Theta_supply_d_t_5", Theta_supply_d_t_i[4])
-
-        # 実行条件: 床下新空調ロジックのみ
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            # New underfloor AC, second pass: forward solve and retain diagnostics.
-            Theta_supply_d_t_i = _get_new_underfloor_supply_temperatures(
-                house, skin, load, new_ufac, new_ufac_df,
-                Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
-                V_dash_supply_d_t_i)
-        elif skin.underfloor_air_conditioning_air_supply == True:
-            # Legacy underfloor AC, second pass: preserve the original where operation.
-            Theta_supply_d_t_i = _adjust_legacy_underfloor_supply_temperatures(
-                ac_setting, house, skin, load, Theta_supply_d_t_i,
-                Theta_ex_d_t, V_dash_supply_d_t_i)
-
-        _logger.NDdebug("Theta_supply_d_t_1", Theta_supply_d_t_i[0])
-        _logger.NDdebug("Theta_supply_d_t_2", Theta_supply_d_t_i[1])
-        _logger.NDdebug("Theta_supply_d_t_3", Theta_supply_d_t_i[2])
-        _logger.NDdebug("Theta_supply_d_t_4", Theta_supply_d_t_i[3])
-        _logger.NDdebug("Theta_supply_d_t_5", Theta_supply_d_t_i[4])
-
+        (
+            X_hs_out_d_t,
+            Theta_hs_out_min_C_d_t,
+            Theta_hs_out_max_H_d_t,
+            Theta_hs_out_d_t,
+            V_supply_d_t_i_before,
+            V_supply_d_t_i,
+            Theta_supply_d_t_i,
+        ) = _prepare_no_carryover_supply_state(
+            v_supply_cap_dto, ac_setting, house, skin, load, new_ufac,
+            new_ufac_df, X_NR_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        V_dash_supply_d_t_i,
+            X_hs_out_min_C_d_t, L_star_CL_d_t_i, Theta_star_hs_in_d_t,
+            Q_hs_max_CS_d_t, Q_hs_max_H_d_t, L_star_H_d_t_i,
+            L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
+            V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C, Theta_ex_d_t)
         # (46) 暖冷房区画𝑖の実際の居室の室温
         Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(
             house, skin, new_ufac, climate, Theta_star_HBR_d_t,

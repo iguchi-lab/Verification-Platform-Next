@@ -3098,3 +3098,39 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
     assert result[:2] == (x_min, x_req)
     assert [e[0] for e in events] == ["requirements"] + ([] if mode == "none" else [mode])
     assert result[2] is (theta_req if mode == "none" else adjusted) if mode != "legacy" else result[2].shape == (5, 8760)
+
+@pytest.mark.parametrize("mode", ("none", "new", "legacy"))
+def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mode):
+    events = []
+    x_out = object()
+    temperatures = tuple(object() for _ in range(3))
+    airflows = tuple(object() for _ in range(2))
+    base_supply = tuple(object() for _ in range(5))
+    adjusted_supply = tuple(object() for _ in range(5))
+    theta_nr = object()
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(underfloor_air_conditioning_air_supply=(mode == "legacy"))
+    new_ufac = SimpleNamespace(
+        new_ufac_flg=(sut.床下空調ロジック.変更する if mode == "new" else object()))
+    context = [object() for _ in range(22)]
+    monkeypatch.setattr(sut, "_get_heat_source_outlet_humidity", lambda *a: events.append(("humidity", a)) or x_out)
+    monkeypatch.setattr(sut.np, "zeros", lambda shape: events.append(("zeros", shape)) or theta_nr)
+    monkeypatch.setattr(sut, "_get_heat_source_outlet_temperatures", lambda *a: events.append(("temperatures", a)) or temperatures)
+    monkeypatch.setattr(sut, "_get_capped_supply_airflows", lambda *a, **k: events.append(("airflows", a, k)) or airflows)
+    monkeypatch.setattr(sut, "_get_supply_air_temperatures", lambda *a: events.append(("supply", a)) or base_supply)
+    monkeypatch.setattr(sut, "_get_new_underfloor_supply_temperatures", lambda *a: events.append(("new", a)) or adjusted_supply)
+    monkeypatch.setattr(sut, "_adjust_legacy_underfloor_supply_temperatures", lambda *a: events.append(("legacy", a)) or adjusted_supply)
+    monkeypatch.setattr(sut._logger, "NDdebug", lambda *a: events.append(("debug", a)))
+
+    result = sut._prepare_no_carryover_supply_state(
+        context[0], context[1], house, skin, context[2], new_ufac,
+        context[3], *context[4:22])
+
+    expected = ["humidity", "zeros", "temperatures", "airflows", "supply"]
+    expected += ["debug"] * 5
+    if mode != "none":
+        expected.append(mode)
+    expected += ["debug"] * 5
+    assert [e[0] for e in events] == expected
+    assert result[:6] == (x_out, *temperatures, *airflows)
+    assert result[6] == (base_supply if mode == "none" else adjusted_supply)
