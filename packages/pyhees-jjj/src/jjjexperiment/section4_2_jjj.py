@@ -435,6 +435,43 @@ def _record_actual_load_outputs(
         L_dash_H_d_t_5=L_dash_H_d_t_i[4],
     )
 
+def _record_unprocessed_load_outputs(
+        df_output: pd.DataFrame,
+        Q_UT_CL_d_t_i: np.ndarray,
+        Q_UT_CS_d_t_i: np.ndarray,
+        Q_UT_H_d_t_i: np.ndarray,
+    ) -> pd.DataFrame:
+    df_output = df_output.assign(
+        Q_UT_CL_d_t_1=Q_UT_CL_d_t_i[0],
+        Q_UT_CL_d_t_2=Q_UT_CL_d_t_i[1],
+        Q_UT_CL_d_t_3=Q_UT_CL_d_t_i[2],
+        Q_UT_CL_d_t_4=Q_UT_CL_d_t_i[3],
+        Q_UT_CL_d_t_5=Q_UT_CL_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        Q_UT_CS_d_t_1=Q_UT_CS_d_t_i[0],
+        Q_UT_CS_d_t_2=Q_UT_CS_d_t_i[1],
+        Q_UT_CS_d_t_3=Q_UT_CS_d_t_i[2],
+        Q_UT_CS_d_t_4=Q_UT_CS_d_t_i[3],
+        Q_UT_CS_d_t_5=Q_UT_CS_d_t_i[4],
+    )
+    return df_output.assign(
+        Q_UT_H_d_t_1=Q_UT_H_d_t_i[0],
+        Q_UT_H_d_t_2=Q_UT_H_d_t_i[1],
+        Q_UT_H_d_t_3=Q_UT_H_d_t_i[2],
+        Q_UT_H_d_t_4=Q_UT_H_d_t_i[3],
+        Q_UT_H_d_t_5=Q_UT_H_d_t_i[4],
+    )
+
+
+def _record_unprocessed_energy_output(
+        df_output: pd.DataFrame,
+        output_name: str,
+        E_UT_d_t: np.ndarray,
+    ) -> pd.DataFrame:
+    df_output[output_name] = E_UT_d_t
+    return df_output
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1676,26 +1713,11 @@ def calc_Q_UT_A(
         L_star_H_d_t_i,
         L_dash_H_d_t_i,
     )
-    df_output = df_output.assign(
-        Q_UT_CL_d_t_1 = Q_UT_CL_d_t_i[0],
-        Q_UT_CL_d_t_2 = Q_UT_CL_d_t_i[1],
-        Q_UT_CL_d_t_3 = Q_UT_CL_d_t_i[2],
-        Q_UT_CL_d_t_4 = Q_UT_CL_d_t_i[3],
-        Q_UT_CL_d_t_5 = Q_UT_CL_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        Q_UT_CS_d_t_1 = Q_UT_CS_d_t_i[0],
-        Q_UT_CS_d_t_2 = Q_UT_CS_d_t_i[1],
-        Q_UT_CS_d_t_3 = Q_UT_CS_d_t_i[2],
-        Q_UT_CS_d_t_4 = Q_UT_CS_d_t_i[3],
-        Q_UT_CS_d_t_5 = Q_UT_CS_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        Q_UT_H_d_t_1 = Q_UT_H_d_t_i[0],
-        Q_UT_H_d_t_2 = Q_UT_H_d_t_i[1],
-        Q_UT_H_d_t_3 = Q_UT_H_d_t_i[2],
-        Q_UT_H_d_t_4 = Q_UT_H_d_t_i[3],
-        Q_UT_H_d_t_5 = Q_UT_H_d_t_i[4]
+    df_output = _record_unprocessed_load_outputs(
+        df_output,
+        Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i,
+        Q_UT_H_d_t_i,
     )
     """ まとめ - 一次エネルギー """
     E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
@@ -1705,7 +1727,11 @@ def calc_Q_UT_A(
         Q_UT_H_d_t_i,
         house.region,
     )
-    df_output[E_UT_output_name] = E_UT_d_t
+    df_output = _record_unprocessed_energy_output(
+        df_output,
+        E_UT_output_name,
+        E_UT_d_t,
+    )
     _export_underfloor_output(
         case_name,
         ac_setting,

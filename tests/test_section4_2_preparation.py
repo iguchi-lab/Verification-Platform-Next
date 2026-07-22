@@ -676,3 +676,54 @@ def test_record_actual_load_outputs_preserves_assign_order():
             tuple((f"L_dash_H_d_t_{i + 1}", heating[i]) for i in range(5)),
         ),
     ]
+
+def test_record_unprocessed_load_outputs_preserves_assign_order():
+    frame = _FrameRecorder()
+    latent = [object() for _ in range(5)]
+    sensible = [object() for _ in range(5)]
+    heating = [object() for _ in range(5)]
+
+    result = sut._record_unprocessed_load_outputs(
+        frame,
+        latent,
+        sensible,
+        heating,
+    )
+
+    assert result.generation == 3
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple((f"Q_UT_CL_d_t_{i + 1}", latent[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"Q_UT_CS_d_t_{i + 1}", sensible[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            2,
+            tuple((f"Q_UT_H_d_t_{i + 1}", heating[i]) for i in range(5)),
+        ),
+    ]
+
+
+def test_record_unprocessed_energy_output_preserves_direct_assignment():
+    frame = _FrameRecorder()
+    energy = object()
+
+    result = sut._record_unprocessed_energy_output(
+        frame,
+        "E_UT_H_d_t",
+        energy,
+    )
+
+    assert result is frame
+    assert frame.events == [
+        ("setitem", 0, "E_UT_H_d_t", energy),
+    ]
