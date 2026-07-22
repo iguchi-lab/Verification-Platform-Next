@@ -3740,3 +3740,12 @@ def test_heat_source_outlet_temperatures_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("Theta_hs_out_min_C_d_t", "Theta_hs_out_max_H_d_t", "Theta_hs_out_d_t",)
+
+
+def test_capped_supply_airflows_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(2))
+    result = sut._CappedSupplyAirflowsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("V_supply_d_t_i_before", "V_supply_d_t_i",)

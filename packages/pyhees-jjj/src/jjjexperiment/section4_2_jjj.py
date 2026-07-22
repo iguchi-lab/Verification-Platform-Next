@@ -120,6 +120,11 @@ class _HeatSourceOutletTemperaturesResult(NamedTuple):
     Theta_hs_out_d_t: object
 
 
+class _CappedSupplyAirflowsResult(NamedTuple):
+    V_supply_d_t_i_before: object
+    V_supply_d_t_i: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -533,7 +538,10 @@ def _get_capped_supply_airflows(
     V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
                                                 , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=print_exec)
 
-    return V_supply_d_t_i_before, V_supply_d_t_i
+    return _CappedSupplyAirflowsResult(
+        V_supply_d_t_i_before,
+        V_supply_d_t_i,
+    )
 
 def _get_supply_air_temperatures(
         house: HouseInfo,
