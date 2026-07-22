@@ -2074,6 +2074,20 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_unprocessed_load_state(
+        df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
+        L_star_CS_d_t_i, L_dash_CS_d_t_i,
+        L_star_H_d_t_i, L_dash_H_d_t_i):
+    """Calculate and record unprocessed cooling and heating loads."""
+    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
+        L_star_CL_d_t_i, L_dash_CL_d_t_i,
+        L_star_CS_d_t_i, L_dash_CS_d_t_i,
+        L_star_H_d_t_i, L_dash_H_d_t_i)
+    df_output = _record_unprocessed_load_outputs(
+        df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i)
+    return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, df_output
+
+
 def _prepare_actual_load_state(
         df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
@@ -2817,20 +2831,15 @@ def calc_Q_UT_A(
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i,
         house.region)
     """ まとめ - 未処理負荷 """
-    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
-        L_star_CL_d_t_i,
-        L_dash_CL_d_t_i,
-        L_star_CS_d_t_i,
-        L_dash_CS_d_t_i,
-        L_star_H_d_t_i,
-        L_dash_H_d_t_i,
-    )
-    df_output = _record_unprocessed_load_outputs(
-        df_output,
+    (
         Q_UT_CL_d_t_i,
         Q_UT_CS_d_t_i,
         Q_UT_H_d_t_i,
-    )
+        df_output,
+    ) = _prepare_unprocessed_load_state(
+        df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
+        L_star_CS_d_t_i, L_dash_CS_d_t_i,
+        L_star_H_d_t_i, L_dash_H_d_t_i)
     """ まとめ - 一次エネルギー """
     E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
         ac_setting,
