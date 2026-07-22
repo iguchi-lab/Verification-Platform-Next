@@ -2159,12 +2159,18 @@ def _prepare_no_carryover_capacity_state(
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        (
-            q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
-            L_max_CL_d_t, L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t,
-            Q_max_CS_d_t, Q_max_CL_d_t,
-        ) = _get_rac_cooling_capacity(
+        rac_cooling = _get_rac_cooling_capacity(
             cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
+        q_r_max_C = rac_cooling.q_r_max_C
+        Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
+        Q_max_C_d_t = rac_cooling.Q_max_C_d_t
+        SHF_L_min_c = rac_cooling.SHF_L_min_c
+        L_max_CL_d_t = rac_cooling.L_max_CL_d_t
+        L_dash_CL_d_t = rac_cooling.L_dash_CL_d_t
+        L_dash_C_d_t = rac_cooling.L_dash_C_d_t
+        SHF_dash_d_t = rac_cooling.SHF_dash_d_t
+        Q_max_CS_d_t = rac_cooling.Q_max_CS_d_t
+        Q_max_CL_d_t = rac_cooling.Q_max_CL_d_t
         Q_hs_max_C_d_t = Q_max_C_d_t
         Q_hs_max_CL_d_t = Q_max_CL_d_t
         Q_hs_max_CS_d_t = Q_max_CS_d_t
@@ -2646,12 +2652,18 @@ def _prepare_carryover_capacity_state(
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        (
-            q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
-            L_max_CL_d_t, L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t,
-            Q_max_CS_d_t, Q_max_CL_d_t,
-        ) = _get_rac_cooling_capacity(
+        rac_cooling = _get_rac_cooling_capacity(
             cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
+        q_r_max_C = rac_cooling.q_r_max_C
+        Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
+        Q_max_C_d_t = rac_cooling.Q_max_C_d_t
+        SHF_L_min_c = rac_cooling.SHF_L_min_c
+        L_max_CL_d_t = rac_cooling.L_max_CL_d_t
+        L_dash_CL_d_t = rac_cooling.L_dash_CL_d_t
+        L_dash_C_d_t = rac_cooling.L_dash_C_d_t
+        SHF_dash_d_t = rac_cooling.SHF_dash_d_t
+        Q_max_CS_d_t = rac_cooling.Q_max_CS_d_t
+        Q_max_CL_d_t = rac_cooling.Q_max_CL_d_t
         Q_hs_max_C_d_t = Q_max_C_d_t
         Q_hs_max_CL_d_t = Q_max_CL_d_t
         Q_hs_max_CS_d_t = Q_max_CS_d_t
