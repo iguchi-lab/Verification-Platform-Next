@@ -3204,3 +3204,34 @@ def test_prepare_carryover_heat_source_inlet_state_preserves_formula_20_19(
     assert inlet_temperature[t] == expected
     assert events == [
         ("humidity", star_humidity), ("temperature", star_temperature)]
+
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_carryover_outlet_requirements_preserves_first_pass(
+        monkeypatch, enabled):
+    events = []
+    humidity_min, humidity_req, temperature_req = (
+        object(), object(), object())
+    adjusted = object()
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(
+        underfloor_air_conditioning_air_supply=enabled,
+        YUCACO_r_A_ufvnt=0.25)
+    inputs = [object() for _ in range(13)]
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_requirements",
+        lambda *a: events.append(("requirements", a))
+        or (humidity_min, humidity_req, temperature_req))
+    monkeypatch.setattr(
+        sut, "_adjust_legacy_underfloor_requested_temperatures",
+        lambda *a: events.append(("adjust", a)) or adjusted)
+
+    result = sut._prepare_carryover_outlet_requirements(
+        inputs[0], house, skin, inputs[1], *inputs[2:])
+
+    assert result == (
+        humidity_min, humidity_req, adjusted if enabled else temperature_req)
+    assert [event[0] for event in events] == (
+        ["requirements", "adjust"] if enabled else ["requirements"])
+    if enabled:
+        assert events[1][1][4] == skin.YUCACO_r_A_ufvnt

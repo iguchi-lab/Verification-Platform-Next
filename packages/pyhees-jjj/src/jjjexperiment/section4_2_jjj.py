@@ -2074,6 +2074,25 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_carryover_outlet_requirements(
+        ac_setting, house, skin, load, X_star_hs_in_d_t,
+        Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
+        L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
+        L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, Theta_ex_d_t):
+    """Prepare carryover outlet requirements and legacy first floor pass."""
+    X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
+        _get_heat_source_outlet_requirements(
+            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+            X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+            Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+            l_duct_i, house.region)
+    if skin.underfloor_air_conditioning_air_supply:
+        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
+            ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
+            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+    return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
+
+
 def _prepare_carryover_heat_source_inlet_state(
         t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
         Theta_NR_d_t, Theta_star_hs_in_d_t):
@@ -2378,15 +2397,13 @@ def calc_Q_UT_A(
                     t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
                     Theta_NR_d_t, Theta_star_hs_in_d_t)
 
-            X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = _get_heat_source_outlet_requirements(
-                X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
-                L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
-                L_star_CS_d_t_i, l_duct_i, house.region)
-            if skin.underfloor_air_conditioning_air_supply:
-                # Carryover heat, first pass: preserve the legacy correction formula.
-                Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
-                    ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
-                    Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+            X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
+                _prepare_carryover_outlet_requirements(
+                    ac_setting, house, skin, load, X_star_hs_in_d_t,
+                    Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
+                    L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
+                    L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
+                    Theta_ex_d_t)
 
             # NOTE: 過剰熱量繰越 未利用の場合では、式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
             # Theta_NR_d_t = np.zeros(24 * 365)
