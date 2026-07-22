@@ -3686,3 +3686,93 @@ def test_export_and_build_calculation_result_preserves_order(monkeypatch):
             inputs[5], inputs[6], inputs[7])),
     ]
     assert result == tuple(inputs[8:])
+
+
+def test_rated_heat_source_capacities_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(2))
+    result = sut._RatedHeatSourceCapacitiesResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Q_hs_rtd_H", "Q_hs_rtd_C",)
+
+
+def test_underfloor_ground_response_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(4))
+    result = sut._UnderfloorGroundResponseResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Theta_in_d_t", "Phi_A_0", "Theta_g_avg", "sum_Theta_dash_g_surf_A_m",)
+
+
+def test_supply_airflow_before_vav_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._SupplyAirflowBeforeVavResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("r_supply_des_i", "r_supply_des_d_t_i", "V_dash_supply_d_t_i",)
+
+
+def test_room_to_underfloor_transfer_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(4))
+    result = sut._RoomToUnderfloorTransferResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Q_hat_hs_d_t", "U_s_input", "A_s_ufac_i", "r_A_s_ufac",)
+
+
+def test_heat_source_outlet_requirements_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._HeatSourceOutletRequirementsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("X_hs_out_min_C_d_t", "X_req_d_t_i", "Theta_req_d_t_i",)
+
+
+def test_heat_source_outlet_temperatures_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._HeatSourceOutletTemperaturesResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Theta_hs_out_min_C_d_t", "Theta_hs_out_max_H_d_t", "Theta_hs_out_d_t",)
+
+
+def test_capped_supply_airflows_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(2))
+    result = sut._CappedSupplyAirflowsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("V_supply_d_t_i_before", "V_supply_d_t_i",)
+
+
+def test_balanced_cooling_loads_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(6))
+    result = sut._BalancedCoolingLoadsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("L_star_CL_d_t", "L_star_CS_d_t", "L_star_CL_max_d_t", "L_star_dash_CL_d_t", "L_star_dash_C_d_t", "SHF_dash_d_t",)
+
+
+def test_standard_capacity_limits_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(5))
+    result = sut._StandardCapacityLimitsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Q_hs_max_C_d_t", "Q_hs_max_CL_d_t", "Q_hs_max_CS_d_t", "C_df_H_d_t", "Q_hs_max_H_d_t",)
+
+
+def test_rac_heating_capacity_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._RacHeatingCapacityResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("q_r_max_H", "Q_r_max_H_d_t", "Q_max_H_d_t",)

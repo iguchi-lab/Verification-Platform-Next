@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, NewType
+from typing import Callable, NamedTuple, NewType
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -82,6 +82,71 @@ VHS_DSGN_C = NewType('VHS_DSGN_C', float)
 @dataclass
 class ActiveAcSetting:
     load: HeatingAcSetting | CoolingAcSetting
+
+class _RatedHeatSourceCapacitiesResult(NamedTuple):
+    Q_hs_rtd_H: object
+    Q_hs_rtd_C: object
+
+
+class _UnderfloorGroundResponseResult(NamedTuple):
+    Theta_in_d_t: object
+    Phi_A_0: object
+    Theta_g_avg: object
+    sum_Theta_dash_g_surf_A_m: object
+
+
+class _SupplyAirflowBeforeVavResult(NamedTuple):
+    r_supply_des_i: object
+    r_supply_des_d_t_i: object
+    V_dash_supply_d_t_i: object
+
+
+class _RoomToUnderfloorTransferResult(NamedTuple):
+    Q_hat_hs_d_t: object
+    U_s_input: object
+    A_s_ufac_i: object
+    r_A_s_ufac: object
+
+
+class _HeatSourceOutletRequirementsResult(NamedTuple):
+    X_hs_out_min_C_d_t: object
+    X_req_d_t_i: object
+    Theta_req_d_t_i: object
+
+
+class _HeatSourceOutletTemperaturesResult(NamedTuple):
+    Theta_hs_out_min_C_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_d_t: object
+
+
+class _CappedSupplyAirflowsResult(NamedTuple):
+    V_supply_d_t_i_before: object
+    V_supply_d_t_i: object
+
+
+class _BalancedCoolingLoadsResult(NamedTuple):
+    L_star_CL_d_t: object
+    L_star_CS_d_t: object
+    L_star_CL_max_d_t: object
+    L_star_dash_CL_d_t: object
+    L_star_dash_C_d_t: object
+    SHF_dash_d_t: object
+
+
+class _StandardCapacityLimitsResult(NamedTuple):
+    Q_hs_max_C_d_t: object
+    Q_hs_max_CL_d_t: object
+    Q_hs_max_CS_d_t: object
+    C_df_H_d_t: object
+    Q_hs_max_H_d_t: object
+
+
+class _RacHeatingCapacityResult(NamedTuple):
+    q_r_max_H: object
+    Q_r_max_H_d_t: object
+    Q_max_H_d_t: object
+
 
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
@@ -169,7 +234,7 @@ def _get_rated_heat_source_capacities(
     else:
         raise Exception('設備機器の種類の入力が不正です。')
 
-    return Q_hs_rtd_H, Q_hs_rtd_C
+    return _RatedHeatSourceCapacitiesResult(Q_hs_rtd_H, Q_hs_rtd_C)
 
 
 def _prepare_underfloor_ground_response(
@@ -198,7 +263,7 @@ def _prepare_underfloor_ground_response(
         case _:
             raise ValueError
 
-    return Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m
+    return _UnderfloorGroundResponseResult(Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m)
 
 
 def _get_heat_source_supply_airflow_before_vav(
@@ -278,7 +343,7 @@ def _get_supply_airflow_before_vav(
         # (44)　VAV 調整前の吹き出し風量
         V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i(r_supply_des_i, V_dash_hs_supply_d_t, V_vent_g_i)
 
-    return r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i
+    return _SupplyAirflowBeforeVavResult(r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i)
 
 def _adjust_heat_source_output_for_room_to_underfloor_transfer(
         new_ufac: UnderfloorAc,
@@ -309,7 +374,7 @@ def _adjust_heat_source_output_for_room_to_underfloor_transfer(
     #260112 IGUCHI デバッグ用
     #print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
 
-    return Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac
+    return _RoomToUnderfloorTransferResult(Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac)
 
 def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
         ac_setting: ActiveAcSetting,
@@ -428,7 +493,7 @@ def _get_heat_source_outlet_requirements(
     Theta_req_d_t_i = dc.get_Theta_req_d_t_i(Theta_sur_d_t_i, Theta_star_HBR_d_t, V_dash_supply_d_t_i,
                         L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, region)
 
-    return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
+    return _HeatSourceOutletRequirementsResult(X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i)
 
 def _get_heat_source_outlet_humidity(
         X_NR_d_t: np.ndarray,
@@ -467,7 +532,11 @@ def _get_heat_source_outlet_temperatures(
                                             L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
                                             Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
 
-    return Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t
+    return _HeatSourceOutletTemperaturesResult(
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+    )
 
 def _get_capped_supply_airflows(
         v_supply_cap_dto: VSupplyCapDto,
@@ -492,7 +561,10 @@ def _get_capped_supply_airflows(
     V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
                                                 , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=print_exec)
 
-    return V_supply_d_t_i_before, V_supply_d_t_i
+    return _CappedSupplyAirflowsResult(
+        V_supply_d_t_i_before,
+        V_supply_d_t_i,
+    )
 
 def _get_supply_air_temperatures(
         house: HouseInfo,
@@ -527,7 +599,7 @@ def _get_balanced_cooling_loads(
     # (28)
     SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
 
-    return (
+    return _BalancedCoolingLoadsResult(
         L_star_CL_d_t,
         L_star_CS_d_t,
         L_star_CL_max_d_t,
@@ -557,7 +629,13 @@ def _get_standard_heat_source_capacity_limits(
     # (23)
     Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
 
-    return Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t, C_df_H_d_t, Q_hs_max_H_d_t
+    return _StandardCapacityLimitsResult(
+        Q_hs_max_C_d_t,
+        Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t,
+        C_df_H_d_t,
+        Q_hs_max_H_d_t,
+    )
 
 def _get_rac_heating_capacity(
         heat_CRAC: HeatCRACSpec,
@@ -582,7 +660,11 @@ def _get_rac_heating_capacity(
     if log_intermediates:
         _logger.NDdebug("Q_max_H_d_t", Q_max_H_d_t)
 
-    return q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t
+    return _RacHeatingCapacityResult(
+        q_r_max_H,
+        Q_r_max_H_d_t,
+        Q_max_H_d_t,
+    )
 
 def _get_rac_cooling_capacity(
         cool_CRAC: CoolCRACSpec,
