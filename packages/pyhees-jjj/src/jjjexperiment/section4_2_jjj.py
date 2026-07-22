@@ -172,6 +172,35 @@ def _get_rated_heat_source_capacities(
     return Q_hs_rtd_H, Q_hs_rtd_C
 
 
+def _prepare_underfloor_ground_response(
+        ac_setting: ActiveAcSetting,
+        Theta_ex_d_t: np.ndarray,
+    ) -> tuple[np.ndarray, float, float, float]:
+    match ac_setting:
+        case HeatingAcSetting():
+            Theta_in_d_t = uf.get_Theta_in_d_t('H')
+        case CoolingAcSetting():
+            Theta_in_d_t = uf.get_Theta_in_d_t('CS')
+        case _:
+            raise ValueError
+
+    # 吸熱応答係数の初項
+    Phi_A_0 = 0.025504994
+    # 地盤の不易層温度と助走計算による吸熱応答成分の合計 (床下→地盤 熱損失計算用)
+    # Theta_ex_d_t に依存するが ループ内では変わらないため事前に計算する
+    Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
+    match ac_setting:
+        # 260112 IGUCHI 指定温度での助走暫定値を使用
+        case HeatingAcSetting():
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)  # 11.2224
+        case CoolingAcSetting():
+            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)  # 9.15940
+        case _:
+            raise ValueError
+
+    return Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -373,24 +402,12 @@ def calc_Q_UT_A(
     df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
     ####################################################################################################################
 
-    match ac_setting:
-        case HeatingAcSetting(): Theta_in_d_t = uf.get_Theta_in_d_t('H')
-        case CoolingAcSetting(): Theta_in_d_t = uf.get_Theta_in_d_t('CS')
-        case _: raise ValueError
-
-    # 吸熱応答係数の初項
-    Phi_A_0 = 0.025504994
-    # 地盤の不易層温度と助走計算による吸熱応答成分の合計 (床下→地盤 熱損失計算用)
-    # Theta_ex_d_t に依存するが ループ内では変わらないため事前に計算する
-    Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
-    match ac_setting:
-        # 260112 IGUCHI 指定温度での助走暫定値を使用
-        case HeatingAcSetting():
-            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)  # 11.2224
-        case CoolingAcSetting():
-            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)  # 9.15940
-        case _:
-            raise ValueError
+    (
+        Theta_in_d_t,
+        Phi_A_0,
+        Theta_g_avg,
+        sum_Theta_dash_g_surf_A_m,
+    ) = _prepare_underfloor_ground_response(ac_setting, Theta_ex_d_t)
 
     # 脱出条件:
     should_be_adjusted_Q_hat_hs_d_t = new_ufac.new_ufac_flg == 床下空調ロジック.変更する

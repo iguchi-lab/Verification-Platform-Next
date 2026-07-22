@@ -172,3 +172,57 @@ def test_rated_heat_source_capacities_reject_unknown_model():
             SimpleNamespace(q_rtd=300.0),
             SimpleNamespace(q_rtd=400.0),
         )
+
+
+@pytest.mark.parametrize(
+    ("setting_type", "season", "representative_temperature", "runup_result"),
+    (
+        (sut.HeatingAcSetting, "H", sut.THETA_UF_WARM, 11.2224),
+        (sut.CoolingAcSetting, "CS", sut.THETA_UF_COOL, 9.15940),
+    ),
+)
+def test_prepare_underfloor_ground_response_preserves_order_and_season(
+    monkeypatch,
+    setting_type,
+    season,
+    representative_temperature,
+    runup_result,
+):
+    calls = []
+    theta_ex = object()
+    theta_in = object()
+
+    monkeypatch.setattr(
+        sut.uf,
+        "get_Theta_in_d_t",
+        lambda value: calls.append(("indoor", value)) or theta_in,
+    )
+    monkeypatch.setattr(
+        sut.algo,
+        "get_Theta_g_avg",
+        lambda value: calls.append(("ground", value)) or 15.5,
+    )
+    monkeypatch.setattr(
+        sut,
+        "calc_sum_Theta_dash_g_surf_A_m_runup",
+        lambda temperature, average: calls.append(
+            ("runup", temperature, average)
+        ) or runup_result,
+    )
+
+    result = sut._prepare_underfloor_ground_response(
+        _setting(setting_type),
+        theta_ex,
+    )
+
+    assert result == (theta_in, 0.025504994, 15.5, runup_result)
+    assert calls == [
+        ("indoor", season),
+        ("ground", theta_ex),
+        ("runup", representative_temperature, 15.5),
+    ]
+
+
+def test_prepare_underfloor_ground_response_rejects_unknown_setting():
+    with pytest.raises(ValueError):
+        sut._prepare_underfloor_ground_response(object(), object())
