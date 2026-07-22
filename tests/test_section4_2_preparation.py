@@ -2533,3 +2533,20 @@ def test_prepare_internal_heat_state_preserves_formula_64_order(monkeypatch):
     assert [events[i][1] for i in (1, 3, 5, 7)] == [
         "q_gen_NR_d_t", "q_gen_OR_d_t", "q_gen_MR_d_t", "q_gen_d_t"
     ]
+
+def test_prepare_local_ventilation_state_preserves_formula_63_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+    frame = _FrameRecorder(events)
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_NR_d_t", lambda: events.append(("NR",)) or values[0])
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_OR_d_t", lambda: events.append(("OR",)) or values[1])
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_MR_d_t", lambda: events.append(("MR",)) or values[2])
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_d_t", lambda *x: events.append(("total", x)) or values[3])
+    nr, total, next_frame = sut._prepare_local_ventilation_state(frame)
+    assert (nr, total) == (values[0], values[3])
+    assert next_frame.generation == 1
+    assert [e[0] for e in events] == ["NR", "OR", "MR", "total", "assign"]
+    assert events[3][1] == (values[2], values[1], values[0])
+    assert tuple(name for name, _ in events[4][2]) == (
+        "V_vent_l_NR_d_t", "V_vent_l_OR_d_t", "V_vent_l_MR_d_t", "V_vent_l_d_t"
+    )

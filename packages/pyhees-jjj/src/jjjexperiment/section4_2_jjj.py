@@ -1559,6 +1559,21 @@ def _prepare_internal_heat_state(df_output, house, A_NR):
     df_output['q_gen_d_t'] = q_gen_d_t
     return q_gen_d_t
 
+def _prepare_local_ventilation_state(df_output):
+    """Calculate formula (63) and preserve the assign column order."""
+    V_vent_l_NR_d_t = dc.get_V_vent_l_NR_d_t()
+    V_vent_l_OR_d_t = dc.get_V_vent_l_OR_d_t()
+    V_vent_l_MR_d_t = dc.get_V_vent_l_MR_d_t()
+    V_vent_l_d_t = dc.get_V_vent_l_d_t(
+        V_vent_l_MR_d_t, V_vent_l_OR_d_t, V_vent_l_NR_d_t)
+    df_output = df_output.assign(
+        V_vent_l_NR_d_t=V_vent_l_NR_d_t,
+        V_vent_l_OR_d_t=V_vent_l_OR_d_t,
+        V_vent_l_MR_d_t=V_vent_l_MR_d_t,
+        V_vent_l_d_t=V_vent_l_d_t,
+    )
+    return V_vent_l_NR_d_t, V_vent_l_d_t, df_output
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1618,16 +1633,8 @@ def calc_Q_UT_A(
     q_gen_d_t = _prepare_internal_heat_state(df_output, house, A_NR)
 
     # (63)　局所排気量
-    V_vent_l_NR_d_t = dc.get_V_vent_l_NR_d_t()
-    V_vent_l_OR_d_t = dc.get_V_vent_l_OR_d_t()
-    V_vent_l_MR_d_t = dc.get_V_vent_l_MR_d_t()
-    V_vent_l_d_t = dc.get_V_vent_l_d_t(V_vent_l_MR_d_t, V_vent_l_OR_d_t, V_vent_l_NR_d_t)
-    df_output = df_output.assign(
-        V_vent_l_NR_d_t = V_vent_l_NR_d_t,
-        V_vent_l_OR_d_t = V_vent_l_OR_d_t,
-        V_vent_l_MR_d_t = V_vent_l_MR_d_t,
-        V_vent_l_d_t = V_vent_l_d_t
-    )
+    V_vent_l_NR_d_t, V_vent_l_d_t, df_output = _prepare_local_ventilation_state(
+        df_output)
 
     v_min_input = _select_minimum_airflow_input(
         ac_setting,
