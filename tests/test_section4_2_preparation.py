@@ -2533,3 +2533,156 @@ def test_prepare_internal_heat_state_preserves_formula_64_order(monkeypatch):
     assert [events[i][1] for i in (1, 3, 5, 7)] == [
         "q_gen_NR_d_t", "q_gen_OR_d_t", "q_gen_MR_d_t", "q_gen_d_t"
     ]
+
+def test_prepare_local_ventilation_state_preserves_formula_63_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+    frame = _FrameRecorder(events)
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_NR_d_t", lambda: events.append(("NR",)) or values[0])
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_OR_d_t", lambda: events.append(("OR",)) or values[1])
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_MR_d_t", lambda: events.append(("MR",)) or values[2])
+    monkeypatch.setattr(sut.dc, "get_V_vent_l_d_t", lambda *x: events.append(("total", x)) or values[3])
+    nr, total, next_frame = sut._prepare_local_ventilation_state(frame)
+    assert (nr, total) == (values[0], values[3])
+    assert next_frame.generation == 1
+    assert [e[0] for e in events] == ["NR", "OR", "MR", "total", "assign"]
+    assert events[3][1] == (values[2], values[1], values[0])
+    assert tuple(name for name, _ in events[4][2]) == (
+        "V_vent_l_NR_d_t", "V_vent_l_OR_d_t", "V_vent_l_MR_d_t", "V_vent_l_d_t"
+    )
+
+@pytest.mark.parametrize("direct", (True, False))
+def test_prepare_general_ventilation_state_preserves_formula_62_branch(monkeypatch, direct):
+    events = []
+    base = object()
+    adjusted = object()
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    monkeypatch.setattr(sut.dc, "get_V_vent_g_i", lambda *x: events.append(("base", x)) or base)
+    monkeypatch.setattr(sut, "rescale_V_vent_g_i", lambda *x: events.append(("scale", x)) or adjusted)
+    setting = SimpleNamespace(
+        input_V_hs_min=(sut.最低風量直接入力.入力する if direct else sut.最低風量直接入力.入力しない),
+        V_hs_min=500.0,
+    )
+    a_hcz, ratios = object(), object()
+    result = sut._prepare_general_ventilation_state(Frame(), setting, a_hcz, ratios)
+    assert result is (adjusted if direct else base)
+    assert events[0] == ("base", (a_hcz, ratios))
+    assert [e[0] for e in events] == (["base", "scale", "write"] if direct else ["base", "write"])
+    if direct:
+        assert events[1] == ("scale", (base, 500.0))
+    assert events[-1][1] == "V_vent_g_i"
+    assert events[-1][2] is result
+
+def test_prepare_partition_state_preserves_formula_61_60_order(monkeypatch):
+    events = []
+    u_value, areas = object(), object()
+
+    class Frame:
+        def __init__(self, name): self.name = name
+        def __setitem__(self, key, value): events.append(("write", self.name, key, value))
+
+    monkeypatch.setattr(sut.dc, "get_U_prt", lambda: events.append(("U",)) or u_value)
+    monkeypatch.setattr(sut.dc, "get_A_prt_i", lambda *x: events.append(("A", x)) or areas)
+    house = SimpleNamespace(A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(r_env=0.4)
+    hcz, a_nr = object(), 40.0
+    result = sut._prepare_partition_state(Frame("df2"), Frame("df3"), house, skin, hcz, a_nr)
+    assert result == (u_value, areas)
+    assert [e[0] for e in events] == ["U", "write", "A", "write", "write"]
+    assert events[2] == ("A", (hcz, 0.4, 30.0, 40.0, 50.0))
+    assert [(events[i][1], events[i][2]) for i in (1, 3, 4)] == [
+        ("df3", "U_prt"), ("df3", "r_env"), ("df2", "A_prt_i")
+    ]
+
+def test_prepare_duct_geometry_state_preserves_formula_59_to_56_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Frame:
+        def __init__(self, name):
+            self.name = name
+
+        def __setitem__(self, key, value):
+            events.append(("write", self.name, key, value))
+
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_SAT_d_t",
+        lambda *args: events.append(("sat", args)) or values[0])
+    monkeypatch.setattr(
+        sut.dc, "get_l_duct_ex_i",
+        lambda *args: events.append(("ex", args)) or values[1])
+    monkeypatch.setattr(
+        sut.dc, "get_l_duct_in_i",
+        lambda *args: events.append(("in", args)) or values[2])
+    monkeypatch.setattr(
+        sut.dc, "get_l_duct__i",
+        lambda *args: events.append(("total", args)) or values[3])
+
+    theta_ex, solar = object(), object()
+    result = sut._prepare_duct_geometry_state(
+        Frame("df"), Frame("df2"), SimpleNamespace(A_A=120.0), theta_ex, solar)
+
+    assert result == tuple(values)
+    assert [event[0] for event in events] == [
+        "sat", "write", "ex", "write", "in", "write", "total", "write"
+    ]
+    assert events[0][1] == (theta_ex, solar)
+    assert events[2][1] == (120.0,)
+    assert events[4][1] == (120.0,)
+    assert events[6][1] == (values[2], values[1])
+    assert [(events[i][1], events[i][2]) for i in (1, 3, 5, 7)] == [
+        ("df", "Theta_SAT_d_t"),
+        ("df2", "l_duct_ex_i"),
+        ("df2", "l_duct_in_i"),
+        ("df2", "l_duct_i"),
+    ]
+
+
+def test_prepare_balanced_room_and_duct_state_preserves_formula_order(monkeypatch):
+    events = []
+    values = [object(), object(), object(), tuple(object() for _ in range(5))]
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc, "get_X_star_HBR_d_t",
+        lambda *args: events.append(("humidity", args)) or values[0])
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_star_HBR_d_t",
+        lambda *args: events.append(("temperature", args)) or values[1])
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_attic_d_t",
+        lambda *args: events.append(("attic", args)) or values[2])
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_sur_d_t_i",
+        lambda *args: events.append(("surrounding", args)) or values[3])
+
+    setting = SimpleNamespace(duct_insulation="outside")
+    house = SimpleNamespace(region=6)
+    x_ex, theta_ex, theta_sat, duct_in, duct_ex = [object() for _ in range(5)]
+    result = sut._prepare_balanced_room_and_duct_state(
+        frame, setting, house, x_ex, theta_ex, theta_sat, duct_in, duct_ex)
+
+    assert result[:4] == tuple(values)
+    assert result[4].generation == 1
+    assert [event[0] for event in events] == [
+        "humidity", "setitem", "temperature", "setitem",
+        "attic", "setitem", "surrounding", "assign",
+    ]
+    assert events[0][1] == (x_ex, 6)
+    assert events[2][1] == (theta_ex, 6)
+    assert events[4][1] == (theta_sat, values[1])
+    assert events[6][1] == (values[1], values[2], duct_in, duct_ex, "outside")
+    assert [events[i][2] for i in (1, 3, 5)] == [
+        "X_star_HBR_d_t", "Theta_star_HBR_d_t", "Theta_attic_d_t"
+    ]
+    assert tuple(name for name, _ in events[7][2]) == (
+        "Theta_sur_d_t_i_1",
+        "Theta_sur_d_t_i_2",
+        "Theta_sur_d_t_i_3",
+        "Theta_sur_d_t_i_4",
+        "Theta_sur_d_t_i_5",
+    )

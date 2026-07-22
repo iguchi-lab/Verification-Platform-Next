@@ -1559,6 +1559,96 @@ def _prepare_internal_heat_state(df_output, house, A_NR):
     df_output['q_gen_d_t'] = q_gen_d_t
     return q_gen_d_t
 
+def _prepare_local_ventilation_state(df_output):
+    """Calculate formula (63) and preserve the assign column order."""
+    V_vent_l_NR_d_t = dc.get_V_vent_l_NR_d_t()
+    V_vent_l_OR_d_t = dc.get_V_vent_l_OR_d_t()
+    V_vent_l_MR_d_t = dc.get_V_vent_l_MR_d_t()
+    V_vent_l_d_t = dc.get_V_vent_l_d_t(
+        V_vent_l_MR_d_t, V_vent_l_OR_d_t, V_vent_l_NR_d_t)
+    df_output = df_output.assign(
+        V_vent_l_NR_d_t=V_vent_l_NR_d_t,
+        V_vent_l_OR_d_t=V_vent_l_OR_d_t,
+        V_vent_l_MR_d_t=V_vent_l_MR_d_t,
+        V_vent_l_d_t=V_vent_l_d_t,
+    )
+    return V_vent_l_NR_d_t, V_vent_l_d_t, df_output
+
+def _prepare_general_ventilation_state(
+        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i):
+    """Calculate formula (62) while preserving the minimum-airflow branch."""
+    V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
+    if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
+        V_vent_g_i = rescale_V_vent_g_i(V_vent_g_i, v_min_input.V_hs_min)
+    df_output2['V_vent_g_i'] = V_vent_g_i
+    return V_vent_g_i
+
+def _prepare_partition_state(df_output2, df_output3, house, skin, A_HCZ_i, A_NR):
+    """Calculate formulas (61) and (60) and preserve direct output writes."""
+    U_prt = dc.get_U_prt()
+    df_output3['U_prt'] = [U_prt]
+    A_prt_i = dc.get_A_prt_i(
+        A_HCZ_i, skin.r_env, house.A_MR, A_NR, house.A_OR)
+    df_output3['r_env'] = [skin.r_env]
+    df_output2['A_prt_i'] = A_prt_i
+    return U_prt, A_prt_i
+
+
+def _prepare_duct_geometry_state(
+        df_output, df_output2, house, Theta_ex_d_t, J_d_t):
+    """Calculate formulas (59), (58), (57), and (56) in source order."""
+    Theta_SAT_d_t = dc.get_Theta_SAT_d_t(Theta_ex_d_t, J_d_t)
+    df_output['Theta_SAT_d_t'] = Theta_SAT_d_t
+
+    l_duct_ex_i = dc.get_l_duct_ex_i(house.A_A)
+    df_output2['l_duct_ex_i'] = l_duct_ex_i
+
+    l_duct_in_i = dc.get_l_duct_in_i(house.A_A)
+    df_output2['l_duct_in_i'] = l_duct_in_i
+
+    l_duct_i = dc.get_l_duct__i(l_duct_in_i, l_duct_ex_i)
+    df_output2['l_duct_i'] = l_duct_i
+    return Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i
+
+
+def _prepare_balanced_room_and_duct_state(
+        df_output, ac_setting, house, X_ex_d_t, Theta_ex_d_t,
+        Theta_SAT_d_t, l_duct_in_i, l_duct_ex_i):
+    """Calculate formulas (51), (50), (55), and (54) in source order."""
+    X_star_HBR_d_t = dc.get_X_star_HBR_d_t(X_ex_d_t, house.region)
+    df_output['X_star_HBR_d_t'] = X_star_HBR_d_t
+
+    Theta_star_HBR_d_t = dc.get_Theta_star_HBR_d_t(
+        Theta_ex_d_t, house.region)
+    df_output['Theta_star_HBR_d_t'] = Theta_star_HBR_d_t
+
+    Theta_attic_d_t = dc.get_Theta_attic_d_t(
+        Theta_SAT_d_t, Theta_star_HBR_d_t)
+    df_output['Theta_attic_d_t'] = Theta_attic_d_t
+
+    Theta_sur_d_t_i = dc.get_Theta_sur_d_t_i(
+        Theta_star_HBR_d_t,
+        Theta_attic_d_t,
+        l_duct_in_i,
+        l_duct_ex_i,
+        ac_setting.duct_insulation,
+    )
+    df_output = df_output.assign(
+        Theta_sur_d_t_i_1=Theta_sur_d_t_i[0],
+        Theta_sur_d_t_i_2=Theta_sur_d_t_i[1],
+        Theta_sur_d_t_i_3=Theta_sur_d_t_i[2],
+        Theta_sur_d_t_i_4=Theta_sur_d_t_i[3],
+        Theta_sur_d_t_i_5=Theta_sur_d_t_i[4],
+    )
+    return (
+        X_star_HBR_d_t,
+        Theta_star_HBR_d_t,
+        Theta_attic_d_t,
+        Theta_sur_d_t_i,
+        df_output,
+    )
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1618,16 +1708,8 @@ def calc_Q_UT_A(
     q_gen_d_t = _prepare_internal_heat_state(df_output, house, A_NR)
 
     # (63)　局所排気量
-    V_vent_l_NR_d_t = dc.get_V_vent_l_NR_d_t()
-    V_vent_l_OR_d_t = dc.get_V_vent_l_OR_d_t()
-    V_vent_l_MR_d_t = dc.get_V_vent_l_MR_d_t()
-    V_vent_l_d_t = dc.get_V_vent_l_d_t(V_vent_l_MR_d_t, V_vent_l_OR_d_t, V_vent_l_NR_d_t)
-    df_output = df_output.assign(
-        V_vent_l_NR_d_t = V_vent_l_NR_d_t,
-        V_vent_l_OR_d_t = V_vent_l_OR_d_t,
-        V_vent_l_MR_d_t = V_vent_l_MR_d_t,
-        V_vent_l_d_t = V_vent_l_d_t
-    )
+    V_vent_l_NR_d_t, V_vent_l_d_t, df_output = _prepare_local_ventilation_state(
+        df_output)
 
     v_min_input = _select_minimum_airflow_input(
         ac_setting,
@@ -1636,60 +1718,33 @@ def calc_Q_UT_A(
     )
 
     # (62)　全般換気量
-    if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:  # ダックタイピング
-        # 最低風量指定を満たすように調整
-        V_vent_g_i = rescale_V_vent_g_i(
-            dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i),  # 従来式
-            v_min_input.V_hs_min)
-    else:
-        V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
-    df_output2['V_vent_g_i'] = V_vent_g_i
+    V_vent_g_i = _prepare_general_ventilation_state(
+        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i)
 
     # (61)　間仕切の熱貫流率
-    U_prt = dc.get_U_prt()
-    df_output3['U_prt'] = [U_prt]
+    U_prt, A_prt_i = _prepare_partition_state(
+        df_output2, df_output3, house, skin, A_HCZ_i, A_NR)
 
-    # (60)　非居室の間仕切の面積
-    A_prt_i = dc.get_A_prt_i(A_HCZ_i, skin.r_env, house.A_MR, A_NR, house.A_OR)
-    df_output3['r_env'] = [skin.r_env]
-    df_output2['A_prt_i'] = A_prt_i
-
-    # (59)　等価外気温度
-    Theta_SAT_d_t = dc.get_Theta_SAT_d_t(Theta_ex_d_t, J_d_t)
-    df_output['Theta_SAT_d_t'] = Theta_SAT_d_t
-
-    # (58)　断熱区画外を通るダクトの長さ
-    l_duct_ex_i = dc.get_l_duct_ex_i(house.A_A)
-    df_output2['l_duct_ex_i'] = l_duct_ex_i
-
-    # (57)　断熱区画内を通るダクト長さ
-    l_duct_in_i = dc.get_l_duct_in_i(house.A_A)
-    df_output2['l_duct_in_i'] = l_duct_in_i
-
-    # (56)　ダクト長さ
-    l_duct_i = dc.get_l_duct__i(l_duct_in_i, l_duct_ex_i)
-    df_output2['l_duct_i'] = l_duct_i
-
-    # (51)　負荷バランス時の居室の絶対湿度
-    X_star_HBR_d_t = dc.get_X_star_HBR_d_t(X_ex_d_t, house.region)  # X_ex_d_t [g/kg(DA)] 想定
-    df_output['X_star_HBR_d_t'] = X_star_HBR_d_t
-
-    # (50)　負荷バランス時の居室の室温
-    Theta_star_HBR_d_t = dc.get_Theta_star_HBR_d_t(Theta_ex_d_t, house.region)
-    df_output['Theta_star_HBR_d_t'] = Theta_star_HBR_d_t
-
-    # (55)　小屋裏の空気温度
-    Theta_attic_d_t = dc.get_Theta_attic_d_t(Theta_SAT_d_t, Theta_star_HBR_d_t)
-    df_output['Theta_attic_d_t'] = Theta_attic_d_t
-
-    # (54)　ダクトの周囲の空気温度
-    Theta_sur_d_t_i = dc.get_Theta_sur_d_t_i(Theta_star_HBR_d_t, Theta_attic_d_t, l_duct_in_i, l_duct_ex_i, ac_setting.duct_insulation)
-    df_output = df_output.assign(
-        Theta_sur_d_t_i_1 = Theta_sur_d_t_i[0],
-        Theta_sur_d_t_i_2 = Theta_sur_d_t_i[1],
-        Theta_sur_d_t_i_3 = Theta_sur_d_t_i[2],
-        Theta_sur_d_t_i_4 = Theta_sur_d_t_i[3],
-        Theta_sur_d_t_i_5 = Theta_sur_d_t_i[4]
+    # (59), (58), (57), (56)　等価外気温度とダクト長さ
+    Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i = \
+        _prepare_duct_geometry_state(
+            df_output, df_output2, house, Theta_ex_d_t, J_d_t)
+    # (51), (50), (55), (54)　負荷バランス時の室内・ダクト周囲状態
+    (
+        X_star_HBR_d_t,
+        Theta_star_HBR_d_t,
+        Theta_attic_d_t,
+        Theta_sur_d_t_i,
+        df_output,
+    ) = _prepare_balanced_room_and_duct_state(
+        df_output,
+        ac_setting,
+        house,
+        X_ex_d_t,
+        Theta_ex_d_t,
+        Theta_SAT_d_t,
+        l_duct_in_i,
+        l_duct_ex_i,
     )
 
     # (40)-1st 熱源機の風量を計算するための熱源機の出力
