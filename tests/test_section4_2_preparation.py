@@ -3594,3 +3594,26 @@ def test_prepare_heat_source_inlet_temperature_output_preserves_formula_12(
         ("formula", source),
         ("setitem", "Theta_hs_in_d_t", value),
     ]
+
+
+def test_prepare_actual_load_state_preserves_calculate_record_order(
+        monkeypatch):
+    events = []
+    loads = tuple(object() for _ in range(3))
+    original = object()
+    recorded = object()
+    inputs = [object() for _ in range(7)]
+    monkeypatch.setattr(
+        sut, "_get_actual_loads",
+        lambda *args: events.append(("calculate", args)) or loads)
+    monkeypatch.setattr(
+        sut, "_record_actual_load_outputs",
+        lambda *args: events.append(("record", args)) or recorded)
+
+    result = sut._prepare_actual_load_state(original, *inputs)
+
+    assert result == (*loads, recorded)
+    assert events == [
+        ("calculate", tuple(inputs)),
+        ("record", (original, *loads)),
+    ]

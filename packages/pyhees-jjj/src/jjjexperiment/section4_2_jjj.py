@@ -2074,6 +2074,20 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_actual_load_state(
+        df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
+        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
+    """Calculate and record actual cooling and heating loads."""
+    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
+        carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
+        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+    df_output = _record_actual_load_outputs(
+        df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i)
+    return (
+        L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i, df_output,
+    )
+
+
 def _prepare_heat_source_inlet_temperature_output(
         df_output, Theta_NR_d_t):
     """Calculate and record formula (12) by direct assignment."""
@@ -2793,21 +2807,15 @@ def calc_Q_UT_A(
             df_output, Theta_NR_d_t)
 
     """ まとめ - 実際の暖冷房負荷 """
-    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
-        carryover_heat_dto,
-        V_supply_d_t_i,
-        X_HBR_d_t_i,
-        X_supply_d_t_i,
-        Theta_supply_d_t_i,
-        Theta_HBR_d_t_i,
-        house.region,
-    )
-    df_output = _record_actual_load_outputs(
-        df_output,
+    (
         L_dash_CL_d_t_i,
         L_dash_CS_d_t_i,
         L_dash_H_d_t_i,
-    )
+        df_output,
+    ) = _prepare_actual_load_state(
+        df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
+        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i,
+        house.region)
     """ まとめ - 未処理負荷 """
     Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
         L_star_CL_d_t_i,
