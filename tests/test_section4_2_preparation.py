@@ -3866,3 +3866,19 @@ def test_balanced_room_and_duct_state_result_preserves_tuple_contract():
         "Theta_sur_d_t_i",
         "df_output",
     )
+
+
+def test_pre_vav_airflow_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(6))
+    result = sut._PreVavAirflowStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "A_s_ufac_i",
+        "Theta_uf_d_t",
+        "r_supply_des_i",
+        "r_supply_des_d_t_i",
+        "V_dash_supply_d_t_i",
+        "df_output",
+    )

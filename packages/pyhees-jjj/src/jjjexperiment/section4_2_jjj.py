@@ -120,6 +120,14 @@ class _BalancedRoomAndDuctStateResult(NamedTuple):
     Theta_sur_d_t_i: object
     df_output: object
 
+class _PreVavAirflowStateResult(NamedTuple):
+    A_s_ufac_i: object
+    Theta_uf_d_t: object
+    r_supply_des_i: object
+    r_supply_des_d_t_i: object
+    V_dash_supply_d_t_i: object
+    df_output: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1952,7 +1960,7 @@ def _prepare_pre_vav_airflow_state(
         V_dash_supply_d_t_4=V_dash_supply_d_t_i[3],
         V_dash_supply_d_t_5=V_dash_supply_d_t_i[4],
     )
-    return (
+    return _PreVavAirflowStateResult(
         A_s_ufac_i,
         Theta_uf_d_t,
         r_supply_des_i,
