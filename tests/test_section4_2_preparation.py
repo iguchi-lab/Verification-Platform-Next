@@ -3776,3 +3776,173 @@ def test_rac_heating_capacity_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("q_r_max_H", "Q_r_max_H_d_t", "Q_max_H_d_t",)
+
+
+def test_rac_cooling_capacity_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(10))
+    result = sut._RacCoolingCapacityResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "q_r_max_C",
+        "Q_r_max_C_d_t",
+        "Q_max_C_d_t",
+        "SHF_L_min_c",
+        "L_max_CL_d_t",
+        "L_dash_CL_d_t",
+        "L_dash_C_d_t",
+        "SHF_dash_d_t",
+        "Q_max_CS_d_t",
+        "Q_max_CL_d_t",
+    )
+
+
+def test_actual_loads_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._ActualLoadsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "L_dash_CL_d_t_i",
+        "L_dash_CS_d_t_i",
+        "L_dash_H_d_t_i",
+    )
+
+
+def test_unprocessed_loads_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._UnprocessedLoadsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "Q_UT_CL_d_t_i",
+        "Q_UT_CS_d_t_i",
+        "Q_UT_H_d_t_i",
+    )
+
+
+def test_climate_conditions_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(5))
+    result = sut._ClimateConditionsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "climate",
+        "Theta_ex_d_t",
+        "X_ex_d_t",
+        "J_d_t",
+        "h_ex_d_t",
+    )
+
+
+def test_dwelling_areas_and_water_heat_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(4))
+    result = sut._DwellingAreasAndWaterHeatResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "A_HCZ_i",
+        "A_HCZ_R_i",
+        "A_NR",
+        "L_wtr",
+    )
+
+
+def test_balanced_room_and_duct_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(5))
+    result = sut._BalancedRoomAndDuctStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "X_star_HBR_d_t",
+        "Theta_star_HBR_d_t",
+        "Theta_attic_d_t",
+        "Theta_sur_d_t_i",
+        "df_output",
+    )
+
+
+def test_pre_vav_airflow_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(6))
+    result = sut._PreVavAirflowStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "A_s_ufac_i",
+        "Theta_uf_d_t",
+        "r_supply_des_i",
+        "r_supply_des_d_t_i",
+        "V_dash_supply_d_t_i",
+        "df_output",
+    )
+
+
+def test_carryover_hourly_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(9))
+    result = sut._CarryoverHourlyStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "L_star_CS_d_t_i",
+        "L_star_H_d_t_i",
+        "Theta_star_hs_in_d_t",
+        "Theta_HBR_d_t_i",
+        "Theta_NR_d_t",
+        "carryovers",
+        "H",
+        "C",
+        "M",
+    )
+
+
+def test_capacity_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(18))
+    result = sut._CapacityStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "Q_hs_max_C_d_t",
+        "Q_hs_max_CL_d_t",
+        "Q_hs_max_CS_d_t",
+        "Q_hs_max_H_d_t",
+        "L_star_CL_d_t",
+        "L_star_CS_d_t",
+        "L_star_dash_CL_d_t",
+        "L_star_dash_C_d_t",
+        "C_df_H_d_t",
+        "Q_r_max_H_d_t",
+        "Q_r_max_C_d_t",
+        "L_max_CL_d_t",
+        "L_dash_CL_d_t",
+        "L_dash_C_d_t",
+        "q_r_max_H",
+        "q_r_max_C",
+        "SHF_L_min_c",
+        "SHF_dash_d_t",
+    )
+
+
+def test_supply_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(7))
+    result = sut._SupplyStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "X_hs_out_d_t",
+        "Theta_hs_out_min_C_d_t",
+        "Theta_hs_out_max_H_d_t",
+        "Theta_hs_out_d_t",
+        "V_supply_d_t_i_before",
+        "V_supply_d_t_i",
+        "Theta_supply_d_t_i",
+    )

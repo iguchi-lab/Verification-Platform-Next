@@ -78,6 +78,96 @@ class Load_DTI:
 VHS_DSGN_H = NewType('VHS_DSGN_H', float)
 VHS_DSGN_C = NewType('VHS_DSGN_C', float)
 
+class _RacCoolingCapacityResult(NamedTuple):
+    q_r_max_C: object
+    Q_r_max_C_d_t: object
+    Q_max_C_d_t: object
+    SHF_L_min_c: object
+    L_max_CL_d_t: object
+    L_dash_CL_d_t: object
+    L_dash_C_d_t: object
+    SHF_dash_d_t: object
+    Q_max_CS_d_t: object
+    Q_max_CL_d_t: object
+
+class _ActualLoadsResult(NamedTuple):
+    L_dash_CL_d_t_i: object
+    L_dash_CS_d_t_i: object
+    L_dash_H_d_t_i: object
+
+class _UnprocessedLoadsResult(NamedTuple):
+    Q_UT_CL_d_t_i: object
+    Q_UT_CS_d_t_i: object
+    Q_UT_H_d_t_i: object
+
+class _ClimateConditionsResult(NamedTuple):
+    climate: object
+    Theta_ex_d_t: object
+    X_ex_d_t: object
+    J_d_t: object
+    h_ex_d_t: object
+
+class _DwellingAreasAndWaterHeatResult(NamedTuple):
+    A_HCZ_i: object
+    A_HCZ_R_i: object
+    A_NR: object
+    L_wtr: object
+
+class _BalancedRoomAndDuctStateResult(NamedTuple):
+    X_star_HBR_d_t: object
+    Theta_star_HBR_d_t: object
+    Theta_attic_d_t: object
+    Theta_sur_d_t_i: object
+    df_output: object
+
+class _PreVavAirflowStateResult(NamedTuple):
+    A_s_ufac_i: object
+    Theta_uf_d_t: object
+    r_supply_des_i: object
+    r_supply_des_d_t_i: object
+    V_dash_supply_d_t_i: object
+    df_output: object
+
+class _CarryoverHourlyStateResult(NamedTuple):
+    L_star_CS_d_t_i: object
+    L_star_H_d_t_i: object
+    Theta_star_hs_in_d_t: object
+    Theta_HBR_d_t_i: object
+    Theta_NR_d_t: object
+    carryovers: object
+    H: object
+    C: object
+    M: object
+
+class _CapacityStateResult(NamedTuple):
+    Q_hs_max_C_d_t: object
+    Q_hs_max_CL_d_t: object
+    Q_hs_max_CS_d_t: object
+    Q_hs_max_H_d_t: object
+    L_star_CL_d_t: object
+    L_star_CS_d_t: object
+    L_star_dash_CL_d_t: object
+    L_star_dash_C_d_t: object
+    C_df_H_d_t: object
+    Q_r_max_H_d_t: object
+    Q_r_max_C_d_t: object
+    L_max_CL_d_t: object
+    L_dash_CL_d_t: object
+    L_dash_C_d_t: object
+    q_r_max_H: object
+    q_r_max_C: object
+    SHF_L_min_c: object
+    SHF_dash_d_t: object
+
+class _SupplyStateResult(NamedTuple):
+    X_hs_out_d_t: object
+    Theta_hs_out_min_C_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_d_t: object
+    V_supply_d_t_i_before: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -706,7 +796,7 @@ def _get_rac_cooling_capacity(
     Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
     Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
 
-    return (
+    return _RacCoolingCapacityResult(
         q_r_max_C,
         Q_r_max_C_d_t,
         Q_max_C_d_t,
@@ -874,7 +964,11 @@ def _get_actual_loads(
     else:
         L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
 
-    return L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i
+    return _ActualLoadsResult(
+        L_dash_CL_d_t_i,
+        L_dash_CS_d_t_i,
+        L_dash_H_d_t_i,
+    )
 
 def _get_unprocessed_loads(
         L_star_CL_d_t_i: np.ndarray,
@@ -892,7 +986,11 @@ def _get_unprocessed_loads(
     # (2)　暖房設備機器等の未処理暖房負荷
     Q_UT_H_d_t_i = dc.get_Q_UT_H_d_t_i(L_star_H_d_t_i, L_dash_H_d_t_i)
 
-    return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i
+    return _UnprocessedLoadsResult(
+        Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i,
+        Q_UT_H_d_t_i,
+    )
 
 def _get_unprocessed_energy(
         ac_setting: ActiveAcSetting,
@@ -1588,7 +1686,13 @@ def _prepare_climate_conditions(df_output, house, new_ufac, climateFile):
     df_output['X_ex_d_t'] = X_ex_d_t
     df_output['J_d_t'] = J_d_t
     df_output['h_ex_d_t'] = h_ex_d_t
-    return climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t
+    return _ClimateConditionsResult(
+        climate,
+        Theta_ex_d_t,
+        X_ex_d_t,
+        J_d_t,
+        h_ex_d_t,
+    )
 
 def _prepare_dwelling_areas_and_water_heat(df_output2, df_output3, house):
     """Prepare dwelling areas and formula (67) in their original order."""
@@ -1603,7 +1707,12 @@ def _prepare_dwelling_areas_and_water_heat(df_output2, df_output3, house):
     df_output3['A_NR'] = [A_NR]
     L_wtr = dc.get_L_wtr()
     df_output3['L_wtr'] = [L_wtr]
-    return A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr
+    return _DwellingAreasAndWaterHeatResult(
+        A_HCZ_i,
+        A_HCZ_R_i,
+        A_NR,
+        L_wtr,
+    )
 
 def _prepare_occupancy_state(df_output, house, A_NR):
     """Calculate formula (66) values and preserve direct output writes."""
@@ -1722,7 +1831,7 @@ def _prepare_balanced_room_and_duct_state(
         Theta_sur_d_t_i_4=Theta_sur_d_t_i[3],
         Theta_sur_d_t_i_5=Theta_sur_d_t_i[4],
     )
-    return (
+    return _BalancedRoomAndDuctStateResult(
         X_star_HBR_d_t,
         Theta_star_HBR_d_t,
         Theta_attic_d_t,
@@ -1891,7 +2000,7 @@ def _prepare_pre_vav_airflow_state(
         V_dash_supply_d_t_4=V_dash_supply_d_t_i[3],
         V_dash_supply_d_t_5=V_dash_supply_d_t_i[4],
     )
-    return (
+    return _PreVavAirflowStateResult(
         A_s_ufac_i,
         Theta_uf_d_t,
         r_supply_des_i,
@@ -1982,7 +2091,7 @@ def _initialize_carryover_hourly_state(region):
     Theta_NR_d_t = np.zeros(24 * 365)
     carryovers = np.zeros((5, 24 * 365))
     H, C, M = dc.get_season_array_d_t(region)
-    return (
+    return _CarryoverHourlyStateResult(
         L_star_CS_d_t_i,
         L_star_H_d_t_i,
         Theta_star_hs_in_d_t,
@@ -2052,7 +2161,7 @@ def _prepare_no_carryover_capacity_state(
         Q_hs_max_CS_d_t = Q_max_CS_d_t
     else:
         raise Exception('設備機器の種類の入力が不正です。')
-    return (
+    return _CapacityStateResult(
         Q_hs_max_C_d_t,
         Q_hs_max_CL_d_t,
         Q_hs_max_CS_d_t,
@@ -2145,7 +2254,7 @@ def _prepare_no_carryover_supply_state(
             ac_setting, house, skin, load, Theta_supply_d_t_i,
             Theta_ex_d_t, V_dash_supply_d_t_i)
     _log_supply_temperatures(Theta_supply_d_t_i)
-    return (
+    return _SupplyStateResult(
         X_hs_out_d_t,
         Theta_hs_out_min_C_d_t,
         Theta_hs_out_max_H_d_t,
@@ -2438,10 +2547,14 @@ def _prepare_carryover_supply_state(
         Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
             ac_setting, house, skin, load, Theta_supply_d_t_i,
             Theta_ex_d_t, V_dash_supply_d_t_i)
-    return (
-        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
-        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+    return _SupplyStateResult(
+        X_hs_out_d_t,
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+        V_supply_d_t_i_before,
+        V_supply_d_t_i,
+        Theta_supply_d_t_i,
     )
 
 
@@ -2520,13 +2633,25 @@ def _prepare_carryover_capacity_state(
         Q_hs_max_CS_d_t = Q_max_CS_d_t
     else:
         raise Exception('設備機器の種類の入力が不正です。')
-    return (
-        Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-        Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
-        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
-        SHF_L_min_c, SHF_dash_d_t,
+    return _CapacityStateResult(
+        Q_hs_max_C_d_t,
+        Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t,
+        L_star_CL_d_t,
+        L_star_CS_d_t,
+        L_star_dash_CL_d_t,
+        L_star_dash_C_d_t,
+        C_df_H_d_t,
+        Q_r_max_H_d_t,
+        Q_r_max_C_d_t,
+        L_max_CL_d_t,
+        L_dash_CL_d_t,
+        L_dash_C_d_t,
+        q_r_max_H,
+        q_r_max_C,
+        SHF_L_min_c,
+        SHF_dash_d_t,
     )
 
 
