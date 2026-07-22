@@ -95,6 +95,11 @@ class _ActualLoadsResult(NamedTuple):
     L_dash_CS_d_t_i: object
     L_dash_H_d_t_i: object
 
+class _UnprocessedLoadsResult(NamedTuple):
+    Q_UT_CL_d_t_i: object
+    Q_UT_CS_d_t_i: object
+    Q_UT_H_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -913,7 +918,11 @@ def _get_unprocessed_loads(
     # (2)　暖房設備機器等の未処理暖房負荷
     Q_UT_H_d_t_i = dc.get_Q_UT_H_d_t_i(L_star_H_d_t_i, L_dash_H_d_t_i)
 
-    return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i
+    return _UnprocessedLoadsResult(
+        Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i,
+        Q_UT_H_d_t_i,
+    )
 
 def _get_unprocessed_energy(
         ac_setting: ActiveAcSetting,

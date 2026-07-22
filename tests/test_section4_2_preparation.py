@@ -3809,3 +3809,16 @@ def test_actual_loads_result_preserves_tuple_contract():
         "L_dash_CS_d_t_i",
         "L_dash_H_d_t_i",
     )
+
+
+def test_unprocessed_loads_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._UnprocessedLoadsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "Q_UT_CL_d_t_i",
+        "Q_UT_CS_d_t_i",
+        "Q_UT_H_d_t_i",
+    )
