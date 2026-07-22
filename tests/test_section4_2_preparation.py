@@ -1593,3 +1593,54 @@ def test_actual_room_temperatures_at_hour_preserve_slices(monkeypatch, t):
     np.testing.assert_array_equal(args[11], cooling[:5, t : t + 1])
     expected_previous = np.zeros((5, 1)) if t == 0 else actual[:5, t - 1 : t]
     np.testing.assert_array_equal(args[12], expected_previous)
+
+@pytest.mark.parametrize("t", (0, 1))
+def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):
+    calls = []
+    H = np.array([True, False])
+    C = np.array([False, True])
+    M = np.array([False, False])
+    theta_star_nr = np.array([18.0, 19.0])
+    theta_star_hbr = np.array([20.0, 21.0])
+    theta_hbr = np.arange(5 * 2).reshape(5, 2)
+    ventilation_nr = np.array([30.0, 31.0])
+    dash_supply = theta_hbr + 20
+    supply = theta_hbr + 40
+    area_partition = np.arange(1.0, 6.0)
+    theta_nr = np.array([17.0, 0.0])
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_Theta_NR_2023",
+        lambda *args: calls.append(args) or 22.0,
+    )
+
+    result = sut._get_actual_non_room_temperature_at_hour(
+        t,
+        t == 0,
+        H,
+        C,
+        M,
+        theta_star_nr,
+        theta_star_hbr,
+        theta_hbr,
+        40.0,
+        ventilation_nr,
+        dash_supply,
+        supply,
+        0.5,
+        area_partition,
+        2.7,
+        theta_nr,
+    )
+
+    assert result == 22.0
+    args = calls[0]
+    assert args[:6] == (t == 0, H[t], C[t], M[t], theta_star_nr[t], theta_star_hbr[t])
+    np.testing.assert_array_equal(args[6], theta_hbr[:, t : t + 1])
+    assert args[7:9] == (40.0, ventilation_nr[t])
+    np.testing.assert_array_equal(args[9], dash_supply[:, t : t + 1])
+    np.testing.assert_array_equal(args[10], supply[:, t : t + 1])
+    assert args[11] == 0.5
+    np.testing.assert_array_equal(args[12], area_partition.reshape(-1, 1))
+    assert args[13] == 2.7
+    assert args[14] == (0 if t == 0 else theta_nr[t - 1])

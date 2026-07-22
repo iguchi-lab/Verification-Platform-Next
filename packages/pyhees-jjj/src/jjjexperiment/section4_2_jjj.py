@@ -724,6 +724,40 @@ def _get_actual_room_temperatures_at_hour(
         L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
         np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
 
+def _get_actual_non_room_temperature_at_hour(
+        t: int,
+        isFirst: bool,
+        H: np.ndarray,
+        C: np.ndarray,
+        M: np.ndarray,
+        Theta_star_NR_d_t: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        A_NR: float,
+        V_vent_l_NR_d_t: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        V_supply_d_t_i: np.ndarray,
+        U_prt: float,
+        A_prt_i: np.ndarray,
+        Q: float,
+        Theta_NR_d_t: np.ndarray,
+    ) -> float:
+    """Calculate formula (48) for one hour with its original slices."""
+    # (48)　実際の非居室の室温
+    return jjj_carryover_heat.get_Theta_NR_2023(
+        isFirst, H[t], C[t], M[t],
+        Theta_star_NR_d_t[t],
+        Theta_star_HBR_d_t[t],
+        Theta_HBR_d_t_i[:, t:t+1],  # (5,1)
+        A_NR,
+        V_vent_l_NR_d_t[t],
+        V_dash_supply_d_t_i[:, t:t+1],  # (5,1)
+        V_supply_d_t_i[:, t:t+1],  # (5,1)
+        U_prt,
+        A_prt_i.reshape(-1,1),  # (5,1)
+        Q,
+        0 if t==0 else Theta_NR_d_t[t-1])
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1545,22 +1579,10 @@ def calc_Q_UT_A(
                 t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i, Theta_supply_d_t_i,
                 U_prt, A_prt_i, skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
                 Theta_HBR_d_t_i)
-            # (48)　実際の非居室の室温
-            Theta_NR_d_t[t] \
-                = jjj_carryover_heat.get_Theta_NR_2023(
-                    isFirst, H[t], C[t], M[t],
-                    Theta_star_NR_d_t[t],
-                    Theta_star_HBR_d_t[t],
-                    Theta_HBR_d_t_i[:, t:t+1],  # (5,1)
-                    A_NR,
-                    V_vent_l_NR_d_t[t],
-                    V_dash_supply_d_t_i[:, t:t+1],  # (5,1)
-                    V_supply_d_t_i[:, t:t+1],  # (5,1)
-                    U_prt,
-                    A_prt_i.reshape(-1,1),  # (5,1)
-                    skin.Q,
-                    0 if t==0 else Theta_NR_d_t[t-1])
-
+            Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
+                t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
+                Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+                V_supply_d_t_i, U_prt, A_prt_i, skin.Q, Theta_NR_d_t)
     else:  # 過剰熱繰越ナシ(一般的なパターン)
 
         # NOTE: 床下空調のための r_A_ufvnt の上書きはココより前に行わない
