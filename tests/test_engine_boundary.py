@@ -42,9 +42,7 @@ EXPECTED_REVERSE_DEPENDENCIES = {
 # Temporary migration allowlist. Remove modules as their wildcard imports are made explicit.
 EXPECTED_MAIN_WILDCARD_IMPORTS: set[str] = set()
 
-EXPECTED_OPTIONS_WILDCARD_IMPORTERS = {
-    "underfloor_ac/inputs/common.py",
-}
+EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
