@@ -3330,3 +3330,23 @@ def test_prepare_no_carryover_actual_temperature_state_preserves_formula_order(
     assert events[0][1][-1] is (theta_uf if enabled else None)
     assert events[1][1][-2] is (theta_uf if enabled else None)
     assert events[1][1][-1] is (non_room_ratio if enabled else None)
+
+
+def test_log_actual_temperature_state_preserves_diagnostic_order(monkeypatch):
+    events = []
+    room = [object() for _ in range(5)]
+    non_room = object()
+    monkeypatch.setattr(
+        sut._logger, "NDdebug",
+        lambda name, value: events.append((name, value)))
+
+    sut._log_actual_temperature_state(room, non_room)
+
+    assert events == [
+        ("Theta_HBR_d_t_1", room[0]),
+        ("Theta_HBR_d_t_2", room[1]),
+        ("Theta_HBR_d_t_3", room[2]),
+        ("Theta_HBR_d_t_4", room[3]),
+        ("Theta_HBR_d_t_5", room[4]),
+        ("Theta_NR_d_t", non_room),
+    ]

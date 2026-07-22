@@ -2074,6 +2074,13 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t):
+    """Preserve room then non-room diagnostic write order."""
+    for i in range(5):
+        _logger.NDdebug(f"Theta_HBR_d_t_{i + 1}", Theta_HBR_d_t_i[i])
+    _logger.NDdebug("Theta_NR_d_t", Theta_NR_d_t)
+
+
 def _prepare_no_carryover_actual_temperature_state(
         house, skin, new_ufac, climate, Theta_star_HBR_d_t,
         V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
@@ -2574,12 +2581,7 @@ def calc_Q_UT_A(
     ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
-    _logger.NDdebug("Theta_HBR_d_t_1", Theta_HBR_d_t_i[0])
-    _logger.NDdebug("Theta_HBR_d_t_2", Theta_HBR_d_t_i[1])
-    _logger.NDdebug("Theta_HBR_d_t_3", Theta_HBR_d_t_i[2])
-    _logger.NDdebug("Theta_HBR_d_t_4", Theta_HBR_d_t_i[3])
-    _logger.NDdebug("Theta_HBR_d_t_5", Theta_HBR_d_t_i[4])
-    _logger.NDdebug("Theta_NR_d_t", Theta_NR_d_t)
+    _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t)
 
     if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
         df_carryover_output = df_carryover_output.assign(
