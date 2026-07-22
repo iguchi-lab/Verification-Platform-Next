@@ -2315,10 +2315,13 @@ def _prepare_unprocessed_load_state(
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
         L_star_H_d_t_i, L_dash_H_d_t_i):
     """Calculate and record unprocessed cooling and heating loads."""
-    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
+    unprocessed_loads = _get_unprocessed_loads(
         L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
         L_star_H_d_t_i, L_dash_H_d_t_i)
+    Q_UT_CL_d_t_i = unprocessed_loads.Q_UT_CL_d_t_i
+    Q_UT_CS_d_t_i = unprocessed_loads.Q_UT_CS_d_t_i
+    Q_UT_H_d_t_i = unprocessed_loads.Q_UT_H_d_t_i
     df_output = _record_unprocessed_load_outputs(
         df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i)
     return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, df_output
