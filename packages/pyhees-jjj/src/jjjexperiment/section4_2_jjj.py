@@ -1682,6 +1682,19 @@ def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
     V_hs_min = dc.get_V_hs_min(V_vent_g_i)
     df_output3['V_hs_min'] = [V_hs_min]
     return V_hs_min
+
+def _prepare_rated_heat_source_capacity_state(
+        df_output3, ac_setting, house, heat_CRAC, cool_CRAC):
+    """Prepare rated heat-source capacities and preserve output write order."""
+    Q_hs_rtd_H, Q_hs_rtd_C = _get_rated_heat_source_capacities(
+        ac_setting,
+        house,
+        heat_CRAC,
+        cool_CRAC,
+    )
+    df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]
+    df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
+    return Q_hs_rtd_H, Q_hs_rtd_C
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1800,18 +1813,13 @@ def calc_Q_UT_A(
     )
     # (39)　熱源機の最低風量
     V_hs_min = _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i)
-    ####################################################################################################################
-    Q_hs_rtd_H, Q_hs_rtd_C = _get_rated_heat_source_capacities(
+    Q_hs_rtd_H, Q_hs_rtd_C = _prepare_rated_heat_source_capacity_state(
+        df_output3,
         ac_setting,
         house,
         heat_CRAC,
         cool_CRAC,
     )
-
-    df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]
-    df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
-    ####################################################################################################################
-
     (
         Theta_in_d_t,
         Phi_A_0,

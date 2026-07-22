@@ -2744,3 +2744,27 @@ def test_prepare_minimum_heat_source_airflow_preserves_formula_39_write(monkeypa
         ("formula", ventilation),
         ("write", "V_hs_min", [value]),
     ]
+
+def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypatch):
+    events = []
+    heating, cooling = object(), object()
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    inputs = [object() for _ in range(4)]
+    monkeypatch.setattr(
+        sut,
+        "_get_rated_heat_source_capacities",
+        lambda *args: events.append(("prepare", args)) or (heating, cooling),
+    )
+
+    result = sut._prepare_rated_heat_source_capacity_state(Frame(), *inputs)
+
+    assert result == (heating, cooling)
+    assert events == [
+        ("prepare", tuple(inputs)),
+        ("write", "Q_hs_rtd_C", [cooling]),
+        ("write", "Q_hs_rtd_H", [heating]),
+    ]
