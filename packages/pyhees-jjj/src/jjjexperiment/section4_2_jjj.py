@@ -274,6 +274,18 @@ def _get_unprocessed_energy(
         case _:
             raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
 
+def _export_underfloor_output(
+        case_name: CaseName,
+        ac_setting: ActiveAcSetting,
+        new_ufac: UnderfloorAc,
+        new_ufac_df: UfVarsDataFrame,
+    ) -> None:
+    # 床下空調新ロジック調査用変数の出力
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
+        # ネスト関数内で更新されているデータフレーム
+        new_ufac_df.export_to_csv(filename)
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1611,12 +1623,12 @@ def calc_Q_UT_A(
         house.region,
     )
     df_output[E_UT_output_name] = E_UT_d_t
-    # 床下空調新ロジック調査用変数の出力
-    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
-        # ネスト関数内で更新されているデータフレーム
-        new_ufac_df.export_to_csv(filename)
-
+    _export_underfloor_output(
+        case_name,
+        ac_setting,
+        new_ufac,
+        new_ufac_df,
+    )
     match(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
         case(None, None):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")

@@ -353,3 +353,51 @@ def test_get_unprocessed_energy_rejects_unknown_setting():
         match="ac_setting must be HeatingAcSetting or CoolingAcSetting",
     ):
         sut._get_unprocessed_energy(object(), object(), object(), object(), 6)
+
+def test_export_underfloor_output_preserves_filename_and_call_order(monkeypatch):
+    calls = []
+    setting = _setting(sut.HeatingAcSetting)
+    frame = SimpleNamespace(
+        export_to_csv=lambda filename: calls.append(("export", filename))
+    )
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "version_info",
+        lambda: calls.append(("version",)) or "v-test",
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_output_suffix",
+        lambda value: calls.append(("suffix", value)) or "_H",
+    )
+
+    sut._export_underfloor_output(
+        "case",
+        setting,
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
+        frame,
+    )
+
+    assert calls == [
+        ("version",),
+        ("suffix", setting),
+        ("export", "casev-test_H_output_uf.csv"),
+    ]
+
+
+def test_export_underfloor_output_does_nothing_when_disabled(monkeypatch):
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "version_info",
+        lambda: pytest.fail("version must not be requested"),
+    )
+    frame = SimpleNamespace(
+        export_to_csv=lambda filename: pytest.fail("CSV must not be exported")
+    )
+
+    sut._export_underfloor_output(
+        "case",
+        object(),
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
+        frame,
+    )
