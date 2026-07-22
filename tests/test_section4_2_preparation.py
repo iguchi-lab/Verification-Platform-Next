@@ -2550,3 +2550,29 @@ def test_prepare_local_ventilation_state_preserves_formula_63_order(monkeypatch)
     assert tuple(name for name, _ in events[4][2]) == (
         "V_vent_l_NR_d_t", "V_vent_l_OR_d_t", "V_vent_l_MR_d_t", "V_vent_l_d_t"
     )
+
+@pytest.mark.parametrize("direct", (True, False))
+def test_prepare_general_ventilation_state_preserves_formula_62_branch(monkeypatch, direct):
+    events = []
+    base = object()
+    adjusted = object()
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    monkeypatch.setattr(sut.dc, "get_V_vent_g_i", lambda *x: events.append(("base", x)) or base)
+    monkeypatch.setattr(sut, "rescale_V_vent_g_i", lambda *x: events.append(("scale", x)) or adjusted)
+    setting = SimpleNamespace(
+        input_V_hs_min=(sut.最低風量直接入力.入力する if direct else sut.最低風量直接入力.入力しない),
+        V_hs_min=500.0,
+    )
+    a_hcz, ratios = object(), object()
+    result = sut._prepare_general_ventilation_state(Frame(), setting, a_hcz, ratios)
+    assert result is (adjusted if direct else base)
+    assert events[0] == ("base", (a_hcz, ratios))
+    assert [e[0] for e in events] == (["base", "scale", "write"] if direct else ["base", "write"])
+    if direct:
+        assert events[1] == ("scale", (base, 500.0))
+    assert events[-1][1] == "V_vent_g_i"
+    assert events[-1][2] is result

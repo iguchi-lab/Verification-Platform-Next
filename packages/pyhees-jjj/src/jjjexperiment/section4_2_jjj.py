@@ -1574,6 +1574,15 @@ def _prepare_local_ventilation_state(df_output):
     )
     return V_vent_l_NR_d_t, V_vent_l_d_t, df_output
 
+def _prepare_general_ventilation_state(
+        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i):
+    """Calculate formula (62) while preserving the minimum-airflow branch."""
+    V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
+    if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
+        V_vent_g_i = rescale_V_vent_g_i(V_vent_g_i, v_min_input.V_hs_min)
+    df_output2['V_vent_g_i'] = V_vent_g_i
+    return V_vent_g_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1643,14 +1652,8 @@ def calc_Q_UT_A(
     )
 
     # (62)　全般換気量
-    if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:  # ダックタイピング
-        # 最低風量指定を満たすように調整
-        V_vent_g_i = rescale_V_vent_g_i(
-            dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i),  # 従来式
-            v_min_input.V_hs_min)
-    else:
-        V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)  # 従来式
-    df_output2['V_vent_g_i'] = V_vent_g_i
+    V_vent_g_i = _prepare_general_ventilation_state(
+        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i)
 
     # (61)　間仕切の熱貫流率
     U_prt = dc.get_U_prt()
