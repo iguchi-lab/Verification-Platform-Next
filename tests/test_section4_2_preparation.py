@@ -3722,3 +3722,12 @@ def test_room_to_underfloor_transfer_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("Q_hat_hs_d_t", "U_s_input", "A_s_ufac_i", "r_A_s_ufac",)
+
+
+def test_heat_source_outlet_requirements_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._HeatSourceOutletRequirementsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("X_hs_out_min_C_d_t", "X_req_d_t_i", "Theta_req_d_t_i",)

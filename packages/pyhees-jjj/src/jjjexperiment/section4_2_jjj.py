@@ -108,6 +108,12 @@ class _RoomToUnderfloorTransferResult(NamedTuple):
     r_A_s_ufac: object
 
 
+class _HeatSourceOutletRequirementsResult(NamedTuple):
+    X_hs_out_min_C_d_t: object
+    X_req_d_t_i: object
+    Theta_req_d_t_i: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -453,7 +459,7 @@ def _get_heat_source_outlet_requirements(
     Theta_req_d_t_i = dc.get_Theta_req_d_t_i(Theta_sur_d_t_i, Theta_star_HBR_d_t, V_dash_supply_d_t_i,
                         L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, region)
 
-    return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
+    return _HeatSourceOutletRequirementsResult(X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i)
 
 def _get_heat_source_outlet_humidity(
         X_NR_d_t: np.ndarray,
