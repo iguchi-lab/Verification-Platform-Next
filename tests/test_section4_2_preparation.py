@@ -727,3 +727,99 @@ def test_record_unprocessed_energy_output_preserves_direct_assignment():
     assert frame.events == [
         ("setitem", 0, "E_UT_H_d_t", energy),
     ]
+
+
+def test_heat_source_supply_airflow_before_vav_uses_cav_seasons(monkeypatch):
+    heating = np.zeros(24 * 365, dtype=bool)
+    cooling = np.zeros(24 * 365, dtype=bool)
+    mid = np.zeros(24 * 365, dtype=bool)
+    heating[0] = True
+    cooling[1] = True
+    mid[2] = True
+    monkeypatch.setattr(
+        sut.dc_a,
+        "get_season_array_d_t",
+        lambda region: (heating, cooling, mid),
+    )
+
+    result = sut._get_heat_source_supply_airflow_before_vav(
+        SimpleNamespace(type=object()),
+        SimpleNamespace(region=6),
+        SimpleNamespace(hs_CAV=True),
+        1200.0,
+        1500.0,
+        300.0,
+        100.0,
+        200.0,
+        object(),
+        object(),
+    )
+
+    np.testing.assert_array_equal(result[:3], [1200.0, 1500.0, 0.0])
+    np.testing.assert_array_equal(result[3:], np.zeros(24 * 365 - 3))
+
+
+@pytest.mark.parametrize(
+    ("capacities", "load_index", "cooling"),
+    (
+        ((100.0, None), 0, False),
+        ((None, 200.0), 1, True),
+    ),
+)
+def test_heat_source_supply_airflow_before_vav_preserves_2023_branch(
+    monkeypatch,
+    capacities,
+    load_index,
+    cooling,
+):
+    calls = []
+    loads = (object(), object())
+    expected = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_hs_supply_d_t_2023",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_heat_source_supply_airflow_before_vav(
+        SimpleNamespace(type=sut.計算モデル.RAC活用型全館空調_潜熱評価モデル),
+        SimpleNamespace(region=7),
+        SimpleNamespace(hs_CAV=False),
+        1200.0,
+        1500.0,
+        300.0,
+        *capacities,
+        *loads,
+    )
+
+    assert result is expected
+    assert calls == [(loads[load_index], 7, cooling)]
+
+
+def test_heat_source_supply_airflow_before_vav_preserves_standard_arguments(
+    monkeypatch,
+):
+    calls = []
+    load = object()
+    expected = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_hs_supply_d_t",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_heat_source_supply_airflow_before_vav(
+        SimpleNamespace(type=object()),
+        SimpleNamespace(region=5),
+        SimpleNamespace(hs_CAV=False),
+        0,
+        1800.0,
+        250.0,
+        100.0,
+        None,
+        load,
+        object(),
+    )
+
+    assert result is expected
+    assert calls == [(250.0, 0, None, 100.0, None, load, 5)]

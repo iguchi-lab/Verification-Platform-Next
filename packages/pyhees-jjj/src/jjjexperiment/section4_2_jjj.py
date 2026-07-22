@@ -201,6 +201,57 @@ def _prepare_underfloor_ground_response(
     return Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m
 
 
+def _get_heat_source_supply_airflow_before_vav(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        skin: OuterSkin,
+        V_hs_dsgn_H: float | None,
+        V_hs_dsgn_C: float | None,
+        V_hs_min: float,
+        Q_hs_rtd_H: float | None,
+        Q_hs_rtd_C: float | None,
+        Q_hat_hs_d_t: np.ndarray,
+        Q_hat_hs_CS_d_t: np.ndarray,
+    ) -> np.ndarray:
+    """Calculate formula (36) without changing its branch priority."""
+    # (36)　VAV 調整前の熱源機の風量
+    if skin.hs_CAV:
+        H, C, M = dc_a.get_season_array_d_t(house.region)
+        V_dash_hs_supply_d_t = np.zeros(24 * 365)
+        V_dash_hs_supply_d_t[H] = V_hs_dsgn_H or 0
+        V_dash_hs_supply_d_t[C] = V_hs_dsgn_C or 0
+        V_dash_hs_supply_d_t[M] = 0
+        return V_dash_hs_supply_d_t
+
+    if ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
+        # FIXME: 方式3が他方式と比較して大きくなる問題
+        match (Q_hs_rtd_H, Q_hs_rtd_C):
+            case (None, None):
+                raise Exception("どちらかのみを想定")
+            case (_, None):  # 暖房期(=q_hs_rtd_H) => 全熱負荷
+                return dc.get_V_dash_hs_supply_d_t_2023(
+                    Q_hat_hs_d_t, house.region, False
+                )
+            case (None, _):  # 冷房期(=q_hs_rtd_H) => 顕熱負荷のみ
+                return dc.get_V_dash_hs_supply_d_t_2023(
+                    Q_hat_hs_CS_d_t, house.region, True
+                )
+            case (_, _):
+                raise Exception("どちらかのみを想定")
+
+    updated_V_hs_dsgn_H = V_hs_dsgn_H or 0 if Q_hs_rtd_H is not None else None
+    updated_V_hs_dsgn_C = V_hs_dsgn_C or 0 if Q_hs_rtd_C is not None else None
+    return dc.get_V_dash_hs_supply_d_t(
+        V_hs_min,
+        updated_V_hs_dsgn_H,
+        updated_V_hs_dsgn_C,
+        Q_hs_rtd_H,
+        Q_hs_rtd_C,
+        Q_hat_hs_d_t,
+        house.region,
+    )
+
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -683,37 +734,19 @@ def calc_Q_UT_A(
     # 脱出条件:
     should_be_adjusted_Q_hat_hs_d_t = new_ufac.new_ufac_flg == 床下空調ロジック.変更する
     while True:
-        # (36)　VAV 調整前の熱源機の風量
-        if skin.hs_CAV:
-            H, C, M = dc_a.get_season_array_d_t(house.region)
-            V_dash_hs_supply_d_t = np.zeros(24 * 365)
-            V_dash_hs_supply_d_t[H] = V_hs_dsgn_H or 0
-            V_dash_hs_supply_d_t[C] = V_hs_dsgn_C or 0
-            V_dash_hs_supply_d_t[M] = 0
-        else:
-            if ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
-                # FIXME: 方式3が他方式と比較して大きくなる問題
-                match (Q_hs_rtd_H, Q_hs_rtd_C):
-                    case (None, None):
-                        raise Exception("どちらかのみを想定")
-                    case (_, None):  # 暖房期(=q_hs_rtd_H) => 全熱負荷
-                        V_dash_hs_supply_d_t = dc.get_V_dash_hs_supply_d_t_2023(Q_hat_hs_d_t, house.region, False)
-                    case (None, _):  # 冷房期(=q_hs_rtd_H) => 顕熱負荷のみ
-                        V_dash_hs_supply_d_t = dc.get_V_dash_hs_supply_d_t_2023(Q_hat_hs_CS_d_t, house.region, True)
-                    case (_, _):
-                        raise Exception("どちらかのみを想定")
-
-                df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
-            else:
-                updated_V_hs_dsgn_H = V_hs_dsgn_H or 0 if Q_hs_rtd_H is not None  \
-                        else None
-                updated_V_hs_dsgn_C = V_hs_dsgn_C or 0 if Q_hs_rtd_C is not None  \
-                    else None
-
-                V_dash_hs_supply_d_t = \
-                    dc.get_V_dash_hs_supply_d_t(V_hs_min, updated_V_hs_dsgn_H, updated_V_hs_dsgn_C, Q_hs_rtd_H, Q_hs_rtd_C, Q_hat_hs_d_t, house.region)
-                df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
-
+        V_dash_hs_supply_d_t = _get_heat_source_supply_airflow_before_vav(
+            ac_setting,
+            house,
+            skin,
+            V_hs_dsgn_H,
+            V_hs_dsgn_C,
+            V_hs_min,
+            Q_hs_rtd_H,
+            Q_hs_rtd_C,
+            Q_hat_hs_d_t,
+            Q_hat_hs_CS_d_t,
+        )
+        df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
         if ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
             # (45)　風量バランス
             r_supply_des_d_t_i = dc.get_r_supply_des_d_t_i_2023(house.region, load.L_CS_d_t_i, load.L_H_d_t_i)
