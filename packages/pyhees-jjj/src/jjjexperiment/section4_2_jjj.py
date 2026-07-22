@@ -1325,23 +1325,10 @@ def calc_Q_UT_A(
                 if (isFirst or not (H[t] or C[t]))  \
                 else Theta_NR_d_t[t-1]
 
-            (
-                X_hs_out_min_C_d_t,
-                X_req_d_t_i,
-                Theta_req_d_t_i,
-            ) = _get_heat_source_outlet_requirements(
-                X_star_hs_in_d_t,
-                Q_hs_max_CL_d_t,
-                V_dash_supply_d_t_i,
-                X_star_HBR_d_t,
-                L_star_CL_d_t_i,
-                Theta_sur_d_t_i,
-                Theta_star_HBR_d_t,
-                L_star_H_d_t_i,
-                L_star_CS_d_t_i,
-                l_duct_i,
-                house.region,
-            )
+            X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = _get_heat_source_outlet_requirements(
+                X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
+                L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
+                L_star_CS_d_t_i, l_duct_i, house.region)
             if skin.underfloor_air_conditioning_air_supply:
                 for i in range(2):  # i=0,1
                     Theta_uf_d_t, Theta_g_surf_d_t, *others  \
@@ -1369,58 +1356,18 @@ def calc_Q_UT_A(
             # 過剰熱量繰越 利用時には、初期化せず再利用する
 
             X_hs_out_d_t = _get_heat_source_outlet_humidity(
-                X_NR_d_t,
-                X_req_d_t_i,
-                V_dash_supply_d_t_i,
-                X_hs_out_min_C_d_t,
-                L_star_CL_d_t_i,
-                house.region,
-            )
-            (
-                Theta_hs_out_min_C_d_t,
-                Theta_hs_out_max_H_d_t,
-                Theta_hs_out_d_t,
-            ) = _get_heat_source_outlet_temperatures(
-                ac_setting,
-                house,
-                Theta_star_hs_in_d_t,
-                Q_hs_max_CS_d_t,
-                V_dash_supply_d_t_i,
-                Q_hs_max_H_d_t,
-                Theta_req_d_t_i,
-                L_star_H_d_t_i,
-                L_star_CS_d_t_i,
-                Theta_NR_d_t,
-            )
-            (
-                V_supply_d_t_i_before,
-                V_supply_d_t_i,
-            ) = _get_capped_supply_airflows(
-                v_supply_cap_dto,
-                ac_setting,
-                house,
-                L_star_H_d_t_i,
-                L_star_CS_d_t_i,
-                Theta_sur_d_t_i,
-                l_duct_i,
-                Theta_star_HBR_d_t,
-                V_vent_g_i,
-                V_dash_supply_d_t_i,
-                Theta_hs_out_d_t,
-                V_hs_dsgn_H,
-                V_hs_dsgn_C,
-                print_exec=False,
-            )
+                X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
+                L_star_CL_d_t_i, house.region)
+            Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t = _get_heat_source_outlet_temperatures(
+                ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i,
+                Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+            V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+                v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i, L_star_CS_d_t_i,
+                Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
+                Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
             Theta_supply_d_t_i = _get_supply_air_temperatures(
-                house,
-                Theta_sur_d_t_i,
-                Theta_hs_out_d_t,
-                Theta_star_HBR_d_t,
-                l_duct_i,
-                V_supply_d_t_i,
-                L_star_H_d_t_i,
-                L_star_CS_d_t_i,
-            )
+                house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
+                V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
             if skin.underfloor_air_conditioning_air_supply:
                 for i in range(2):  # i=0,1
                     Theta_uf_d_t, Theta_g_surf_d_t, *others  \
@@ -1603,23 +1550,10 @@ def calc_Q_UT_A(
         # (19)　負荷バランス時の熱源機の入口における空気温度
         Theta_star_hs_in_d_t = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
 
-        (
-            X_hs_out_min_C_d_t,
-            X_req_d_t_i,
-            Theta_req_d_t_i,
-        ) = _get_heat_source_outlet_requirements(
-            X_star_hs_in_d_t,
-            Q_hs_max_CL_d_t,
-            V_dash_supply_d_t_i,
-            X_star_HBR_d_t,
-            L_star_CL_d_t_i,
-            Theta_sur_d_t_i,
-            Theta_star_HBR_d_t,
-            L_star_H_d_t_i,
-            L_star_CS_d_t_i,
-            l_duct_i,
-            house.region,
-        )
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = _get_heat_source_outlet_requirements(
+            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
+            L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
+            L_star_CS_d_t_i, l_duct_i, house.region)
         # NOTE: 床下空調を使用する(旧・新 両ロジックとも) 対象居室のみ損失分を補正する
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
             # 期待される床下温度を事前に計算(本計算は後で行う)
@@ -1696,61 +1630,21 @@ def calc_Q_UT_A(
             assert np.shape(Theta_req_d_t_i)==(5, 8760), "想定外の行列数です"
 
         X_hs_out_d_t = _get_heat_source_outlet_humidity(
-            X_NR_d_t,
-            X_req_d_t_i,
-            V_dash_supply_d_t_i,
-            X_hs_out_min_C_d_t,
-            L_star_CL_d_t_i,
-            house.region,
-        )
+            X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
+            L_star_CL_d_t_i, house.region)
         # 式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
         Theta_NR_d_t = np.zeros(24 * 365)
 
-        (
-            Theta_hs_out_min_C_d_t,
-            Theta_hs_out_max_H_d_t,
-            Theta_hs_out_d_t,
-        ) = _get_heat_source_outlet_temperatures(
-            ac_setting,
-            house,
-            Theta_star_hs_in_d_t,
-            Q_hs_max_CS_d_t,
-            V_dash_supply_d_t_i,
-            Q_hs_max_H_d_t,
-            Theta_req_d_t_i,
-            L_star_H_d_t_i,
-            L_star_CS_d_t_i,
-            Theta_NR_d_t,
-        )
-        (
-            V_supply_d_t_i_before,
-            V_supply_d_t_i,
-        ) = _get_capped_supply_airflows(
-            v_supply_cap_dto,
-            ac_setting,
-            house,
-            L_star_H_d_t_i,
-            L_star_CS_d_t_i,
-            Theta_sur_d_t_i,
-            l_duct_i,
-            Theta_star_HBR_d_t,
-            V_vent_g_i,
-            V_dash_supply_d_t_i,
-            Theta_hs_out_d_t,
-            V_hs_dsgn_H,
-            V_hs_dsgn_C,
-            print_exec=True,
-        )
+        Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t = _get_heat_source_outlet_temperatures(
+            ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i,
+            Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+        V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+            v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i, L_star_CS_d_t_i,
+            Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
+            Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
         Theta_supply_d_t_i = _get_supply_air_temperatures(
-            house,
-            Theta_sur_d_t_i,
-            Theta_hs_out_d_t,
-            Theta_star_HBR_d_t,
-            l_duct_i,
-            V_supply_d_t_i,
-            L_star_H_d_t_i,
-            L_star_CS_d_t_i,
-        )
+            house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
+            V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
         _logger.NDdebug("Theta_supply_d_t_1", Theta_supply_d_t_i[0])
         _logger.NDdebug("Theta_supply_d_t_2", Theta_supply_d_t_i[1])
         _logger.NDdebug("Theta_supply_d_t_3", Theta_supply_d_t_i[2])
