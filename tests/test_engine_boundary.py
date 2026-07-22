@@ -6,8 +6,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 PYHEES_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "pyhees"
 JJJEXPERIMENT_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "jjjexperiment"
 JJJEXPERIMENT_MAIN = JJJEXPERIMENT_SOURCE / "main.py"
+ENGINE_TEST_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "tests"
 DENCHU_TEST_SOURCE = (
-    REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "tests" / "denchu"
+    ENGINE_TEST_SOURCE / "denchu"
 )
 
 # Temporary migration allowlist. Removing an entry is encouraged; adding one is not.
@@ -53,6 +54,16 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
+
+EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS = {
+    "latent_load/test_latent_load_integration.py",
+    "test_dicontainer.py",
+    "test_integration_execution.py",
+    "test_not_broken_type1.py",
+    "test_not_broken_type2.py",
+    "underfloor_ac/test_4_2_f46_f48.py",
+    "v_min_input/test_v_min_input_integration.py",
+}
 
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
@@ -194,4 +205,25 @@ def test_denchu_test_wildcard_imports_match_migration_allowlist():
         "EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS in the same refactoring commit.\n"
         f"expected={EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS}\n"
         f"actual={wildcard_imports}"
+    )
+
+
+def test_options_test_wildcard_imports_match_migration_allowlist():
+    wildcard_importers = set()
+    for path in sorted(ENGINE_TEST_SOURCE.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "jjjexperiment.inputs.options"
+            and any(alias.name == "*" for alias in node.names)
+            for node in ast.walk(tree)
+        ):
+            wildcard_importers.add(path.relative_to(ENGINE_TEST_SOURCE).as_posix())
+
+    assert wildcard_importers == EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS, (
+        "Engine tests must import option Enums explicitly. Do not add a wildcard "
+        "import. If an existing wildcard import was removed, reduce "
+        "EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS in the same refactoring commit.\n"
+        f"expected={EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS}\n"
+        f"actual={wildcard_importers}"
     )
