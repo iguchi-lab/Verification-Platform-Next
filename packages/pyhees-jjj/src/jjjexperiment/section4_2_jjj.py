@@ -1535,6 +1535,18 @@ def _prepare_occupancy_state(df_output, house, A_NR):
     df_output['n_p_d_t'] = n_p_d_t
     return n_p_d_t
 
+def _prepare_internal_moisture_state(df_output, house, A_NR):
+    """Calculate formula (65) values and preserve direct output writes."""
+    w_gen_NR_d_t = dc.calc_w_gen_NR_d_t(A_NR)
+    df_output['w_gen_NR_d_t'] = w_gen_NR_d_t
+    w_gen_OR_d_t = dc.calc_w_gen_OR_d_t(house.A_OR)
+    df_output['w_gen_OR_d_t'] = w_gen_OR_d_t
+    w_gen_MR_d_t = dc.calc_w_gen_MR_d_t(house.A_MR)
+    df_output['w_gen_MR_d_t'] = w_gen_MR_d_t
+    w_gen_d_t = dc.get_w_gen_d_t(w_gen_MR_d_t, w_gen_OR_d_t, w_gen_NR_d_t)
+    df_output['w_gen_d_t'] = w_gen_d_t
+    return w_gen_d_t
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1588,17 +1600,7 @@ def calc_Q_UT_A(
     df_output3['q_p_CL'] = [q_p_CL]
 
     # (65d)　非居室の内部発湿
-    w_gen_NR_d_t = dc.calc_w_gen_NR_d_t(A_NR)
-    df_output['w_gen_NR_d_t'] = w_gen_NR_d_t
-    # (65c)　その他居室の内部発湿
-    w_gen_OR_d_t = dc.calc_w_gen_OR_d_t(house.A_OR)
-    df_output['w_gen_OR_d_t'] = w_gen_OR_d_t
-    # (65b)　主たる居室の内部発湿
-    w_gen_MR_d_t = dc.calc_w_gen_MR_d_t(house.A_MR)
-    df_output['w_gen_MR_d_t'] = w_gen_MR_d_t
-    # (65a)　内部発湿
-    w_gen_d_t = dc.get_w_gen_d_t(w_gen_MR_d_t, w_gen_OR_d_t, w_gen_NR_d_t)
-    df_output['w_gen_d_t'] = w_gen_d_t
+    w_gen_d_t = _prepare_internal_moisture_state(df_output, house, A_NR)
 
     # (64d)　非居室の内部発熱
     q_gen_NR_d_t = dc.calc_q_gen_NR_d_t(A_NR)
