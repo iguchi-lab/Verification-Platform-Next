@@ -3134,3 +3134,320 @@ def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mo
     assert [e[0] for e in events] == expected
     assert result[:6] == (x_out, *temperatures, *airflows)
     assert result[6] == (base_supply if mode == "none" else adjusted_supply)
+
+
+@pytest.mark.parametrize("standard", (True, False))
+def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, standard):
+    events = []
+    model = (sut.計算モデル.ダクト式セントラル空調機 if standard
+             else sut.計算モデル.電中研モデル)
+    setting = SimpleNamespace(type=model)
+    inputs = [object() for _ in range(8)]
+    standard_loads = tuple(object() for _ in range(6))
+    standard_caps = tuple(object() for _ in range(5))
+    heat_caps = tuple(object() for _ in range(3))
+    cool_caps = tuple(object() for _ in range(10))
+    monkeypatch.setattr(
+        sut, "_get_balanced_cooling_loads",
+        lambda *a: events.append(("loads", a)) or standard_loads)
+    monkeypatch.setattr(
+        sut, "_get_standard_heat_source_capacity_limits",
+        lambda *a: events.append(("standard", a)) or standard_caps)
+    monkeypatch.setattr(
+        sut.dc, "get_C_df_H_d_t",
+        lambda *a: events.append(("defrost", a)) or "defrost")
+    monkeypatch.setattr(
+        sut, "_get_rac_heating_capacity",
+        lambda *a, **k: events.append(("rac_heat", a, k)) or heat_caps)
+    monkeypatch.setattr(
+        sut, "_get_rac_cooling_capacity",
+        lambda *a, **k: events.append(("rac_cool", a, k)) or cool_caps)
+
+    result = sut._prepare_carryover_capacity_state(setting, *inputs)
+
+    expected = (["loads", "standard"] if standard
+                else ["defrost", "rac_heat", "rac_cool"])
+    assert [event[0] for event in events] == expected
+    assert result[:4] == (
+        (standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
+        if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
+
+
+@pytest.mark.parametrize(
+    ("t", "is_first", "heating", "cooling", "expected"),
+    ((0, True, True, False, 10.0), (1, False, False, False, 20.0),
+     (1, False, True, False, 31.0)),
+)
+def test_prepare_carryover_heat_source_inlet_state_preserves_formula_20_19(
+        monkeypatch, t, is_first, heating, cooling, expected):
+    events = []
+    inlet_humidity = object()
+    star_humidity = object()
+    star_temperature = object()
+    h = np.array([False, heating])
+    c = np.array([False, cooling])
+    actual_non_room = np.array([31.0, 32.0])
+    inlet_temperature = np.zeros(2)
+    monkeypatch.setattr(
+        sut.dc, "get_X_star_hs_in_d_t",
+        lambda value: events.append(("humidity", value)) or inlet_humidity)
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_star_hs_in_d_t",
+        lambda value: events.append(("temperature", value))
+        or np.array([10.0, 20.0]))
+
+    result = sut._prepare_carryover_heat_source_inlet_state(
+        t, is_first, h, c, star_humidity, star_temperature,
+        actual_non_room, inlet_temperature)
+
+    assert result == (inlet_humidity, inlet_temperature)
+    assert inlet_temperature[t] == expected
+    assert events == [
+        ("humidity", star_humidity), ("temperature", star_temperature)]
+
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_carryover_outlet_requirements_preserves_first_pass(
+        monkeypatch, enabled):
+    events = []
+    humidity_min, humidity_req, temperature_req = (
+        object(), object(), object())
+    adjusted = object()
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(
+        underfloor_air_conditioning_air_supply=enabled,
+        YUCACO_r_A_ufvnt=0.25)
+    inputs = [object() for _ in range(13)]
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_requirements",
+        lambda *a: events.append(("requirements", a))
+        or (humidity_min, humidity_req, temperature_req))
+    monkeypatch.setattr(
+        sut, "_adjust_legacy_underfloor_requested_temperatures",
+        lambda *a: events.append(("adjust", a)) or adjusted)
+
+    result = sut._prepare_carryover_outlet_requirements(
+        inputs[0], house, skin, inputs[1], *inputs[2:])
+
+    assert result == (
+        humidity_min, humidity_req, adjusted if enabled else temperature_req)
+    assert [event[0] for event in events] == (
+        ["requirements", "adjust"] if enabled else ["requirements"])
+    if enabled:
+        assert events[1][1][4] == skin.YUCACO_r_A_ufvnt
+
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_carryover_supply_state_preserves_second_pass(
+        monkeypatch, enabled):
+    events = []
+    outlet_humidity = object()
+    outlet_temperatures = tuple(object() for _ in range(3))
+    airflows = tuple(object() for _ in range(2))
+    supply_temperature = object()
+    adjusted = object()
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(underfloor_air_conditioning_air_supply=enabled)
+    inputs = [object() for _ in range(22)]
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_humidity",
+        lambda *a: events.append(("humidity", a)) or outlet_humidity)
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_temperatures",
+        lambda *a: events.append(("temperatures", a)) or outlet_temperatures)
+    monkeypatch.setattr(
+        sut, "_get_capped_supply_airflows",
+        lambda *a, **k: events.append(("airflows", a, k)) or airflows)
+    monkeypatch.setattr(
+        sut, "_get_supply_air_temperatures",
+        lambda *a: events.append(("supply", a)) or supply_temperature)
+    monkeypatch.setattr(
+        sut, "_adjust_carryover_underfloor_supply_temperatures",
+        lambda *a: events.append(("adjust", a)) or adjusted)
+
+    result = sut._prepare_carryover_supply_state(
+        inputs[0], inputs[1], house, skin, inputs[2], *inputs[3:])
+
+    assert result == (
+        outlet_humidity, *outlet_temperatures, *airflows,
+        adjusted if enabled else supply_temperature)
+    assert [event[0] for event in events] == (
+        ["humidity", "temperatures", "airflows", "supply", "adjust"]
+        if enabled else ["humidity", "temperatures", "airflows", "supply"])
+    assert events[2][2] == {"print_exec": False}
+
+
+def test_update_carryover_actual_temperature_state_preserves_formula_order(
+        monkeypatch):
+    events = []
+    room_state = np.zeros((5, 2))
+    non_room_state = np.zeros(2)
+    room_hour = np.full((5, 1), 7.0)
+    inputs = [object() for _ in range(16)]
+    monkeypatch.setattr(
+        sut, "_get_actual_room_temperatures_at_hour",
+        lambda *a: events.append(("room", a)) or room_hour)
+    monkeypatch.setattr(
+        sut, "_get_actual_non_room_temperature_at_hour",
+        lambda *a: events.append(("non_room", a)) or 8.0)
+
+    result = sut._update_carryover_actual_temperature_state(
+        1, False, *inputs[:12], room_state,
+        *inputs[12:], non_room_state)
+
+    assert result[0] is room_state
+    assert result[1] is non_room_state
+    assert np.all(room_state[:, 1:2] == room_hour)
+    assert non_room_state[1] == 8.0
+    assert [event[0] for event in events] == ["room", "non_room"]
+    assert events[1][1][7] is room_state
+
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_no_carryover_actual_temperature_state_preserves_formula_order(
+        monkeypatch, enabled):
+    events = []
+    room = object()
+    non_room = object()
+    flag = sut.床下空調ロジック.変更する if enabled else object()
+    new_ufac = SimpleNamespace(new_ufac_flg=flag)
+    inputs = [object() for _ in range(15)]
+    theta_uf = object()
+    non_room_ratio = object()
+    monkeypatch.setattr(
+        sut, "_get_actual_room_temperatures_without_carryover",
+        lambda *a: events.append(("room", a)) or room)
+    monkeypatch.setattr(
+        sut, "_get_actual_non_room_temperatures_without_carryover",
+        lambda *a: events.append(("non_room", a)) or non_room)
+
+    result = sut._prepare_no_carryover_actual_temperature_state(
+        inputs[0], inputs[1], new_ufac, *inputs[2:11], theta_uf,
+        *inputs[11:], non_room_ratio)
+
+    assert result == (room, non_room)
+    assert [event[0] for event in events] == ["room", "non_room"]
+    assert events[0][1][-1] is (theta_uf if enabled else None)
+    assert events[1][1][-2] is (theta_uf if enabled else None)
+    assert events[1][1][-1] is (non_room_ratio if enabled else None)
+
+
+def test_log_actual_temperature_state_preserves_diagnostic_order(monkeypatch):
+    events = []
+    room = [object() for _ in range(5)]
+    non_room = object()
+    monkeypatch.setattr(
+        sut._logger, "NDdebug",
+        lambda name, value: events.append((name, value)))
+
+    sut._log_actual_temperature_state(room, non_room)
+
+    assert events == [
+        ("Theta_HBR_d_t_1", room[0]),
+        ("Theta_HBR_d_t_2", room[1]),
+        ("Theta_HBR_d_t_3", room[2]),
+        ("Theta_HBR_d_t_4", room[3]),
+        ("Theta_HBR_d_t_5", room[4]),
+        ("Theta_NR_d_t", non_room),
+    ]
+
+
+@pytest.mark.parametrize(("mode", "rated", "suffix"), (
+    ("disabled", (object(), None), None),
+    ("heating", (object(), None), "_H_carryover_output.csv"),
+    ("cooling", (None, object()), "_C_carryover_output.csv"),
+))
+def test_export_carryover_diagnostics_preserves_columns_and_filename(
+        monkeypatch, mode, rated, suffix):
+    events = []
+
+    class Frame:
+        def assign(self, **values):
+            events.append(("assign", tuple(values), values))
+            return self
+
+        def to_csv(self, path, **kwargs):
+            events.append(("csv", path, kwargs))
+
+    enabled = sut.過剰熱量繰越計算.行う
+    carryover = SimpleNamespace(
+        carry_over_heat=enabled if mode != "disabled" else object())
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *a: rated[0])
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *a: rated[1])
+    monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_version")
+    values = [object() for _ in range(5)]
+
+    sut._export_carryover_diagnostics(
+        "case", object(), object(), carryover, Frame(), values)
+
+    if mode == "disabled":
+        assert events == []
+    else:
+        assert events[0][1] == tuple(
+            f"carryovers_i_{i}" for i in range(1, 6))
+        assert events[1] == (
+            "csv", "case_version" + suffix, {"encoding": "cp932"})
+
+
+def test_record_capacity_state_outputs_preserves_frame_generations_and_order():
+    events = []
+
+    class Frame:
+        def __init__(self, name):
+            self.name = name
+
+        def assign(self, **values):
+            events.append((self.name, "assign", tuple(values), values))
+            return self
+
+        def __setitem__(self, key, value):
+            events.append((self.name, "setitem", key, value))
+
+    output = Frame("output")
+    output3 = Frame("output3")
+    values = [object() for _ in range(17)]
+
+    result = sut._record_capacity_state_outputs(output, output3, *values)
+
+    assert result == (output, output3)
+    assert [(event[0], event[1]) for event in events] == [
+        ("output", "assign"),
+        ("output3", "assign"),
+        ("output", "setitem"),
+        ("output", "assign"),
+    ]
+    assert events[0][2] == (
+        "L_star_CL_d_t", "L_star_CS_d_t", "L_star_dash_CL_d_t",
+        "L_star_dash_C_d_t", "C_df_H_d_t", "Q_r_max_H_d_t",
+        "Q_r_max_C_d_t", "L_max_CL_d_t", "L_dash_CL_d_t",
+        "L_dash_C_d_t")
+    assert events[1][2] == ("q_r_max_H", "q_r_max_C", "SHF_L_min_c")
+    assert events[1][3]["q_r_max_H"] is None
+    assert events[3][2] == (
+        "Q_hs_max_C_d_t", "Q_hs_max_CL_d_t",
+        "Q_hs_max_CS_d_t", "Q_hs_max_H_d_t")
+
+
+def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
+        monkeypatch):
+    events = []
+    original = object()
+    outlet_frame = object()
+    supply_frame = object()
+    inputs = [object() for _ in range(14)]
+    monkeypatch.setattr(
+        sut, "_record_heat_source_outlet_outputs",
+        lambda *a: events.append(("outlet", a)) or outlet_frame)
+    monkeypatch.setattr(
+        sut, "_record_supply_state_outputs",
+        lambda *a: events.append(("supply", a)) or supply_frame)
+
+    result = sut._record_common_outlet_and_supply_outputs(
+        original, *inputs)
+
+    assert result is supply_frame
+    assert [event[0] for event in events] == ["outlet", "supply"]
+    assert events[0][1][0] is original
+    assert events[1][1][0] is outlet_frame
+    assert events[0][1][1:] == tuple(inputs[:9])
+    assert events[1][1][1:] == tuple(inputs[9:])

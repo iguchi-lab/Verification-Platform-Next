@@ -2074,6 +2074,264 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _record_common_outlet_and_supply_outputs(
+        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
+        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+        Theta_HBR_d_t_i, Theta_NR_d_t):
+    """Record common heat-source outlet then supply state outputs."""
+    df_output = _record_heat_source_outlet_outputs(
+        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t)
+    return _record_supply_state_outputs(
+        df_output, V_supply_d_t_i_before, V_supply_d_t_i,
+        Theta_supply_d_t_i, Theta_HBR_d_t_i, Theta_NR_d_t)
+
+
+def _record_capacity_state_outputs(
+        df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
+        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
+        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
+        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_C, SHF_L_min_c,
+        SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t, Q_hs_max_H_d_t):
+    """Record maximum capacity outputs without changing frame generations."""
+    df_output = df_output.assign(
+        L_star_CL_d_t=L_star_CL_d_t,
+        L_star_CS_d_t=L_star_CS_d_t,
+        L_star_dash_CL_d_t=L_star_dash_CL_d_t,
+        L_star_dash_C_d_t=L_star_dash_C_d_t,
+        C_df_H_d_t=C_df_H_d_t,
+        Q_r_max_H_d_t=Q_r_max_H_d_t,
+        Q_r_max_C_d_t=Q_r_max_C_d_t,
+        L_max_CL_d_t=L_max_CL_d_t,
+        L_dash_CL_d_t=L_dash_CL_d_t,
+        L_dash_C_d_t=L_dash_C_d_t,
+    )
+    df_output3 = df_output3.assign(
+        # Preserve the legacy misspelled locals check: this column was None.
+        q_r_max_H=None,
+        q_r_max_C=q_r_max_C,
+        SHF_L_min_c=SHF_L_min_c,
+    )
+    df_output['SHF_dash_d_t'] = SHF_dash_d_t
+    df_output = df_output.assign(
+        Q_hs_max_C_d_t=Q_hs_max_C_d_t,
+        Q_hs_max_CL_d_t=Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t=Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t=Q_hs_max_H_d_t,
+    )
+    return df_output, df_output3
+
+
+def _export_carryover_diagnostics(
+        case_name, ac_setting, house, carryover_heat_dto,
+        df_carryover_output, carryovers):
+    """Export carryover diagnostics with the legacy mode-specific filename."""
+    if carryover_heat_dto.carry_over_heat != 過剰熱量繰越計算.行う:
+        return
+    df_carryover_output = df_carryover_output.assign(
+        carryovers_i_1=carryovers[0],
+        carryovers_i_2=carryovers[1],
+        carryovers_i_3=carryovers[2],
+        carryovers_i_4=carryovers[3],
+        carryovers_i_5=carryovers[4],
+    )
+    match (_get_q_hs_rtd_H(ac_setting, house),
+           _get_q_hs_rtd_C(ac_setting, house)):
+        case (None, None):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+        case (_, None):
+            df_carryover_output.to_csv(
+                case_name + jjj_consts.version_info()
+                + '_H_carryover_output.csv',
+                encoding='cp932')
+        case (None, _):
+            df_carryover_output.to_csv(
+                case_name + jjj_consts.version_info()
+                + '_C_carryover_output.csv',
+                encoding='cp932')
+        case (_, _):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+
+
+def _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t):
+    """Preserve room then non-room diagnostic write order."""
+    for i in range(5):
+        _logger.NDdebug(f"Theta_HBR_d_t_{i + 1}", Theta_HBR_d_t_i[i])
+    _logger.NDdebug("Theta_NR_d_t", Theta_NR_d_t)
+
+
+def _prepare_no_carryover_actual_temperature_state(
+        house, skin, new_ufac, climate, Theta_star_HBR_d_t,
+        V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_uf_d_t,
+        Theta_star_NR_d_t, A_NR, V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i, r_A_NR_uf_1F_excl_bath):
+    """Calculate no-carryover formulas (46) and (48) in source order."""
+    Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(
+        house, skin, new_ufac, climate, Theta_star_HBR_d_t,
+        V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i,
+        Theta_uf_d_t
+        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
+    Theta_NR_d_t = _get_actual_non_room_temperatures_without_carryover(
+        skin, new_ufac, Theta_star_NR_d_t, Theta_star_HBR_d_t,
+        Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i, V_supply_d_t_i, U_prt, A_prt_i,
+        Theta_uf_d_t
+        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None,
+        r_A_NR_uf_1F_excl_bath
+        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
+    return Theta_HBR_d_t_i, Theta_NR_d_t
+
+
+def _update_carryover_actual_temperature_state(
+        t, isFirst, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
+        Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i,
+        Theta_star_NR_d_t, A_NR, V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i, Theta_NR_d_t):
+    """Update formulas (46) and (48) for one carryover hour."""
+    Theta_HBR_d_t_i[:, t:t + 1] = _get_actual_room_temperatures_at_hour(
+        t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
+        Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i)
+    Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
+        t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
+        Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+        V_supply_d_t_i, U_prt, A_prt_i, Q, Theta_NR_d_t)
+    return Theta_HBR_d_t_i, Theta_NR_d_t
+
+
+def _prepare_carryover_supply_state(
+        v_supply_cap_dto, ac_setting, house, skin, load, X_NR_d_t,
+        X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
+        L_star_CL_d_t_i, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i,
+        L_star_CS_d_t_i, Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
+        Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C,
+        Theta_ex_d_t):
+    """Prepare carryover outlet and supply state with legacy second pass."""
+    X_hs_out_d_t = _get_heat_source_outlet_humidity(
+        X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
+        X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
+    (
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+    ) = _get_heat_source_outlet_temperatures(
+        ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
+        V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+    V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+        v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
+        L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i,
+        Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
+        Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
+    Theta_supply_d_t_i = _get_supply_air_temperatures(
+        house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
+        l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
+    if skin.underfloor_air_conditioning_air_supply:
+        Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
+            ac_setting, house, skin, load, Theta_supply_d_t_i,
+            Theta_ex_d_t, V_dash_supply_d_t_i)
+    return (
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
+        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+    )
+
+
+def _prepare_carryover_outlet_requirements(
+        ac_setting, house, skin, load, X_star_hs_in_d_t,
+        Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
+        L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
+        L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, Theta_ex_d_t):
+    """Prepare carryover outlet requirements and legacy first floor pass."""
+    X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
+        _get_heat_source_outlet_requirements(
+            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+            X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+            Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+            l_duct_i, house.region)
+    if skin.underfloor_air_conditioning_air_supply:
+        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
+            ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
+            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+    return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
+
+
+def _prepare_carryover_heat_source_inlet_state(
+        t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
+        Theta_NR_d_t, Theta_star_hs_in_d_t):
+    """Calculate formulas (20) and (19) for one carryover hour."""
+    X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
+    balanced_inlet = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
+    Theta_star_hs_in_d_t[t] = (
+        balanced_inlet[t]
+        if (isFirst or not (H[t] or C[t]))
+        else Theta_NR_d_t[t - 1]
+    )
+    return X_star_hs_in_d_t, Theta_star_hs_in_d_t
+
+
+def _prepare_carryover_capacity_state(
+        ac_setting, house, heat_CRAC, cool_CRAC, load,
+        Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i):
+    """Prepare per-hour capacity limits without changing model evaluation."""
+    L_star_CL_d_t = L_star_CS_d_t = None
+    L_star_dash_CL_d_t = L_star_dash_C_d_t = None
+    Q_r_max_H_d_t = Q_r_max_C_d_t = None
+    L_max_CL_d_t = L_dash_CL_d_t = L_dash_C_d_t = None
+    q_r_max_H = q_r_max_C = SHF_L_min_c = None
+    if ac_setting.type in [
+            計算モデル.ダクト式セントラル空調機,
+            計算モデル.RAC活用型全館空調_潜熱評価モデル]:
+        (
+            L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
+            L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
+        ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
+        (
+            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+            C_df_H_d_t, Q_hs_max_H_d_t,
+        ) = _get_standard_heat_source_capacity_limits(
+            ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
+            L_star_dash_CL_d_t,
+            lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t))
+    elif ac_setting.type in [
+            計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+            計算モデル.電中研モデル]:
+        C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
+        q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+            heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
+            log_intermediates=False)
+        Q_hs_max_H_d_t = Q_max_H_d_t
+        (
+            q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
+            L_max_CL_d_t, L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t,
+            Q_max_CS_d_t, Q_max_CL_d_t,
+        ) = _get_rac_cooling_capacity(
+            cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
+        Q_hs_max_C_d_t = Q_max_C_d_t
+        Q_hs_max_CL_d_t = Q_max_CL_d_t
+        Q_hs_max_CS_d_t = Q_max_CS_d_t
+    else:
+        raise Exception('設備機器の種類の入力が不正です。')
+    return (
+        Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
+        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
+        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
+        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
+        SHF_L_min_c, SHF_dash_d_t,
+    )
+
+
 def _log_supply_temperatures(Theta_supply_d_t_i):
     """Preserve the five diagnostic writes around underfloor adjustment."""
     for i in range(5):
@@ -2295,94 +2553,62 @@ def calc_Q_UT_A(
                 L_star_CS_d_t_i[:, t:t+1],
             ) = _get_balanced_loads_at_hour(
                 t, H, C, load, Q_star_trs_prt_d_t_i, carryover)
-            ####################################################################################################################
-            if ac_setting.type in [
-                    計算モデル.ダクト式セントラル空調機,
-                    計算モデル.RAC活用型全館空調_潜熱評価モデル
-                ]:
-                (
-                    L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
-                    L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
-                ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
-                (
-                    Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-                    C_df_H_d_t, Q_hs_max_H_d_t,
-                ) = _get_standard_heat_source_capacity_limits(
-                    ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t, L_star_dash_CL_d_t,
-                    lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t))
-            elif ac_setting.type in [
-                    計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
-                    計算モデル.電中研モデル
-                ]:
-                # (24)　デフロストに関する暖房出力補正係数
-                C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-                q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
-                    heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=False)
-                Q_hs_max_H_d_t = Q_max_H_d_t
-                (
-                    q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c, L_max_CL_d_t,
-                    L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t, Q_max_CS_d_t, Q_max_CL_d_t,
-                ) = _get_rac_cooling_capacity(cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
-                Q_hs_max_C_d_t = Q_max_C_d_t
-                Q_hs_max_CL_d_t = Q_max_CL_d_t
-                Q_hs_max_CS_d_t = Q_max_CS_d_t
-            else:
-                raise Exception('設備機器の種類の入力が不正です。')
-            ####################################################################################################################
+            (
+                Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+                Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
+                L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
+                Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
+                L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
+                SHF_L_min_c, SHF_dash_d_t,
+            ) = _prepare_carryover_capacity_state(
+                ac_setting, house, heat_CRAC, cool_CRAC, load,
+                Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
 
-            # (20)　負荷バランス時の熱源機の入口における絶対湿度
-            X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
+            # (20), (19)　負荷バランス時の熱源機入口状態
+            X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
+                _prepare_carryover_heat_source_inlet_state(
+                    t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
+                    Theta_NR_d_t, Theta_star_hs_in_d_t)
 
-            # (19)　負荷バランス時の熱源機の入口における空気温度
-            # 前時刻の非居室の温度を熱源入口温度として使用して負荷を下げる
-            Theta_star_hs_in_d_t[t] = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)[t] \
-                if (isFirst or not (H[t] or C[t]))  \
-                else Theta_NR_d_t[t-1]
-
-            X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = _get_heat_source_outlet_requirements(
-                X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
-                L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
-                L_star_CS_d_t_i, l_duct_i, house.region)
-            if skin.underfloor_air_conditioning_air_supply:
-                # Carryover heat, first pass: preserve the legacy correction formula.
-                Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
-                    ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
-                    Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+            X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
+                _prepare_carryover_outlet_requirements(
+                    ac_setting, house, skin, load, X_star_hs_in_d_t,
+                    Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
+                    L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
+                    L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
+                    Theta_ex_d_t)
 
             # NOTE: 過剰熱量繰越 未利用の場合では、式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
             # Theta_NR_d_t = np.zeros(24 * 365)
             # 過剰熱量繰越 利用時には、初期化せず再利用する
 
-            X_hs_out_d_t = _get_heat_source_outlet_humidity(
-                X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
-                L_star_CL_d_t_i, house.region)
-            Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t = _get_heat_source_outlet_temperatures(
-                ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i,
-                Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
-            V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
-                v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i, L_star_CS_d_t_i,
-                Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
-                Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
-            Theta_supply_d_t_i = _get_supply_air_temperatures(
-                house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
-                V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
-            if skin.underfloor_air_conditioning_air_supply:
-                # Carryover heat, second pass: retain its original clipping behavior.
-                Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
-                    ac_setting, house, skin, load, Theta_supply_d_t_i,
-                    Theta_ex_d_t, V_dash_supply_d_t_i)
+            (
+                X_hs_out_d_t,
+                Theta_hs_out_min_C_d_t,
+                Theta_hs_out_max_H_d_t,
+                Theta_hs_out_d_t,
+                V_supply_d_t_i_before,
+                V_supply_d_t_i,
+                Theta_supply_d_t_i,
+            ) = _prepare_carryover_supply_state(
+                v_supply_cap_dto, ac_setting, house, skin, load, X_NR_d_t,
+                X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
+                L_star_CL_d_t_i, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
+                Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i,
+                L_star_CS_d_t_i, Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
+                Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C,
+                Theta_ex_d_t)
 
             # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
             # 0 の扱いは全てのメソッドで考慮されていること
 
-            Theta_HBR_d_t_i[:, t:t+1] = _get_actual_room_temperatures_at_hour(
-                t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i, Theta_supply_d_t_i,
-                U_prt, A_prt_i, skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
-                Theta_HBR_d_t_i)
-            Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
-                t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
-                Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-                V_supply_d_t_i, U_prt, A_prt_i, skin.Q, Theta_NR_d_t)
+            Theta_HBR_d_t_i, Theta_NR_d_t = \
+                _update_carryover_actual_temperature_state(
+                    t, isFirst, H, C, M, Theta_star_HBR_d_t,
+                    V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i,
+                    skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+                    Theta_HBR_d_t_i, Theta_star_NR_d_t, A_NR,
+                    V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_NR_d_t)
     else:  # 過剰熱繰越ナシ(一般的なパターン)
 
         # NOTE: 床下空調のための r_A_ufvnt の上書きはココより前に行わない
@@ -2429,53 +2655,22 @@ def calc_Q_UT_A(
             Q_hs_max_CS_d_t, Q_hs_max_H_d_t, L_star_H_d_t_i,
             L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
             V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C, Theta_ex_d_t)
-        # (46) 暖冷房区画𝑖の実際の居室の室温
-        Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(
-            house, skin, new_ufac, climate, Theta_star_HBR_d_t,
-            V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
-            L_star_H_d_t_i, L_star_CS_d_t_i,
-            Theta_uf_d_t
-            if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
-        # (48) 実際の非居室の室温
-        Theta_NR_d_t = _get_actual_non_room_temperatures_without_carryover(
-            skin, new_ufac, Theta_star_NR_d_t, Theta_star_HBR_d_t,
-            Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t,
-            V_dash_supply_d_t_i, V_supply_d_t_i, U_prt, A_prt_i,
-            Theta_uf_d_t
-            if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None,
-            r_A_NR_uf_1F_excl_bath
-            if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
+        # (46), (48)　実際の居室・非居室の室温
+        Theta_HBR_d_t_i, Theta_NR_d_t = \
+            _prepare_no_carryover_actual_temperature_state(
+                house, skin, new_ufac, climate, Theta_star_HBR_d_t,
+                V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i,
+                A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i, Theta_uf_d_t,
+                Theta_star_NR_d_t, A_NR, V_vent_l_NR_d_t,
+                V_dash_supply_d_t_i, r_A_NR_uf_1F_excl_bath)
     ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
-    _logger.NDdebug("Theta_HBR_d_t_1", Theta_HBR_d_t_i[0])
-    _logger.NDdebug("Theta_HBR_d_t_2", Theta_HBR_d_t_i[1])
-    _logger.NDdebug("Theta_HBR_d_t_3", Theta_HBR_d_t_i[2])
-    _logger.NDdebug("Theta_HBR_d_t_4", Theta_HBR_d_t_i[3])
-    _logger.NDdebug("Theta_HBR_d_t_5", Theta_HBR_d_t_i[4])
-    _logger.NDdebug("Theta_NR_d_t", Theta_NR_d_t)
+    _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t)
 
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        df_carryover_output = df_carryover_output.assign(
-            carryovers_i_1 = carryovers[0],
-            carryovers_i_2 = carryovers[1],
-            carryovers_i_3 = carryovers[2],
-            carryovers_i_4 = carryovers[3],
-            carryovers_i_5 = carryovers[4]
-        )
-        match (_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
-            case (None, None):
-                raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
-            case (_, None):
-                df_carryover_output.to_csv(
-                    case_name + jjj_consts.version_info() + '_H_carryover_output.csv',
-                    encoding = 'cp932')
-            case (None, _):
-                df_carryover_output.to_csv(
-                    case_name + jjj_consts.version_info() + '_C_carryover_output.csv',
-                    encoding = 'cp932')
-            case (_, _):
-                raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+    _export_carryover_diagnostics(
+        case_name, ac_setting, house, carryover_heat_dto,
+        df_carryover_output, carryovers if "carryovers" in locals() else None)
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
     df_output = _record_balanced_load_outputs(
@@ -2484,57 +2679,22 @@ def calc_Q_UT_A(
         L_star_H_d_t_i,
     )
     """ 最大暖冷房能力 """
-    df_output = df_output.assign(
-        # NOTE: タイプ毎に出力する変数の数を変えないようIFなどの分岐はしない
-        # 以下タイプ(1, 3)
-        L_star_CL_d_t = L_star_CL_d_t if "L_star_CL_d_t" in locals() else None,  # (33)
-        L_star_CS_d_t = L_star_CS_d_t if "L_star_CS_d_t" in locals() else None,  # (32)
-        L_star_dash_CL_d_t = L_star_dash_CL_d_t if "L_star_dash_CL_d_t" in locals() else None,  # (30)
-        L_star_dash_C_d_t = L_star_dash_C_d_t if "L_star_dash_C_d_t" in locals() else None,   # (29)
-        # 以下タイプ(2, 4)
-        C_df_H_d_t = C_df_H_d_t if "C_df_H_d_t" in locals() else None,  # (24)
-        Q_r_max_H_d_t = Q_r_max_H_d_t if "Q_r_max_H_d_t" in locals() else None,
-        Q_r_max_C_d_t = Q_r_max_C_d_t if "Q_r_max_C_d_t" in locals() else None,
-        L_max_CL_d_t = L_max_CL_d_t if "L_max_CL_d_t" in locals() else None,
-        L_dash_CL_d_t = L_dash_CL_d_t if "L_dash_CL_d_t" in locals() else None,
-        L_dash_C_d_t  = L_dash_C_d_t if "L_dash_C_d_t" in locals() else None,
-    )
-    df_output3 = df_output3.assign(
-        # 以下タイプ(2, 4)
-        q_r_max_H = q_r_max_H if "q_r_max_+H" in locals() else None,
-        q_r_max_C = q_r_max_C if "q_r_max_C" in locals() else None,
-        SHF_L_min_c = SHF_L_min_c if "SHF_L_min_c" in locals() else None,
-    )
-    df_output['SHF_dash_d_t'] = SHF_dash_d_t
-    df_output = df_output.assign(
-        Q_hs_max_C_d_t  = Q_hs_max_C_d_t,
-        Q_hs_max_CL_d_t = Q_hs_max_CL_d_t,
-        Q_hs_max_CS_d_t = Q_hs_max_CS_d_t,
-        Q_hs_max_H_d_t  = Q_hs_max_H_d_t,
-    )
+    df_output, df_output3 = _record_capacity_state_outputs(
+        df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
+        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
+        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
+        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_C, SHF_L_min_c,
+        SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t, Q_hs_max_H_d_t)
 
-    """ 熱源機の出口 - 負荷バランス時 / 熱源機の出口 """
-    df_output = _record_heat_source_outlet_outputs(
-        df_output,
-        X_star_hs_in_d_t,
-        Theta_star_hs_in_d_t,
-        X_hs_out_min_C_d_t,
-        X_req_d_t_i,
-        Theta_req_d_t_i,
-        X_hs_out_d_t,
-        Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t,
-    )
-    """ 吹出口 - 吹出口 / 実際 """
-    df_output = _record_supply_state_outputs(
-        df_output,
-        V_supply_d_t_i_before,
-        V_supply_d_t_i,
-        Theta_supply_d_t_i,
-        Theta_HBR_d_t_i,
-        Theta_NR_d_t,
-    )
+    """ 熱源機の出口・吹出口 - 負荷バランス時 / 実際 """
+    df_output = _record_common_outlet_and_supply_outputs(
+        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
+        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+        Theta_HBR_d_t_i, Theta_NR_d_t)
     """ 吹出口 - 熱源機の出口 """
     # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以下だった場合の為に再計算
     # (14)　熱源機の出口における空気温度

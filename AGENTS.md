@@ -57,6 +57,12 @@ Before refactoring calculation code, read `docs/REFACTORING.md` and the linked
 GitHub issue. Keep behavior-preserving refactoring separate from feature work,
 formula changes, upstream synchronization, and regression-baseline updates.
 
+Treat one user instruction as a 20-30 boundary work package tracked by one
+issue, normally split into 2-3 pull requests of 8-12 boundaries (15 maximum).
+Keep one small boundary per commit and run targeted checks after every five
+boundaries. Run the full repository, Phase 5, engine, and CI checks for every PR.
+
 Each refactoring pull request must state its scope, non-goals, preserved
-behavior, and verification evidence. Work on one small boundary at a time, and
-update the issue before handing the branch to another computer or Codex task.
+behavior, verification evidence, and relationship to the work package. Update
+the issue before handing the branch to another computer or Codex task and after
+each PR merge.
