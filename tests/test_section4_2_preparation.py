@@ -3713,3 +3713,12 @@ def test_supply_airflow_before_vav_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("r_supply_des_i", "r_supply_des_d_t_i", "V_dash_supply_d_t_i",)
+
+
+def test_room_to_underfloor_transfer_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(4))
+    result = sut._RoomToUnderfloorTransferResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Q_hat_hs_d_t", "U_s_input", "A_s_ufac_i", "r_A_s_ufac",)

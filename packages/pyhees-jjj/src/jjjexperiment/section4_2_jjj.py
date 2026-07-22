@@ -101,6 +101,13 @@ class _SupplyAirflowBeforeVavResult(NamedTuple):
     V_dash_supply_d_t_i: object
 
 
+class _RoomToUnderfloorTransferResult(NamedTuple):
+    Q_hat_hs_d_t: object
+    U_s_input: object
+    A_s_ufac_i: object
+    r_A_s_ufac: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -327,7 +334,7 @@ def _adjust_heat_source_output_for_room_to_underfloor_transfer(
     #260112 IGUCHI デバッグ用
     #print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
 
-    return Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac
+    return _RoomToUnderfloorTransferResult(Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac)
 
 def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
         ac_setting: ActiveAcSetting,
