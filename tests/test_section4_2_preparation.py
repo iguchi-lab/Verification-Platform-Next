@@ -9,6 +9,18 @@ import jjjexperiment.section4_2_jjj as sut
 def _setting(setting_type):
     return object.__new__(setting_type)
 
+class _FrameRecorder:
+    def __init__(self, events=None, generation=0):
+        self.events = [] if events is None else events
+        self.generation = generation
+
+    def __setitem__(self, key, value):
+        self.events.append(("setitem", self.generation, key, value))
+
+    def assign(self, **columns):
+        self.events.append(("assign", self.generation, tuple(columns.items())))
+        return _FrameRecorder(self.events, self.generation + 1)
+
 
 def test_output_suffix_matches_heating_and_cooling():
     assert sut._get_output_suffix(_setting(sut.HeatingAcSetting)) == "_H"
@@ -492,3 +504,226 @@ def test_export_standard_outputs_rejects_ambiguous_capacities(
         )
 
     assert calls == ["H", "C"]
+
+def test_record_balanced_load_outputs_preserves_assign_order_and_result():
+    frame = _FrameRecorder()
+    sensible = [object() for _ in range(5)]
+    heating = [object() for _ in range(5)]
+
+    result = sut._record_balanced_load_outputs(frame, sensible, heating)
+
+    assert result.generation == 2
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple(
+                (f"L_star_CS_d_t_i_{i + 1}", sensible[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"L_star_H_d_t_i_{i + 1}", heating[i])
+                for i in range(5)
+            ),
+        ),
+    ]
+
+def test_record_heat_source_outlet_outputs_preserves_write_order():
+    frame = _FrameRecorder()
+    x_star = object()
+    theta_star = object()
+    x_min = object()
+    x_req = [object() for _ in range(5)]
+    theta_req = [object() for _ in range(5)]
+    x_out = object()
+    theta_min = object()
+    theta_max = object()
+    theta_out = object()
+
+    result = sut._record_heat_source_outlet_outputs(
+        frame,
+        x_star,
+        theta_star,
+        x_min,
+        x_req,
+        theta_req,
+        x_out,
+        theta_min,
+        theta_max,
+        theta_out,
+    )
+
+    assert result.generation == 3
+    assert frame.events == [
+        ("setitem", 0, "X_star_hs_in_d_t", x_star),
+        ("setitem", 0, "Theta_star_hs_in_d_t", theta_star),
+        ("setitem", 0, "X_star_hs_in_d_t", x_star),
+        ("setitem", 0, "Theta_star_hs_in_d_t", theta_star),
+        ("setitem", 0, "X_hs_out_min_C_d_t", x_min),
+        (
+            "assign",
+            0,
+            tuple((f"X_req_d_t_{i + 1}", x_req[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"Theta_req_d_t_{i + 1}", theta_req[i])
+                for i in range(5)
+            ),
+        ),
+        ("setitem", 2, "X_hs_out_d_t", x_out),
+        (
+            "assign",
+            2,
+            (
+                ("Theta_hs_out_min_C_d_t", theta_min),
+                ("Theta_hs_out_max_H_d_t", theta_max),
+                ("Theta_hs_out_d_t", theta_out),
+            ),
+        ),
+    ]
+
+@pytest.mark.parametrize("before_is_none", (False, True))
+def test_record_supply_state_outputs_preserves_assign_order(before_is_none):
+    frame = _FrameRecorder()
+    before_values = [object() for _ in range(5)]
+    before = None if before_is_none else before_values
+    supply = [object() for _ in range(5)]
+    theta_supply = [object() for _ in range(5)]
+    theta_hbr = [object() for _ in range(5)]
+    theta_nr = object()
+
+    result = sut._record_supply_state_outputs(
+        frame,
+        before,
+        supply,
+        theta_supply,
+        theta_hbr,
+        theta_nr,
+    )
+
+    expected_before = [None] * 5 if before_is_none else before_values
+    assert result.generation == 4
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple(
+                (f"V_supply_d_t_{i + 1}_before", expected_before[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            1,
+            tuple((f"V_supply_d_t_{i + 1}", supply[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            2,
+            tuple(
+                (f"Theta_supply_d_t_{i + 1}", theta_supply[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            3,
+            tuple(
+                (f"Theta_HBR_d_t_{i + 1}", theta_hbr[i])
+                for i in range(5)
+            ) + (("Theta_NR_d_t", theta_nr),),
+        ),
+    ]
+
+def test_record_actual_load_outputs_preserves_assign_order():
+    frame = _FrameRecorder()
+    latent = [object() for _ in range(5)]
+    sensible = [object() for _ in range(5)]
+    heating = [object() for _ in range(5)]
+
+    result = sut._record_actual_load_outputs(
+        frame,
+        latent,
+        sensible,
+        heating,
+    )
+
+    assert result.generation == 3
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple((f"L_dash_CL_d_t_{i + 1}", latent[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"L_dash_CS_d_t_{i + 1}", sensible[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            2,
+            tuple((f"L_dash_H_d_t_{i + 1}", heating[i]) for i in range(5)),
+        ),
+    ]
+
+def test_record_unprocessed_load_outputs_preserves_assign_order():
+    frame = _FrameRecorder()
+    latent = [object() for _ in range(5)]
+    sensible = [object() for _ in range(5)]
+    heating = [object() for _ in range(5)]
+
+    result = sut._record_unprocessed_load_outputs(
+        frame,
+        latent,
+        sensible,
+        heating,
+    )
+
+    assert result.generation == 3
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple((f"Q_UT_CL_d_t_{i + 1}", latent[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"Q_UT_CS_d_t_{i + 1}", sensible[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            2,
+            tuple((f"Q_UT_H_d_t_{i + 1}", heating[i]) for i in range(5)),
+        ),
+    ]
+
+
+def test_record_unprocessed_energy_output_preserves_direct_assignment():
+    frame = _FrameRecorder()
+    energy = object()
+
+    result = sut._record_unprocessed_energy_output(
+        frame,
+        "E_UT_H_d_t",
+        energy,
+    )
+
+    assert result is frame
+    assert frame.events == [
+        ("setitem", 0, "E_UT_H_d_t", energy),
+    ]

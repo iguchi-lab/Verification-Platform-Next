@@ -308,6 +308,170 @@ def _export_standard_outputs(
         case(_, _):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
 
+def _record_balanced_load_outputs(
+        df_output: pd.DataFrame,
+        L_star_CS_d_t_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+    ) -> pd.DataFrame:
+    df_output = df_output.assign(
+        L_star_CS_d_t_i_1=L_star_CS_d_t_i[0],
+        L_star_CS_d_t_i_2=L_star_CS_d_t_i[1],
+        L_star_CS_d_t_i_3=L_star_CS_d_t_i[2],
+        L_star_CS_d_t_i_4=L_star_CS_d_t_i[3],
+        L_star_CS_d_t_i_5=L_star_CS_d_t_i[4],
+    )
+    return df_output.assign(
+        L_star_H_d_t_i_1=L_star_H_d_t_i[0],
+        L_star_H_d_t_i_2=L_star_H_d_t_i[1],
+        L_star_H_d_t_i_3=L_star_H_d_t_i[2],
+        L_star_H_d_t_i_4=L_star_H_d_t_i[3],
+        L_star_H_d_t_i_5=L_star_H_d_t_i[4],
+    )
+
+def _record_heat_source_outlet_outputs(
+        df_output: pd.DataFrame,
+        X_star_hs_in_d_t: np.ndarray,
+        Theta_star_hs_in_d_t: np.ndarray,
+        X_hs_out_min_C_d_t: np.ndarray,
+        X_req_d_t_i: np.ndarray,
+        Theta_req_d_t_i: np.ndarray,
+        X_hs_out_d_t: np.ndarray,
+        Theta_hs_out_min_C_d_t: np.ndarray,
+        Theta_hs_out_max_H_d_t: np.ndarray,
+        Theta_hs_out_d_t: np.ndarray,
+    ) -> pd.DataFrame:
+    """Record heat-source outlet values in the original column order."""
+    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
+    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
+    # These two assignments intentionally preserve the existing duplicate writes.
+    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
+    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
+    df_output['X_hs_out_min_C_d_t'] = X_hs_out_min_C_d_t
+    df_output = df_output.assign(
+        X_req_d_t_1=X_req_d_t_i[0],
+        X_req_d_t_2=X_req_d_t_i[1],
+        X_req_d_t_3=X_req_d_t_i[2],
+        X_req_d_t_4=X_req_d_t_i[3],
+        X_req_d_t_5=X_req_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        Theta_req_d_t_1=Theta_req_d_t_i[0],
+        Theta_req_d_t_2=Theta_req_d_t_i[1],
+        Theta_req_d_t_3=Theta_req_d_t_i[2],
+        Theta_req_d_t_4=Theta_req_d_t_i[3],
+        Theta_req_d_t_5=Theta_req_d_t_i[4],
+    )
+    df_output['X_hs_out_d_t'] = X_hs_out_d_t
+    return df_output.assign(
+        Theta_hs_out_min_C_d_t=Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t=Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t=Theta_hs_out_d_t,
+    )
+
+def _record_supply_state_outputs(
+        df_output: pd.DataFrame,
+        V_supply_d_t_i_before: np.ndarray | None,
+        V_supply_d_t_i: np.ndarray,
+        Theta_supply_d_t_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        Theta_NR_d_t: np.ndarray,
+    ) -> pd.DataFrame:
+    # NOTE: 2024/02/14 WG の話で出力してほしいデータになりました
+    df_output = df_output.assign(
+        V_supply_d_t_1_before=V_supply_d_t_i_before[0] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_2_before=V_supply_d_t_i_before[1] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_3_before=V_supply_d_t_i_before[2] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_4_before=V_supply_d_t_i_before[3] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_5_before=V_supply_d_t_i_before[4] if V_supply_d_t_i_before is not None else None,
+    )
+    df_output = df_output.assign(
+        V_supply_d_t_1=V_supply_d_t_i[0],
+        V_supply_d_t_2=V_supply_d_t_i[1],
+        V_supply_d_t_3=V_supply_d_t_i[2],
+        V_supply_d_t_4=V_supply_d_t_i[3],
+        V_supply_d_t_5=V_supply_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        Theta_supply_d_t_1=Theta_supply_d_t_i[0],
+        Theta_supply_d_t_2=Theta_supply_d_t_i[1],
+        Theta_supply_d_t_3=Theta_supply_d_t_i[2],
+        Theta_supply_d_t_4=Theta_supply_d_t_i[3],
+        Theta_supply_d_t_5=Theta_supply_d_t_i[4],
+    )
+    return df_output.assign(
+        Theta_HBR_d_t_1=Theta_HBR_d_t_i[0],
+        Theta_HBR_d_t_2=Theta_HBR_d_t_i[1],
+        Theta_HBR_d_t_3=Theta_HBR_d_t_i[2],
+        Theta_HBR_d_t_4=Theta_HBR_d_t_i[3],
+        Theta_HBR_d_t_5=Theta_HBR_d_t_i[4],
+        Theta_NR_d_t=Theta_NR_d_t,
+    )
+
+def _record_actual_load_outputs(
+        df_output: pd.DataFrame,
+        L_dash_CL_d_t_i: np.ndarray,
+        L_dash_CS_d_t_i: np.ndarray,
+        L_dash_H_d_t_i: np.ndarray,
+    ) -> pd.DataFrame:
+    df_output = df_output.assign(
+        L_dash_CL_d_t_1=L_dash_CL_d_t_i[0],
+        L_dash_CL_d_t_2=L_dash_CL_d_t_i[1],
+        L_dash_CL_d_t_3=L_dash_CL_d_t_i[2],
+        L_dash_CL_d_t_4=L_dash_CL_d_t_i[3],
+        L_dash_CL_d_t_5=L_dash_CL_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        L_dash_CS_d_t_1=L_dash_CS_d_t_i[0],
+        L_dash_CS_d_t_2=L_dash_CS_d_t_i[1],
+        L_dash_CS_d_t_3=L_dash_CS_d_t_i[2],
+        L_dash_CS_d_t_4=L_dash_CS_d_t_i[3],
+        L_dash_CS_d_t_5=L_dash_CS_d_t_i[4],
+    )
+    return df_output.assign(
+        L_dash_H_d_t_1=L_dash_H_d_t_i[0],
+        L_dash_H_d_t_2=L_dash_H_d_t_i[1],
+        L_dash_H_d_t_3=L_dash_H_d_t_i[2],
+        L_dash_H_d_t_4=L_dash_H_d_t_i[3],
+        L_dash_H_d_t_5=L_dash_H_d_t_i[4],
+    )
+
+def _record_unprocessed_load_outputs(
+        df_output: pd.DataFrame,
+        Q_UT_CL_d_t_i: np.ndarray,
+        Q_UT_CS_d_t_i: np.ndarray,
+        Q_UT_H_d_t_i: np.ndarray,
+    ) -> pd.DataFrame:
+    df_output = df_output.assign(
+        Q_UT_CL_d_t_1=Q_UT_CL_d_t_i[0],
+        Q_UT_CL_d_t_2=Q_UT_CL_d_t_i[1],
+        Q_UT_CL_d_t_3=Q_UT_CL_d_t_i[2],
+        Q_UT_CL_d_t_4=Q_UT_CL_d_t_i[3],
+        Q_UT_CL_d_t_5=Q_UT_CL_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        Q_UT_CS_d_t_1=Q_UT_CS_d_t_i[0],
+        Q_UT_CS_d_t_2=Q_UT_CS_d_t_i[1],
+        Q_UT_CS_d_t_3=Q_UT_CS_d_t_i[2],
+        Q_UT_CS_d_t_4=Q_UT_CS_d_t_i[3],
+        Q_UT_CS_d_t_5=Q_UT_CS_d_t_i[4],
+    )
+    return df_output.assign(
+        Q_UT_H_d_t_1=Q_UT_H_d_t_i[0],
+        Q_UT_H_d_t_2=Q_UT_H_d_t_i[1],
+        Q_UT_H_d_t_3=Q_UT_H_d_t_i[2],
+        Q_UT_H_d_t_4=Q_UT_H_d_t_i[3],
+        Q_UT_H_d_t_5=Q_UT_H_d_t_i[4],
+    )
+
+
+def _record_unprocessed_energy_output(
+        df_output: pd.DataFrame,
+        output_name: str,
+        E_UT_d_t: np.ndarray,
+    ) -> pd.DataFrame:
+    df_output[output_name] = E_UT_d_t
+    return df_output
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1430,21 +1594,11 @@ def calc_Q_UT_A(
                 raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
-    df_output = df_output.assign(
-        L_star_CS_d_t_i_1 = L_star_CS_d_t_i[0],
-        L_star_CS_d_t_i_2 = L_star_CS_d_t_i[1],
-        L_star_CS_d_t_i_3 = L_star_CS_d_t_i[2],
-        L_star_CS_d_t_i_4 = L_star_CS_d_t_i[3],
-        L_star_CS_d_t_i_5 = L_star_CS_d_t_i[4]
+    df_output = _record_balanced_load_outputs(
+        df_output,
+        L_star_CS_d_t_i,
+        L_star_H_d_t_i,
     )
-    df_output = df_output.assign(
-        L_star_H_d_t_i_1 = L_star_H_d_t_i[0],
-        L_star_H_d_t_i_2 = L_star_H_d_t_i[1],
-        L_star_H_d_t_i_3 = L_star_H_d_t_i[2],
-        L_star_H_d_t_i_4 = L_star_H_d_t_i[3],
-        L_star_H_d_t_i_5 = L_star_H_d_t_i[4]
-    )
-
     """ 最大暖冷房能力 """
     df_output = df_output.assign(
         # NOTE: タイプ毎に出力する変数の数を変えないようIFなどの分岐はしない
@@ -1475,69 +1629,28 @@ def calc_Q_UT_A(
         Q_hs_max_H_d_t  = Q_hs_max_H_d_t,
     )
 
-    """ 熱源機の出口 - 負荷バランス時 """
-    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
-    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
-
-    """ 熱源機の出口 - 熱源機の出口 """
-    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
-    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
-    df_output['X_hs_out_min_C_d_t'] = X_hs_out_min_C_d_t
-    df_output = df_output.assign(
-        X_req_d_t_1 = X_req_d_t_i[0],
-        X_req_d_t_2 = X_req_d_t_i[1],
-        X_req_d_t_3 = X_req_d_t_i[2],
-        X_req_d_t_4 = X_req_d_t_i[3],
-        X_req_d_t_5 = X_req_d_t_i[4]
+    """ 熱源機の出口 - 負荷バランス時 / 熱源機の出口 """
+    df_output = _record_heat_source_outlet_outputs(
+        df_output,
+        X_star_hs_in_d_t,
+        Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t,
+        X_req_d_t_i,
+        Theta_req_d_t_i,
+        X_hs_out_d_t,
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
     )
-    df_output = df_output.assign(
-        Theta_req_d_t_1 = Theta_req_d_t_i[0],
-        Theta_req_d_t_2 = Theta_req_d_t_i[1],
-        Theta_req_d_t_3 = Theta_req_d_t_i[2],
-        Theta_req_d_t_4 = Theta_req_d_t_i[3],
-        Theta_req_d_t_5 = Theta_req_d_t_i[4]
+    """ 吹出口 - 吹出口 / 実際 """
+    df_output = _record_supply_state_outputs(
+        df_output,
+        V_supply_d_t_i_before,
+        V_supply_d_t_i,
+        Theta_supply_d_t_i,
+        Theta_HBR_d_t_i,
+        Theta_NR_d_t,
     )
-    df_output['X_hs_out_d_t'] = X_hs_out_d_t
-    df_output = df_output.assign(
-        Theta_hs_out_min_C_d_t = Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t = Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t = Theta_hs_out_d_t,
-    )
-
-    """吹出口 - 吹出口"""
-    # NOTE: 2024/02/14 WG の話で出力してほしいデータになりました
-    df_output = df_output.assign(
-        V_supply_d_t_1_before = V_supply_d_t_i_before[0] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_2_before = V_supply_d_t_i_before[1] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_3_before = V_supply_d_t_i_before[2] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_4_before = V_supply_d_t_i_before[3] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_5_before = V_supply_d_t_i_before[4] if V_supply_d_t_i_before is not None else None,
-    )
-    df_output = df_output.assign(
-        V_supply_d_t_1 = V_supply_d_t_i[0],
-        V_supply_d_t_2 = V_supply_d_t_i[1],
-        V_supply_d_t_3 = V_supply_d_t_i[2],
-        V_supply_d_t_4 = V_supply_d_t_i[3],
-        V_supply_d_t_5 = V_supply_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        Theta_supply_d_t_1 = Theta_supply_d_t_i[0],
-        Theta_supply_d_t_2 = Theta_supply_d_t_i[1],
-        Theta_supply_d_t_3 = Theta_supply_d_t_i[2],
-        Theta_supply_d_t_4 = Theta_supply_d_t_i[3],
-        Theta_supply_d_t_5 = Theta_supply_d_t_i[4]
-    )
-
-    """ 吹出口 - 実際 """
-    df_output = df_output.assign(
-        Theta_HBR_d_t_1 = Theta_HBR_d_t_i[0],
-        Theta_HBR_d_t_2 = Theta_HBR_d_t_i[1],
-        Theta_HBR_d_t_3 = Theta_HBR_d_t_i[2],
-        Theta_HBR_d_t_4 = Theta_HBR_d_t_i[3],
-        Theta_HBR_d_t_5 = Theta_HBR_d_t_i[4],
-        Theta_NR_d_t = Theta_NR_d_t
-    )
-
     """ 吹出口 - 熱源機の出口 """
     # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以下だった場合の為に再計算
     # (14)　熱源機の出口における空気温度
@@ -1585,26 +1698,11 @@ def calc_Q_UT_A(
         Theta_HBR_d_t_i,
         house.region,
     )
-    df_output = df_output.assign(
-        L_dash_CL_d_t_1 = L_dash_CL_d_t_i[0],
-        L_dash_CL_d_t_2 = L_dash_CL_d_t_i[1],
-        L_dash_CL_d_t_3 = L_dash_CL_d_t_i[2],
-        L_dash_CL_d_t_4 = L_dash_CL_d_t_i[3],
-        L_dash_CL_d_t_5 = L_dash_CL_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        L_dash_CS_d_t_1 = L_dash_CS_d_t_i[0],
-        L_dash_CS_d_t_2 = L_dash_CS_d_t_i[1],
-        L_dash_CS_d_t_3 = L_dash_CS_d_t_i[2],
-        L_dash_CS_d_t_4 = L_dash_CS_d_t_i[3],
-        L_dash_CS_d_t_5 = L_dash_CS_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        L_dash_H_d_t_1 = L_dash_H_d_t_i[0],
-        L_dash_H_d_t_2 = L_dash_H_d_t_i[1],
-        L_dash_H_d_t_3 = L_dash_H_d_t_i[2],
-        L_dash_H_d_t_4 = L_dash_H_d_t_i[3],
-        L_dash_H_d_t_5 = L_dash_H_d_t_i[4]
+    df_output = _record_actual_load_outputs(
+        df_output,
+        L_dash_CL_d_t_i,
+        L_dash_CS_d_t_i,
+        L_dash_H_d_t_i,
     )
     """ まとめ - 未処理負荷 """
     Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
@@ -1615,26 +1713,11 @@ def calc_Q_UT_A(
         L_star_H_d_t_i,
         L_dash_H_d_t_i,
     )
-    df_output = df_output.assign(
-        Q_UT_CL_d_t_1 = Q_UT_CL_d_t_i[0],
-        Q_UT_CL_d_t_2 = Q_UT_CL_d_t_i[1],
-        Q_UT_CL_d_t_3 = Q_UT_CL_d_t_i[2],
-        Q_UT_CL_d_t_4 = Q_UT_CL_d_t_i[3],
-        Q_UT_CL_d_t_5 = Q_UT_CL_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        Q_UT_CS_d_t_1 = Q_UT_CS_d_t_i[0],
-        Q_UT_CS_d_t_2 = Q_UT_CS_d_t_i[1],
-        Q_UT_CS_d_t_3 = Q_UT_CS_d_t_i[2],
-        Q_UT_CS_d_t_4 = Q_UT_CS_d_t_i[3],
-        Q_UT_CS_d_t_5 = Q_UT_CS_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        Q_UT_H_d_t_1 = Q_UT_H_d_t_i[0],
-        Q_UT_H_d_t_2 = Q_UT_H_d_t_i[1],
-        Q_UT_H_d_t_3 = Q_UT_H_d_t_i[2],
-        Q_UT_H_d_t_4 = Q_UT_H_d_t_i[3],
-        Q_UT_H_d_t_5 = Q_UT_H_d_t_i[4]
+    df_output = _record_unprocessed_load_outputs(
+        df_output,
+        Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i,
+        Q_UT_H_d_t_i,
     )
     """ まとめ - 一次エネルギー """
     E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
@@ -1644,7 +1727,11 @@ def calc_Q_UT_A(
         Q_UT_H_d_t_i,
         house.region,
     )
-    df_output[E_UT_output_name] = E_UT_d_t
+    df_output = _record_unprocessed_energy_output(
+        df_output,
+        E_UT_output_name,
+        E_UT_d_t,
+    )
     _export_underfloor_output(
         case_name,
         ac_setting,
