@@ -95,3 +95,80 @@ def test_select_minimum_airflow_input_matches_season():
 def test_select_minimum_airflow_input_rejects_unknown_setting():
     with pytest.raises(ValueError):
         sut._select_minimum_airflow_input(object(), object(), object())
+
+
+@pytest.mark.parametrize(
+    "model",
+    (
+        sut.計算モデル.ダクト式セントラル空調機,
+        sut.計算モデル.RAC活用型全館空調_潜熱評価モデル,
+    ),
+)
+def test_rated_heat_source_capacities_use_quantity_services(monkeypatch, model):
+    calls = []
+    setting = SimpleNamespace(type=model)
+    house = object()
+
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda ac, value: 200.0)
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda ac, value: 100.0)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_hs_rtd_C",
+        lambda value: calls.append(("C", value)) or value + 2.0,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_hs_rtd_H",
+        lambda value: calls.append(("H", value)) or value + 1.0,
+    )
+
+    result = sut._get_rated_heat_source_capacities(
+        setting,
+        house,
+        SimpleNamespace(q_rtd=300.0),
+        SimpleNamespace(q_rtd=400.0),
+    )
+
+    assert result == (101.0, 202.0)
+    assert calls == [("C", 200.0), ("H", 100.0)]
+
+
+@pytest.mark.parametrize(
+    "model",
+    (
+        sut.計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        sut.計算モデル.電中研モデル,
+    ),
+)
+def test_rated_heat_source_capacities_use_equipment_ratings(monkeypatch, model):
+    calls = []
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_hs_rtd_C",
+        lambda value: calls.append(("C", value)) or value + 2.0,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_hs_rtd_H",
+        lambda value: calls.append(("H", value)) or value + 1.0,
+    )
+
+    result = sut._get_rated_heat_source_capacities(
+        SimpleNamespace(type=model),
+        object(),
+        SimpleNamespace(q_rtd=300.0),
+        SimpleNamespace(q_rtd=400.0),
+    )
+
+    assert result == (301.0, 402.0)
+    assert calls == [("C", 400.0), ("H", 300.0)]
+
+
+def test_rated_heat_source_capacities_reject_unknown_model():
+    with pytest.raises(Exception, match="設備機器の種類の入力が不正です。"):
+        sut._get_rated_heat_source_capacities(
+            SimpleNamespace(type=object()),
+            object(),
+            SimpleNamespace(q_rtd=300.0),
+            SimpleNamespace(q_rtd=400.0),
+        )

@@ -144,6 +144,34 @@ def _select_minimum_airflow_input(
             raise ValueError
 
 
+def _get_rated_heat_source_capacities(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        heat_CRAC: HeatCRACSpec,
+        cool_CRAC: CoolCRACSpec,
+    ) -> tuple[float | None, float | None]:
+    if ac_setting.type in [
+            計算モデル.ダクト式セントラル空調機,
+            計算モデル.RAC活用型全館空調_潜熱評価モデル
+        ]:
+        # (38)
+        Q_hs_rtd_C = dc.get_Q_hs_rtd_C(_get_q_hs_rtd_C(ac_setting, house))
+        # (37)
+        Q_hs_rtd_H = dc.get_Q_hs_rtd_H(_get_q_hs_rtd_H(ac_setting, house))
+    elif ac_setting.type in [
+            計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+            計算モデル.電中研モデル
+        ]:
+        # (38)　冷房時の熱源機の定格出力
+        Q_hs_rtd_C = dc.get_Q_hs_rtd_C(cool_CRAC.q_rtd)  #ルームエアコンディショナの定格能力 q_rtd_C を入力するよう書き換え
+        # (37)　暖房時の熱源機の定格出力
+        Q_hs_rtd_H = dc.get_Q_hs_rtd_H(heat_CRAC.q_rtd)  #ルームエアコンディショナの定格能力 q_rtd_H を入力するよう書き換え
+    else:
+        raise Exception('設備機器の種類の入力が不正です。')
+
+    return Q_hs_rtd_H, Q_hs_rtd_C
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -334,24 +362,12 @@ def calc_Q_UT_A(
     df_output3['V_hs_min'] = [V_hs_min]
 
     ####################################################################################################################
-    if ac_setting.type in [
-            計算モデル.ダクト式セントラル空調機,
-            計算モデル.RAC活用型全館空調_潜熱評価モデル
-        ]:
-        # (38)
-        Q_hs_rtd_C = dc.get_Q_hs_rtd_C(_get_q_hs_rtd_C(ac_setting, house))
-        # (37)
-        Q_hs_rtd_H = dc.get_Q_hs_rtd_H(_get_q_hs_rtd_H(ac_setting, house))
-    elif ac_setting.type in [
-            計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
-            計算モデル.電中研モデル
-        ]:
-        # (38)　冷房時の熱源機の定格出力
-        Q_hs_rtd_C = dc.get_Q_hs_rtd_C(cool_CRAC.q_rtd)  #ルームエアコンディショナの定格能力 q_rtd_C を入力するよう書き換え
-        # (37)　暖房時の熱源機の定格出力
-        Q_hs_rtd_H = dc.get_Q_hs_rtd_H(heat_CRAC.q_rtd)  #ルームエアコンディショナの定格能力 q_rtd_H を入力するよう書き換え
-    else:
-        raise Exception('設備機器の種類の入力が不正です。')
+    Q_hs_rtd_H, Q_hs_rtd_C = _get_rated_heat_source_capacities(
+        ac_setting,
+        house,
+        heat_CRAC,
+        cool_CRAC,
+    )
 
     df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]
     df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
