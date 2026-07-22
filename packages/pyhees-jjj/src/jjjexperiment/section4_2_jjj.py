@@ -2790,13 +2790,7 @@ def calc_Q_UT_A(
         _prepare_duct_geometry_state(
             df_output, df_output2, house, Theta_ex_d_t, J_d_t)
     # (51), (50), (55), (54)　負荷バランス時の室内・ダクト周囲状態
-    (
-        X_star_HBR_d_t,
-        Theta_star_HBR_d_t,
-        Theta_attic_d_t,
-        Theta_sur_d_t_i,
-        df_output,
-    ) = _prepare_balanced_room_and_duct_state(
+    balanced_room_state = _prepare_balanced_room_and_duct_state(
         df_output,
         ac_setting,
         house,
@@ -2806,6 +2800,11 @@ def calc_Q_UT_A(
         l_duct_in_i,
         l_duct_ex_i,
     )
+    X_star_HBR_d_t = balanced_room_state.X_star_HBR_d_t
+    Theta_star_HBR_d_t = balanced_room_state.Theta_star_HBR_d_t
+    Theta_attic_d_t = balanced_room_state.Theta_attic_d_t
+    Theta_sur_d_t_i = balanced_room_state.Theta_sur_d_t_i
+    df_output = balanced_room_state.df_output
 
     # (40)-1st　熱源機の風量を計算するための熱源機の出力
     Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(
