@@ -252,6 +252,34 @@ def _get_heat_source_supply_airflow_before_vav(
     )
 
 
+def _get_supply_airflow_before_vav(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        load: Load_DTI,
+        A_HCZ_i: np.ndarray,
+        V_dash_hs_supply_d_t: np.ndarray,
+        V_vent_g_i: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (45) and (44) without changing their branch order."""
+    if ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
+        # (45)　風量バランス
+        r_supply_des_d_t_i = dc.get_r_supply_des_d_t_i_2023(house.region, load.L_CS_d_t_i, load.L_H_d_t_i)
+        assert r_supply_des_d_t_i.shape == (5, 24*365)
+        # 出力用
+        r_supply_des_i = r_supply_des_d_t_i[:, 0:1]
+        # (44)　VAV 調整前の吹き出し風量
+        V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i_2023(r_supply_des_d_t_i, V_dash_hs_supply_d_t, V_vent_g_i)
+    else:
+        # (45)　風量バランス
+        r_supply_des_i = dc.get_r_supply_des_i(A_HCZ_i)
+        assert r_supply_des_i.shape == (5,)
+        # 出力用
+        r_supply_des_d_t_i = np.tile(r_supply_des_i, 24 * 365).reshape(5, 24 * 365)
+        # (44)　VAV 調整前の吹き出し風量
+        V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i(r_supply_des_i, V_dash_hs_supply_d_t, V_vent_g_i)
+
+    return r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -747,23 +775,18 @@ def calc_Q_UT_A(
             Q_hat_hs_CS_d_t,
         )
         df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
-        if ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
-            # (45)　風量バランス
-            r_supply_des_d_t_i = dc.get_r_supply_des_d_t_i_2023(house.region, load.L_CS_d_t_i, load.L_H_d_t_i)
-            assert r_supply_des_d_t_i.shape == (5, 24*365)
-            # 出力用
-            r_supply_des_i = r_supply_des_d_t_i[:, 0:1]
-            # (44)　VAV 調整前の吹き出し風量
-            V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i_2023(r_supply_des_d_t_i, V_dash_hs_supply_d_t, V_vent_g_i)
-        else:
-            # (45)　風量バランス
-            r_supply_des_i = dc.get_r_supply_des_i(A_HCZ_i)
-            assert r_supply_des_i.shape == (5,)
-            # 出力用
-            r_supply_des_d_t_i = np.tile(r_supply_des_i, 24 * 365).reshape(5, 24 * 365)
-            # (44)　VAV 調整前の吹き出し風量
-            V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i(r_supply_des_i, V_dash_hs_supply_d_t, V_vent_g_i)
-
+        (
+            r_supply_des_i,
+            r_supply_des_d_t_i,
+            V_dash_supply_d_t_i,
+        ) = _get_supply_airflow_before_vav(
+            ac_setting,
+            house,
+            load,
+            A_HCZ_i,
+            V_dash_hs_supply_d_t,
+            V_vent_g_i,
+        )
         if not should_be_adjusted_Q_hat_hs_d_t:
             break
 

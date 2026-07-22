@@ -823,3 +823,83 @@ def test_heat_source_supply_airflow_before_vav_preserves_standard_arguments(
 
     assert result is expected
     assert calls == [(250.0, 0, None, 100.0, None, load, 5)]
+
+def test_supply_airflow_before_vav_preserves_vav_formula_order(monkeypatch):
+    calls = []
+    sensible = object()
+    heating = object()
+    heat_source_airflow = object()
+    ventilation = object()
+    ratios = np.arange(5 * 24 * 365).reshape(5, 24 * 365)
+    supply = object()
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "change_supply_volume_before_vav_adjust",
+        sut.VAVありなしの吹出風量.数式を統一する.value,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_r_supply_des_d_t_i_2023",
+        lambda *args: calls.append(("ratios", args)) or ratios,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_supply_d_t_i_2023",
+        lambda *args: calls.append(("supply", args)) or supply,
+    )
+
+    result = sut._get_supply_airflow_before_vav(
+        SimpleNamespace(VAV=True),
+        SimpleNamespace(region=6),
+        SimpleNamespace(L_CS_d_t_i=sensible, L_H_d_t_i=heating),
+        object(),
+        heat_source_airflow,
+        ventilation,
+    )
+
+    np.testing.assert_array_equal(result[0], ratios[:, 0:1])
+    assert result[1] is ratios
+    assert result[2] is supply
+    assert calls == [
+        ("ratios", (6, sensible, heating)),
+        ("supply", (ratios, heat_source_airflow, ventilation)),
+    ]
+
+
+def test_supply_airflow_before_vav_preserves_standard_formula_order(monkeypatch):
+    calls = []
+    areas = object()
+    heat_source_airflow = object()
+    ventilation = object()
+    ratios = np.arange(1.0, 6.0)
+    supply = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_r_supply_des_i",
+        lambda value: calls.append(("ratios", value)) or ratios,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_supply_d_t_i",
+        lambda *args: calls.append(("supply", args)) or supply,
+    )
+
+    result = sut._get_supply_airflow_before_vav(
+        SimpleNamespace(VAV=False),
+        object(),
+        object(),
+        areas,
+        heat_source_airflow,
+        ventilation,
+    )
+
+    assert result[0] is ratios
+    np.testing.assert_array_equal(
+        result[1],
+        np.tile(ratios, 24 * 365).reshape(5, 24 * 365),
+    )
+    assert result[2] is supply
+    assert calls == [
+        ("ratios", areas),
+        ("supply", (ratios, heat_source_airflow, ventilation)),
+    ]
