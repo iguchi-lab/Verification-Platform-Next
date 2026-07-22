@@ -693,6 +693,37 @@ def _get_balanced_loads_at_hour(
 
     return L_star_H_i, L_star_CS_i
 
+def _get_actual_room_temperatures_at_hour(
+        t: int,
+        H: np.ndarray,
+        C: np.ndarray,
+        M: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+        V_supply_d_t_i: np.ndarray,
+        Theta_supply_d_t_i: np.ndarray,
+        U_prt: float,
+        A_prt_i: np.ndarray,
+        Q: float,
+        A_HCZ_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+    ) -> np.ndarray:
+    """Calculate formula (46) for one hour with its original slices."""
+    # (46)　暖冷房区画𝑖の実際の居室の室温
+    return jjj_carryover_heat.get_Theta_HBR_i_2023(
+        H[t], C[t], M[t],
+        Theta_star_HBR_d_t[t],
+        V_supply_d_t_i[:, t:t+1],  # (5,1)
+        Theta_supply_d_t_i[:, t:t+1],  # (5,1)
+        U_prt,
+        A_prt_i.reshape(-1,1),  # (5,1)
+        Q,
+        A_HCZ_i.reshape(-1,1),  # (5,1)
+        L_star_H_d_t_i[:5, t:t+1],  # (5,1)
+        L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
+        np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1510,21 +1541,10 @@ def calc_Q_UT_A(
             # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
             # 0 の扱いは全てのメソッドで考慮されていること
 
-            # (46)　暖冷房区画𝑖の実際の居室の室温
-            Theta_HBR_d_t_i[:, t:t+1] \
-                = jjj_carryover_heat.get_Theta_HBR_i_2023(
-                    H[t], C[t], M[t],
-                    Theta_star_HBR_d_t[t],
-                    V_supply_d_t_i[:, t:t+1],  # (5,1)
-                    Theta_supply_d_t_i[:, t:t+1],  # (5,1)
-                    U_prt,
-                    A_prt_i.reshape(-1,1),  # (5,1)
-                    skin.Q,
-                    A_HCZ_i.reshape(-1,1),  # (5,1)
-                    L_star_H_d_t_i[:5, t:t+1],  # (5,1)
-                    L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
-                    np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
-
+            Theta_HBR_d_t_i[:, t:t+1] = _get_actual_room_temperatures_at_hour(
+                t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i, Theta_supply_d_t_i,
+                U_prt, A_prt_i, skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+                Theta_HBR_d_t_i)
             # (48)　実際の非居室の室温
             Theta_NR_d_t[t] \
                 = jjj_carryover_heat.get_Theta_NR_2023(

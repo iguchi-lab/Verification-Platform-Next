@@ -1541,3 +1541,55 @@ def test_balanced_loads_at_hour_preserve_formula_order_and_slices(monkeypatch):
     np.testing.assert_array_equal(calls[1][1][1], cooling[:5, 1:2])
     np.testing.assert_array_equal(calls[1][1][2], transfer[:5, 1:2])
     assert calls[1][1][3] is carryover
+
+@pytest.mark.parametrize("t", (0, 1))
+def test_actual_room_temperatures_at_hour_preserve_slices(monkeypatch, t):
+    calls = []
+    expected = object()
+    H = np.array([True, False])
+    C = np.array([False, True])
+    M = np.array([False, False])
+    theta_star = np.array([20.0, 21.0])
+    supply = np.arange(5 * 2).reshape(5, 2)
+    supply_theta = supply + 10
+    area_partition = np.arange(1.0, 6.0)
+    area_room = np.arange(6.0, 11.0)
+    heating = np.arange(7 * 2).reshape(7, 2) + 20
+    cooling = heating + 20
+    actual = heating + 40
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_Theta_HBR_i_2023",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_actual_room_temperatures_at_hour(
+        t,
+        H,
+        C,
+        M,
+        theta_star,
+        supply,
+        supply_theta,
+        0.5,
+        area_partition,
+        2.7,
+        area_room,
+        heating,
+        cooling,
+        actual,
+    )
+
+    assert result is expected
+    args = calls[0]
+    assert args[:4] == (H[t], C[t], M[t], theta_star[t])
+    np.testing.assert_array_equal(args[4], supply[:, t : t + 1])
+    np.testing.assert_array_equal(args[5], supply_theta[:, t : t + 1])
+    assert args[6] == 0.5
+    np.testing.assert_array_equal(args[7], area_partition.reshape(-1, 1))
+    assert args[8] == 2.7
+    np.testing.assert_array_equal(args[9], area_room.reshape(-1, 1))
+    np.testing.assert_array_equal(args[10], heating[:5, t : t + 1])
+    np.testing.assert_array_equal(args[11], cooling[:5, t : t + 1])
+    expected_previous = np.zeros((5, 1)) if t == 0 else actual[:5, t - 1 : t]
+    np.testing.assert_array_equal(args[12], expected_previous)
