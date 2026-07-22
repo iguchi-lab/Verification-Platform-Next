@@ -1611,6 +1611,44 @@ def _prepare_duct_geometry_state(
     return Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i
 
 
+def _prepare_balanced_room_and_duct_state(
+        df_output, ac_setting, house, X_ex_d_t, Theta_ex_d_t,
+        Theta_SAT_d_t, l_duct_in_i, l_duct_ex_i):
+    """Calculate formulas (51), (50), (55), and (54) in source order."""
+    X_star_HBR_d_t = dc.get_X_star_HBR_d_t(X_ex_d_t, house.region)
+    df_output['X_star_HBR_d_t'] = X_star_HBR_d_t
+
+    Theta_star_HBR_d_t = dc.get_Theta_star_HBR_d_t(
+        Theta_ex_d_t, house.region)
+    df_output['Theta_star_HBR_d_t'] = Theta_star_HBR_d_t
+
+    Theta_attic_d_t = dc.get_Theta_attic_d_t(
+        Theta_SAT_d_t, Theta_star_HBR_d_t)
+    df_output['Theta_attic_d_t'] = Theta_attic_d_t
+
+    Theta_sur_d_t_i = dc.get_Theta_sur_d_t_i(
+        Theta_star_HBR_d_t,
+        Theta_attic_d_t,
+        l_duct_in_i,
+        l_duct_ex_i,
+        ac_setting.duct_insulation,
+    )
+    df_output = df_output.assign(
+        Theta_sur_d_t_i_1=Theta_sur_d_t_i[0],
+        Theta_sur_d_t_i_2=Theta_sur_d_t_i[1],
+        Theta_sur_d_t_i_3=Theta_sur_d_t_i[2],
+        Theta_sur_d_t_i_4=Theta_sur_d_t_i[3],
+        Theta_sur_d_t_i_5=Theta_sur_d_t_i[4],
+    )
+    return (
+        X_star_HBR_d_t,
+        Theta_star_HBR_d_t,
+        Theta_attic_d_t,
+        Theta_sur_d_t_i,
+        df_output,
+    )
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1691,26 +1729,22 @@ def calc_Q_UT_A(
     Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i = \
         _prepare_duct_geometry_state(
             df_output, df_output2, house, Theta_ex_d_t, J_d_t)
-    # (51)　負荷バランス時の居室の絶対湿度
-    X_star_HBR_d_t = dc.get_X_star_HBR_d_t(X_ex_d_t, house.region)  # X_ex_d_t [g/kg(DA)] 想定
-    df_output['X_star_HBR_d_t'] = X_star_HBR_d_t
-
-    # (50)　負荷バランス時の居室の室温
-    Theta_star_HBR_d_t = dc.get_Theta_star_HBR_d_t(Theta_ex_d_t, house.region)
-    df_output['Theta_star_HBR_d_t'] = Theta_star_HBR_d_t
-
-    # (55)　小屋裏の空気温度
-    Theta_attic_d_t = dc.get_Theta_attic_d_t(Theta_SAT_d_t, Theta_star_HBR_d_t)
-    df_output['Theta_attic_d_t'] = Theta_attic_d_t
-
-    # (54)　ダクトの周囲の空気温度
-    Theta_sur_d_t_i = dc.get_Theta_sur_d_t_i(Theta_star_HBR_d_t, Theta_attic_d_t, l_duct_in_i, l_duct_ex_i, ac_setting.duct_insulation)
-    df_output = df_output.assign(
-        Theta_sur_d_t_i_1 = Theta_sur_d_t_i[0],
-        Theta_sur_d_t_i_2 = Theta_sur_d_t_i[1],
-        Theta_sur_d_t_i_3 = Theta_sur_d_t_i[2],
-        Theta_sur_d_t_i_4 = Theta_sur_d_t_i[3],
-        Theta_sur_d_t_i_5 = Theta_sur_d_t_i[4]
+    # (51), (50), (55), (54)　負荷バランス時の室内・ダクト周囲状態
+    (
+        X_star_HBR_d_t,
+        Theta_star_HBR_d_t,
+        Theta_attic_d_t,
+        Theta_sur_d_t_i,
+        df_output,
+    ) = _prepare_balanced_room_and_duct_state(
+        df_output,
+        ac_setting,
+        house,
+        X_ex_d_t,
+        Theta_ex_d_t,
+        Theta_SAT_d_t,
+        l_duct_in_i,
+        l_duct_ex_i,
     )
 
     # (40)-1st 熱源機の風量を計算するための熱源機の出力

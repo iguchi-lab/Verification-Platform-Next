@@ -2640,3 +2640,49 @@ def test_prepare_duct_geometry_state_preserves_formula_59_to_56_order(monkeypatc
         ("df2", "l_duct_in_i"),
         ("df2", "l_duct_i"),
     ]
+
+
+def test_prepare_balanced_room_and_duct_state_preserves_formula_order(monkeypatch):
+    events = []
+    values = [object(), object(), object(), tuple(object() for _ in range(5))]
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc, "get_X_star_HBR_d_t",
+        lambda *args: events.append(("humidity", args)) or values[0])
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_star_HBR_d_t",
+        lambda *args: events.append(("temperature", args)) or values[1])
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_attic_d_t",
+        lambda *args: events.append(("attic", args)) or values[2])
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_sur_d_t_i",
+        lambda *args: events.append(("surrounding", args)) or values[3])
+
+    setting = SimpleNamespace(duct_insulation="outside")
+    house = SimpleNamespace(region=6)
+    x_ex, theta_ex, theta_sat, duct_in, duct_ex = [object() for _ in range(5)]
+    result = sut._prepare_balanced_room_and_duct_state(
+        frame, setting, house, x_ex, theta_ex, theta_sat, duct_in, duct_ex)
+
+    assert result[:4] == tuple(values)
+    assert result[4].generation == 1
+    assert [event[0] for event in events] == [
+        "humidity", "setitem", "temperature", "setitem",
+        "attic", "setitem", "surrounding", "assign",
+    ]
+    assert events[0][1] == (x_ex, 6)
+    assert events[2][1] == (theta_ex, 6)
+    assert events[4][1] == (theta_sat, values[1])
+    assert events[6][1] == (values[1], values[2], duct_in, duct_ex, "outside")
+    assert [events[i][2] for i in (1, 3, 5)] == [
+        "X_star_HBR_d_t", "Theta_star_HBR_d_t", "Theta_attic_d_t"
+    ]
+    assert tuple(name for name, _ in events[7][2]) == (
+        "Theta_sur_d_t_i_1",
+        "Theta_sur_d_t_i_2",
+        "Theta_sur_d_t_i_3",
+        "Theta_sur_d_t_i_4",
+        "Theta_sur_d_t_i_5",
+    )
