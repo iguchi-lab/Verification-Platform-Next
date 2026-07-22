@@ -2080,32 +2080,14 @@ def calc_Q_UT_A(
 
     # (53)　負荷バランス時の非居室の絶対湿度
     X_star_NR_d_t = _prepare_balanced_non_room_humidity(
-        df_output,
-        house,
-        load,
-        X_star_HBR_d_t,
-        L_wtr,
-        V_vent_l_NR_d_t,
-        V_dash_supply_d_t_i,
-    )
+        df_output, house, load, X_star_HBR_d_t, L_wtr,
+        V_vent_l_NR_d_t, V_dash_supply_d_t_i)
     # (52)　負荷バランス時の非居室の室温
     Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
         _prepare_balanced_non_room_temperature(
-            df_output,
-            new_ufac,
-            house,
-            skin,
-            climate,
-            load,
-            A_NR,
-            A_prt_i,
-            U_prt,
-            V_vent_l_NR_d_t,
-            V_dash_supply_d_t_i,
-            Theta_star_HBR_d_t,
-            Theta_in_d_t,
-            Theta_uf_d_t,
-        )
+            df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
+            U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+            Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t)
     # (49), (47)　実際の非居室・居室の絶対湿度
     X_NR_d_t, X_HBR_d_t_i, df_output = _prepare_actual_humidity_state(
         df_output, X_star_NR_d_t, X_star_HBR_d_t)
@@ -2113,14 +2095,8 @@ def calc_Q_UT_A(
     # (11), (10)　間仕切熱移動と冷房潜熱負荷
     Q_star_trs_prt_d_t_i, L_star_CL_d_t_i, df_output = \
         _prepare_balanced_load_state(
-            df_output,
-            U_prt,
-            A_prt_i,
-            Theta_star_HBR_d_t,
-            Theta_star_NR_d_t,
-            load,
-            house.region,
-        )
+            df_output, U_prt, A_prt_i, Theta_star_HBR_d_t,
+            Theta_star_NR_d_t, load, house.region)
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
     if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
