@@ -404,6 +404,32 @@ def _adjust_heat_source_output_for_underfloor_to_ground_transfer(
 
     return Q_hat_hs_d_t
 
+def _get_heat_source_outlet_requirements(
+        X_star_hs_in_d_t: np.ndarray,
+        Q_hs_max_CL_d_t: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        X_star_HBR_d_t: np.ndarray,
+        L_star_CL_d_t_i: np.ndarray,
+        Theta_sur_d_t_i: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+        l_duct_i: np.ndarray,
+        region: int,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (18), (22), and (21) in their original order."""
+    # (18)　熱源機の出口における空気温度の最低値
+    X_hs_out_min_C_d_t = dc.get_X_hs_out_min_C_d_t(X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i)
+
+    # (22)　熱源機の出口における要求絶対湿度
+    X_req_d_t_i = dc.get_X_req_d_t_i(X_star_HBR_d_t, L_star_CL_d_t_i, V_dash_supply_d_t_i, region)
+
+    # (21)　熱源機の出口における要求空気温度
+    Theta_req_d_t_i = dc.get_Theta_req_d_t_i(Theta_sur_d_t_i, Theta_star_HBR_d_t, V_dash_supply_d_t_i,
+                        L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, region)
+
+    return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1220,16 +1246,23 @@ def calc_Q_UT_A(
                 if (isFirst or not (H[t] or C[t]))  \
                 else Theta_NR_d_t[t-1]
 
-            # (18)　熱源機の出口における空気温度の最低値
-            X_hs_out_min_C_d_t = dc.get_X_hs_out_min_C_d_t(X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i)
-
-            # (22)　熱源機の出口における要求絶対湿度
-            X_req_d_t_i = dc.get_X_req_d_t_i(X_star_HBR_d_t, L_star_CL_d_t_i, V_dash_supply_d_t_i, house.region)
-
-            # (21)　熱源機の出口における要求空気温度
-            Theta_req_d_t_i = dc.get_Theta_req_d_t_i(Theta_sur_d_t_i, Theta_star_HBR_d_t, V_dash_supply_d_t_i,
-                                L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, house.region)
-
+            (
+                X_hs_out_min_C_d_t,
+                X_req_d_t_i,
+                Theta_req_d_t_i,
+            ) = _get_heat_source_outlet_requirements(
+                X_star_hs_in_d_t,
+                Q_hs_max_CL_d_t,
+                V_dash_supply_d_t_i,
+                X_star_HBR_d_t,
+                L_star_CL_d_t_i,
+                Theta_sur_d_t_i,
+                Theta_star_HBR_d_t,
+                L_star_H_d_t_i,
+                L_star_CS_d_t_i,
+                l_duct_i,
+                house.region,
+            )
             if skin.underfloor_air_conditioning_air_supply:
                 for i in range(2):  # i=0,1
                     Theta_uf_d_t, Theta_g_surf_d_t, *others  \
@@ -1463,16 +1496,23 @@ def calc_Q_UT_A(
         # (19)　負荷バランス時の熱源機の入口における空気温度
         Theta_star_hs_in_d_t = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
 
-        # (18)　熱源機の出口における空気温度の最低値
-        X_hs_out_min_C_d_t = dc.get_X_hs_out_min_C_d_t(X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i)
-
-        # (22)　熱源機の出口における要求絶対湿度
-        X_req_d_t_i = dc.get_X_req_d_t_i(X_star_HBR_d_t, L_star_CL_d_t_i, V_dash_supply_d_t_i, house.region)
-
-        # (21)　熱源機の出口における要求空気温度
-        Theta_req_d_t_i = dc.get_Theta_req_d_t_i(Theta_sur_d_t_i, Theta_star_HBR_d_t, V_dash_supply_d_t_i,
-                            L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, house.region)
-
+        (
+            X_hs_out_min_C_d_t,
+            X_req_d_t_i,
+            Theta_req_d_t_i,
+        ) = _get_heat_source_outlet_requirements(
+            X_star_hs_in_d_t,
+            Q_hs_max_CL_d_t,
+            V_dash_supply_d_t_i,
+            X_star_HBR_d_t,
+            L_star_CL_d_t_i,
+            Theta_sur_d_t_i,
+            Theta_star_HBR_d_t,
+            L_star_H_d_t_i,
+            L_star_CS_d_t_i,
+            l_duct_i,
+            house.region,
+        )
         # NOTE: 床下空調を使用する(旧・新 両ロジックとも) 対象居室のみ損失分を補正する
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
             # 期待される床下温度を事前に計算(本計算は後で行う)

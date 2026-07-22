@@ -1057,3 +1057,35 @@ def test_underfloor_to_ground_transfer_preserves_argument_order(monkeypatch):
     assert calls[-1] == (
         "transfer", 1.0, 2.0, 78.0, 3.0, 0.025, 8759.0, 11.2, 15.5
     )
+
+def test_heat_source_outlet_requirements_preserve_formula_order(monkeypatch):
+    calls = []
+    inputs = [object() for _ in range(10)]
+    outputs = [object() for _ in range(3)]
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_hs_out_min_C_d_t",
+        lambda *args: calls.append(("minimum", args)) or outputs[0],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_req_d_t_i",
+        lambda *args: calls.append(("humidity", args)) or outputs[1],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_req_d_t_i",
+        lambda *args: calls.append(("temperature", args)) or outputs[2],
+    )
+
+    result = sut._get_heat_source_outlet_requirements(*inputs, 6)
+
+    assert result == tuple(outputs)
+    assert calls == [
+        ("minimum", (inputs[0], inputs[1], inputs[2])),
+        ("humidity", (inputs[3], inputs[4], inputs[2], 6)),
+        (
+            "temperature",
+            (inputs[5], inputs[6], inputs[2], inputs[7], inputs[8], inputs[9], 6),
+        ),
+    ]
