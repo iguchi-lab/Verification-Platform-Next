@@ -1944,18 +1944,17 @@ def _prepare_pre_vav_airflow_state(
         if not should_adjust:
             break
 
-        (
-            Q_hat_hs_d_t,
-            U_s_input,
-            A_s_ufac_i,
-            r_A_s_ufac,
-        ) = _adjust_heat_source_output_for_room_to_underfloor_transfer(
+        room_transfer = _adjust_heat_source_output_for_room_to_underfloor_transfer(
             new_ufac,
             house,
             Theta_ex_d_t,
             Theta_in_d_t,
             Q_hat_hs_d_t,
         )
+        Q_hat_hs_d_t = room_transfer.Q_hat_hs_d_t
+        U_s_input = room_transfer.U_s_input
+        A_s_ufac_i = room_transfer.A_s_ufac_i
+        r_A_s_ufac = room_transfer.r_A_s_ufac
         Q_hat_hs_d_t, Theta_uf_d_t = \
             _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
                 ac_setting,

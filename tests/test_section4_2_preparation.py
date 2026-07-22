@@ -2824,7 +2824,8 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     monkeypatch.setattr(
         sut,
         "_adjust_heat_source_output_for_room_to_underfloor_transfer",
-        lambda *args: events.append(("room", args)) or (q_room, u_s, a_s, r_a),
+        lambda *args: events.append(("room", args))
+        or sut._RoomToUnderfloorTransferResult(q_room, u_s, a_s, r_a),
     )
     monkeypatch.setattr(
         sut,
