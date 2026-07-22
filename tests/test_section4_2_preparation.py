@@ -2915,8 +2915,8 @@ def test_prepare_balanced_non_room_temperature_preserves_formula_52_branch(
         lambda *args: events.append(("legacy", args)) or theta,
     )
 
-    result = sut._prepare_balanced_non_room_temperature(
-        frame, new_ufac, house, skin, object(), load, *inputs)
+    result = sut._prepare_balanced_non_room_temperature(sut._BalancedNonRoomTemperatureInputs(
+        frame, new_ufac, house, skin, object(), load, *inputs))
 
     assert result == (theta, ratio if enabled else None)
     assert [event[0] for event in events] == [
@@ -4019,4 +4019,27 @@ def test_pre_vav_airflow_inputs_preserve_field_order():
         "Theta_g_avg",
         "sum_Theta_dash_g_surf_A_m",
         "should_adjust",
+    )
+
+
+def test_balanced_non_room_temperature_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(14))
+    inputs = sut._BalancedNonRoomTemperatureInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "new_ufac",
+        "house",
+        "skin",
+        "climate",
+        "load",
+        "A_NR",
+        "A_prt_i",
+        "U_prt",
+        "V_vent_l_NR_d_t",
+        "V_dash_supply_d_t_i",
+        "Theta_star_HBR_d_t",
+        "Theta_in_d_t",
+        "Theta_uf_d_t",
     )

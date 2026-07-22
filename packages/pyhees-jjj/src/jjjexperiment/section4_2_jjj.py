@@ -212,6 +212,23 @@ class _PreVavAirflowInputs(NamedTuple):
     should_adjust: object
 
 
+class _BalancedNonRoomTemperatureInputs(NamedTuple):
+    df_output: object
+    new_ufac: object
+    house: object
+    skin: object
+    climate: object
+    load: object
+    A_NR: object
+    A_prt_i: object
+    U_prt: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+    Theta_star_HBR_d_t: object
+    Theta_in_d_t: object
+    Theta_uf_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2100,11 +2117,22 @@ def _prepare_balanced_non_room_humidity(
     df_output['X_star_NR_d_t'] = X_star_NR_d_t
     return X_star_NR_d_t
 
-def _prepare_balanced_non_room_temperature(
-        df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
-        U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-        Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t):
+def _prepare_balanced_non_room_temperature(inputs: _BalancedNonRoomTemperatureInputs):
     """Calculate formula (52) while preserving the new-underfloor branch."""
+    df_output = inputs.df_output
+    new_ufac = inputs.new_ufac
+    house = inputs.house
+    skin = inputs.skin
+    climate = inputs.climate
+    load = inputs.load
+    A_NR = inputs.A_NR
+    A_prt_i = inputs.A_prt_i
+    U_prt = inputs.U_prt
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_in_d_t = inputs.Theta_in_d_t
+    Theta_uf_d_t = inputs.Theta_uf_d_t
     r_A_NR_uf_1F_excl_bath = None
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
@@ -2954,10 +2982,10 @@ def calc_Q_UT_A(
         V_vent_l_NR_d_t, V_dash_supply_d_t_i)
     # (52)　負荷バランス時の非居室の室温
     Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
-        _prepare_balanced_non_room_temperature(
+        _prepare_balanced_non_room_temperature(_BalancedNonRoomTemperatureInputs(
             df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
             U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-            Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t)
+            Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t))
     # (49), (47)　実際の非居室・居室の絶対湿度
     X_NR_d_t, X_HBR_d_t_i, df_output = _prepare_actual_humidity_state(
         df_output, X_star_NR_d_t, X_star_HBR_d_t)
