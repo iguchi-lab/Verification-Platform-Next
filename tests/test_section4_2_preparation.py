@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 import jjjexperiment.section4_2_jjj as sut
@@ -226,3 +227,52 @@ def test_prepare_underfloor_ground_response_preserves_order_and_season(
 def test_prepare_underfloor_ground_response_rejects_unknown_setting():
     with pytest.raises(ValueError):
         sut._prepare_underfloor_ground_response(object(), object())
+
+@pytest.mark.parametrize(
+    ("carryover", "expected"),
+    (
+        (sut.過剰熱量繰越計算.行う, [0.0, 2.0]),
+        (sut.過剰熱量繰越計算.行わない, [-1.0, 2.0]),
+    ),
+)
+def test_get_actual_loads_preserves_formula_order_and_clipping(
+    monkeypatch,
+    carryover,
+    expected,
+):
+    calls = []
+    inputs = [object() for _ in range(5)]
+
+    def result(name, *args):
+        calls.append((name, args))
+        return np.array([-1.0, 2.0])
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_dash_CL_d_t_i",
+        lambda *args: result("CL", *args),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_dash_CS_d_t_i",
+        lambda *args: result("CS", *args),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_dash_H_d_t_i",
+        lambda *args: result("H", *args),
+    )
+
+    actual = sut._get_actual_loads(
+        SimpleNamespace(carry_over_heat=carryover),
+        *inputs,
+        6,
+    )
+
+    for value in actual:
+        np.testing.assert_array_equal(value, expected)
+    assert calls == [
+        ("CL", (inputs[0], inputs[1], inputs[2], 6)),
+        ("CS", (inputs[0], inputs[3], inputs[4], 6)),
+        ("H", (inputs[0], inputs[3], inputs[4], 6)),
+    ]

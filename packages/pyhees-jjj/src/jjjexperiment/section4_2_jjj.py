@@ -201,6 +201,42 @@ def _prepare_underfloor_ground_response(
     return Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m
 
 
+def _get_actual_loads(
+        carryover_heat_dto: CarryoverHeatDto,
+        V_supply_d_t_i: np.ndarray,
+        X_HBR_d_t_i: np.ndarray,
+        X_supply_d_t_i: np.ndarray,
+        Theta_supply_d_t_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        region: int,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (7) through (5) in their original order."""
+    # (7)　間仕切りの熱取得を含む実際の冷房潜熱負荷
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CL_d_t_i = np.clip(
+            dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, region),  # 従来式
+            0, None)
+    else:
+        L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, region)
+
+    # (6)　間仕切りの熱取得を含む実際の冷房顕熱負荷
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CS_d_t_i = np.clip(
+            dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region),  # 従来式
+            0, None)
+    else:
+        L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+
+    # (5)　間仕切りの熱損失を含む実際の暖房負荷
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_H_d_t_i = np.clip(
+            dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region),  # 従来式
+            0, None)
+    else:
+        L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+
+    return L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1469,13 +1505,15 @@ def calc_Q_UT_A(
     df_output['Theta_hs_in_d_t'] = Theta_hs_in_d_t
 
     """ まとめ - 実際の暖冷房負荷 """
-    # (7)　間仕切りの熱取得を含む実際の冷房潜熱負荷
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        L_dash_CL_d_t_i = np.clip(
-            dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region), # 従来式
-            0, None)
-    else:
-        L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region)
+    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
+        carryover_heat_dto,
+        V_supply_d_t_i,
+        X_HBR_d_t_i,
+        X_supply_d_t_i,
+        Theta_supply_d_t_i,
+        Theta_HBR_d_t_i,
+        house.region,
+    )
     df_output = df_output.assign(
         L_dash_CL_d_t_1 = L_dash_CL_d_t_i[0],
         L_dash_CL_d_t_2 = L_dash_CL_d_t_i[1],
@@ -1483,13 +1521,6 @@ def calc_Q_UT_A(
         L_dash_CL_d_t_4 = L_dash_CL_d_t_i[3],
         L_dash_CL_d_t_5 = L_dash_CL_d_t_i[4]
     )
-    # (6)　間仕切りの熱取得を含む実際の冷房顕熱負荷
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        L_dash_CS_d_t_i = np.clip(
-            dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
-            0, None)
-    else:
-        L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_CS_d_t_1 = L_dash_CS_d_t_i[0],
         L_dash_CS_d_t_2 = L_dash_CS_d_t_i[1],
@@ -1497,13 +1528,6 @@ def calc_Q_UT_A(
         L_dash_CS_d_t_4 = L_dash_CS_d_t_i[3],
         L_dash_CS_d_t_5 = L_dash_CS_d_t_i[4]
     )
-    # (5)　間仕切りの熱損失を含む実際の暖房負荷
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        L_dash_H_d_t_i = np.clip(
-            dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
-            0, None)
-    else:
-        L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_H_d_t_1 = L_dash_H_d_t_i[0],
         L_dash_H_d_t_2 = L_dash_H_d_t_i[1],
@@ -1511,7 +1535,6 @@ def calc_Q_UT_A(
         L_dash_H_d_t_4 = L_dash_H_d_t_i[3],
         L_dash_H_d_t_5 = L_dash_H_d_t_i[4]
     )
-
     """ まとめ - 未処理負荷 """
     # (4)　冷房設備機器の未処理冷房潜熱負荷
     Q_UT_CL_d_t_i = dc.get_Q_UT_CL_d_t_i(L_star_CL_d_t_i, L_dash_CL_d_t_i)
