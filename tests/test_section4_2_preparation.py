@@ -2686,3 +2686,38 @@ def test_prepare_balanced_room_and_duct_state_preserves_formula_order(monkeypatc
         "Theta_sur_d_t_i_4",
         "Theta_sur_d_t_i_5",
     )
+
+def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monkeypatch):
+    events = []
+    values = (object(), object())
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc,
+        "calc_Q_hat_hs_d_t",
+        lambda *args: events.append(("formula", args)) or values,
+    )
+    house = SimpleNamespace(A_A=120.0, region=6)
+    skin = SimpleNamespace(Q=2.4, mu_H=0.08, mu_C=0.05)
+    inputs = [object() for _ in range(12)]
+    result = sut._prepare_initial_heat_source_output(
+        frame,
+        house,
+        skin,
+        *inputs,
+    )
+
+    assert result == values
+    assert [event[0] for event in events] == ["formula", "setitem"]
+    assert events[0][1] == (
+        2.4,
+        120.0,
+        inputs[0],
+        inputs[1],
+        0.08,
+        0.05,
+        *inputs[2:],
+        6,
+    )
+    assert events[1][2] == "Q_hat_hs_d_t"
+    assert events[1][3] is values[0]

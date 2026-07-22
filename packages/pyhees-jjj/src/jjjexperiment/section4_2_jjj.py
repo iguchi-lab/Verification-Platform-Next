@@ -1649,6 +1649,33 @@ def _prepare_balanced_room_and_duct_state(
     )
 
 
+
+def _prepare_initial_heat_source_output(
+        df_output, house, skin, V_vent_l_d_t, V_vent_g_i, J_d_t,
+        q_gen_d_t, n_p_d_t, q_p_H, q_p_CS, q_p_CL, X_ex_d_t,
+        w_gen_d_t, Theta_ex_d_t, L_wtr):
+    """Calculate the first formula (40) heat-source output in source order."""
+    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(
+        skin.Q,
+        house.A_A,
+        V_vent_l_d_t,
+        V_vent_g_i,
+        skin.mu_H,
+        skin.mu_C,
+        J_d_t,
+        q_gen_d_t,
+        n_p_d_t,
+        q_p_H,
+        q_p_CS,
+        q_p_CL,
+        X_ex_d_t,
+        w_gen_d_t,
+        Theta_ex_d_t,
+        L_wtr,
+        house.region,
+    )
+    df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
+    return Q_hat_hs_d_t, Q_hat_hs_CS_d_t
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1747,11 +1774,24 @@ def calc_Q_UT_A(
         l_duct_ex_i,
     )
 
-    # (40)-1st 熱源機の風量を計算するための熱源機の出力
-    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(skin.Q, house.A_A, V_vent_l_d_t, V_vent_g_i, skin.mu_H, skin.mu_C, J_d_t, q_gen_d_t, n_p_d_t, q_p_H,
-                                     q_p_CS, q_p_CL, X_ex_d_t, w_gen_d_t, Theta_ex_d_t, L_wtr, house.region)
-    df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
-
+    # (40)-1st　熱源機の風量を計算するための熱源機の出力
+    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(
+        df_output,
+        house,
+        skin,
+        V_vent_l_d_t,
+        V_vent_g_i,
+        J_d_t,
+        q_gen_d_t,
+        n_p_d_t,
+        q_p_H,
+        q_p_CS,
+        q_p_CL,
+        X_ex_d_t,
+        w_gen_d_t,
+        Theta_ex_d_t,
+        L_wtr,
+    )
     # (39)　熱源機の最低風量
     V_hs_min = dc.get_V_hs_min(V_vent_g_i)
     df_output3['V_hs_min'] = [V_hs_min]
