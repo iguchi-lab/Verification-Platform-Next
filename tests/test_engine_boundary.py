@@ -43,7 +43,6 @@ EXPECTED_REVERSE_DEPENDENCIES = {
 EXPECTED_MAIN_WILDCARD_IMPORTS: set[str] = set()
 
 EXPECTED_OPTIONS_WILDCARD_IMPORTERS = {
-    "section4_2.py",
     "section4_2_a.py",
     "underfloor_ac/inputs/common.py",
 }
