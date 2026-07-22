@@ -159,6 +159,15 @@ class _CapacityStateResult(NamedTuple):
     SHF_L_min_c: object
     SHF_dash_d_t: object
 
+class _SupplyStateResult(NamedTuple):
+    X_hs_out_d_t: object
+    Theta_hs_out_min_C_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_d_t: object
+    V_supply_d_t_i_before: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2245,7 +2254,7 @@ def _prepare_no_carryover_supply_state(
             ac_setting, house, skin, load, Theta_supply_d_t_i,
             Theta_ex_d_t, V_dash_supply_d_t_i)
     _log_supply_temperatures(Theta_supply_d_t_i)
-    return (
+    return _SupplyStateResult(
         X_hs_out_d_t,
         Theta_hs_out_min_C_d_t,
         Theta_hs_out_max_H_d_t,
@@ -2538,10 +2547,14 @@ def _prepare_carryover_supply_state(
         Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
             ac_setting, house, skin, load, Theta_supply_d_t_i,
             Theta_ex_d_t, V_dash_supply_d_t_i)
-    return (
-        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
-        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+    return _SupplyStateResult(
+        X_hs_out_d_t,
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+        V_supply_d_t_i_before,
+        V_supply_d_t_i,
+        Theta_supply_d_t_i,
     )
 
 

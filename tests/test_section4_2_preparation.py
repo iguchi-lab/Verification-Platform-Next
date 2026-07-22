@@ -3929,3 +3929,20 @@ def test_capacity_state_result_preserves_tuple_contract():
         "SHF_L_min_c",
         "SHF_dash_d_t",
     )
+
+
+def test_supply_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(7))
+    result = sut._SupplyStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "X_hs_out_d_t",
+        "Theta_hs_out_min_C_d_t",
+        "Theta_hs_out_max_H_d_t",
+        "Theta_hs_out_d_t",
+        "V_supply_d_t_i_before",
+        "V_supply_d_t_i",
+        "Theta_supply_d_t_i",
+    )
