@@ -44,6 +44,18 @@ EXPECTED_MAIN_WILDCARD_IMPORTS: set[str] = set()
 
 EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 
+# Package __init__.py files may deliberately re-export a public API. Implementation
+# modules must make their dependencies explicit; shrink this migration allowlist as
+# each remaining boundary is refactored.
+EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS = {
+    ("denchu/denchu_1.py", "jjjexperiment.denchu.utils"),
+    ("denchu/denchu_2.py", "jjjexperiment.denchu.denchu_1"),
+    (
+        "underfloor_ac/section4_2_f46_f48.py",
+        "jjjexperiment.inputs.di_container",
+    ),
+}
+
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -139,4 +151,28 @@ def test_options_wildcard_imports_match_migration_allowlist():
         "Do not add a wildcard import. If an existing wildcard import was removed, "
         "reduce EXPECTED_OPTIONS_WILDCARD_IMPORTERS in the same refactoring commit.\n"
         f"expected={EXPECTED_OPTIONS_WILDCARD_IMPORTERS}\nactual={wildcard_importers}"
+    )
+
+
+def test_implementation_wildcard_imports_match_migration_allowlist():
+    wildcard_imports = set()
+    for path in sorted(JJJEXPERIMENT_SOURCE.rglob("*.py")):
+        if path.name == "__init__.py":
+            continue
+
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        wildcard_imports.update(
+            (path.relative_to(JJJEXPERIMENT_SOURCE).as_posix(), node.module)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            and node.module
+            and any(alias.name == "*" for alias in node.names)
+        )
+
+    assert wildcard_imports == EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS, (
+        "Implementation modules must use explicit imports. Do not add a wildcard "
+        "import. If an existing wildcard import was removed, reduce "
+        "EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS in the same refactoring commit.\n"
+        f"expected={EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS}\n"
+        f"actual={wildcard_imports}"
     )
