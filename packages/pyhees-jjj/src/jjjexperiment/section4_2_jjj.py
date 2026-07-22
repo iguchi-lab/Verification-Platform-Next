@@ -328,6 +328,46 @@ def _record_balanced_load_outputs(
         L_star_H_d_t_i_5=L_star_H_d_t_i[4],
     )
 
+def _record_heat_source_outlet_outputs(
+        df_output: pd.DataFrame,
+        X_star_hs_in_d_t: np.ndarray,
+        Theta_star_hs_in_d_t: np.ndarray,
+        X_hs_out_min_C_d_t: np.ndarray,
+        X_req_d_t_i: np.ndarray,
+        Theta_req_d_t_i: np.ndarray,
+        X_hs_out_d_t: np.ndarray,
+        Theta_hs_out_min_C_d_t: np.ndarray,
+        Theta_hs_out_max_H_d_t: np.ndarray,
+        Theta_hs_out_d_t: np.ndarray,
+    ) -> pd.DataFrame:
+    """Record heat-source outlet values in the original column order."""
+    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
+    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
+    # These two assignments intentionally preserve the existing duplicate writes.
+    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
+    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
+    df_output['X_hs_out_min_C_d_t'] = X_hs_out_min_C_d_t
+    df_output = df_output.assign(
+        X_req_d_t_1=X_req_d_t_i[0],
+        X_req_d_t_2=X_req_d_t_i[1],
+        X_req_d_t_3=X_req_d_t_i[2],
+        X_req_d_t_4=X_req_d_t_i[3],
+        X_req_d_t_5=X_req_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        Theta_req_d_t_1=Theta_req_d_t_i[0],
+        Theta_req_d_t_2=Theta_req_d_t_i[1],
+        Theta_req_d_t_3=Theta_req_d_t_i[2],
+        Theta_req_d_t_4=Theta_req_d_t_i[3],
+        Theta_req_d_t_5=Theta_req_d_t_i[4],
+    )
+    df_output['X_hs_out_d_t'] = X_hs_out_d_t
+    return df_output.assign(
+        Theta_hs_out_min_C_d_t=Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t=Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t=Theta_hs_out_d_t,
+    )
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1485,35 +1525,19 @@ def calc_Q_UT_A(
         Q_hs_max_H_d_t  = Q_hs_max_H_d_t,
     )
 
-    """ 熱源機の出口 - 負荷バランス時 """
-    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
-    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
-
-    """ 熱源機の出口 - 熱源機の出口 """
-    df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
-    df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
-    df_output['X_hs_out_min_C_d_t'] = X_hs_out_min_C_d_t
-    df_output = df_output.assign(
-        X_req_d_t_1 = X_req_d_t_i[0],
-        X_req_d_t_2 = X_req_d_t_i[1],
-        X_req_d_t_3 = X_req_d_t_i[2],
-        X_req_d_t_4 = X_req_d_t_i[3],
-        X_req_d_t_5 = X_req_d_t_i[4]
+    """ 熱源機の出口 - 負荷バランス時 / 熱源機の出口 """
+    df_output = _record_heat_source_outlet_outputs(
+        df_output,
+        X_star_hs_in_d_t,
+        Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t,
+        X_req_d_t_i,
+        Theta_req_d_t_i,
+        X_hs_out_d_t,
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
     )
-    df_output = df_output.assign(
-        Theta_req_d_t_1 = Theta_req_d_t_i[0],
-        Theta_req_d_t_2 = Theta_req_d_t_i[1],
-        Theta_req_d_t_3 = Theta_req_d_t_i[2],
-        Theta_req_d_t_4 = Theta_req_d_t_i[3],
-        Theta_req_d_t_5 = Theta_req_d_t_i[4]
-    )
-    df_output['X_hs_out_d_t'] = X_hs_out_d_t
-    df_output = df_output.assign(
-        Theta_hs_out_min_C_d_t = Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t = Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t = Theta_hs_out_d_t,
-    )
-
     """吹出口 - 吹出口"""
     # NOTE: 2024/02/14 WG の話で出力してほしいデータになりました
     df_output = df_output.assign(

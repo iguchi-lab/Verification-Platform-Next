@@ -531,3 +531,60 @@ def test_record_balanced_load_outputs_preserves_assign_order_and_result():
             ),
         ),
     ]
+
+def test_record_heat_source_outlet_outputs_preserves_write_order():
+    frame = _FrameRecorder()
+    x_star = object()
+    theta_star = object()
+    x_min = object()
+    x_req = [object() for _ in range(5)]
+    theta_req = [object() for _ in range(5)]
+    x_out = object()
+    theta_min = object()
+    theta_max = object()
+    theta_out = object()
+
+    result = sut._record_heat_source_outlet_outputs(
+        frame,
+        x_star,
+        theta_star,
+        x_min,
+        x_req,
+        theta_req,
+        x_out,
+        theta_min,
+        theta_max,
+        theta_out,
+    )
+
+    assert result.generation == 3
+    assert frame.events == [
+        ("setitem", 0, "X_star_hs_in_d_t", x_star),
+        ("setitem", 0, "Theta_star_hs_in_d_t", theta_star),
+        ("setitem", 0, "X_star_hs_in_d_t", x_star),
+        ("setitem", 0, "Theta_star_hs_in_d_t", theta_star),
+        ("setitem", 0, "X_hs_out_min_C_d_t", x_min),
+        (
+            "assign",
+            0,
+            tuple((f"X_req_d_t_{i + 1}", x_req[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"Theta_req_d_t_{i + 1}", theta_req[i])
+                for i in range(5)
+            ),
+        ),
+        ("setitem", 2, "X_hs_out_d_t", x_out),
+        (
+            "assign",
+            2,
+            (
+                ("Theta_hs_out_min_C_d_t", theta_min),
+                ("Theta_hs_out_max_H_d_t", theta_max),
+                ("Theta_hs_out_d_t", theta_out),
+            ),
+        ),
+    ]
