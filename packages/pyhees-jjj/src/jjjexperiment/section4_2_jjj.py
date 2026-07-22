@@ -1523,6 +1523,18 @@ def _prepare_dwelling_areas_and_water_heat(df_output2, df_output3, house):
     df_output3['L_wtr'] = [L_wtr]
     return A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr
 
+def _prepare_occupancy_state(df_output, house, A_NR):
+    """Calculate formula (66) values and preserve direct output writes."""
+    n_p_NR_d_t = dc.calc_n_p_NR_d_t(A_NR)
+    df_output['n_p_NR_d_t'] = n_p_NR_d_t
+    n_p_OR_d_t = dc.calc_n_p_OR_d_t(house.A_OR)
+    df_output['n_p_OR_d_t'] = n_p_OR_d_t
+    n_p_MR_d_t = dc.calc_n_p_MR_d_t(house.A_MR)
+    df_output['n_p_MR_d_t'] = n_p_MR_d_t
+    n_p_d_t = dc.get_n_p_d_t(n_p_MR_d_t, n_p_OR_d_t, n_p_NR_d_t)
+    df_output['n_p_d_t'] = n_p_d_t
+    return n_p_d_t
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1565,17 +1577,7 @@ def calc_Q_UT_A(
         df_output2, df_output3, house)
 
     # (66d)　非居室の在室人数
-    n_p_NR_d_t = dc.calc_n_p_NR_d_t(A_NR)
-    df_output['n_p_NR_d_t'] = n_p_NR_d_t
-    # (66c)　その他居室の在室人数
-    n_p_OR_d_t = dc.calc_n_p_OR_d_t(house.A_OR)
-    df_output['n_p_OR_d_t'] = n_p_OR_d_t
-    # (66b)　主たる居室の在室人数
-    n_p_MR_d_t = dc.calc_n_p_MR_d_t(house.A_MR)
-    df_output['n_p_MR_d_t'] = n_p_MR_d_t
-    # (66a)　在室人数
-    n_p_d_t = dc.get_n_p_d_t(n_p_MR_d_t, n_p_OR_d_t, n_p_NR_d_t)
-    df_output['n_p_d_t'] = n_p_d_t
+    n_p_d_t = _prepare_occupancy_state(df_output, house, A_NR)
 
     # 人体発熱
     q_p_H = dc.get_q_p_H()

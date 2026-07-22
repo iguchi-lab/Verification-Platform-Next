@@ -2455,3 +2455,29 @@ def test_prepare_dwelling_areas_and_water_heat_preserves_order(monkeypatch):
     ]
     assert events[14] == ("water",)
     assert events[15][0:3] == ("write", "df3", "L_wtr")
+
+def test_prepare_occupancy_state_preserves_formula_66_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    monkeypatch.setattr(sut.dc, "calc_n_p_NR_d_t", lambda x: events.append(("NR", x)) or values[0])
+    monkeypatch.setattr(sut.dc, "calc_n_p_OR_d_t", lambda x: events.append(("OR", x)) or values[1])
+    monkeypatch.setattr(sut.dc, "calc_n_p_MR_d_t", lambda x: events.append(("MR", x)) or values[2])
+    monkeypatch.setattr(sut.dc, "get_n_p_d_t", lambda *x: events.append(("total", x)) or values[3])
+
+    result = sut._prepare_occupancy_state(
+        Frame(), SimpleNamespace(A_OR=50.0, A_MR=30.0), 40.0
+    )
+
+    assert result is values[3]
+    assert [event[0] for event in events] == [
+        "NR", "write", "OR", "write", "MR", "write", "total", "write"
+    ]
+    assert events[6][1] == (values[2], values[1], values[0])
+    assert [events[i][1] for i in (1, 3, 5, 7)] == [
+        "n_p_NR_d_t", "n_p_OR_d_t", "n_p_MR_d_t", "n_p_d_t"
+    ]
