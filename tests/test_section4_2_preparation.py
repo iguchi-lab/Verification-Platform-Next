@@ -2774,7 +2774,8 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
 def test_prepare_underfloor_adjustment_state_preserves_ground_response_and_flag(
         monkeypatch, enabled):
     events = []
-    ground = tuple(object() for _ in range(4))
+    ground = sut._UnderfloorGroundResponseResult(
+        *(object() for _ in range(4)))
     setting, theta_ex = object(), object()
     flag = sut.床下空調ロジック.変更する if enabled else object()
     monkeypatch.setattr(

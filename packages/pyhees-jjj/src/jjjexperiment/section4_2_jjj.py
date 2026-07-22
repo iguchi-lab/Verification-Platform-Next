@@ -1891,12 +1891,12 @@ def _prepare_rated_heat_source_capacity_state(
 
 def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
     """Prepare ground response and whether heat-source output needs adjustment."""
-    (
-        Theta_in_d_t,
-        Phi_A_0,
-        Theta_g_avg,
-        sum_Theta_dash_g_surf_A_m,
-    ) = _prepare_underfloor_ground_response(ac_setting, Theta_ex_d_t)
+    ground_response = _prepare_underfloor_ground_response(
+        ac_setting, Theta_ex_d_t)
+    Theta_in_d_t = ground_response.Theta_in_d_t
+    Phi_A_0 = ground_response.Phi_A_0
+    Theta_g_avg = ground_response.Theta_g_avg
+    sum_Theta_dash_g_surf_A_m = ground_response.sum_Theta_dash_g_surf_A_m
     should_adjust = new_ufac.new_ufac_flg == 床下空調ロジック.変更する
     return (
         Theta_in_d_t,
