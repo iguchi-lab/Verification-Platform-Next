@@ -3071,3 +3071,30 @@ def test_prepare_balanced_heat_source_inlet_state_preserves_formula_20_19_order(
 
     assert result == (humidity, temperature)
     assert events == [("humidity", star_humidity), ("temperature", star_temperature)]
+
+@pytest.mark.parametrize("mode", ("none", "new", "legacy"))
+def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypatch, mode):
+    events = []
+    x_min, x_req, theta_req, adjusted = [object() for _ in range(4)]
+    new_ufac = SimpleNamespace(
+        new_ufac_flg=(sut.床下空調ロジック.変更する if mode == "new" else object()))
+    skin = SimpleNamespace(
+        underfloor_air_conditioning_air_supply=(mode == "legacy"), r_A_ufac=0.5)
+    house = SimpleNamespace(region=6)
+    context = [object() for _ in range(15)]
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_requirements",
+        lambda *a: events.append(("requirements", a)) or (x_min, x_req, theta_req))
+    monkeypatch.setattr(
+        sut, "_get_new_underfloor_requested_temperatures",
+        lambda *a: events.append(("new", a)) or adjusted)
+    monkeypatch.setattr(
+        sut, "_adjust_legacy_underfloor_requested_temperatures",
+        lambda *a: events.append(("legacy", a)) or np.zeros((5, 8760)))
+
+    result = sut._prepare_no_carryover_outlet_requirements(
+        context[0], house, skin, context[1], new_ufac, *context[2:])
+
+    assert result[:2] == (x_min, x_req)
+    assert [e[0] for e in events] == ["requirements"] + ([] if mode == "none" else [mode])
+    assert result[2] is (theta_req if mode == "none" else adjusted) if mode != "legacy" else result[2].shape == (5, 8760)

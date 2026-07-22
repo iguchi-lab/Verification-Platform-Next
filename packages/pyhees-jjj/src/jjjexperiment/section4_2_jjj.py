@@ -1996,6 +1996,31 @@ def _prepare_balanced_heat_source_inlet_state(X_star_NR_d_t, Theta_star_NR_d_t):
     X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
     Theta_star_hs_in_d_t = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
     return X_star_hs_in_d_t, Theta_star_hs_in_d_t
+
+def _prepare_no_carryover_outlet_requirements(
+        ac_setting, house, skin, load, new_ufac, new_ufac_df,
+        X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+        X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+        Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
+        Theta_ex_d_t, Theta_in_d_t):
+    """Prepare outlet requirements and the optional first underfloor pass."""
+    X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
+        _get_heat_source_outlet_requirements(
+            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+            X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+            Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+            l_duct_i, house.region)
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(
+            ac_setting, house, skin, load, new_ufac, new_ufac_df,
+            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i,
+            Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i)
+    elif skin.underfloor_air_conditioning_air_supply:
+        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
+            ac_setting, house, skin, load, skin.r_A_ufac,
+            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+        assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数です"
+    return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2324,26 +2349,13 @@ def calc_Q_UT_A(
         X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
             _prepare_balanced_heat_source_inlet_state(
                 X_star_NR_d_t, Theta_star_NR_d_t)
-        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = _get_heat_source_outlet_requirements(
-            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
-            L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
-            L_star_CS_d_t_i, l_duct_i, house.region)
-        # NOTE: 床下空調を使用する(旧・新 両ロジックとも) 対象居室のみ損失分を補正する
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            # 期待される床下温度を事前に計算(本計算は後で行う)
-            # New underfloor AC, first pass: reverse solve and preserve rated limits.
-            Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
+            _prepare_no_carryover_outlet_requirements(
                 ac_setting, house, skin, load, new_ufac, new_ufac_df,
-                Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i,
-                Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i)
-
-        elif skin.underfloor_air_conditioning_air_supply:
-            # Legacy underfloor AC, first pass: preserve the original correction formula.
-            Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
-                ac_setting, house, skin, load, skin.r_A_ufac,
-                Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
-            assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数です"
-
+                X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+                X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+                Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+                l_duct_i, Theta_ex_d_t, Theta_in_d_t)
         X_hs_out_d_t = _get_heat_source_outlet_humidity(
             X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
             L_star_CL_d_t_i, house.region)
