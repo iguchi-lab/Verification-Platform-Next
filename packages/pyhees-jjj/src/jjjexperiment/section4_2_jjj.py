@@ -637,6 +637,127 @@ def _get_rac_cooling_capacity(
         Q_max_CL_d_t,
     )
 
+def _get_carryover_at_hour(
+        t: int,
+        H: np.ndarray,
+        C: np.ndarray,
+        A_HCZ_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+    ) -> np.ndarray:
+    """Determine one hour of carryover without changing branch priority."""
+    isFirst = (t == 0)
+    if H[t] and C[t]:
+        raise ValueError("想定外の季節")
+    elif isFirst:
+        return np.zeros((5, 1))
+    # 暖房期 前時刻にて 暖かさに余裕があるとき
+    elif H[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] > Theta_star_HBR_d_t[t-1]):
+        return jjj_carryover_heat.calc_carryover(
+                            H[t], C[t], A_HCZ_i,
+                            Theta_HBR_d_t_i[:, t-1:t],
+                            Theta_star_HBR_d_t[t])
+    # 冷房期 前時刻にて 涼しさに余裕があるとき
+    elif C[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] < Theta_star_HBR_d_t[t-1]):
+        return jjj_carryover_heat.calc_carryover(
+                            H[t], C[t], A_HCZ_i,
+                            Theta_HBR_d_t_i[:, t-1:t],
+                            Theta_star_HBR_d_t[t])
+    else:
+        # 前時刻の Theta_HBR_d_t_i を使用するため
+        # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う
+        return np.zeros((5, 1))
+
+def _get_balanced_loads_at_hour(
+        t: int,
+        H: np.ndarray,
+        C: np.ndarray,
+        load: Load_DTI,
+        Q_star_trs_prt_d_t_i: np.ndarray,
+        carryover: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+    """Calculate formulas (8) and (9) for one hour in their original order."""
+    # (8)　熱損失を含む負荷バランス時の暖房負荷
+    L_star_H_i = jjj_carryover_heat.get_L_star_H_i_2024(
+        H[t],
+        load.L_H_d_t_i[:5, t:t+1],
+        Q_star_trs_prt_d_t_i[:5, t:t+1],
+        carryover)
+
+    # (9)　熱取得を含む負荷バランス時の冷房顕熱負荷
+    L_star_CS_i = jjj_carryover_heat.get_L_star_CS_i_2024(
+        C[t],
+        load.L_CS_d_t_i[:5, t:t+1],
+        Q_star_trs_prt_d_t_i[:5, t:t+1],
+        carryover)
+
+    return L_star_H_i, L_star_CS_i
+
+def _get_actual_room_temperatures_at_hour(
+        t: int,
+        H: np.ndarray,
+        C: np.ndarray,
+        M: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+        V_supply_d_t_i: np.ndarray,
+        Theta_supply_d_t_i: np.ndarray,
+        U_prt: float,
+        A_prt_i: np.ndarray,
+        Q: float,
+        A_HCZ_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+    ) -> np.ndarray:
+    """Calculate formula (46) for one hour with its original slices."""
+    # (46)　暖冷房区画𝑖の実際の居室の室温
+    return jjj_carryover_heat.get_Theta_HBR_i_2023(
+        H[t], C[t], M[t],
+        Theta_star_HBR_d_t[t],
+        V_supply_d_t_i[:, t:t+1],  # (5,1)
+        Theta_supply_d_t_i[:, t:t+1],  # (5,1)
+        U_prt,
+        A_prt_i.reshape(-1,1),  # (5,1)
+        Q,
+        A_HCZ_i.reshape(-1,1),  # (5,1)
+        L_star_H_d_t_i[:5, t:t+1],  # (5,1)
+        L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
+        np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
+
+def _get_actual_non_room_temperature_at_hour(
+        t: int,
+        isFirst: bool,
+        H: np.ndarray,
+        C: np.ndarray,
+        M: np.ndarray,
+        Theta_star_NR_d_t: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        A_NR: float,
+        V_vent_l_NR_d_t: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        V_supply_d_t_i: np.ndarray,
+        U_prt: float,
+        A_prt_i: np.ndarray,
+        Q: float,
+        Theta_NR_d_t: np.ndarray,
+    ) -> float:
+    """Calculate formula (48) for one hour with its original slices."""
+    # (48)　実際の非居室の室温
+    return jjj_carryover_heat.get_Theta_NR_2023(
+        isFirst, H[t], C[t], M[t],
+        Theta_star_NR_d_t[t],
+        Theta_star_HBR_d_t[t],
+        Theta_HBR_d_t_i[:, t:t+1],  # (5,1)
+        A_NR,
+        V_vent_l_NR_d_t[t],
+        V_dash_supply_d_t_i[:, t:t+1],  # (5,1)
+        V_supply_d_t_i[:, t:t+1],  # (5,1)
+        U_prt,
+        A_prt_i.reshape(-1,1),  # (5,1)
+        Q,
+        0 if t==0 else Theta_NR_d_t[t-1])
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1337,45 +1458,15 @@ def calc_Q_UT_A(
             # TODO: 先頭時の扱いを考慮
             isFirst = (t == 0)
 
-            if H[t] and C[t]:
-                raise ValueError("想定外の季節")
-            elif isFirst:
-                carryover = np.zeros((5, 1))
-            # 暖房期 前時刻にて 暖かさに余裕があるとき
-            elif H[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] > Theta_star_HBR_d_t[t-1]):
-                carryover = jjj_carryover_heat.calc_carryover(
-                                    H[t], C[t], A_HCZ_i,
-                                    Theta_HBR_d_t_i[:, t-1:t],
-                                    Theta_star_HBR_d_t[t])
-            # 冷房期 前時刻にて 涼しさに余裕があるとき
-            elif C[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] < Theta_star_HBR_d_t[t-1]):
-                carryover = jjj_carryover_heat.calc_carryover(
-                                    H[t], C[t], A_HCZ_i,
-                                    Theta_HBR_d_t_i[:, t-1:t],
-                                    Theta_star_HBR_d_t[t])
-            else:
-                carryover = np.zeros((5, 1))
-                # 前時刻の Theta_HBR_d_t_i を使用するため
-                # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う
-
+            carryover = _get_carryover_at_hour(
+                t, H, C, A_HCZ_i, Theta_HBR_d_t_i, Theta_star_HBR_d_t)
             carryovers[:, t] = carryover[:, 0]  # 確認用
 
-            # (8)　熱損失を含む負荷バランス時の暖房負荷
-            L_star_H_d_t_i[:, t:t+1]  \
-                = jjj_carryover_heat.get_L_star_H_i_2024(
-                    H[t],
-                    load.L_H_d_t_i[:5, t:t+1],
-                    Q_star_trs_prt_d_t_i[:5, t:t+1],
-                    carryover)
-
-            # (9)　熱取得を含む負荷バランス時の冷房顕熱負荷
-            L_star_CS_d_t_i[:, t:t+1]  \
-                = jjj_carryover_heat.get_L_star_CS_i_2024(
-                    C[t],
-                    load.L_CS_d_t_i[:5, t:t+1],
-                    Q_star_trs_prt_d_t_i[:5, t:t+1],
-                    carryover)
-
+            (
+                L_star_H_d_t_i[:, t:t+1],
+                L_star_CS_d_t_i[:, t:t+1],
+            ) = _get_balanced_loads_at_hour(
+                t, H, C, load, Q_star_trs_prt_d_t_i, carryover)
             ####################################################################################################################
             if ac_setting.type in [
                     計算モデル.ダクト式セントラル空調機,
@@ -1484,37 +1575,14 @@ def calc_Q_UT_A(
             # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
             # 0 の扱いは全てのメソッドで考慮されていること
 
-            # (46)　暖冷房区画𝑖の実際の居室の室温
-            Theta_HBR_d_t_i[:, t:t+1] \
-                = jjj_carryover_heat.get_Theta_HBR_i_2023(
-                    H[t], C[t], M[t],
-                    Theta_star_HBR_d_t[t],
-                    V_supply_d_t_i[:, t:t+1],  # (5,1)
-                    Theta_supply_d_t_i[:, t:t+1],  # (5,1)
-                    U_prt,
-                    A_prt_i.reshape(-1,1),  # (5,1)
-                    skin.Q,
-                    A_HCZ_i.reshape(-1,1),  # (5,1)
-                    L_star_H_d_t_i[:5, t:t+1],  # (5,1)
-                    L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
-                    np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
-
-            # (48)　実際の非居室の室温
-            Theta_NR_d_t[t] \
-                = jjj_carryover_heat.get_Theta_NR_2023(
-                    isFirst, H[t], C[t], M[t],
-                    Theta_star_NR_d_t[t],
-                    Theta_star_HBR_d_t[t],
-                    Theta_HBR_d_t_i[:, t:t+1],  # (5,1)
-                    A_NR,
-                    V_vent_l_NR_d_t[t],
-                    V_dash_supply_d_t_i[:, t:t+1],  # (5,1)
-                    V_supply_d_t_i[:, t:t+1],  # (5,1)
-                    U_prt,
-                    A_prt_i.reshape(-1,1),  # (5,1)
-                    skin.Q,
-                    0 if t==0 else Theta_NR_d_t[t-1])
-
+            Theta_HBR_d_t_i[:, t:t+1] = _get_actual_room_temperatures_at_hour(
+                t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i, Theta_supply_d_t_i,
+                U_prt, A_prt_i, skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+                Theta_HBR_d_t_i)
+            Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
+                t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
+                Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+                V_supply_d_t_i, U_prt, A_prt_i, skin.Q, Theta_NR_d_t)
     else:  # 過剰熱繰越ナシ(一般的なパターン)
 
         # NOTE: 床下空調のための r_A_ufvnt の上書きはココより前に行わない

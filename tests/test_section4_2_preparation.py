@@ -1431,3 +1431,216 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
         ("max_latent_output", (outputs[2], outputs[7], outputs[5])),
     ))
     assert calls == expected
+
+def test_carryover_at_hour_rejects_overlapping_seasons_before_first_hour():
+    with pytest.raises(ValueError, match="想定外の季節"):
+        sut._get_carryover_at_hour(
+            0,
+            np.array([True]),
+            np.array([True]),
+            object(),
+            np.zeros((5, 1)),
+            np.zeros(1),
+        )
+
+
+def test_carryover_at_hour_returns_first_hour_zero_without_calculation(monkeypatch):
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "calc_carryover",
+        lambda *args: pytest.fail("first hour must not calculate carryover"),
+    )
+
+    result = sut._get_carryover_at_hour(
+        0,
+        np.array([True]),
+        np.array([False]),
+        object(),
+        np.zeros((5, 1)),
+        np.zeros(1),
+    )
+
+    np.testing.assert_array_equal(result, np.zeros((5, 1)))
+
+
+@pytest.mark.parametrize(
+    ("heating", "cooling", "room_temperature", "target_temperature"),
+    (
+        (True, False, 22.0, 20.0),
+        (False, True, 24.0, 26.0),
+    ),
+)
+def test_carryover_at_hour_preserves_previous_comparison_and_current_target(
+    monkeypatch,
+    heating,
+    cooling,
+    room_temperature,
+    target_temperature,
+):
+    calls = []
+    area = object()
+    expected = object()
+    rooms = np.full((5, 2), room_temperature)
+    targets = np.array([target_temperature, target_temperature + 1.0])
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "calc_carryover",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_carryover_at_hour(
+        1,
+        np.array([False, heating]),
+        np.array([False, cooling]),
+        area,
+        rooms,
+        targets,
+    )
+
+    assert result is expected
+    assert len(calls) == 1
+    assert calls[0][:3] == (heating, cooling, area)
+    np.testing.assert_array_equal(calls[0][3], rooms[:, 0:1])
+    assert calls[0][4] == targets[1]
+
+def test_balanced_loads_at_hour_preserve_formula_order_and_slices(monkeypatch):
+    calls = []
+    heating = np.arange(7 * 3).reshape(7, 3)
+    cooling = heating + 100
+    transfer = heating + 200
+    carryover = object()
+    outputs = (object(), object())
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_L_star_H_i_2024",
+        lambda *args: calls.append(("heating", args)) or outputs[0],
+    )
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_L_star_CS_i_2024",
+        lambda *args: calls.append(("cooling", args)) or outputs[1],
+    )
+
+    result = sut._get_balanced_loads_at_hour(
+        1,
+        np.array([False, True, False]),
+        np.array([False, False, True]),
+        SimpleNamespace(L_H_d_t_i=heating, L_CS_d_t_i=cooling),
+        transfer,
+        carryover,
+    )
+
+    assert result == outputs
+    assert calls[0][0] == "heating"
+    assert calls[0][1][0] is True or calls[0][1][0] == np.bool_(True)
+    np.testing.assert_array_equal(calls[0][1][1], heating[:5, 1:2])
+    np.testing.assert_array_equal(calls[0][1][2], transfer[:5, 1:2])
+    assert calls[0][1][3] is carryover
+    assert calls[1][0] == "cooling"
+    assert calls[1][1][0] is False or calls[1][1][0] == np.bool_(False)
+    np.testing.assert_array_equal(calls[1][1][1], cooling[:5, 1:2])
+    np.testing.assert_array_equal(calls[1][1][2], transfer[:5, 1:2])
+    assert calls[1][1][3] is carryover
+
+@pytest.mark.parametrize("t", (0, 1))
+def test_actual_room_temperatures_at_hour_preserve_slices(monkeypatch, t):
+    calls = []
+    expected = object()
+    H = np.array([True, False])
+    C = np.array([False, True])
+    M = np.array([False, False])
+    theta_star = np.array([20.0, 21.0])
+    supply = np.arange(5 * 2).reshape(5, 2)
+    supply_theta = supply + 10
+    area_partition = np.arange(1.0, 6.0)
+    area_room = np.arange(6.0, 11.0)
+    heating = np.arange(7 * 2).reshape(7, 2) + 20
+    cooling = heating + 20
+    actual = heating + 40
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_Theta_HBR_i_2023",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_actual_room_temperatures_at_hour(
+        t,
+        H,
+        C,
+        M,
+        theta_star,
+        supply,
+        supply_theta,
+        0.5,
+        area_partition,
+        2.7,
+        area_room,
+        heating,
+        cooling,
+        actual,
+    )
+
+    assert result is expected
+    args = calls[0]
+    assert args[:4] == (H[t], C[t], M[t], theta_star[t])
+    np.testing.assert_array_equal(args[4], supply[:, t : t + 1])
+    np.testing.assert_array_equal(args[5], supply_theta[:, t : t + 1])
+    assert args[6] == 0.5
+    np.testing.assert_array_equal(args[7], area_partition.reshape(-1, 1))
+    assert args[8] == 2.7
+    np.testing.assert_array_equal(args[9], area_room.reshape(-1, 1))
+    np.testing.assert_array_equal(args[10], heating[:5, t : t + 1])
+    np.testing.assert_array_equal(args[11], cooling[:5, t : t + 1])
+    expected_previous = np.zeros((5, 1)) if t == 0 else actual[:5, t - 1 : t]
+    np.testing.assert_array_equal(args[12], expected_previous)
+
+@pytest.mark.parametrize("t", (0, 1))
+def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):
+    calls = []
+    H = np.array([True, False])
+    C = np.array([False, True])
+    M = np.array([False, False])
+    theta_star_nr = np.array([18.0, 19.0])
+    theta_star_hbr = np.array([20.0, 21.0])
+    theta_hbr = np.arange(5 * 2).reshape(5, 2)
+    ventilation_nr = np.array([30.0, 31.0])
+    dash_supply = theta_hbr + 20
+    supply = theta_hbr + 40
+    area_partition = np.arange(1.0, 6.0)
+    theta_nr = np.array([17.0, 0.0])
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "get_Theta_NR_2023",
+        lambda *args: calls.append(args) or 22.0,
+    )
+
+    result = sut._get_actual_non_room_temperature_at_hour(
+        t,
+        t == 0,
+        H,
+        C,
+        M,
+        theta_star_nr,
+        theta_star_hbr,
+        theta_hbr,
+        40.0,
+        ventilation_nr,
+        dash_supply,
+        supply,
+        0.5,
+        area_partition,
+        2.7,
+        theta_nr,
+    )
+
+    assert result == 22.0
+    args = calls[0]
+    assert args[:6] == (t == 0, H[t], C[t], M[t], theta_star_nr[t], theta_star_hbr[t])
+    np.testing.assert_array_equal(args[6], theta_hbr[:, t : t + 1])
+    assert args[7:9] == (40.0, ventilation_nr[t])
+    np.testing.assert_array_equal(args[9], dash_supply[:, t : t + 1])
+    np.testing.assert_array_equal(args[10], supply[:, t : t + 1])
+    assert args[11] == 0.5
+    np.testing.assert_array_equal(args[12], area_partition.reshape(-1, 1))
+    assert args[13] == 2.7
+    assert args[14] == (0 if t == 0 else theta_nr[t - 1])
