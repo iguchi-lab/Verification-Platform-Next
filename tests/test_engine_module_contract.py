@@ -1,4 +1,5 @@
 import ast
+import importlib
 from pathlib import Path
 
 from jjjexperiment import main
@@ -44,6 +45,14 @@ def _accessed_attributes(alias: str) -> set[str]:
 def test_main_section4_2_api_contract():
     assert _accessed_attributes("jjj_dc") == EXPECTED_SECTION4_2_MAIN_API
     assert all(hasattr(main.jjj_dc, name) for name in EXPECTED_SECTION4_2_MAIN_API)
+
+
+def test_legacy_section4_2_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.section4_2")
+    implementation = importlib.import_module("jjjexperiment.section4_2_jjj")
+
+    assert legacy is implementation
+    assert main.jjj_dc is implementation
 
 
 def test_main_section4_2_a_api_contract():
