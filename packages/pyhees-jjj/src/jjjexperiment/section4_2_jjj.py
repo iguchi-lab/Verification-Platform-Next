@@ -2735,8 +2735,12 @@ def calc_Q_UT_A(
     df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
 
     # 気象条件
-    climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t = \
-        _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
+    climate_conditions = _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
+    climate = climate_conditions.climate
+    Theta_ex_d_t = climate_conditions.Theta_ex_d_t
+    X_ex_d_t = climate_conditions.X_ex_d_t
+    J_d_t = climate_conditions.J_d_t
+    h_ex_d_t = climate_conditions.h_ex_d_t
 
     #主たる居室・その他居室・非居室の面積
     A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr = _prepare_dwelling_areas_and_water_heat(
