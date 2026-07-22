@@ -2074,6 +2074,20 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_carryover_heat_source_inlet_state(
+        t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
+        Theta_NR_d_t, Theta_star_hs_in_d_t):
+    """Calculate formulas (20) and (19) for one carryover hour."""
+    X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
+    balanced_inlet = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
+    Theta_star_hs_in_d_t[t] = (
+        balanced_inlet[t]
+        if (isFirst or not (H[t] or C[t]))
+        else Theta_NR_d_t[t - 1]
+    )
+    return X_star_hs_in_d_t, Theta_star_hs_in_d_t
+
+
 def _prepare_carryover_capacity_state(
         ac_setting, house, heat_CRAC, cool_CRAC, load,
         Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i):
@@ -2358,14 +2372,11 @@ def calc_Q_UT_A(
                 ac_setting, house, heat_CRAC, cool_CRAC, load,
                 Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
 
-            # (20)　負荷バランス時の熱源機の入口における絶対湿度
-            X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
-
-            # (19)　負荷バランス時の熱源機の入口における空気温度
-            # 前時刻の非居室の温度を熱源入口温度として使用して負荷を下げる
-            Theta_star_hs_in_d_t[t] = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)[t] \
-                if (isFirst or not (H[t] or C[t]))  \
-                else Theta_NR_d_t[t-1]
+            # (20), (19)　負荷バランス時の熱源機入口状態
+            X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
+                _prepare_carryover_heat_source_inlet_state(
+                    t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
+                    Theta_NR_d_t, Theta_star_hs_in_d_t)
 
             X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = _get_heat_source_outlet_requirements(
                 X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,

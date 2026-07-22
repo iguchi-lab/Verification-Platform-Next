@@ -3171,3 +3171,36 @@ def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, st
     assert result[:4] == (
         (standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
         if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
+
+
+@pytest.mark.parametrize(
+    ("t", "is_first", "heating", "cooling", "expected"),
+    ((0, True, True, False, 10.0), (1, False, False, False, 20.0),
+     (1, False, True, False, 31.0)),
+)
+def test_prepare_carryover_heat_source_inlet_state_preserves_formula_20_19(
+        monkeypatch, t, is_first, heating, cooling, expected):
+    events = []
+    inlet_humidity = object()
+    star_humidity = object()
+    star_temperature = object()
+    h = np.array([False, heating])
+    c = np.array([False, cooling])
+    actual_non_room = np.array([31.0, 32.0])
+    inlet_temperature = np.zeros(2)
+    monkeypatch.setattr(
+        sut.dc, "get_X_star_hs_in_d_t",
+        lambda value: events.append(("humidity", value)) or inlet_humidity)
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_star_hs_in_d_t",
+        lambda value: events.append(("temperature", value))
+        or np.array([10.0, 20.0]))
+
+    result = sut._prepare_carryover_heat_source_inlet_state(
+        t, is_first, h, c, star_humidity, star_temperature,
+        actual_non_room, inlet_temperature)
+
+    assert result == (inlet_humidity, inlet_temperature)
+    assert inlet_temperature[t] == expected
+    assert events == [
+        ("humidity", star_humidity), ("temperature", star_temperature)]
