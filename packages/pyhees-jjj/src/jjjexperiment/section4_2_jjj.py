@@ -1834,6 +1834,44 @@ def _prepare_balanced_non_room_humidity(
     )
     df_output['X_star_NR_d_t'] = X_star_NR_d_t
     return X_star_NR_d_t
+
+def _prepare_balanced_non_room_temperature(
+        df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
+        U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+        Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t):
+    """Calculate formula (52) while preserving the new-underfloor branch."""
+    r_A_NR_uf_1F_excl_bath = None
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
+            _get_new_balanced_non_room_temperature(
+                house,
+                skin,
+                climate,
+                load,
+                A_NR,
+                A_prt_i,
+                U_prt,
+                V_vent_l_NR_d_t,
+                V_dash_supply_d_t_i,
+                Theta_star_HBR_d_t,
+                Theta_in_d_t,
+                Theta_uf_d_t,
+            )
+    else:
+        Theta_star_NR_d_t = dc.get_Theta_star_NR_d_t(
+            Theta_star_HBR_d_t,
+            skin.Q,
+            A_NR,
+            V_vent_l_NR_d_t,
+            V_dash_supply_d_t_i,
+            U_prt,
+            A_prt_i,
+            load.L_H_d_t_i,
+            load.L_CS_d_t_i,
+            house.region,
+        )
+    df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
+    return Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2012,21 +2050,23 @@ def calc_Q_UT_A(
         V_dash_supply_d_t_i,
     )
     # (52)　負荷バランス時の非居室の室温
-    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
-            _get_new_balanced_non_room_temperature(
-                house, skin, climate, load, A_NR, A_prt_i, U_prt,
-                V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_star_HBR_d_t,
-                Theta_in_d_t, Theta_uf_d_t)
-    else:
-        Theta_star_NR_d_t = \
-            dc.get_Theta_star_NR_d_t(
-                Theta_star_HBR_d_t, skin.Q, A_NR,
-                V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-                U_prt, A_prt_i, load.L_H_d_t_i, load.L_CS_d_t_i, house.region)
-
-    df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
-
+    Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
+        _prepare_balanced_non_room_temperature(
+            df_output,
+            new_ufac,
+            house,
+            skin,
+            climate,
+            load,
+            A_NR,
+            A_prt_i,
+            U_prt,
+            V_vent_l_NR_d_t,
+            V_dash_supply_d_t_i,
+            Theta_star_HBR_d_t,
+            Theta_in_d_t,
+            Theta_uf_d_t,
+        )
     # (49)　実際の非居室の絶対湿度
     X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
 

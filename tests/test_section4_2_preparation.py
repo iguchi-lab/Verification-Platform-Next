@@ -2887,3 +2887,40 @@ def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monke
         (inputs[0], load.L_CL_d_t_i, inputs[1], inputs[2], inputs[3], 6),
     )
     assert events[1] == ("setitem", 0, "X_star_NR_d_t", value)
+
+@pytest.mark.parametrize("enabled", (True, False))
+def test_prepare_balanced_non_room_temperature_preserves_formula_52_branch(
+        monkeypatch, enabled):
+    events = []
+    frame = _FrameRecorder(events)
+    theta, ratio = object(), object()
+    flag = sut.床下空調ロジック.変更する if enabled else object()
+    new_ufac = SimpleNamespace(new_ufac_flg=flag)
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(Q=2.4)
+    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
+    inputs = [object() for _ in range(8)]
+    monkeypatch.setattr(
+        sut,
+        "_get_new_balanced_non_room_temperature",
+        lambda *args: events.append(("new", args)) or (theta, ratio),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_star_NR_d_t",
+        lambda *args: events.append(("legacy", args)) or theta,
+    )
+
+    result = sut._prepare_balanced_non_room_temperature(
+        frame, new_ufac, house, skin, object(), load, *inputs)
+
+    assert result == (theta, ratio if enabled else None)
+    assert [event[0] for event in events] == [
+        "new" if enabled else "legacy", "setitem"
+    ]
+    assert events[-1] == ("setitem", 0, "Theta_star_NR_d_t", theta)
+    if not enabled:
+        assert events[0][1] == (
+            inputs[5], 2.4, inputs[0], inputs[3], inputs[4], inputs[2],
+            inputs[1], load.L_H_d_t_i, load.L_CS_d_t_i, 6,
+        )
