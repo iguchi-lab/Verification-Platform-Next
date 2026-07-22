@@ -1694,3 +1694,55 @@ def test_legacy_underfloor_requested_temperatures_preserve_first_pass_formula(
     assert [call[5] for call in calls] == [r_a_ufvnt, r_a_ufvnt]
     for index, call in enumerate(calls):
         np.testing.assert_array_equal(call[9], airflows[index])
+
+@pytest.mark.parametrize(
+    ("setting_type", "expected_first", "expected_second"),
+    (
+        (sut.HeatingAcSetting, np.array([10.0, 15.0, 30.0]), np.array([5.0, 15.0, 30.0])),
+        (sut.CoolingAcSetting, np.array([15.0, 20.0, 30.0]), np.array([15.0, 25.0, 35.0])),
+    ),
+)
+def test_carryover_underfloor_supply_temperatures_preserve_clipping(
+    monkeypatch, setting_type, expected_first, expected_second
+):
+    calls = []
+    theta_supply = np.array([
+        [10.0, 20.0, 30.0],
+        [5.0, 25.0, 35.0],
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ])
+    theta_uf = np.array([15.0, 15.0, 30.0])
+    theta_ex = np.array([0.0, 1.0, 2.0])
+    airflows = np.arange(15.0).reshape(5, 3)
+    r_a_ufvnt = object()
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(
+        Q=2.7,
+        YUCACO_r_A_ufvnt=r_a_ufvnt,
+        underfloor_insulation=True,
+    )
+    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
+
+    def calc_theta(*args):
+        calls.append(args)
+        return theta_uf, object(), object()
+
+    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
+
+    result = sut._adjust_carryover_underfloor_supply_temperatures(
+        _setting(setting_type), house, skin, load,
+        theta_supply, theta_ex, airflows
+    )
+
+    assert result is theta_supply
+    np.testing.assert_array_equal(result[0], expected_first)
+    np.testing.assert_array_equal(result[1], expected_second)
+    np.testing.assert_array_equal(result[2:], np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ]))
+    assert len(calls) == 2
+    assert [call[5] for call in calls] == [r_a_ufvnt, r_a_ufvnt]

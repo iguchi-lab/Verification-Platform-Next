@@ -1062,6 +1062,35 @@ def _adjust_legacy_underfloor_requested_temperatures(
 
     return Theta_req_d_t_i
 
+def _adjust_carryover_underfloor_supply_temperatures(
+        ac_setting,
+        house,
+        skin,
+        load,
+        Theta_supply_d_t_i,
+        Theta_ex_d_t,
+        V_dash_supply_d_t_i,
+    ):
+    """Apply the carryover second-pass clipping for underfloor air supply."""
+    for i in range(2):  # i=0,1
+        Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
+            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q,
+            skin.YUCACO_r_A_ufvnt, skin.underfloor_insulation,
+            Theta_supply_d_t_i[i], Theta_ex_d_t, V_dash_supply_d_t_i[i],
+            '', load.L_H_d_t_i, load.L_CS_d_t_i)
+
+        match ac_setting:
+            case HeatingAcSetting():
+                Theta_supply_d_t_i[i] = np.clip(
+                    Theta_supply_d_t_i[i], None, Theta_uf_d_t)
+            case CoolingAcSetting():
+                Theta_supply_d_t_i[i] = np.clip(
+                    Theta_supply_d_t_i[i], Theta_uf_d_t, None)
+            case _:
+                raise ValueError
+
+    return Theta_supply_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1572,22 +1601,10 @@ def calc_Q_UT_A(
                 house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
                 V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
             if skin.underfloor_air_conditioning_air_supply:
-                for i in range(2):  # i=0,1
-                    Theta_uf_d_t, Theta_g_surf_d_t, *others  \
-                        = algo.calc_Theta(  # 熱繰越-2nd
-                            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.YUCACO_r_A_ufvnt, skin.underfloor_insulation,
-                            Theta_supply_d_t_i[i], Theta_ex_d_t, V_dash_supply_d_t_i[i],
-                            '', load.L_H_d_t_i, load.L_CS_d_t_i)
-
-                    match ac_setting:
-                        case HeatingAcSetting():
-                            # 暖房期は 床下温度以上の温度は吹き出てこない
-                            Theta_supply_d_t_i[i] = np.clip(Theta_supply_d_t_i[i], None, Theta_uf_d_t)
-                        case CoolingAcSetting():
-                            # 冷房期は 床下温度以下の温度は吹き出てこない
-                            Theta_supply_d_t_i[i] = np.clip(Theta_supply_d_t_i[i], Theta_uf_d_t, None)
-                        case _:
-                            raise ValueError
+                # Carryover heat, second pass: retain its original clipping behavior.
+                Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
+                    ac_setting, house, skin, load, Theta_supply_d_t_i,
+                    Theta_ex_d_t, V_dash_supply_d_t_i)
 
             # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
             # 0 の扱いは全てのメソッドで考慮されていること
