@@ -88,6 +88,13 @@ class _RatedHeatSourceCapacitiesResult(NamedTuple):
     Q_hs_rtd_C: object
 
 
+class _UnderfloorGroundResponseResult(NamedTuple):
+    Theta_in_d_t: object
+    Phi_A_0: object
+    Theta_g_avg: object
+    sum_Theta_dash_g_surf_A_m: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -203,7 +210,7 @@ def _prepare_underfloor_ground_response(
         case _:
             raise ValueError
 
-    return Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m
+    return _UnderfloorGroundResponseResult(Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m)
 
 
 def _get_heat_source_supply_airflow_before_vav(

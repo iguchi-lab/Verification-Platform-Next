@@ -3695,3 +3695,12 @@ def test_rated_heat_source_capacities_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("Q_hs_rtd_H", "Q_hs_rtd_C",)
+
+
+def test_underfloor_ground_response_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(4))
+    result = sut._UnderfloorGroundResponseResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Theta_in_d_t", "Phi_A_0", "Theta_g_avg", "sum_Theta_dash_g_surf_A_m",)
