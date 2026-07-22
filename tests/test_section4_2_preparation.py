@@ -3301,3 +3301,32 @@ def test_update_carryover_actual_temperature_state_preserves_formula_order(
     assert non_room_state[1] == 8.0
     assert [event[0] for event in events] == ["room", "non_room"]
     assert events[1][1][7] is room_state
+
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_no_carryover_actual_temperature_state_preserves_formula_order(
+        monkeypatch, enabled):
+    events = []
+    room = object()
+    non_room = object()
+    flag = sut.床下空調ロジック.変更する if enabled else object()
+    new_ufac = SimpleNamespace(new_ufac_flg=flag)
+    inputs = [object() for _ in range(15)]
+    theta_uf = object()
+    non_room_ratio = object()
+    monkeypatch.setattr(
+        sut, "_get_actual_room_temperatures_without_carryover",
+        lambda *a: events.append(("room", a)) or room)
+    monkeypatch.setattr(
+        sut, "_get_actual_non_room_temperatures_without_carryover",
+        lambda *a: events.append(("non_room", a)) or non_room)
+
+    result = sut._prepare_no_carryover_actual_temperature_state(
+        inputs[0], inputs[1], new_ufac, *inputs[2:11], theta_uf,
+        *inputs[11:], non_room_ratio)
+
+    assert result == (room, non_room)
+    assert [event[0] for event in events] == ["room", "non_room"]
+    assert events[0][1][-1] is (theta_uf if enabled else None)
+    assert events[1][1][-2] is (theta_uf if enabled else None)
+    assert events[1][1][-1] is (non_room_ratio if enabled else None)
