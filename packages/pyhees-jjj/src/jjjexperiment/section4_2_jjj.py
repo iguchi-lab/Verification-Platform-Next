@@ -2743,8 +2743,12 @@ def calc_Q_UT_A(
     h_ex_d_t = climate_conditions.h_ex_d_t
 
     #主たる居室・その他居室・非居室の面積
-    A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr = _prepare_dwelling_areas_and_water_heat(
+    dwelling_state = _prepare_dwelling_areas_and_water_heat(
         df_output2, df_output3, house)
+    A_HCZ_i = dwelling_state.A_HCZ_i
+    A_HCZ_R_i = dwelling_state.A_HCZ_R_i
+    A_NR = dwelling_state.A_NR
+    L_wtr = dwelling_state.L_wtr
 
     # (66d)　非居室の在室人数
     n_p_d_t = _prepare_occupancy_state(df_output, house, A_NR)
