@@ -1091,6 +1091,74 @@ def _adjust_carryover_underfloor_supply_temperatures(
 
     return Theta_supply_d_t_i
 
+def _get_new_underfloor_requested_temperatures(
+        ac_setting,
+        house,
+        skin,
+        load,
+        new_ufac,
+        new_ufac_df,
+        Theta_req_d_t_i,
+        Theta_ex_d_t,
+        V_dash_supply_d_t_i,
+        Theta_in_d_t,
+        L_star_H_d_t_i,
+        L_star_CS_d_t_i,
+    ):
+    """Apply the new-underfloor first pass without changing its calculation order."""
+    # 期待される床下温度を事前に計算(本計算は後で行う)
+    Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(
+        L_star_H_d_t_i, L_star_CS_d_t_i, house.A_A, house.A_MR,
+        house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t)
+    # 新床下空調-1st: θuf_supply を逆算(二分探索)
+    _, _, Theta_uf_supply_d_t = algo.calc_Theta(
+        region=house.region,
+        A_A=house.A_A,
+        A_MR=house.A_MR,
+        A_OR=house.A_OR,
+        Q=skin.Q,
+        r_A_ufvnt=skin.r_A_ufac,
+        underfloor_insulation=skin.underfloor_insulation,
+        Theta_sa_d_t=Theta_uf_d_t_2023,
+        Theta_ex_d_t=Theta_ex_d_t,
+        V_sa_d_t_A=np.sum(V_dash_supply_d_t_i[:2, :], axis=0),
+        H_OR_C="",
+        L_dash_H_R_d_t_i=load.L_dash_H_R_d_t_i,
+        L_dash_CS_R_d_t_i=load.L_dash_CS_R_d_t_i,
+        calc_backwards=True,  # 従来の θuf 用計算式を借りて θuf_supply計算する
+        new_ufac=new_ufac,
+        new_ufac_df=new_ufac_df,
+    )
+
+    # 対象居室 i=1,2(1階居室)の損失分を補正する
+    Theta_req_d_t_i = np.vstack([
+        np.tile(Theta_uf_supply_d_t, (2, 1)),
+        Theta_req_d_t_i[2:, :],
+    ])
+    assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数"
+
+    match (_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
+        case (None, None):
+            raise Exception("どちらかのみを前提")
+        case (_, None):
+            Theta_in_H = Theta_in_d_t[0]
+            Theta_req_d_t_i = np.clip(Theta_req_d_t_i, Theta_in_H, None)
+        case (None, _):
+            Theta_in_C = Theta_in_d_t[0]
+            Theta_req_d_t_i = np.clip(Theta_req_d_t_i, None, Theta_in_C)
+        case (_, _):
+            raise Exception("どちらかのみを前提")
+
+    new_ufac_df.update_df({
+        "Theta_uf_d_t_2023": Theta_uf_d_t_2023,
+        "Theta_req_d_t_1": Theta_req_d_t_i[0],
+        "Theta_req_d_t_2": Theta_req_d_t_i[1],
+        "Theta_req_d_t_3": Theta_req_d_t_i[2],
+        "Theta_req_d_t_4": Theta_req_d_t_i[3],
+        "Theta_req_d_t_5": Theta_req_d_t_i[4],
+    })
+    return Theta_req_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1705,53 +1773,11 @@ def calc_Q_UT_A(
         # NOTE: 床下空調を使用する(旧・新 両ロジックとも) 対象居室のみ損失分を補正する
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
             # 期待される床下温度を事前に計算(本計算は後で行う)
-            Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(
-                L_star_H_d_t_i, L_star_CS_d_t_i, house.A_A, house.A_MR, house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t)
-            # θuf_supply を逆算(二分探索)
-            _, _, Theta_uf_supply_d_t  \
-                = algo.calc_Theta(  # 新床下空調-1st
-                    region = house.region,
-                    A_A = house.A_A,
-                    A_MR = house.A_MR,
-                    A_OR = house.A_OR,
-                    Q = skin.Q,
-                    r_A_ufvnt = skin.r_A_ufac,  # 床下換気ではなく床下空調のため
-                    underfloor_insulation = skin.underfloor_insulation,
-                    Theta_sa_d_t = Theta_uf_d_t_2023,  # ★
-                    Theta_ex_d_t = Theta_ex_d_t,
-                    # 熱源機出口温度から吹き出し温度を計算する
-                    V_sa_d_t_A = np.sum(V_dash_supply_d_t_i[:2, :], axis=0),  # i=1,2
-                    H_OR_C = "",
-                    L_dash_H_R_d_t_i = load.L_dash_H_R_d_t_i,
-                    L_dash_CS_R_d_t_i = load.L_dash_CS_R_d_t_i,
-                    calc_backwards = True,  # 従来の θuf 用計算式を借りて θuf_supply計算する
-                    new_ufac = new_ufac,
-                    new_ufac_df = new_ufac_df
-                )
-
-            # 対象居室 i=1,2(1階居室)の損失分を補正する
-            Theta_req_d_t_i = np.vstack([
-                    np.tile(Theta_uf_supply_d_t, (2, 1)),
-                    Theta_req_d_t_i[2:, :]
-                ])
-            assert np.shape(Theta_req_d_t_i)==(5, 8760), "想定外の行列数"
-
-            match (_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
-                case (None, None):
-                    raise Exception("どちらかのみを前提")
-                case (_, None):
-                    Theta_in_H = Theta_in_d_t[0]
-                    Theta_req_d_t_i = np.clip(Theta_req_d_t_i, Theta_in_H, None)
-                case (None, _):
-                    Theta_in_C = Theta_in_d_t[0]
-                    Theta_req_d_t_i = np.clip(Theta_req_d_t_i, None, Theta_in_C)
-                case (_, _):
-                    raise Exception("どちらかのみを前提")
-
-            new_ufac_df.update_df({
-                "Theta_uf_d_t_2023": Theta_uf_d_t_2023,
-                "Theta_req_d_t_1": Theta_req_d_t_i[0], "Theta_req_d_t_2": Theta_req_d_t_i[1], "Theta_req_d_t_3": Theta_req_d_t_i[2], "Theta_req_d_t_4": Theta_req_d_t_i[3], "Theta_req_d_t_5": Theta_req_d_t_i[4],
-            })
+            # New underfloor AC, first pass: reverse solve and preserve rated limits.
+            Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(
+                ac_setting, house, skin, load, new_ufac, new_ufac_df,
+                Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i,
+                Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i)
 
         elif skin.underfloor_air_conditioning_air_supply:
             # Legacy underfloor AC, first pass: preserve the original correction formula.
