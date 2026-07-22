@@ -1431,3 +1431,74 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
         ("max_latent_output", (outputs[2], outputs[7], outputs[5])),
     ))
     assert calls == expected
+
+def test_carryover_at_hour_rejects_overlapping_seasons_before_first_hour():
+    with pytest.raises(ValueError, match="想定外の季節"):
+        sut._get_carryover_at_hour(
+            0,
+            np.array([True]),
+            np.array([True]),
+            object(),
+            np.zeros((5, 1)),
+            np.zeros(1),
+        )
+
+
+def test_carryover_at_hour_returns_first_hour_zero_without_calculation(monkeypatch):
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "calc_carryover",
+        lambda *args: pytest.fail("first hour must not calculate carryover"),
+    )
+
+    result = sut._get_carryover_at_hour(
+        0,
+        np.array([True]),
+        np.array([False]),
+        object(),
+        np.zeros((5, 1)),
+        np.zeros(1),
+    )
+
+    np.testing.assert_array_equal(result, np.zeros((5, 1)))
+
+
+@pytest.mark.parametrize(
+    ("heating", "cooling", "room_temperature", "target_temperature"),
+    (
+        (True, False, 22.0, 20.0),
+        (False, True, 24.0, 26.0),
+    ),
+)
+def test_carryover_at_hour_preserves_previous_comparison_and_current_target(
+    monkeypatch,
+    heating,
+    cooling,
+    room_temperature,
+    target_temperature,
+):
+    calls = []
+    area = object()
+    expected = object()
+    rooms = np.full((5, 2), room_temperature)
+    targets = np.array([target_temperature, target_temperature + 1.0])
+    monkeypatch.setattr(
+        sut.jjj_carryover_heat,
+        "calc_carryover",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_carryover_at_hour(
+        1,
+        np.array([False, heating]),
+        np.array([False, cooling]),
+        area,
+        rooms,
+        targets,
+    )
+
+    assert result is expected
+    assert len(calls) == 1
+    assert calls[0][:3] == (heating, cooling, area)
+    np.testing.assert_array_equal(calls[0][3], rooms[:, 0:1])
+    assert calls[0][4] == targets[1]

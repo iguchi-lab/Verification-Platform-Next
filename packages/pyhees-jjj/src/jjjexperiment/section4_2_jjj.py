@@ -637,6 +637,37 @@ def _get_rac_cooling_capacity(
         Q_max_CL_d_t,
     )
 
+def _get_carryover_at_hour(
+        t: int,
+        H: np.ndarray,
+        C: np.ndarray,
+        A_HCZ_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+    ) -> np.ndarray:
+    """Determine one hour of carryover without changing branch priority."""
+    isFirst = (t == 0)
+    if H[t] and C[t]:
+        raise ValueError("想定外の季節")
+    elif isFirst:
+        return np.zeros((5, 1))
+    # 暖房期 前時刻にて 暖かさに余裕があるとき
+    elif H[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] > Theta_star_HBR_d_t[t-1]):
+        return jjj_carryover_heat.calc_carryover(
+                            H[t], C[t], A_HCZ_i,
+                            Theta_HBR_d_t_i[:, t-1:t],
+                            Theta_star_HBR_d_t[t])
+    # 冷房期 前時刻にて 涼しさに余裕があるとき
+    elif C[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] < Theta_star_HBR_d_t[t-1]):
+        return jjj_carryover_heat.calc_carryover(
+                            H[t], C[t], A_HCZ_i,
+                            Theta_HBR_d_t_i[:, t-1:t],
+                            Theta_star_HBR_d_t[t])
+    else:
+        # 前時刻の Theta_HBR_d_t_i を使用するため
+        # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う
+        return np.zeros((5, 1))
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1337,27 +1368,8 @@ def calc_Q_UT_A(
             # TODO: 先頭時の扱いを考慮
             isFirst = (t == 0)
 
-            if H[t] and C[t]:
-                raise ValueError("想定外の季節")
-            elif isFirst:
-                carryover = np.zeros((5, 1))
-            # 暖房期 前時刻にて 暖かさに余裕があるとき
-            elif H[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] > Theta_star_HBR_d_t[t-1]):
-                carryover = jjj_carryover_heat.calc_carryover(
-                                    H[t], C[t], A_HCZ_i,
-                                    Theta_HBR_d_t_i[:, t-1:t],
-                                    Theta_star_HBR_d_t[t])
-            # 冷房期 前時刻にて 涼しさに余裕があるとき
-            elif C[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] < Theta_star_HBR_d_t[t-1]):
-                carryover = jjj_carryover_heat.calc_carryover(
-                                    H[t], C[t], A_HCZ_i,
-                                    Theta_HBR_d_t_i[:, t-1:t],
-                                    Theta_star_HBR_d_t[t])
-            else:
-                carryover = np.zeros((5, 1))
-                # 前時刻の Theta_HBR_d_t_i を使用するため
-                # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う
-
+            carryover = _get_carryover_at_hour(
+                t, H, C, A_HCZ_i, Theta_HBR_d_t_i, Theta_star_HBR_d_t)
             carryovers[:, t] = carryover[:, 0]  # 確認用
 
             # (8)　熱損失を含む負荷バランス時の暖房負荷
