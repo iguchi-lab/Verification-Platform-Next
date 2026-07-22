@@ -1880,6 +1880,16 @@ def _prepare_actual_humidity_state(
     X_HBR_d_t_i, df_output = _get_actual_room_humidities(
         df_output, X_star_HBR_d_t)
     return X_NR_d_t, X_HBR_d_t_i, df_output
+
+def _prepare_balanced_load_state(
+        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t,
+        Theta_star_NR_d_t, load, region):
+    """Calculate formulas (11) and (10), preserving DataFrame generations."""
+    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
+        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
+    L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
+        df_output, load, region)
+    return Q_star_trs_prt_d_t_i, L_star_CL_d_t_i, df_output
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2079,14 +2089,17 @@ def calc_Q_UT_A(
     X_NR_d_t, X_HBR_d_t_i, df_output = _prepare_actual_humidity_state(
         df_output, X_star_NR_d_t, X_star_HBR_d_t)
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(1) """
-    # (11)　熱損失を含む負荷バランス時の非居室への熱移動
-    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
-        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
-
-    # (10)　熱取得を含む負荷バランス時の冷房潜熱負荷
-    L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
-        df_output, load, house.region)
-
+    # (11), (10)　間仕切熱移動と冷房潜熱負荷
+    Q_star_trs_prt_d_t_i, L_star_CL_d_t_i, df_output = \
+        _prepare_balanced_load_state(
+            df_output,
+            U_prt,
+            A_prt_i,
+            Theta_star_HBR_d_t,
+            Theta_star_NR_d_t,
+            load,
+            house.region,
+        )
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
     if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:

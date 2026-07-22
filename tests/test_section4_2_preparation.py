@@ -2948,3 +2948,27 @@ def test_prepare_actual_humidity_state_preserves_formula_49_47_order(monkeypatch
         ("non_room", (frame, star_nr)),
         ("room", (frame, star_hbr)),
     ]
+
+def test_prepare_balanced_load_state_preserves_formula_11_10_generations(monkeypatch):
+    events = []
+    first_frame, second_frame, final_frame = object(), object(), object()
+    transfer, latent = object(), object()
+    inputs = [object() for _ in range(6)]
+    monkeypatch.setattr(
+        sut,
+        "_get_partition_heat_transfers",
+        lambda *args: events.append(("transfer", args)) or (transfer, second_frame),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_balanced_latent_cooling_loads",
+        lambda *args: events.append(("latent", args)) or (latent, final_frame),
+    )
+
+    result = sut._prepare_balanced_load_state(first_frame, *inputs)
+
+    assert result == (transfer, latent, final_frame)
+    assert events == [
+        ("transfer", (first_frame, *inputs[:4])),
+        ("latent", (second_frame, inputs[4], inputs[5])),
+    ]
