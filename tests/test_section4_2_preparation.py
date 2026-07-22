@@ -2329,3 +2329,36 @@ def test_partition_heat_transfers_preserve_formula_11_assign_generation(
     )
     for index, (_, value) in enumerate(columns):
         np.testing.assert_array_equal(value, transfers[index])
+
+def test_balanced_latent_cooling_loads_preserve_formula_10_assign_generation(
+    monkeypatch,
+):
+    events = []
+    sensible = object()
+    latent = object()
+    loads = np.arange(15.0).reshape(5, 3)
+    load = SimpleNamespace(L_CS_d_t_i=sensible, L_CL_d_t_i=latent)
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_star_CL_d_t_i",
+        lambda *args: events.append(("formula", args)) or loads,
+    )
+
+    result, next_frame = sut._get_balanced_latent_cooling_loads(
+        frame, load, 6
+    )
+
+    assert result is loads
+    assert next_frame.generation == 1
+    assert events[0] == ("formula", (sensible, latent, 6))
+    assert events[1][0:2] == ("assign", 0)
+    columns = events[1][2]
+    assert tuple(name for name, _ in columns) == (
+        "L_star_CL_d_t_i_1", "L_star_CL_d_t_i_2",
+        "L_star_CL_d_t_i_3", "L_star_CL_d_t_i_4",
+        "L_star_CL_d_t_i_5",
+    )
+    for index, (_, value) in enumerate(columns):
+        np.testing.assert_array_equal(value, loads[index])

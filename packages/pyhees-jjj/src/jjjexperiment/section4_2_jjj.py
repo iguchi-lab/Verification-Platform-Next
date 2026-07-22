@@ -1482,6 +1482,19 @@ def _get_partition_heat_transfers(
     )
     return Q_star_trs_prt_d_t_i, df_output
 
+def _get_balanced_latent_cooling_loads(df_output, load, region):
+    """Calculate formula (10) and record the five latent-load columns."""
+    L_star_CL_d_t_i = dc.get_L_star_CL_d_t_i(
+        load.L_CS_d_t_i, load.L_CL_d_t_i, region)
+    df_output = df_output.assign(
+        L_star_CL_d_t_i_1=L_star_CL_d_t_i[0],
+        L_star_CL_d_t_i_2=L_star_CL_d_t_i[1],
+        L_star_CL_d_t_i_3=L_star_CL_d_t_i[2],
+        L_star_CL_d_t_i_4=L_star_CL_d_t_i[3],
+        L_star_CL_d_t_i_5=L_star_CL_d_t_i[4],
+    )
+    return L_star_CL_d_t_i, df_output
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1813,14 +1826,8 @@ def calc_Q_UT_A(
         df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
 
     # (10)　熱取得を含む負荷バランス時の冷房潜熱負荷
-    L_star_CL_d_t_i = dc.get_L_star_CL_d_t_i(load.L_CS_d_t_i, load.L_CL_d_t_i, house.region)
-    df_output = df_output.assign(
-        L_star_CL_d_t_i_1 = L_star_CL_d_t_i[0],
-        L_star_CL_d_t_i_2 = L_star_CL_d_t_i[1],
-        L_star_CL_d_t_i_3 = L_star_CL_d_t_i[2],
-        L_star_CL_d_t_i_4 = L_star_CL_d_t_i[3],
-        L_star_CL_d_t_i_5 = L_star_CL_d_t_i[4]
-    )
+    L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
+        df_output, load, house.region)
 
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
