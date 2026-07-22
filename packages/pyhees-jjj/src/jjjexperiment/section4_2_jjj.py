@@ -2074,6 +2074,24 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _update_carryover_actual_temperature_state(
+        t, isFirst, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
+        Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i,
+        Theta_star_NR_d_t, A_NR, V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i, Theta_NR_d_t):
+    """Update formulas (46) and (48) for one carryover hour."""
+    Theta_HBR_d_t_i[:, t:t + 1] = _get_actual_room_temperatures_at_hour(
+        t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
+        Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i)
+    Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
+        t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
+        Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
+        V_supply_d_t_i, U_prt, A_prt_i, Q, Theta_NR_d_t)
+    return Theta_HBR_d_t_i, Theta_NR_d_t
+
+
 def _prepare_carryover_supply_state(
         v_supply_cap_dto, ac_setting, house, skin, load, X_NR_d_t,
         X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
@@ -2468,14 +2486,13 @@ def calc_Q_UT_A(
             # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
             # 0 の扱いは全てのメソッドで考慮されていること
 
-            Theta_HBR_d_t_i[:, t:t+1] = _get_actual_room_temperatures_at_hour(
-                t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i, Theta_supply_d_t_i,
-                U_prt, A_prt_i, skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
-                Theta_HBR_d_t_i)
-            Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
-                t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
-                Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-                V_supply_d_t_i, U_prt, A_prt_i, skin.Q, Theta_NR_d_t)
+            Theta_HBR_d_t_i, Theta_NR_d_t = \
+                _update_carryover_actual_temperature_state(
+                    t, isFirst, H, C, M, Theta_star_HBR_d_t,
+                    V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i,
+                    skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+                    Theta_HBR_d_t_i, Theta_star_NR_d_t, A_NR,
+                    V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_NR_d_t)
     else:  # 過剰熱繰越ナシ(一般的なパターン)
 
         # NOTE: 床下空調のための r_A_ufvnt の上書きはココより前に行わない

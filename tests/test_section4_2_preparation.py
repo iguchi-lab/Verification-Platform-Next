@@ -3275,3 +3275,29 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
         ["humidity", "temperatures", "airflows", "supply", "adjust"]
         if enabled else ["humidity", "temperatures", "airflows", "supply"])
     assert events[2][2] == {"print_exec": False}
+
+
+def test_update_carryover_actual_temperature_state_preserves_formula_order(
+        monkeypatch):
+    events = []
+    room_state = np.zeros((5, 2))
+    non_room_state = np.zeros(2)
+    room_hour = np.full((5, 1), 7.0)
+    inputs = [object() for _ in range(16)]
+    monkeypatch.setattr(
+        sut, "_get_actual_room_temperatures_at_hour",
+        lambda *a: events.append(("room", a)) or room_hour)
+    monkeypatch.setattr(
+        sut, "_get_actual_non_room_temperature_at_hour",
+        lambda *a: events.append(("non_room", a)) or 8.0)
+
+    result = sut._update_carryover_actual_temperature_state(
+        1, False, *inputs[:12], room_state,
+        *inputs[12:], non_room_state)
+
+    assert result[0] is room_state
+    assert result[1] is non_room_state
+    assert np.all(room_state[:, 1:2] == room_hour)
+    assert non_room_state[1] == 8.0
+    assert [event[0] for event in events] == ["room", "non_room"]
+    assert events[1][1][7] is room_state
