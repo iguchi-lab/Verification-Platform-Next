@@ -19,7 +19,7 @@ from pyhees.section3_2 import calc_r_env, get_Q_dash, get_mu_H, get_mu_C
 """ オーバーライドロジック """
 
 import jjjexperiment.section4_2_jjj as jjj_dc
-import jjjexperiment.section4_2_a as jjj_dc_a
+import jjjexperiment.section4_2_a_jjj as jjj_dc_a
 
 """ 独自ロジック """
 

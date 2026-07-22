@@ -58,3 +58,11 @@ def test_legacy_section4_2_import_aliases_jjj_module():
 def test_main_section4_2_a_api_contract():
     assert _accessed_attributes("jjj_dc_a") == EXPECTED_SECTION4_2_A_MAIN_API
     assert all(hasattr(main.jjj_dc_a, name) for name in EXPECTED_SECTION4_2_A_MAIN_API)
+
+
+def test_legacy_section4_2_a_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.section4_2_a")
+    implementation = importlib.import_module("jjjexperiment.section4_2_a_jjj")
+
+    assert legacy is implementation
+    assert main.jjj_dc_a is implementation
