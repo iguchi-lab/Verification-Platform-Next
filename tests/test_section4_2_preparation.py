@@ -1934,3 +1934,246 @@ def test_legacy_underfloor_supply_temperatures_preserve_where_operation(
     assert len(calls) == 2
     assert len(where_calls) == 2
     assert [call[5] for call in calls] == [r_a_ufac, r_a_ufac]
+
+
+def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
+    monkeypatch,
+):
+    calc_calls = []
+    updates = []
+    hours = 24 * 365
+    heating = np.zeros(hours, dtype=bool)
+    cooling = np.zeros(hours, dtype=bool)
+    middle = np.zeros(hours, dtype=bool)
+    heating[2] = True
+    cooling[1] = True
+    load_h = np.zeros((5, hours))
+    load_cs = np.zeros((5, hours))
+    load_h[1, 2] = 1.0
+    load_cs[0, 1] = 1.0
+    load = SimpleNamespace(
+        L_H_d_t_i=load_h,
+        L_CS_d_t_i=load_cs,
+        L_CL_d_t_i=np.full((5, hours), 3.0),
+    )
+    l_star_h = np.full((5, hours), 10.0)
+    l_star_cs = np.full((5, hours), 20.0)
+    theta_room = np.arange(float(hours))
+    theta_ex = np.zeros(hours)
+    area = object()
+    new_ufac = SimpleNamespace(U_s_floor_ins=0.8)
+
+    class FrameRecorder:
+        def update_df(self, values):
+            updates.append(values)
+
+    def calc_delta(u_value, area_value, temperature_difference):
+        calc_calls.append((u_value, area_value, temperature_difference))
+        return np.full((5, 1), 2.0)
+
+    monkeypatch.setattr(sut.jjj_ufac_dc, "calc_delta_L_room2uf_i", calc_delta)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_season_array_d_t",
+        lambda region: (heating, cooling, middle),
+    )
+
+    result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(
+        SimpleNamespace(region=6), new_ufac, FrameRecorder(), load, area,
+        theta_room, theta_ex, l_star_h, l_star_cs
+    )
+
+    assert result_h is l_star_h
+    assert result_cs is l_star_cs
+    assert len(calc_calls) == hours
+    assert calc_calls[0] == (0.8, area, 0.0)
+    assert calc_calls[-1] == (0.8, area, float(hours - 1))
+    assert result_cs[0, 1] == 18.0
+    assert result_h[1, 2] == 8.0
+    assert np.count_nonzero(result_cs != 20.0) == 1
+    assert np.count_nonzero(result_h != 10.0) == 1
+    assert len(updates) == 1
+    assert tuple(updates[0]) == (
+        "L_H_d_t_1", "L_H_d_t_2", "L_H_d_t_3", "L_H_d_t_4", "L_H_d_t_5",
+        "L_CS_d_t_1", "L_CS_d_t_2", "L_CS_d_t_3", "L_CS_d_t_4", "L_CS_d_t_5",
+        "L_CL_d_t_1", "L_CL_d_t_2", "L_CL_d_t_3", "L_CL_d_t_4", "L_CL_d_t_5",
+        "L_star_CS_d_t_1", "L_star_CS_d_t_2", "L_star_CS_d_t_3", "L_star_CS_d_t_4", "L_star_CS_d_t_5",
+        "L_star_H_d_t_1", "L_star_H_d_t_2", "L_star_H_d_t_3", "L_star_H_d_t_4", "L_star_H_d_t_5",
+    )
+
+def test_actual_room_temperatures_without_carryover_preserve_new_hour_order(
+    monkeypatch,
+):
+    hours = 24 * 365
+    call_count = 0
+    boundary_calls = []
+    theta_star = np.arange(float(hours))
+    supply_airflow = np.vstack([np.arange(float(hours)) + i for i in range(5)])
+    supply_temperature = supply_airflow + 10.0
+    l_star_h = supply_airflow + 20.0
+    l_star_cs = supply_airflow + 30.0
+    theta_uf = np.arange(float(hours)) + 40.0
+    hcm = np.arange(hours) % 3
+    area_underfloor = np.arange(5.0).reshape(5, 1)
+    area_partition = np.arange(5.0)
+    area_hcz = np.arange(5.0) + 10.0
+
+    class Climate:
+        def get_HCM_d_t(self):
+            return hcm
+
+    def get_area(*args):
+        boundary_calls.append(("area", args))
+        return area_underfloor, object()
+
+    def get_theta_hbr(**kwargs):
+        nonlocal call_count
+        if call_count in (0, hours - 1):
+            boundary_calls.append(("hour", call_count, kwargs))
+        call_count += 1
+        return np.full((5, 1), kwargs["Theta_uf"])
+
+    monkeypatch.setattr(sut.jjj_ufac_dc, "get_A_s_ufac_i", get_area)
+    monkeypatch.setattr(sut, "get_Theta_HBR_i", get_theta_hbr)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_HBR_d_t_i",
+        lambda *_: pytest.fail("new branch must not call the legacy formula"),
+    )
+
+    result = sut._get_actual_room_temperatures_without_carryover(
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0, region=6),
+        SimpleNamespace(Q=2.7),
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
+        Climate(), theta_star, supply_airflow, supply_temperature,
+        0.5, area_partition, area_hcz, l_star_h, l_star_cs, theta_uf
+    )
+
+    assert result.shape == (5, hours)
+    np.testing.assert_array_equal(result[0], theta_uf)
+    assert call_count == hours
+    assert boundary_calls[0] == ("area", (120.0, 30.0, 50.0))
+    first = boundary_calls[1][2]
+    last = boundary_calls[2][2]
+    assert first["Theta_star_HBR"] == theta_star[0]
+    assert last["Theta_star_HBR"] == theta_star[-1]
+    assert first["HCM"] == hcm[0]
+    assert last["HCM"] == hcm[-1]
+    np.testing.assert_array_equal(first["V_supply_i"], supply_airflow[:, 0:1])
+    np.testing.assert_array_equal(last["V_supply_i"], supply_airflow[:, -1:])
+    np.testing.assert_array_equal(first["A_prt_i"], area_partition.reshape(-1, 1)[:5, :])
+    np.testing.assert_array_equal(first["A_s_ufac_i"], area_underfloor[:5, :])
+
+
+def test_actual_room_temperatures_without_carryover_preserve_legacy_formula(
+    monkeypatch,
+):
+    calls = []
+    result = object()
+    house = SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0, region=6)
+    skin = SimpleNamespace(Q=2.7)
+    values = [object() for _ in range(9)]
+
+    monkeypatch.setattr(
+        sut,
+        "get_Theta_HBR_i",
+        lambda **_: pytest.fail("legacy branch must not call the new formula"),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_HBR_d_t_i",
+        lambda *args: calls.append(args) or result,
+    )
+
+    actual = sut._get_actual_room_temperatures_without_carryover(
+        house, skin,
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
+        object(), *values
+    )
+
+    assert actual is result
+    assert calls == [(
+        values[0], values[1], values[2], values[3], values[4], 2.7,
+        values[5], values[6], values[7], 6,
+    )]
+
+def test_actual_non_room_temperatures_without_carryover_preserve_new_hour_order(
+    monkeypatch,
+):
+    hours = 24 * 365
+    call_count = 0
+    boundary_calls = []
+    theta_star_nr = np.arange(float(hours))
+    theta_star_hbr = theta_star_nr + 10.0
+    theta_hbr = np.vstack([theta_star_nr + i for i in range(5)])
+    vent_nr = theta_star_nr + 20.0
+    dash_supply = theta_hbr + 30.0
+    supply = theta_hbr + 40.0
+    theta_uf = theta_star_nr + 50.0
+    area_partition = np.arange(5.0)
+    r_area = object()
+
+    def get_theta_nr(**kwargs):
+        nonlocal call_count
+        if call_count in (0, hours - 1):
+            boundary_calls.append((call_count, kwargs))
+        call_count += 1
+        return kwargs["Theta_uf"]
+
+    monkeypatch.setattr(sut, "get_Theta_NR", get_theta_nr)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_NR_d_t",
+        lambda *_: pytest.fail("new branch must not call the legacy formula"),
+    )
+
+    result = sut._get_actual_non_room_temperatures_without_carryover(
+        SimpleNamespace(Q=2.7),
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
+        theta_star_nr, theta_star_hbr, theta_hbr, 45.0, vent_nr,
+        dash_supply, supply, 0.5, area_partition, theta_uf, r_area
+    )
+
+    np.testing.assert_array_equal(result, theta_uf)
+    assert call_count == hours
+    first = boundary_calls[0][1]
+    last = boundary_calls[1][1]
+    assert first["Theta_star_NR"] == theta_star_nr[0]
+    assert last["Theta_star_NR"] == theta_star_nr[-1]
+    assert first["V_vent_l_NR"] == vent_nr[0]
+    assert last["V_vent_l_NR"] == vent_nr[-1]
+    np.testing.assert_array_equal(first["Theta_HBR_i"], theta_hbr[:, 0:1])
+    np.testing.assert_array_equal(last["Theta_HBR_i"], theta_hbr[:, -1:])
+    np.testing.assert_array_equal(first["A_prt_i"], area_partition.reshape(-1, 1))
+    assert first["r_A_NR_1F_excl_bath"] is r_area
+
+
+def test_actual_non_room_temperatures_without_carryover_preserve_legacy_formula(
+    monkeypatch,
+):
+    calls = []
+    result = object()
+    values = [object() for _ in range(11)]
+
+    monkeypatch.setattr(
+        sut,
+        "get_Theta_NR",
+        lambda **_: pytest.fail("legacy branch must not call the new formula"),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_NR_d_t",
+        lambda *args: calls.append(args) or result,
+    )
+
+    actual = sut._get_actual_non_room_temperatures_without_carryover(
+        SimpleNamespace(Q=2.7),
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
+        *values
+    )
+
+    assert actual is result
+    assert calls == [(
+        values[0], values[1], values[2], values[3], values[4],
+        values[5], values[6], values[7], values[8], 2.7,
+    )]
