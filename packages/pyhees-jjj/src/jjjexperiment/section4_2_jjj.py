@@ -255,6 +255,25 @@ def _get_unprocessed_loads(
 
     return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i
 
+def _get_unprocessed_energy(
+        ac_setting: ActiveAcSetting,
+        Q_UT_CL_d_t_i: np.ndarray,
+        Q_UT_CS_d_t_i: np.ndarray,
+        Q_UT_H_d_t_i: np.ndarray,
+        region: int,
+    ) -> tuple[np.ndarray, str]:
+    match ac_setting:
+        case HeatingAcSetting():
+            # 暖房: 未処理暖房負荷の設計一次エネルギー消費量相当値
+            alpha_UT_H_A: float = get_alpha_UT_H_A(region)
+            Q_UT_H_A_d_t: np.ndarray = np.sum(Q_UT_H_d_t_i, axis=0)
+            return Q_UT_H_A_d_t * alpha_UT_H_A, 'E_UT_H_d_t'
+        case CoolingAcSetting():
+            # (1)　冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値
+            return dc.get_E_C_UT_d_t(Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, region), 'E_UT_C_d_t'
+        case _:
+            raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1584,20 +1603,14 @@ def calc_Q_UT_A(
         Q_UT_H_d_t_5 = Q_UT_H_d_t_i[4]
     )
     """ まとめ - 一次エネルギー """
-    match ac_setting:
-        case HeatingAcSetting():
-            # 暖房: 未処理暖房負荷の設計一次エネルギー消費量相当値
-            alpha_UT_H_A: float = get_alpha_UT_H_A(house.region)
-            Q_UT_H_A_d_t: np.ndarray = np.sum(Q_UT_H_d_t_i, axis=0)
-            E_UT_d_t = Q_UT_H_A_d_t * alpha_UT_H_A
-            df_output['E_UT_H_d_t'] = E_UT_d_t
-        case CoolingAcSetting():
-            # (1)　冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値
-            E_UT_d_t = dc.get_E_C_UT_d_t(Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, house.region)
-            df_output['E_UT_C_d_t'] = E_UT_d_t
-        case _:
-            raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
-
+    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
+        ac_setting,
+        Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i,
+        Q_UT_H_d_t_i,
+        house.region,
+    )
+    df_output[E_UT_output_name] = E_UT_d_t
     # 床下空調新ロジック調査用変数の出力
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
