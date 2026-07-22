@@ -1299,3 +1299,56 @@ def test_standard_heat_source_capacity_limits_preserve_formula_order(monkeypatch
         ("rated_H", (setting, house)),
         ("max_H", (setting.type, 100.0, outputs[3], 1.1)),
     ]
+
+@pytest.mark.parametrize("log_intermediates", (False, True))
+def test_rac_heating_capacity_preserves_formula_and_log_order(
+    monkeypatch,
+    log_intermediates,
+):
+    calls = []
+    heating = SimpleNamespace(q_max=10.0, q_rtd=8.0, input_C_af=1.1)
+    cooling = SimpleNamespace(q_rtd=7.0)
+    theta = object()
+    humidity = object()
+    outputs = (1.25, object(), object())
+    monkeypatch.setattr(
+        sut.rac,
+        "get_q_r_max_H",
+        lambda *args: calls.append(("ratio", args)) or outputs[0],
+    )
+    monkeypatch.setattr(
+        sut.rac,
+        "calc_Q_r_max_H_d_t",
+        lambda *args: calls.append(("output_ratio", args)) or outputs[1],
+    )
+    monkeypatch.setattr(
+        sut.rac,
+        "calc_Q_max_H_d_t",
+        lambda *args: calls.append(("output", args)) or outputs[2],
+    )
+    monkeypatch.setattr(
+        sut._logger,
+        "debug",
+        lambda message: calls.append(("debug", message)),
+    )
+    monkeypatch.setattr(
+        sut._logger,
+        "NDdebug",
+        lambda name, value: calls.append(("NDdebug", name, value)),
+    )
+
+    result = sut._get_rac_heating_capacity(
+        heating, cooling, theta, humidity, log_intermediates
+    )
+
+    assert result == outputs
+    expected = [("ratio", (10.0, 8.0))]
+    if log_intermediates:
+        expected.append(("debug", "q_r_max_H: 1.25"))
+    expected.append(("output_ratio", (7.0, outputs[0], theta)))
+    if log_intermediates:
+        expected.append(("NDdebug", "Q_r_max_H_d_t", outputs[1]))
+    expected.append(("output", (outputs[1], 8.0, theta, humidity, 1.1)))
+    if log_intermediates:
+        expected.append(("NDdebug", "Q_max_H_d_t", outputs[2]))
+    assert calls == expected

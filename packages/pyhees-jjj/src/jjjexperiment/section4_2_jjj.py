@@ -559,6 +559,31 @@ def _get_standard_heat_source_capacity_limits(
 
     return Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t, C_df_H_d_t, Q_hs_max_H_d_t
 
+def _get_rac_heating_capacity(
+        heat_CRAC: HeatCRACSpec,
+        cool_CRAC: CoolCRACSpec,
+        Theta_ex_d_t: np.ndarray,
+        h_ex_d_t: np.ndarray,
+        log_intermediates: bool,
+    ) -> tuple[float, np.ndarray, np.ndarray]:
+    """Calculate the RAC maximum heating capacity in its original order."""
+    # 最大暖房能力比
+    q_r_max_H = rac.get_q_r_max_H(heat_CRAC.q_max, heat_CRAC.q_rtd)
+    if log_intermediates:
+        _logger.debug(f'q_r_max_H: {q_r_max_H}')  # here
+
+    # 最大暖房出力比
+    Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(cool_CRAC.q_rtd, q_r_max_H, Theta_ex_d_t)
+    if log_intermediates:
+        _logger.NDdebug("Q_r_max_H_d_t", Q_r_max_H_d_t)  # here
+
+    # 最大暖房出力
+    Q_max_H_d_t = rac.calc_Q_max_H_d_t(Q_r_max_H_d_t, heat_CRAC.q_rtd, Theta_ex_d_t, h_ex_d_t, heat_CRAC.input_C_af)
+    if log_intermediates:
+        _logger.NDdebug("Q_max_H_d_t", Q_max_H_d_t)
+
+    return q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1319,12 +1344,8 @@ def calc_Q_UT_A(
                 ]:
                 # (24)　デフロストに関する暖房出力補正係数
                 C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-                # 最大暖房能力比
-                q_r_max_H = rac.get_q_r_max_H(heat_CRAC.q_max, heat_CRAC.q_rtd)
-                # 最大暖房出力比
-                Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(cool_CRAC.q_rtd, q_r_max_H, Theta_ex_d_t)
-                # 最大暖房出力
-                Q_max_H_d_t = rac.calc_Q_max_H_d_t(Q_r_max_H_d_t, heat_CRAC.q_rtd, Theta_ex_d_t, h_ex_d_t, heat_CRAC.input_C_af)
+                q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+                    heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=False)
                 Q_hs_max_H_d_t = Q_max_H_d_t
                 # 最大冷房能力比
                 q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
@@ -1518,19 +1539,9 @@ def calc_Q_UT_A(
             C_df_H_d_t = climate.get_C_df_H_d_t()
             _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
 
-            # 最大暖房能力比
-            q_r_max_H = rac.get_q_r_max_H(heat_CRAC.q_max, heat_CRAC.q_rtd)
-            _logger.debug(f'q_r_max_H: {q_r_max_H}')  # here
-
-            # 最大暖房出力比
-            Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(cool_CRAC.q_rtd, q_r_max_H, Theta_ex_d_t)
-            _logger.NDdebug("Q_r_max_H_d_t", Q_r_max_H_d_t)  # here
-
-            # 最大暖房出力
-            Q_max_H_d_t = rac.calc_Q_max_H_d_t(Q_r_max_H_d_t, heat_CRAC.q_rtd, Theta_ex_d_t, h_ex_d_t, heat_CRAC.input_C_af)
-            _logger.NDdebug("Q_max_H_d_t", Q_max_H_d_t)
+            q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+                heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=True)
             Q_hs_max_H_d_t = Q_max_H_d_t
-
             # 最大冷房能力比
             q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
             _logger.debug(f"q_r_max_C: {q_r_max_C}")
