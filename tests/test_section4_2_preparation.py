@@ -2507,3 +2507,29 @@ def test_prepare_internal_moisture_state_preserves_formula_65_order(monkeypatch)
     assert [events[i][1] for i in (1, 3, 5, 7)] == [
         "w_gen_NR_d_t", "w_gen_OR_d_t", "w_gen_MR_d_t", "w_gen_d_t"
     ]
+
+def test_prepare_internal_heat_state_preserves_formula_64_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    monkeypatch.setattr(sut.dc, "calc_q_gen_NR_d_t", lambda x: events.append(("NR", x)) or values[0])
+    monkeypatch.setattr(sut.dc, "calc_q_gen_OR_d_t", lambda x: events.append(("OR", x)) or values[1])
+    monkeypatch.setattr(sut.dc, "calc_q_gen_MR_d_t", lambda x: events.append(("MR", x)) or values[2])
+    monkeypatch.setattr(sut.dc, "get_q_gen_d_t", lambda *x: events.append(("total", x)) or values[3])
+
+    result = sut._prepare_internal_heat_state(
+        Frame(), SimpleNamespace(A_OR=50.0, A_MR=30.0), 40.0
+    )
+
+    assert result is values[3]
+    assert [event[0] for event in events] == [
+        "NR", "write", "OR", "write", "MR", "write", "total", "write"
+    ]
+    assert events[6][1] == (values[2], values[1], values[0])
+    assert [events[i][1] for i in (1, 3, 5, 7)] == [
+        "q_gen_NR_d_t", "q_gen_OR_d_t", "q_gen_MR_d_t", "q_gen_d_t"
+    ]

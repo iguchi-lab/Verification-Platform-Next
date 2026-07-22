@@ -1547,6 +1547,18 @@ def _prepare_internal_moisture_state(df_output, house, A_NR):
     df_output['w_gen_d_t'] = w_gen_d_t
     return w_gen_d_t
 
+def _prepare_internal_heat_state(df_output, house, A_NR):
+    """Calculate formula (64) values and preserve direct output writes."""
+    q_gen_NR_d_t = dc.calc_q_gen_NR_d_t(A_NR)
+    df_output['q_gen_NR_d_t'] = q_gen_NR_d_t
+    q_gen_OR_d_t = dc.calc_q_gen_OR_d_t(house.A_OR)
+    df_output['q_gen_OR_d_t'] = q_gen_OR_d_t
+    q_gen_MR_d_t = dc.calc_q_gen_MR_d_t(house.A_MR)
+    df_output['q_gen_MR_d_t'] = q_gen_MR_d_t
+    q_gen_d_t = dc.get_q_gen_d_t(q_gen_MR_d_t, q_gen_OR_d_t, q_gen_NR_d_t)
+    df_output['q_gen_d_t'] = q_gen_d_t
+    return q_gen_d_t
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1603,17 +1615,7 @@ def calc_Q_UT_A(
     w_gen_d_t = _prepare_internal_moisture_state(df_output, house, A_NR)
 
     # (64d)　非居室の内部発熱
-    q_gen_NR_d_t = dc.calc_q_gen_NR_d_t(A_NR)
-    df_output['q_gen_NR_d_t'] = q_gen_NR_d_t
-    # (64c)　その他居室の内部発熱
-    q_gen_OR_d_t = dc.calc_q_gen_OR_d_t(house.A_OR)
-    df_output['q_gen_OR_d_t'] = q_gen_OR_d_t
-    # (64b)　主たる居室の内部発熱
-    q_gen_MR_d_t = dc.calc_q_gen_MR_d_t(house.A_MR)
-    df_output['q_gen_MR_d_t'] = q_gen_MR_d_t
-    # (64a)　内部発熱
-    q_gen_d_t = dc.get_q_gen_d_t(q_gen_MR_d_t, q_gen_OR_d_t, q_gen_NR_d_t)
-    df_output['q_gen_d_t'] = q_gen_d_t
+    q_gen_d_t = _prepare_internal_heat_state(df_output, house, A_NR)
 
     # (63)　局所排気量
     V_vent_l_NR_d_t = dc.get_V_vent_l_NR_d_t()
