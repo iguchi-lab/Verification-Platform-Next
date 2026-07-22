@@ -57,7 +57,6 @@ EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS = {
     "latent_load/test_latent_load_integration.py",
-    "test_integration_execution.py",
     "underfloor_ac/test_4_2_f46_f48.py",
 }
 
