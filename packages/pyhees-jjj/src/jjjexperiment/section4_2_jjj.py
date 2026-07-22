@@ -378,6 +378,32 @@ def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
 
     return Q_hat_hs_d_t, Theta_uf_d_t
 
+def _adjust_heat_source_output_for_underfloor_to_ground_transfer(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        A_s_ufac_i: np.ndarray,
+        Phi_A_0: float,
+        Theta_uf_d_t: np.ndarray,
+        sum_Theta_dash_g_surf_A_m: float,
+        Theta_g_avg: float,
+        Q_hat_hs_d_t: np.ndarray,
+    ) -> np.ndarray:
+    """Apply the ground part of formula (40)-2nd without changing evaluation."""
+    # 3. 床下 -> 地盤 (逃げ方向)
+    A_s_ufac_A = np.sum(A_s_ufac_i)
+
+    delta_L_uf2gnd_d_t = np.vectorize(jjj_ufac_dc.calc_delta_L_uf2gnd)
+    delta_L_uf2gnd_d_t = \
+        delta_L_uf2gnd_d_t(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house),
+            A_s_ufac_A, jjj_consts.R_g, Phi_A_0, Theta_uf_d_t, sum_Theta_dash_g_surf_A_m, Theta_g_avg)
+    Q_hat_hs_d_t += delta_L_uf2gnd_d_t
+
+    #260112 IGUCHI デバッグ用
+    #print("delta_L_uf2gnd_d_t[0] 床下⇒地盤: ", delta_L_uf2gnd_d_t[0])
+    #print("Q_hat_hs_d_t[0] 床下⇒地盤を足す: ", Q_hat_hs_d_t[0])
+
+    return Q_hat_hs_d_t
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -918,19 +944,16 @@ def calc_Q_UT_A(
             V_dash_supply_d_t_i,
             Q_hat_hs_d_t,
         )
-        # 3. 床下 -> 地盤 (逃げ方向)
-        A_s_ufac_A = np.sum(A_s_ufac_i)
-
-        delta_L_uf2gnd_d_t = np.vectorize(jjj_ufac_dc.calc_delta_L_uf2gnd)
-        delta_L_uf2gnd_d_t = \
-            delta_L_uf2gnd_d_t(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house),
-                A_s_ufac_A, jjj_consts.R_g, Phi_A_0, Theta_uf_d_t, sum_Theta_dash_g_surf_A_m, Theta_g_avg)
-        Q_hat_hs_d_t += delta_L_uf2gnd_d_t
-
-        #260112 IGUCHI デバッグ用
-        #print("delta_L_uf2gnd_d_t[0] 床下⇒地盤: ", delta_L_uf2gnd_d_t[0])
-        #print("Q_hat_hs_d_t[0] 床下⇒地盤を足す: ", Q_hat_hs_d_t[0])
-
+        Q_hat_hs_d_t = _adjust_heat_source_output_for_underfloor_to_ground_transfer(
+            ac_setting,
+            house,
+            A_s_ufac_i,
+            Phi_A_0,
+            Theta_uf_d_t,
+            sum_Theta_dash_g_surf_A_m,
+            Theta_g_avg,
+            Q_hat_hs_d_t,
+        )
         # 補正完了した Q^hs を使って V'supply を再計算する
         should_be_adjusted_Q_hat_hs_d_t = False
 

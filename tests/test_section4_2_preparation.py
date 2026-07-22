@@ -992,3 +992,68 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
         (4.8, 12.0, 0.7, 0.3, 20.0, 10.0, 5.0),
     )
     assert theta_calls[-1] == theta_calls[0]
+
+def test_underfloor_to_ground_transfer_preserves_argument_order(monkeypatch):
+    setting = object()
+    house = object()
+    area = np.arange(1.0, 13.0).reshape(12, 1)
+    theta = np.arange(24 * 365, dtype=float)
+    output = np.full(24 * 365, 100.0)
+    calls = []
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_H",
+        lambda *args: calls.append(("capacity", "H", args)) or 1.0,
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_C",
+        lambda *args: calls.append(("capacity", "C", args)) or 2.0,
+    )
+    monkeypatch.setattr(sut.jjj_consts, "R_g", 3.0, raising=False)
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_delta_L_uf2gnd",
+        lambda q_h, q_c, area_total, resistance, phi, theta_uf, response, average: (
+            calls.append(
+                (
+                    "transfer",
+                    q_h,
+                    q_c,
+                    area_total,
+                    resistance,
+                    phi,
+                    theta_uf,
+                    response,
+                    average,
+                )
+            )
+            or theta_uf + 1.0
+        ),
+    )
+
+    result = sut._adjust_heat_source_output_for_underfloor_to_ground_transfer(
+        setting,
+        house,
+        area,
+        0.025,
+        theta,
+        11.2,
+        15.5,
+        output,
+    )
+
+    assert result is output
+    np.testing.assert_array_equal(output, 101.0 + theta)
+    assert calls[:2] == [
+        ("capacity", "H", (setting, house)),
+        ("capacity", "C", (setting, house)),
+    ]
+    # np.vectorize evaluates the first element once for type inference.
+    assert len(calls) == 3 + 24 * 365
+    assert calls[2] == (
+        "transfer", 1.0, 2.0, 78.0, 3.0, 0.025, 0.0, 11.2, 15.5
+    )
+    assert calls[-1] == (
+        "transfer", 1.0, 2.0, 78.0, 3.0, 0.025, 8759.0, 11.2, 15.5
+    )
