@@ -1927,6 +1927,69 @@ def _prepare_no_carryover_balanced_loads(
                 Theta_star_HBR_d_t, Theta_ex_d_t,
                 L_star_H_d_t_i, L_star_CS_d_t_i)
     return L_star_H_d_t_i, L_star_CS_d_t_i
+
+def _prepare_no_carryover_capacity_state(
+        ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
+        Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i):
+    """Prepare heat-source capacity limits for the selected calculation model."""
+    L_star_CL_d_t = L_star_CS_d_t = None
+    L_star_dash_CL_d_t = L_star_dash_C_d_t = None
+    Q_r_max_H_d_t = Q_r_max_C_d_t = None
+    L_max_CL_d_t = L_dash_CL_d_t = L_dash_C_d_t = None
+    q_r_max_H = q_r_max_C = SHF_L_min_c = None
+    if ac_setting.type in [
+            計算モデル.ダクト式セントラル空調機,
+            計算モデル.RAC活用型全館空調_潜熱評価モデル]:
+        (
+            L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
+            L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
+        ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
+        (
+            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+            C_df_H_d_t, Q_hs_max_H_d_t,
+        ) = _get_standard_heat_source_capacity_limits(
+            ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
+            L_star_dash_CL_d_t, climate.get_C_df_H_d_t)
+    elif ac_setting.type in [
+            計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+            計算モデル.電中研モデル]:
+        C_df_H_d_t = climate.get_C_df_H_d_t()
+        _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
+        q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+            heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
+            log_intermediates=True)
+        Q_hs_max_H_d_t = Q_max_H_d_t
+        (
+            q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
+            L_max_CL_d_t, L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t,
+            Q_max_CS_d_t, Q_max_CL_d_t,
+        ) = _get_rac_cooling_capacity(
+            cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
+        Q_hs_max_C_d_t = Q_max_C_d_t
+        Q_hs_max_CL_d_t = Q_max_CL_d_t
+        Q_hs_max_CS_d_t = Q_max_CS_d_t
+    else:
+        raise Exception('設備機器の種類の入力が不正です。')
+    return (
+        Q_hs_max_C_d_t,
+        Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t,
+        L_star_CL_d_t,
+        L_star_CS_d_t,
+        L_star_dash_CL_d_t,
+        L_star_dash_C_d_t,
+        C_df_H_d_t,
+        Q_r_max_H_d_t,
+        Q_r_max_C_d_t,
+        L_max_CL_d_t,
+        L_dash_CL_d_t,
+        L_dash_C_d_t,
+        q_r_max_H,
+        q_r_max_C,
+        SHF_L_min_c,
+        SHF_dash_d_t,
+    )
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2240,42 +2303,16 @@ def calc_Q_UT_A(
         L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(
             house, new_ufac, new_ufac_df, load, A_s_ufac_i,
             Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i)
-        ####################################################################################################################
-        if ac_setting.type in [
-                計算モデル.ダクト式セントラル空調機,
-                計算モデル.RAC活用型全館空調_潜熱評価モデル
-            ]:
-            (
-                L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
-                L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
-            ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
-            (
-                Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-                C_df_H_d_t, Q_hs_max_H_d_t,
-            ) = _get_standard_heat_source_capacity_limits(
-                ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t, L_star_dash_CL_d_t,
-                climate.get_C_df_H_d_t)
-        elif ac_setting.type in [
-                計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
-                計算モデル.電中研モデル
-            ]:
-            # (24)　デフロストに関する暖房出力補正係数
-            C_df_H_d_t = climate.get_C_df_H_d_t()
-            _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
-
-            q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
-                heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=True)
-            Q_hs_max_H_d_t = Q_max_H_d_t
-            (
-                q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c, L_max_CL_d_t,
-                L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t, Q_max_CS_d_t, Q_max_CL_d_t,
-            ) = _get_rac_cooling_capacity(cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
-            Q_hs_max_C_d_t = Q_max_C_d_t
-            Q_hs_max_CL_d_t = Q_max_CL_d_t
-            Q_hs_max_CS_d_t = Q_max_CS_d_t
-        else:
-            raise Exception('設備機器の種類の入力が不正です。')
-        ####################################################################################################################
+        (
+            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+            Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
+            L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
+            Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
+            L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
+            SHF_L_min_c, SHF_dash_d_t,
+        ) = _prepare_no_carryover_capacity_state(
+            ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
+            Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
 
         # (20)　負荷バランス時の熱源機の入口における絶対湿度
         X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
