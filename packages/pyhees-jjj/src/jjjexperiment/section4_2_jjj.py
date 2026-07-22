@@ -1029,6 +1029,39 @@ def _record_unprocessed_energy_output(
     df_output[output_name] = E_UT_d_t
     return df_output
 
+def _adjust_legacy_underfloor_requested_temperatures(
+        ac_setting,
+        house,
+        skin,
+        load,
+        r_A_ufvnt,
+        Theta_req_d_t_i,
+        Theta_ex_d_t,
+        V_dash_supply_d_t_i,
+    ):
+    """Apply the existing first-pass correction for legacy underfloor air supply."""
+    for i in range(2):  # i=0,1
+        Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
+            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, r_A_ufvnt,
+            skin.underfloor_insulation, Theta_req_d_t_i[i], Theta_ex_d_t,
+            V_dash_supply_d_t_i[i], '', load.L_H_d_t_i, load.L_CS_d_t_i)
+
+        match ac_setting:
+            case HeatingAcSetting():
+                mask = Theta_req_d_t_i[i] > Theta_uf_d_t
+            case CoolingAcSetting():
+                mask = Theta_req_d_t_i[i] < Theta_uf_d_t
+            case _:
+                raise ValueError
+
+        Theta_req_d_t_i[i] = np.where(
+            mask,
+            Theta_req_d_t_i[i] + (Theta_req_d_t_i[i] - Theta_uf_d_t),
+            Theta_req_d_t_i[i],
+        )
+
+    return Theta_req_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1516,26 +1549,10 @@ def calc_Q_UT_A(
                 L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
                 L_star_CS_d_t_i, l_duct_i, house.region)
             if skin.underfloor_air_conditioning_air_supply:
-                for i in range(2):  # i=0,1
-                    Theta_uf_d_t, Theta_g_surf_d_t, *others  \
-                        = algo.calc_Theta(  # 熱繰越-1st
-                            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.YUCACO_r_A_ufvnt, skin.underfloor_insulation,
-                            Theta_req_d_t_i[i], Theta_ex_d_t, V_dash_supply_d_t_i[i],
-                            '', load.L_H_d_t_i, load.L_CS_d_t_i)
-
-                    # 暖冷房期 判別
-                    match ac_setting:
-                        case HeatingAcSetting():
-                            mask = Theta_req_d_t_i[i] > Theta_uf_d_t
-                        case CoolingAcSetting():
-                            mask = Theta_req_d_t_i[i] < Theta_uf_d_t
-                        case _:
-                            raise ValueError
-
-                    Theta_req_d_t_i[i]  \
-                        = np.where(mask,
-                                Theta_req_d_t_i[i] + (Theta_req_d_t_i[i] - Theta_uf_d_t),
-                                Theta_req_d_t_i[i])
+                # Carryover heat, first pass: preserve the legacy correction formula.
+                Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
+                    ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
+                    Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
 
             # NOTE: 過剰熱量繰越 未利用の場合では、式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
             # Theta_NR_d_t = np.zeros(24 * 365)
@@ -1720,28 +1737,11 @@ def calc_Q_UT_A(
             })
 
         elif skin.underfloor_air_conditioning_air_supply:
-            for i in range(2):  # 1F居室のみ(i=0,1)損失分を補正
-                # CHECK: 床下温度が i(部屋) で変わるが問題ないか
-                Theta_uf_d_t, Theta_g_surf_d_t, *others  \
-                    = algo.calc_Theta(  # 旧床下空調-1st
-                        house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.r_A_ufac, skin.underfloor_insulation,
-                        Theta_req_d_t_i[i], Theta_ex_d_t, V_dash_supply_d_t_i[i],
-                        '', load.L_H_d_t_i, load.L_CS_d_t_i)
-
-                match ac_setting:
-                    case HeatingAcSetting():
-                        mask = Theta_req_d_t_i[i] > Theta_uf_d_t
-                    case CoolingAcSetting():
-                        mask = Theta_req_d_t_i[i] < Theta_uf_d_t
-                    case _:
-                        raise ValueError
-
-                Theta_req_d_t_i[i] = np.where(mask,
-                                    # 熱源機出口 -> 居室床下までの温度低下分を見込む
-                                    Theta_req_d_t_i[i] + (Theta_req_d_t_i[i] - Theta_uf_d_t),
-                                    Theta_req_d_t_i[i])
-
-            assert np.shape(Theta_req_d_t_i)==(5, 8760), "想定外の行列数です"
+            # Legacy underfloor AC, first pass: preserve the original correction formula.
+            Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
+                ac_setting, house, skin, load, skin.r_A_ufac,
+                Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+            assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数です"
 
         X_hs_out_d_t = _get_heat_source_outlet_humidity(
             X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
