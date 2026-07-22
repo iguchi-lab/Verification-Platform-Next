@@ -61,3 +61,20 @@ def test_season_helpers_reject_unknown_setting(helper):
     else:
         with pytest.raises(ValueError):
             helper(object(), SimpleNamespace(region=6, A_A=120.0))
+
+
+def test_normalize_design_airflows_preserves_heating_selection():
+    assert sut._normalize_design_airflows(0, 1500.0) == (None, 1500.0)
+
+
+def test_normalize_design_airflows_preserves_cooling_selection():
+    assert sut._normalize_design_airflows(1200.0, 0) == (1200.0, None)
+
+
+def test_normalize_design_airflows_preserves_both_zero_match_priority():
+    assert sut._normalize_design_airflows(0, 0) == (None, 0)
+
+
+def test_normalize_design_airflows_rejects_two_nonzero_values():
+    with pytest.raises(ValueError, match="暖房・冷房の判別がつかない"):
+        sut._normalize_design_airflows(1200.0, 1500.0)

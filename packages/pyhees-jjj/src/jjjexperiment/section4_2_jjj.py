@@ -115,6 +115,21 @@ def _get_q_hs_rtd_C(ac_setting: ActiveAcSetting, house: HouseInfo) -> float | No
             raise ValueError
 
 
+def _normalize_design_airflows(
+        V_hs_dsgn_H: VHS_DSGN_H,
+        V_hs_dsgn_C: VHS_DSGN_C,
+    ) -> tuple[VHS_DSGN_H | None, VHS_DSGN_C | None]:
+    match V_hs_dsgn_H, V_hs_dsgn_C:
+        case 0, _:
+            V_hs_dsgn_H = None
+        case _, 0:
+            V_hs_dsgn_C = None
+        case _:
+            raise ValueError("暖房・冷房の判別がつかない")
+
+    return V_hs_dsgn_H, V_hs_dsgn_C
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -136,13 +151,10 @@ def calc_Q_UT_A(
     """未処理負荷と機器の計算に必要な変数を取得"""
 
     # NOTE: 暖房・冷房で二回実行される。定格能力のどちらが None かで判別している
-    match V_hs_dsgn_H, V_hs_dsgn_C:
-        case 0, _:
-            V_hs_dsgn_H = None
-        case _, 0:
-            V_hs_dsgn_C = None
-        case _:
-            raise ValueError("暖房・冷房の判別がつかない")
+    V_hs_dsgn_H, V_hs_dsgn_C = _normalize_design_airflows(
+        V_hs_dsgn_H,
+        V_hs_dsgn_C,
+    )
 
     df_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
     df_output2 = pd.DataFrame()
