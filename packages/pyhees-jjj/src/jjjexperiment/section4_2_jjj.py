@@ -130,6 +130,20 @@ def _normalize_design_airflows(
     return V_hs_dsgn_H, V_hs_dsgn_C
 
 
+def _select_minimum_airflow_input(
+        ac_setting: ActiveAcSetting,
+        v_min_heat_input: HeatMinVolumeInput,
+        v_min_cool_input: CoolMinVolumeInput,
+    ) -> HeatMinVolumeInput | CoolMinVolumeInput:
+    match ac_setting:
+        case HeatingAcSetting():
+            return v_min_heat_input
+        case CoolingAcSetting():
+            return v_min_cool_input
+        case _:
+            raise ValueError
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -247,10 +261,11 @@ def calc_Q_UT_A(
         V_vent_l_d_t = V_vent_l_d_t
     )
 
-    match ac_setting:
-        case HeatingAcSetting(): v_min_input = v_min_heat_input
-        case CoolingAcSetting(): v_min_input = v_min_cool_input
-        case _: raise ValueError
+    v_min_input = _select_minimum_airflow_input(
+        ac_setting,
+        v_min_heat_input,
+        v_min_cool_input,
+    )
 
     # (62)　全般換気量
     if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:  # ダックタイピング

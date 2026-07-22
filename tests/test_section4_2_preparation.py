@@ -78,3 +78,20 @@ def test_normalize_design_airflows_preserves_both_zero_match_priority():
 def test_normalize_design_airflows_rejects_two_nonzero_values():
     with pytest.raises(ValueError, match="暖房・冷房の判別がつかない"):
         sut._normalize_design_airflows(1200.0, 1500.0)
+
+
+def test_select_minimum_airflow_input_matches_season():
+    heat_input = object()
+    cool_input = object()
+
+    assert sut._select_minimum_airflow_input(
+        _setting(sut.HeatingAcSetting), heat_input, cool_input
+    ) is heat_input
+    assert sut._select_minimum_airflow_input(
+        _setting(sut.CoolingAcSetting), heat_input, cool_input
+    ) is cool_input
+
+
+def test_select_minimum_airflow_input_rejects_unknown_setting():
+    with pytest.raises(ValueError):
+        sut._select_minimum_airflow_input(object(), object(), object())
