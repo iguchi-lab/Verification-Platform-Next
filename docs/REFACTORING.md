@@ -80,6 +80,7 @@
 - [PR #28](https://github.com/iguchi-lab/Verification-Platform-Next/pull/28): 電中研モデルのテスト3境界を明示importへ置き換え、電中研テストのワイルドカードimport許可集合を空にしました。
 - [PR #30](https://github.com/iguchi-lab/Verification-Platform-Next/pull/30): ルート・統合テスト5境界のoptionsワイルドカードimportを廃止し、残存する潜熱評価と床下空調の2境界まで許可リストを縮小しました。
 - [PR #32](https://github.com/iguchi-lab/Verification-Platform-Next/pull/32): テスト・テスト支援層の残存ワイルドカードimportを4境界で廃止し、建研由来APIを直接検証するoriginテストだけを明示的な例外として固定しました。
+- [PR #34](https://github.com/iguchi-lab/Verification-Platform-Next/pull/34): `section4_2.py` と `section4_2_a.py` の利用APIを固定し、旧import互換性を維持しながらJJJ変更版を `_jjj` 命名へ移行しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
@@ -88,7 +89,7 @@
 以下は候補であり、着手順ではありません。調査結果をIssueに記録し、同じ目的と検証方法を持ち、独立してcommitできる境界を原則3〜5件選んで1バッチにします。
 
 1. `jjjexperiment`のモジュールと公開APIを棚卸しし、利用箇所のないコード、建研モジュールに対応する変更版、独自機能の境界を区別する。
-2. `jjjexperiment/section4_2.py`、`section4_2_a.py`などを対象に、import/API契約を固定したうえで`_jjj`命名へ段階的に移行する。
+2. `section3_1_e.py`など残るJJJ変更版を対象に、import/API契約と逆依存を確認したうえで`_jjj`命名へ段階的に移行する。
 3. `jjjexperiment`に残るワイルドカードimportを棚卸しし、同じ依存元を持つ3〜5境界ずつ明示的なimportへ置き換える。
 4. 入力準備、負荷計算、暖冷房計算、結果組み立て、ファイル出力の責任を分離する。ただし、建研コードに対応する処理の順序と名前は維持する。
 5. 既存の`pyhees -> jjjexperiment`逆依存を独立して検証できる境界へ分け、同種の3〜5境界ずつ削減する。
