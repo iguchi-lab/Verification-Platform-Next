@@ -168,6 +168,88 @@ class _SupplyStateResult(NamedTuple):
     V_supply_d_t_i: object
     Theta_supply_d_t_i: object
 
+class _InitialHeatSourceOutputInputs(NamedTuple):
+    df_output: object
+    house: object
+    skin: object
+    V_vent_l_d_t: object
+    V_vent_g_i: object
+    J_d_t: object
+    q_gen_d_t: object
+    n_p_d_t: object
+    q_p_H: object
+    q_p_CS: object
+    q_p_CL: object
+    X_ex_d_t: object
+    w_gen_d_t: object
+    Theta_ex_d_t: object
+    L_wtr: object
+
+
+class _PreVavAirflowInputs(NamedTuple):
+    df_output: object
+    df_output2: object
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    new_ufac: object
+    climate: object
+    A_HCZ_i: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    V_hs_min: object
+    Q_hs_rtd_H: object
+    Q_hs_rtd_C: object
+    Q_hat_hs_d_t: object
+    Q_hat_hs_CS_d_t: object
+    V_vent_g_i: object
+    Theta_in_d_t: object
+    Theta_ex_d_t: object
+    Phi_A_0: object
+    Theta_g_avg: object
+    sum_Theta_dash_g_surf_A_m: object
+    should_adjust: object
+
+
+class _BalancedNonRoomTemperatureInputs(NamedTuple):
+    df_output: object
+    new_ufac: object
+    house: object
+    skin: object
+    climate: object
+    load: object
+    A_NR: object
+    A_prt_i: object
+    U_prt: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+    Theta_star_HBR_d_t: object
+    Theta_in_d_t: object
+    Theta_uf_d_t: object
+
+
+class _NoCarryoverOutletRequirementInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    new_ufac: object
+    new_ufac_df: object
+    X_star_hs_in_d_t: object
+    Q_hs_max_CL_d_t: object
+    V_dash_supply_d_t_i: object
+    X_star_HBR_d_t: object
+    L_star_CL_d_t_i: object
+    Theta_sur_d_t_i: object
+    Theta_star_HBR_d_t: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    l_duct_i: object
+    Theta_ex_d_t: object
+    Theta_in_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1841,11 +1923,23 @@ def _prepare_balanced_room_and_duct_state(
 
 
 
-def _prepare_initial_heat_source_output(
-        df_output, house, skin, V_vent_l_d_t, V_vent_g_i, J_d_t,
-        q_gen_d_t, n_p_d_t, q_p_H, q_p_CS, q_p_CL, X_ex_d_t,
-        w_gen_d_t, Theta_ex_d_t, L_wtr):
+def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
     """Calculate the first formula (40) heat-source output in source order."""
+    df_output = inputs.df_output
+    house = inputs.house
+    skin = inputs.skin
+    V_vent_l_d_t = inputs.V_vent_l_d_t
+    V_vent_g_i = inputs.V_vent_g_i
+    J_d_t = inputs.J_d_t
+    q_gen_d_t = inputs.q_gen_d_t
+    n_p_d_t = inputs.n_p_d_t
+    q_p_H = inputs.q_p_H
+    q_p_CS = inputs.q_p_CS
+    q_p_CL = inputs.q_p_CL
+    X_ex_d_t = inputs.X_ex_d_t
+    w_gen_d_t = inputs.w_gen_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    L_wtr = inputs.L_wtr
     Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(
         skin.Q,
         house.A_A,
@@ -1907,13 +2001,31 @@ def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
     )
 
 
-def _prepare_pre_vav_airflow_state(
-        df_output, df_output2, ac_setting, house, skin, load, new_ufac,
-        climate, A_HCZ_i, V_hs_dsgn_H, V_hs_dsgn_C, V_hs_min,
-        Q_hs_rtd_H, Q_hs_rtd_C, Q_hat_hs_d_t, Q_hat_hs_CS_d_t,
-        V_vent_g_i, Theta_in_d_t, Theta_ex_d_t, Phi_A_0, Theta_g_avg,
-        sum_Theta_dash_g_surf_A_m, should_adjust):
+def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
     """Prepare pre-VAV airflow, including the optional underfloor recalculation."""
+    df_output = inputs.df_output
+    df_output2 = inputs.df_output2
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    new_ufac = inputs.new_ufac
+    climate = inputs.climate
+    A_HCZ_i = inputs.A_HCZ_i
+    V_hs_dsgn_H = inputs.V_hs_dsgn_H
+    V_hs_dsgn_C = inputs.V_hs_dsgn_C
+    V_hs_min = inputs.V_hs_min
+    Q_hs_rtd_H = inputs.Q_hs_rtd_H
+    Q_hs_rtd_C = inputs.Q_hs_rtd_C
+    Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
+    Q_hat_hs_CS_d_t = inputs.Q_hat_hs_CS_d_t
+    V_vent_g_i = inputs.V_vent_g_i
+    Theta_in_d_t = inputs.Theta_in_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    Phi_A_0 = inputs.Phi_A_0
+    Theta_g_avg = inputs.Theta_g_avg
+    sum_Theta_dash_g_surf_A_m = inputs.sum_Theta_dash_g_surf_A_m
+    should_adjust = inputs.should_adjust
     A_s_ufac_i = None
     Theta_uf_d_t = None
     while True:
@@ -2026,11 +2138,22 @@ def _prepare_balanced_non_room_humidity(
     df_output['X_star_NR_d_t'] = X_star_NR_d_t
     return X_star_NR_d_t
 
-def _prepare_balanced_non_room_temperature(
-        df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
-        U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-        Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t):
+def _prepare_balanced_non_room_temperature(inputs: _BalancedNonRoomTemperatureInputs):
     """Calculate formula (52) while preserving the new-underfloor branch."""
+    df_output = inputs.df_output
+    new_ufac = inputs.new_ufac
+    house = inputs.house
+    skin = inputs.skin
+    climate = inputs.climate
+    load = inputs.load
+    A_NR = inputs.A_NR
+    A_prt_i = inputs.A_prt_i
+    U_prt = inputs.U_prt
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_in_d_t = inputs.Theta_in_d_t
+    Theta_uf_d_t = inputs.Theta_uf_d_t
     r_A_NR_uf_1F_excl_bath = None
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
@@ -2203,13 +2326,26 @@ def _prepare_balanced_heat_source_inlet_state(X_star_NR_d_t, Theta_star_NR_d_t):
     Theta_star_hs_in_d_t = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
     return X_star_hs_in_d_t, Theta_star_hs_in_d_t
 
-def _prepare_no_carryover_outlet_requirements(
-        ac_setting, house, skin, load, new_ufac, new_ufac_df,
-        X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
-        X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
-        Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
-        Theta_ex_d_t, Theta_in_d_t):
+def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirementInputs):
     """Prepare outlet requirements and the optional first underfloor pass."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
+    X_star_hs_in_d_t = inputs.X_star_hs_in_d_t
+    Q_hs_max_CL_d_t = inputs.Q_hs_max_CL_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    X_star_HBR_d_t = inputs.X_star_HBR_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    Theta_sur_d_t_i = inputs.Theta_sur_d_t_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    l_duct_i = inputs.l_duct_i
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    Theta_in_d_t = inputs.Theta_in_d_t
     outlet_requirements = _get_heat_source_outlet_requirements(
         X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
         X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
@@ -2315,10 +2451,13 @@ def _prepare_unprocessed_load_state(
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
         L_star_H_d_t_i, L_dash_H_d_t_i):
     """Calculate and record unprocessed cooling and heating loads."""
-    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
+    unprocessed_loads = _get_unprocessed_loads(
         L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
         L_star_H_d_t_i, L_dash_H_d_t_i)
+    Q_UT_CL_d_t_i = unprocessed_loads.Q_UT_CL_d_t_i
+    Q_UT_CS_d_t_i = unprocessed_loads.Q_UT_CS_d_t_i
+    Q_UT_H_d_t_i = unprocessed_loads.Q_UT_H_d_t_i
     df_output = _record_unprocessed_load_outputs(
         df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i)
     return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, df_output
@@ -2732,12 +2871,20 @@ def calc_Q_UT_A(
     df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
 
     # 気象条件
-    climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t = \
-        _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
+    climate_conditions = _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
+    climate = climate_conditions.climate
+    Theta_ex_d_t = climate_conditions.Theta_ex_d_t
+    X_ex_d_t = climate_conditions.X_ex_d_t
+    J_d_t = climate_conditions.J_d_t
+    h_ex_d_t = climate_conditions.h_ex_d_t
 
     #主たる居室・その他居室・非居室の面積
-    A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr = _prepare_dwelling_areas_and_water_heat(
+    dwelling_state = _prepare_dwelling_areas_and_water_heat(
         df_output2, df_output3, house)
+    A_HCZ_i = dwelling_state.A_HCZ_i
+    A_HCZ_R_i = dwelling_state.A_HCZ_R_i
+    A_NR = dwelling_state.A_NR
+    L_wtr = dwelling_state.L_wtr
 
     # (66d)　非居室の在室人数
     n_p_d_t = _prepare_occupancy_state(df_output, house, A_NR)
@@ -2779,13 +2926,7 @@ def calc_Q_UT_A(
         _prepare_duct_geometry_state(
             df_output, df_output2, house, Theta_ex_d_t, J_d_t)
     # (51), (50), (55), (54)　負荷バランス時の室内・ダクト周囲状態
-    (
-        X_star_HBR_d_t,
-        Theta_star_HBR_d_t,
-        Theta_attic_d_t,
-        Theta_sur_d_t_i,
-        df_output,
-    ) = _prepare_balanced_room_and_duct_state(
+    balanced_room_state = _prepare_balanced_room_and_duct_state(
         df_output,
         ac_setting,
         house,
@@ -2795,9 +2936,14 @@ def calc_Q_UT_A(
         l_duct_in_i,
         l_duct_ex_i,
     )
+    X_star_HBR_d_t = balanced_room_state.X_star_HBR_d_t
+    Theta_star_HBR_d_t = balanced_room_state.Theta_star_HBR_d_t
+    Theta_attic_d_t = balanced_room_state.Theta_attic_d_t
+    Theta_sur_d_t_i = balanced_room_state.Theta_sur_d_t_i
+    df_output = balanced_room_state.df_output
 
     # (40)-1st　熱源機の風量を計算するための熱源機の出力
-    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(
+    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(_InitialHeatSourceOutputInputs(
         df_output,
         house,
         skin,
@@ -2813,7 +2959,7 @@ def calc_Q_UT_A(
         w_gen_d_t,
         Theta_ex_d_t,
         L_wtr,
-    )
+    ))
     # (39)　熱源機の最低風量
     V_hs_min = _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i)
     Q_hs_rtd_H, Q_hs_rtd_C = _prepare_rated_heat_source_capacity_state(
@@ -2832,14 +2978,7 @@ def calc_Q_UT_A(
     ) = _prepare_underfloor_adjustment_state(
         ac_setting, new_ufac, Theta_ex_d_t)
 
-    (
-        A_s_ufac_i,
-        Theta_uf_d_t,
-        r_supply_des_i,
-        r_supply_des_d_t_i,
-        V_dash_supply_d_t_i,
-        df_output,
-    ) = _prepare_pre_vav_airflow_state(
+    pre_vav_state = _prepare_pre_vav_airflow_state(_PreVavAirflowInputs(
         df_output,
         df_output2,
         ac_setting,
@@ -2863,7 +3002,13 @@ def calc_Q_UT_A(
         Theta_g_avg,
         sum_Theta_dash_g_surf_A_m,
         should_be_adjusted_Q_hat_hs_d_t,
-    )
+    ))
+    A_s_ufac_i = pre_vav_state.A_s_ufac_i
+    Theta_uf_d_t = pre_vav_state.Theta_uf_d_t
+    r_supply_des_i = pre_vav_state.r_supply_des_i
+    r_supply_des_d_t_i = pre_vav_state.r_supply_des_d_t_i
+    V_dash_supply_d_t_i = pre_vav_state.V_dash_supply_d_t_i
+    df_output = pre_vav_state.df_output
 
     # (53)　負荷バランス時の非居室の絶対湿度
     X_star_NR_d_t = _prepare_balanced_non_room_humidity(
@@ -2871,10 +3016,10 @@ def calc_Q_UT_A(
         V_vent_l_NR_d_t, V_dash_supply_d_t_i)
     # (52)　負荷バランス時の非居室の室温
     Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
-        _prepare_balanced_non_room_temperature(
+        _prepare_balanced_non_room_temperature(_BalancedNonRoomTemperatureInputs(
             df_output, new_ufac, house, skin, climate, load, A_NR, A_prt_i,
             U_prt, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-            Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t)
+            Theta_star_HBR_d_t, Theta_in_d_t, Theta_uf_d_t))
     # (49), (47)　実際の非居室・居室の絶対湿度
     X_NR_d_t, X_HBR_d_t_i, df_output = _prepare_actual_humidity_state(
         df_output, X_star_NR_d_t, X_star_HBR_d_t)
@@ -2891,17 +3036,16 @@ def calc_Q_UT_A(
         # NOTE: 過剰熱繰越と併用しないオプションはインプットデータクラスの段階で強制オフしている
 
         # 過剰熱繰越ループの配列・季節状態を初期化
-        (
-            L_star_CS_d_t_i,
-            L_star_H_d_t_i,
-            Theta_star_hs_in_d_t,
-            Theta_HBR_d_t_i,
-            Theta_NR_d_t,
-            carryovers,
-            H,
-            C,
-            M,
-        ) = _initialize_carryover_hourly_state(house.region)
+        carryover_hourly_state = _initialize_carryover_hourly_state(house.region)
+        L_star_CS_d_t_i = carryover_hourly_state.L_star_CS_d_t_i
+        L_star_H_d_t_i = carryover_hourly_state.L_star_H_d_t_i
+        Theta_star_hs_in_d_t = carryover_hourly_state.Theta_star_hs_in_d_t
+        Theta_HBR_d_t_i = carryover_hourly_state.Theta_HBR_d_t_i
+        Theta_NR_d_t = carryover_hourly_state.Theta_NR_d_t
+        carryovers = carryover_hourly_state.carryovers
+        H = carryover_hourly_state.H
+        C = carryover_hourly_state.C
+        M = carryover_hourly_state.M
         for t in range(0, 24 * 365):
             # TODO: 先頭時の扱いを考慮
             isFirst = (t == 0)
@@ -2915,16 +3059,27 @@ def calc_Q_UT_A(
                 L_star_CS_d_t_i[:, t:t+1],
             ) = _get_balanced_loads_at_hour(
                 t, H, C, load, Q_star_trs_prt_d_t_i, carryover)
-            (
-                Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-                Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
-                L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-                Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-                L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
-                SHF_L_min_c, SHF_dash_d_t,
-            ) = _prepare_carryover_capacity_state(
+            capacity_state = _prepare_carryover_capacity_state(
                 ac_setting, house, heat_CRAC, cool_CRAC, load,
                 Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
+            Q_hs_max_C_d_t = capacity_state.Q_hs_max_C_d_t
+            Q_hs_max_CL_d_t = capacity_state.Q_hs_max_CL_d_t
+            Q_hs_max_CS_d_t = capacity_state.Q_hs_max_CS_d_t
+            Q_hs_max_H_d_t = capacity_state.Q_hs_max_H_d_t
+            L_star_CL_d_t = capacity_state.L_star_CL_d_t
+            L_star_CS_d_t = capacity_state.L_star_CS_d_t
+            L_star_dash_CL_d_t = capacity_state.L_star_dash_CL_d_t
+            L_star_dash_C_d_t = capacity_state.L_star_dash_C_d_t
+            C_df_H_d_t = capacity_state.C_df_H_d_t
+            Q_r_max_H_d_t = capacity_state.Q_r_max_H_d_t
+            Q_r_max_C_d_t = capacity_state.Q_r_max_C_d_t
+            L_max_CL_d_t = capacity_state.L_max_CL_d_t
+            L_dash_CL_d_t = capacity_state.L_dash_CL_d_t
+            L_dash_C_d_t = capacity_state.L_dash_C_d_t
+            q_r_max_H = capacity_state.q_r_max_H
+            q_r_max_C = capacity_state.q_r_max_C
+            SHF_L_min_c = capacity_state.SHF_L_min_c
+            SHF_dash_d_t = capacity_state.SHF_dash_d_t
 
             # (20), (19)　負荷バランス時の熱源機入口状態
             X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
@@ -2944,15 +3099,7 @@ def calc_Q_UT_A(
             # Theta_NR_d_t = np.zeros(24 * 365)
             # 過剰熱量繰越 利用時には、初期化せず再利用する
 
-            (
-                X_hs_out_d_t,
-                Theta_hs_out_min_C_d_t,
-                Theta_hs_out_max_H_d_t,
-                Theta_hs_out_d_t,
-                V_supply_d_t_i_before,
-                V_supply_d_t_i,
-                Theta_supply_d_t_i,
-            ) = _prepare_carryover_supply_state(
+            supply_state = _prepare_carryover_supply_state(
                 v_supply_cap_dto, ac_setting, house, skin, load, X_NR_d_t,
                 X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
                 L_star_CL_d_t_i, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
@@ -2960,6 +3107,13 @@ def calc_Q_UT_A(
                 L_star_CS_d_t_i, Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
                 Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C,
                 Theta_ex_d_t)
+            X_hs_out_d_t = supply_state.X_hs_out_d_t
+            Theta_hs_out_min_C_d_t = supply_state.Theta_hs_out_min_C_d_t
+            Theta_hs_out_max_H_d_t = supply_state.Theta_hs_out_max_H_d_t
+            Theta_hs_out_d_t = supply_state.Theta_hs_out_d_t
+            V_supply_d_t_i_before = supply_state.V_supply_d_t_i_before
+            V_supply_d_t_i = supply_state.V_supply_d_t_i
+            Theta_supply_d_t_i = supply_state.Theta_supply_d_t_i
 
             # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
             # 0 の扱いは全てのメソッドで考慮されていること
@@ -2979,37 +3133,40 @@ def calc_Q_UT_A(
         L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(
             house, new_ufac, new_ufac_df, load, A_s_ufac_i,
             Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i)
-        (
-            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-            Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
-            L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-            Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-            L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
-            SHF_L_min_c, SHF_dash_d_t,
-        ) = _prepare_no_carryover_capacity_state(
+        capacity_state = _prepare_no_carryover_capacity_state(
             ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
             Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
+        Q_hs_max_C_d_t = capacity_state.Q_hs_max_C_d_t
+        Q_hs_max_CL_d_t = capacity_state.Q_hs_max_CL_d_t
+        Q_hs_max_CS_d_t = capacity_state.Q_hs_max_CS_d_t
+        Q_hs_max_H_d_t = capacity_state.Q_hs_max_H_d_t
+        L_star_CL_d_t = capacity_state.L_star_CL_d_t
+        L_star_CS_d_t = capacity_state.L_star_CS_d_t
+        L_star_dash_CL_d_t = capacity_state.L_star_dash_CL_d_t
+        L_star_dash_C_d_t = capacity_state.L_star_dash_C_d_t
+        C_df_H_d_t = capacity_state.C_df_H_d_t
+        Q_r_max_H_d_t = capacity_state.Q_r_max_H_d_t
+        Q_r_max_C_d_t = capacity_state.Q_r_max_C_d_t
+        L_max_CL_d_t = capacity_state.L_max_CL_d_t
+        L_dash_CL_d_t = capacity_state.L_dash_CL_d_t
+        L_dash_C_d_t = capacity_state.L_dash_C_d_t
+        q_r_max_H = capacity_state.q_r_max_H
+        q_r_max_C = capacity_state.q_r_max_C
+        SHF_L_min_c = capacity_state.SHF_L_min_c
+        SHF_dash_d_t = capacity_state.SHF_dash_d_t
 
         # (20), (19)　負荷バランス時の熱源機入口状態
         X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
             _prepare_balanced_heat_source_inlet_state(
                 X_star_NR_d_t, Theta_star_NR_d_t)
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
-            _prepare_no_carryover_outlet_requirements(
+            _prepare_no_carryover_outlet_requirements(_NoCarryoverOutletRequirementInputs(
                 ac_setting, house, skin, load, new_ufac, new_ufac_df,
                 X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
                 X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
                 Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
-                l_duct_i, Theta_ex_d_t, Theta_in_d_t)
-        (
-            X_hs_out_d_t,
-            Theta_hs_out_min_C_d_t,
-            Theta_hs_out_max_H_d_t,
-            Theta_hs_out_d_t,
-            V_supply_d_t_i_before,
-            V_supply_d_t_i,
-            Theta_supply_d_t_i,
-        ) = _prepare_no_carryover_supply_state(
+                l_duct_i, Theta_ex_d_t, Theta_in_d_t))
+        supply_state = _prepare_no_carryover_supply_state(
             v_supply_cap_dto, ac_setting, house, skin, load, new_ufac,
             new_ufac_df, X_NR_d_t, X_req_d_t_i, Theta_req_d_t_i,
         V_dash_supply_d_t_i,
@@ -3017,6 +3174,13 @@ def calc_Q_UT_A(
             Q_hs_max_CS_d_t, Q_hs_max_H_d_t, L_star_H_d_t_i,
             L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
             V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C, Theta_ex_d_t)
+        X_hs_out_d_t = supply_state.X_hs_out_d_t
+        Theta_hs_out_min_C_d_t = supply_state.Theta_hs_out_min_C_d_t
+        Theta_hs_out_max_H_d_t = supply_state.Theta_hs_out_max_H_d_t
+        Theta_hs_out_d_t = supply_state.Theta_hs_out_d_t
+        V_supply_d_t_i_before = supply_state.V_supply_d_t_i_before
+        V_supply_d_t_i = supply_state.V_supply_d_t_i
+        Theta_supply_d_t_i = supply_state.Theta_supply_d_t_i
         # (46), (48)　実際の居室・非居室の室温
         Theta_HBR_d_t_i, Theta_NR_d_t = \
             _prepare_no_carryover_actual_temperature_state(

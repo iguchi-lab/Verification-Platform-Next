@@ -2700,12 +2700,12 @@ def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monke
     house = SimpleNamespace(A_A=120.0, region=6)
     skin = SimpleNamespace(Q=2.4, mu_H=0.08, mu_C=0.05)
     inputs = [object() for _ in range(12)]
-    result = sut._prepare_initial_heat_source_output(
+    result = sut._prepare_initial_heat_source_output(sut._InitialHeatSourceOutputInputs(
         frame,
         house,
         skin,
         *inputs,
-    )
+    ))
 
     assert result == values
     assert [event[0] for event in events] == ["formula", "setitem"]
@@ -2840,7 +2840,7 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
 
     context = [object() for _ in range(18)]
     q_sensible = object()
-    result = sut._prepare_pre_vav_airflow_state(
+    result = sut._prepare_pre_vav_airflow_state(sut._PreVavAirflowInputs(
         df_output,
         Output2(),
         *context[:12],
@@ -2848,7 +2848,7 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
         q_sensible,
         *context[12:],
         should_adjust,
-    )
+    ))
 
     expected_names = ["heat_airflow", "setitem", "supply_airflow"]
     if should_adjust:
@@ -2915,8 +2915,8 @@ def test_prepare_balanced_non_room_temperature_preserves_formula_52_branch(
         lambda *args: events.append(("legacy", args)) or theta,
     )
 
-    result = sut._prepare_balanced_non_room_temperature(
-        frame, new_ufac, house, skin, object(), load, *inputs)
+    result = sut._prepare_balanced_non_room_temperature(sut._BalancedNonRoomTemperatureInputs(
+        frame, new_ufac, house, skin, object(), load, *inputs))
 
     assert result == (theta, ratio if enabled else None)
     assert [event[0] for event in events] == [
@@ -3101,8 +3101,8 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
         sut, "_adjust_legacy_underfloor_requested_temperatures",
         lambda *a: events.append(("legacy", a)) or np.zeros((5, 8760)))
 
-    result = sut._prepare_no_carryover_outlet_requirements(
-        context[0], house, skin, context[1], new_ufac, *context[2:])
+    result = sut._prepare_no_carryover_outlet_requirements(sut._NoCarryoverOutletRequirementInputs(
+        context[0], house, skin, context[1], new_ufac, *context[2:]))
 
     assert result[:2] == (x_min, x_req)
     assert [e[0] for e in events] == ["requirements"] + ([] if mode == "none" else [mode])
@@ -3640,7 +3640,7 @@ def test_prepare_actual_load_state_preserves_calculate_record_order(
 def test_prepare_unprocessed_load_state_preserves_calculate_record_order(
         monkeypatch):
     events = []
-    loads = tuple(object() for _ in range(3))
+    loads = sut._UnprocessedLoadsResult(*(object() for _ in range(3)))
     original = object()
     recorded = object()
     inputs = [object() for _ in range(6)]
@@ -3963,4 +3963,110 @@ def test_supply_state_result_preserves_tuple_contract():
         "V_supply_d_t_i_before",
         "V_supply_d_t_i",
         "Theta_supply_d_t_i",
+    )
+
+
+def test_initial_heat_source_output_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(15))
+    inputs = sut._InitialHeatSourceOutputInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "house",
+        "skin",
+        "V_vent_l_d_t",
+        "V_vent_g_i",
+        "J_d_t",
+        "q_gen_d_t",
+        "n_p_d_t",
+        "q_p_H",
+        "q_p_CS",
+        "q_p_CL",
+        "X_ex_d_t",
+        "w_gen_d_t",
+        "Theta_ex_d_t",
+        "L_wtr",
+    )
+
+
+def test_pre_vav_airflow_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(23))
+    inputs = sut._PreVavAirflowInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "df_output2",
+        "ac_setting",
+        "house",
+        "skin",
+        "load",
+        "new_ufac",
+        "climate",
+        "A_HCZ_i",
+        "V_hs_dsgn_H",
+        "V_hs_dsgn_C",
+        "V_hs_min",
+        "Q_hs_rtd_H",
+        "Q_hs_rtd_C",
+        "Q_hat_hs_d_t",
+        "Q_hat_hs_CS_d_t",
+        "V_vent_g_i",
+        "Theta_in_d_t",
+        "Theta_ex_d_t",
+        "Phi_A_0",
+        "Theta_g_avg",
+        "sum_Theta_dash_g_surf_A_m",
+        "should_adjust",
+    )
+
+
+def test_balanced_non_room_temperature_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(14))
+    inputs = sut._BalancedNonRoomTemperatureInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "new_ufac",
+        "house",
+        "skin",
+        "climate",
+        "load",
+        "A_NR",
+        "A_prt_i",
+        "U_prt",
+        "V_vent_l_NR_d_t",
+        "V_dash_supply_d_t_i",
+        "Theta_star_HBR_d_t",
+        "Theta_in_d_t",
+        "Theta_uf_d_t",
+    )
+
+
+def test_no_carryover_outlet_requirement_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(18))
+    inputs = sut._NoCarryoverOutletRequirementInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "ac_setting",
+        "house",
+        "skin",
+        "load",
+        "new_ufac",
+        "new_ufac_df",
+        "X_star_hs_in_d_t",
+        "Q_hs_max_CL_d_t",
+        "V_dash_supply_d_t_i",
+        "X_star_HBR_d_t",
+        "L_star_CL_d_t_i",
+        "Theta_sur_d_t_i",
+        "Theta_star_HBR_d_t",
+        "L_star_H_d_t_i",
+        "L_star_CS_d_t_i",
+        "l_duct_i",
+        "Theta_ex_d_t",
+        "Theta_in_d_t",
     )
