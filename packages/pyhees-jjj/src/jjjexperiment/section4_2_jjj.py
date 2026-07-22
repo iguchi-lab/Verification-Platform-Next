@@ -1583,6 +1583,16 @@ def _prepare_general_ventilation_state(
     df_output2['V_vent_g_i'] = V_vent_g_i
     return V_vent_g_i
 
+def _prepare_partition_state(df_output2, df_output3, house, skin, A_HCZ_i, A_NR):
+    """Calculate formulas (61) and (60) and preserve direct output writes."""
+    U_prt = dc.get_U_prt()
+    df_output3['U_prt'] = [U_prt]
+    A_prt_i = dc.get_A_prt_i(
+        A_HCZ_i, skin.r_env, house.A_MR, A_NR, house.A_OR)
+    df_output3['r_env'] = [skin.r_env]
+    df_output2['A_prt_i'] = A_prt_i
+    return U_prt, A_prt_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1656,13 +1666,8 @@ def calc_Q_UT_A(
         df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i)
 
     # (61)　間仕切の熱貫流率
-    U_prt = dc.get_U_prt()
-    df_output3['U_prt'] = [U_prt]
-
-    # (60)　非居室の間仕切の面積
-    A_prt_i = dc.get_A_prt_i(A_HCZ_i, skin.r_env, house.A_MR, A_NR, house.A_OR)
-    df_output3['r_env'] = [skin.r_env]
-    df_output2['A_prt_i'] = A_prt_i
+    U_prt, A_prt_i = _prepare_partition_state(
+        df_output2, df_output3, house, skin, A_HCZ_i, A_NR)
 
     # (59)　等価外気温度
     Theta_SAT_d_t = dc.get_Theta_SAT_d_t(Theta_ex_d_t, J_d_t)

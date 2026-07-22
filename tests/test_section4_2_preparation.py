@@ -2576,3 +2576,24 @@ def test_prepare_general_ventilation_state_preserves_formula_62_branch(monkeypat
         assert events[1] == ("scale", (base, 500.0))
     assert events[-1][1] == "V_vent_g_i"
     assert events[-1][2] is result
+
+def test_prepare_partition_state_preserves_formula_61_60_order(monkeypatch):
+    events = []
+    u_value, areas = object(), object()
+
+    class Frame:
+        def __init__(self, name): self.name = name
+        def __setitem__(self, key, value): events.append(("write", self.name, key, value))
+
+    monkeypatch.setattr(sut.dc, "get_U_prt", lambda: events.append(("U",)) or u_value)
+    monkeypatch.setattr(sut.dc, "get_A_prt_i", lambda *x: events.append(("A", x)) or areas)
+    house = SimpleNamespace(A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(r_env=0.4)
+    hcz, a_nr = object(), 40.0
+    result = sut._prepare_partition_state(Frame("df2"), Frame("df3"), house, skin, hcz, a_nr)
+    assert result == (u_value, areas)
+    assert [e[0] for e in events] == ["U", "write", "A", "write", "write"]
+    assert events[2] == ("A", (hcz, 0.4, 30.0, 40.0, 50.0))
+    assert [(events[i][1], events[i][2]) for i in (1, 3, 4)] == [
+        ("df3", "U_prt"), ("df3", "r_env"), ("df2", "A_prt_i")
+    ]
