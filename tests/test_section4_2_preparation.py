@@ -3003,3 +3003,28 @@ def test_initialize_carryover_hourly_state_preserves_shapes_and_season_order(mon
         ("zeros", (5, 24 * 365)),
         ("season", 6),
     ]
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_no_carryover_balanced_loads_preserves_formula_and_adjustment_order(
+        monkeypatch, enabled):
+    events = []
+    sensible_c, heating = object(), object()
+    adjusted_h, adjusted_c = object(), object()
+    flag = sut.床下空調ロジック.変更する if enabled else object()
+    house = SimpleNamespace(region=6)
+    new_ufac = SimpleNamespace(new_ufac_flg=flag)
+    load = SimpleNamespace(L_CS_d_t_i=object(), L_H_d_t_i=object())
+    inputs = [object() for _ in range(5)]
+    monkeypatch.setattr(sut.dc, "get_L_star_CS_d_t_i", lambda *a: events.append(("cool", a)) or sensible_c)
+    monkeypatch.setattr(sut.dc, "get_L_star_H_d_t_i", lambda *a: events.append(("heat", a)) or heating)
+    monkeypatch.setattr(
+        sut, "_adjust_new_underfloor_balanced_loads",
+        lambda *a: events.append(("adjust", a)) or (adjusted_h, adjusted_c))
+
+    result = sut._prepare_no_carryover_balanced_loads(
+        house, new_ufac, inputs[0], load, *inputs[1:])
+
+    assert result == ((adjusted_h, adjusted_c) if enabled else (heating, sensible_c))
+    assert [e[0] for e in events] == (["cool", "heat", "adjust"] if enabled else ["cool", "heat"])
+    assert events[0][1] == (load.L_CS_d_t_i, inputs[4], 6)
+    assert events[1][1] == (load.L_H_d_t_i, inputs[4], 6)

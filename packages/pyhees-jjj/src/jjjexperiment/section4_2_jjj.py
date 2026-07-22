@@ -1911,6 +1911,22 @@ def _initialize_carryover_hourly_state(region):
         C,
         M,
     )
+
+def _prepare_no_carryover_balanced_loads(
+        house, new_ufac, new_ufac_df, load, A_s_ufac_i,
+        Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i):
+    """Calculate formulas (9) and (8), including the new-underfloor adjustment."""
+    L_star_CS_d_t_i = dc.get_L_star_CS_d_t_i(
+        load.L_CS_d_t_i, Q_star_trs_prt_d_t_i, house.region)
+    L_star_H_d_t_i = dc.get_L_star_H_d_t_i(
+        load.L_H_d_t_i, Q_star_trs_prt_d_t_i, house.region)
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        L_star_H_d_t_i, L_star_CS_d_t_i = \
+            _adjust_new_underfloor_balanced_loads(
+                house, new_ufac, new_ufac_df, load, A_s_ufac_i,
+                Theta_star_HBR_d_t, Theta_ex_d_t,
+                L_star_H_d_t_i, L_star_CS_d_t_i)
+    return L_star_H_d_t_i, L_star_CS_d_t_i
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2220,18 +2236,10 @@ def calc_Q_UT_A(
 
         # NOTE: 床下空調のための r_A_ufvnt の上書きはココより前に行わない
         # 外気導入の負荷削減の計算までは、削減ナシ(r_A_ufvnt=None) のままであるべきため
-
-        # (9) 熱取得を含む負荷バランス時の冷房顕熱負荷
-        L_star_CS_d_t_i = dc.get_L_star_CS_d_t_i(load.L_CS_d_t_i, Q_star_trs_prt_d_t_i, house.region)
-        # (8) 熱損失を含む負荷バランス時の暖房負荷
-        L_star_H_d_t_i = dc.get_L_star_H_d_t_i(load.L_H_d_t_i, Q_star_trs_prt_d_t_i, house.region)
-
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            L_star_H_d_t_i, L_star_CS_d_t_i = _adjust_new_underfloor_balanced_loads(
-                house, new_ufac, new_ufac_df, load, A_s_ufac_i,
-                Theta_star_HBR_d_t, Theta_ex_d_t,
-                L_star_H_d_t_i, L_star_CS_d_t_i)
-
+        # (9), (8)　冷房顕熱・暖房の負荷バランス
+        L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(
+            house, new_ufac, new_ufac_df, load, A_s_ufac_i,
+            Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i)
         ####################################################################################################################
         if ac_setting.type in [
                 計算モデル.ダクト式セントラル空調機,
