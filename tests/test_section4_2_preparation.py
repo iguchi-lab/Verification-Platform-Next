@@ -3525,3 +3525,26 @@ def test_prepare_heat_source_ventilation_airflow_output_preserves_formula_35(
         ("formula", tuple(inputs)),
         ("setitem", "V_hs_vent_d_t", value),
     ]
+
+
+def test_prepare_heat_source_supply_airflow_output_preserves_formula_34(
+        monkeypatch):
+    events = []
+    value = object()
+    source = object()
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("setitem", key, item))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_V_hs_supply_d_t",
+        lambda arg: events.append(("formula", arg)) or value)
+
+    assert sut._prepare_heat_source_supply_airflow_output(
+        frame, source) == (value, frame)
+    assert events == [
+        ("formula", source),
+        ("setitem", "V_hs_supply_d_t", value),
+    ]
