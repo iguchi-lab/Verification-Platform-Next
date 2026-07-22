@@ -2842,14 +2842,7 @@ def calc_Q_UT_A(
     ) = _prepare_underfloor_adjustment_state(
         ac_setting, new_ufac, Theta_ex_d_t)
 
-    (
-        A_s_ufac_i,
-        Theta_uf_d_t,
-        r_supply_des_i,
-        r_supply_des_d_t_i,
-        V_dash_supply_d_t_i,
-        df_output,
-    ) = _prepare_pre_vav_airflow_state(
+    pre_vav_state = _prepare_pre_vav_airflow_state(
         df_output,
         df_output2,
         ac_setting,
@@ -2874,6 +2867,12 @@ def calc_Q_UT_A(
         sum_Theta_dash_g_surf_A_m,
         should_be_adjusted_Q_hat_hs_d_t,
     )
+    A_s_ufac_i = pre_vav_state.A_s_ufac_i
+    Theta_uf_d_t = pre_vav_state.Theta_uf_d_t
+    r_supply_des_i = pre_vav_state.r_supply_des_i
+    r_supply_des_d_t_i = pre_vav_state.r_supply_des_d_t_i
+    V_dash_supply_d_t_i = pre_vav_state.V_dash_supply_d_t_i
+    df_output = pre_vav_state.df_output
 
     # (53)　負荷バランス時の非居室の絶対湿度
     X_star_NR_d_t = _prepare_balanced_non_room_humidity(
