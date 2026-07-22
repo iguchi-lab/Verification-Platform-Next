@@ -59,12 +59,10 @@ EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS = {
-    "latent_load/test_latent_load_integration.py",
     "underfloor_ac/test_4_2_f46_f48.py",
 }
 
 EXPECTED_ENGINE_TEST_WILDCARD_IMPORTS = {
-    ("tests/latent_load/test_latent_load_integration.py", "jjjexperiment.inputs.options"),
     ("tests/origin/test_4_2_formula_45.py", "pyhees.section4_2"),
     ("tests/underfloor_ac/test_4_2_f46_f48.py", "jjjexperiment.common"),
     (
