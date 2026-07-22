@@ -3108,7 +3108,8 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
 def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mode):
     events = []
     x_out = object()
-    temperatures = tuple(object() for _ in range(3))
+    temperatures = sut._HeatSourceOutletTemperaturesResult(
+        *(object() for _ in range(3)))
     airflows = tuple(object() for _ in range(2))
     base_supply = tuple(object() for _ in range(5))
     adjusted_supply = tuple(object() for _ in range(5))
@@ -3248,7 +3249,8 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
         monkeypatch, enabled):
     events = []
     outlet_humidity = object()
-    outlet_temperatures = tuple(object() for _ in range(3))
+    outlet_temperatures = sut._HeatSourceOutletTemperaturesResult(
+        *(object() for _ in range(3)))
     airflows = tuple(object() for _ in range(2))
     supply_temperature = object()
     adjusted = object()

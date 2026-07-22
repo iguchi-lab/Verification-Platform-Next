@@ -2228,14 +2228,13 @@ def _prepare_no_carryover_supply_state(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
     Theta_NR_d_t = np.zeros(24 * 365)
-    (
-        Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t,
-    ) = _get_heat_source_outlet_temperatures(
+    outlet_temperatures = _get_heat_source_outlet_temperatures(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
         V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+    Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
+    Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
+    Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
     V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
@@ -2529,14 +2528,13 @@ def _prepare_carryover_supply_state(
     X_hs_out_d_t = _get_heat_source_outlet_humidity(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
-    (
-        Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t,
-    ) = _get_heat_source_outlet_temperatures(
+    outlet_temperatures = _get_heat_source_outlet_temperatures(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
         V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+    Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
+    Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
+    Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
     V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i,
