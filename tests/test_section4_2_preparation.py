@@ -3040,7 +3040,8 @@ def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch,
              else sut.計算モデル.電中研モデル)
     setting = SimpleNamespace(type=model)
     inputs = [object() for _ in range(8)]
-    standard_loads = tuple(object() for _ in range(6))
+    standard_loads = sut._BalancedCoolingLoadsResult(
+        *(object() for _ in range(6)))
     standard_caps = tuple(object() for _ in range(5))
     heat_caps = tuple(object() for _ in range(3))
     cool_caps = tuple(object() for _ in range(10))
@@ -3150,7 +3151,8 @@ def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, st
              else sut.計算モデル.電中研モデル)
     setting = SimpleNamespace(type=model)
     inputs = [object() for _ in range(8)]
-    standard_loads = tuple(object() for _ in range(6))
+    standard_loads = sut._BalancedCoolingLoadsResult(
+        *(object() for _ in range(6)))
     standard_caps = tuple(object() for _ in range(5))
     heat_caps = tuple(object() for _ in range(3))
     cool_caps = tuple(object() for _ in range(10))

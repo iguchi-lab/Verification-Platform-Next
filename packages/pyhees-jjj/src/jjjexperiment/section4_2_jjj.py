@@ -2131,10 +2131,14 @@ def _prepare_no_carryover_capacity_state(
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル]:
-        (
-            L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
-            L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
-        ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
+        balanced_cooling = _get_balanced_cooling_loads(
+            L_star_CL_d_t_i, L_star_CS_d_t_i)
+        L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
+        L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
+        L_star_CL_max_d_t = balanced_cooling.L_star_CL_max_d_t
+        L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
+        L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
+        SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
         (
             Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
             C_df_H_d_t, Q_hs_max_H_d_t,
@@ -2609,10 +2613,14 @@ def _prepare_carryover_capacity_state(
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル]:
-        (
-            L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
-            L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
-        ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
+        balanced_cooling = _get_balanced_cooling_loads(
+            L_star_CL_d_t_i, L_star_CS_d_t_i)
+        L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
+        L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
+        L_star_CL_max_d_t = balanced_cooling.L_star_CL_max_d_t
+        L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
+        L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
+        SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
         (
             Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
             C_df_H_d_t, Q_hs_max_H_d_t,
