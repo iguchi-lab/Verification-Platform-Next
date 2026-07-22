@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, NewType
+from typing import Callable, NamedTuple, NewType
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -82,6 +82,11 @@ VHS_DSGN_C = NewType('VHS_DSGN_C', float)
 @dataclass
 class ActiveAcSetting:
     load: HeatingAcSetting | CoolingAcSetting
+
+class _RatedHeatSourceCapacitiesResult(NamedTuple):
+    Q_hs_rtd_H: object
+    Q_hs_rtd_C: object
+
 
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
@@ -169,7 +174,7 @@ def _get_rated_heat_source_capacities(
     else:
         raise Exception('設備機器の種類の入力が不正です。')
 
-    return Q_hs_rtd_H, Q_hs_rtd_C
+    return _RatedHeatSourceCapacitiesResult(Q_hs_rtd_H, Q_hs_rtd_C)
 
 
 def _prepare_underfloor_ground_response(

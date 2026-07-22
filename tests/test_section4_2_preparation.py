@@ -3686,3 +3686,12 @@ def test_export_and_build_calculation_result_preserves_order(monkeypatch):
             inputs[5], inputs[6], inputs[7])),
     ]
     assert result == tuple(inputs[8:])
+
+
+def test_rated_heat_source_capacities_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(2))
+    result = sut._RatedHeatSourceCapacitiesResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Q_hs_rtd_H", "Q_hs_rtd_C",)
