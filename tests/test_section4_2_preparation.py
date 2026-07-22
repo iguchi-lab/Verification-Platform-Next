@@ -3704,3 +3704,12 @@ def test_underfloor_ground_response_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("Theta_in_d_t", "Phi_A_0", "Theta_g_avg", "sum_Theta_dash_g_surf_A_m",)
+
+
+def test_supply_airflow_before_vav_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(3))
+    result = sut._SupplyAirflowBeforeVavResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("r_supply_des_i", "r_supply_des_d_t_i", "V_dash_supply_d_t_i",)

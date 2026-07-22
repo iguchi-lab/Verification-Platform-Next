@@ -95,6 +95,12 @@ class _UnderfloorGroundResponseResult(NamedTuple):
     sum_Theta_dash_g_surf_A_m: object
 
 
+class _SupplyAirflowBeforeVavResult(NamedTuple):
+    r_supply_des_i: object
+    r_supply_des_d_t_i: object
+    V_dash_supply_d_t_i: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -290,7 +296,7 @@ def _get_supply_airflow_before_vav(
         # (44)　VAV 調整前の吹き出し風量
         V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i(r_supply_des_i, V_dash_hs_supply_d_t, V_vent_g_i)
 
-    return r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i
+    return _SupplyAirflowBeforeVavResult(r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i)
 
 def _adjust_heat_source_output_for_room_to_underfloor_transfer(
         new_ufac: UnderfloorAc,
