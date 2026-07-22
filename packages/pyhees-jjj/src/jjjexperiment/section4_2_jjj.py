@@ -128,6 +128,17 @@ class _PreVavAirflowStateResult(NamedTuple):
     V_dash_supply_d_t_i: object
     df_output: object
 
+class _CarryoverHourlyStateResult(NamedTuple):
+    L_star_CS_d_t_i: object
+    L_star_H_d_t_i: object
+    Theta_star_hs_in_d_t: object
+    Theta_HBR_d_t_i: object
+    Theta_NR_d_t: object
+    carryovers: object
+    H: object
+    C: object
+    M: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2051,7 +2062,7 @@ def _initialize_carryover_hourly_state(region):
     Theta_NR_d_t = np.zeros(24 * 365)
     carryovers = np.zeros((5, 24 * 365))
     H, C, M = dc.get_season_array_d_t(region)
-    return (
+    return _CarryoverHourlyStateResult(
         L_star_CS_d_t_i,
         L_star_H_d_t_i,
         Theta_star_hs_in_d_t,

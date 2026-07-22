@@ -3882,3 +3882,22 @@ def test_pre_vav_airflow_state_result_preserves_tuple_contract():
         "V_dash_supply_d_t_i",
         "df_output",
     )
+
+
+def test_carryover_hourly_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(9))
+    result = sut._CarryoverHourlyStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "L_star_CS_d_t_i",
+        "L_star_H_d_t_i",
+        "Theta_star_hs_in_d_t",
+        "Theta_HBR_d_t_i",
+        "Theta_NR_d_t",
+        "carryovers",
+        "H",
+        "C",
+        "M",
+    )
