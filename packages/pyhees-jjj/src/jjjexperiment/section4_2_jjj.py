@@ -308,6 +308,26 @@ def _export_standard_outputs(
         case(_, _):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
 
+def _record_balanced_load_outputs(
+        df_output: pd.DataFrame,
+        L_star_CS_d_t_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+    ) -> pd.DataFrame:
+    df_output = df_output.assign(
+        L_star_CS_d_t_i_1=L_star_CS_d_t_i[0],
+        L_star_CS_d_t_i_2=L_star_CS_d_t_i[1],
+        L_star_CS_d_t_i_3=L_star_CS_d_t_i[2],
+        L_star_CS_d_t_i_4=L_star_CS_d_t_i[3],
+        L_star_CS_d_t_i_5=L_star_CS_d_t_i[4],
+    )
+    return df_output.assign(
+        L_star_H_d_t_i_1=L_star_H_d_t_i[0],
+        L_star_H_d_t_i_2=L_star_H_d_t_i[1],
+        L_star_H_d_t_i_3=L_star_H_d_t_i[2],
+        L_star_H_d_t_i_4=L_star_H_d_t_i[3],
+        L_star_H_d_t_i_5=L_star_H_d_t_i[4],
+    )
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1430,21 +1450,11 @@ def calc_Q_UT_A(
                 raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
-    df_output = df_output.assign(
-        L_star_CS_d_t_i_1 = L_star_CS_d_t_i[0],
-        L_star_CS_d_t_i_2 = L_star_CS_d_t_i[1],
-        L_star_CS_d_t_i_3 = L_star_CS_d_t_i[2],
-        L_star_CS_d_t_i_4 = L_star_CS_d_t_i[3],
-        L_star_CS_d_t_i_5 = L_star_CS_d_t_i[4]
+    df_output = _record_balanced_load_outputs(
+        df_output,
+        L_star_CS_d_t_i,
+        L_star_H_d_t_i,
     )
-    df_output = df_output.assign(
-        L_star_H_d_t_i_1 = L_star_H_d_t_i[0],
-        L_star_H_d_t_i_2 = L_star_H_d_t_i[1],
-        L_star_H_d_t_i_3 = L_star_H_d_t_i[2],
-        L_star_H_d_t_i_4 = L_star_H_d_t_i[3],
-        L_star_H_d_t_i_5 = L_star_H_d_t_i[4]
-    )
-
     """ 最大暖冷房能力 """
     df_output = df_output.assign(
         # NOTE: タイプ毎に出力する変数の数を変えないようIFなどの分岐はしない

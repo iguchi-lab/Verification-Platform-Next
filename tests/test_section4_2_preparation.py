@@ -9,6 +9,18 @@ import jjjexperiment.section4_2_jjj as sut
 def _setting(setting_type):
     return object.__new__(setting_type)
 
+class _FrameRecorder:
+    def __init__(self, events=None, generation=0):
+        self.events = [] if events is None else events
+        self.generation = generation
+
+    def __setitem__(self, key, value):
+        self.events.append(("setitem", self.generation, key, value))
+
+    def assign(self, **columns):
+        self.events.append(("assign", self.generation, tuple(columns.items())))
+        return _FrameRecorder(self.events, self.generation + 1)
+
 
 def test_output_suffix_matches_heating_and_cooling():
     assert sut._get_output_suffix(_setting(sut.HeatingAcSetting)) == "_H"
@@ -492,3 +504,30 @@ def test_export_standard_outputs_rejects_ambiguous_capacities(
         )
 
     assert calls == ["H", "C"]
+
+def test_record_balanced_load_outputs_preserves_assign_order_and_result():
+    frame = _FrameRecorder()
+    sensible = [object() for _ in range(5)]
+    heating = [object() for _ in range(5)]
+
+    result = sut._record_balanced_load_outputs(frame, sensible, heating)
+
+    assert result.generation == 2
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple(
+                (f"L_star_CS_d_t_i_{i + 1}", sensible[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"L_star_H_d_t_i_{i + 1}", heating[i])
+                for i in range(5)
+            ),
+        ),
+    ]
