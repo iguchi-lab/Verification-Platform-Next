@@ -3426,3 +3426,28 @@ def test_record_capacity_state_outputs_preserves_frame_generations_and_order():
     assert events[3][2] == (
         "Q_hs_max_C_d_t", "Q_hs_max_CL_d_t",
         "Q_hs_max_CS_d_t", "Q_hs_max_H_d_t")
+
+
+def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
+        monkeypatch):
+    events = []
+    original = object()
+    outlet_frame = object()
+    supply_frame = object()
+    inputs = [object() for _ in range(14)]
+    monkeypatch.setattr(
+        sut, "_record_heat_source_outlet_outputs",
+        lambda *a: events.append(("outlet", a)) or outlet_frame)
+    monkeypatch.setattr(
+        sut, "_record_supply_state_outputs",
+        lambda *a: events.append(("supply", a)) or supply_frame)
+
+    result = sut._record_common_outlet_and_supply_outputs(
+        original, *inputs)
+
+    assert result is supply_frame
+    assert [event[0] for event in events] == ["outlet", "supply"]
+    assert events[0][1][0] is original
+    assert events[1][1][0] is outlet_frame
+    assert events[0][1][1:] == tuple(inputs[:9])
+    assert events[1][1][1:] == tuple(inputs[9:])

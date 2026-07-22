@@ -2074,6 +2074,24 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _record_common_outlet_and_supply_outputs(
+        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
+        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+        Theta_HBR_d_t_i, Theta_NR_d_t):
+    """Record common heat-source outlet then supply state outputs."""
+    df_output = _record_heat_source_outlet_outputs(
+        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t)
+    return _record_supply_state_outputs(
+        df_output, V_supply_d_t_i_before, V_supply_d_t_i,
+        Theta_supply_d_t_i, Theta_HBR_d_t_i, Theta_NR_d_t)
+
+
 def _record_capacity_state_outputs(
         df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
         L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
@@ -2669,28 +2687,14 @@ def calc_Q_UT_A(
         SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
         Q_hs_max_CS_d_t, Q_hs_max_H_d_t)
 
-    """ 熱源機の出口 - 負荷バランス時 / 熱源機の出口 """
-    df_output = _record_heat_source_outlet_outputs(
-        df_output,
-        X_star_hs_in_d_t,
-        Theta_star_hs_in_d_t,
-        X_hs_out_min_C_d_t,
-        X_req_d_t_i,
-        Theta_req_d_t_i,
-        X_hs_out_d_t,
-        Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t,
-    )
-    """ 吹出口 - 吹出口 / 実際 """
-    df_output = _record_supply_state_outputs(
-        df_output,
-        V_supply_d_t_i_before,
-        V_supply_d_t_i,
-        Theta_supply_d_t_i,
-        Theta_HBR_d_t_i,
-        Theta_NR_d_t,
-    )
+    """ 熱源機の出口・吹出口 - 負荷バランス時 / 実際 """
+    df_output = _record_common_outlet_and_supply_outputs(
+        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
+        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
+        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
+        Theta_HBR_d_t_i, Theta_NR_d_t)
     """ 吹出口 - 熱源機の出口 """
     # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以下だった場合の為に再計算
     # (14)　熱源機の出口における空気温度
