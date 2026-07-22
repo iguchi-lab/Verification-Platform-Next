@@ -1152,3 +1152,66 @@ def test_heat_source_outlet_temperatures_preserve_formula_order(monkeypatch):
             ),
         ),
     ]
+
+@pytest.mark.parametrize("print_exec", (False, True))
+def test_capped_supply_airflows_preserve_call_order_and_diagnostics(
+    monkeypatch,
+    print_exec,
+):
+    calls = []
+    cap = object()
+    setting = SimpleNamespace(VAV=True)
+    house = SimpleNamespace(region=6)
+    inputs = [object() for _ in range(10)]
+    before = object()
+    after = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_supply_d_t_i",
+        lambda *args: calls.append(("calculate", args)) or before,
+    )
+    monkeypatch.setattr(
+        sut.jjj_vsupcap,
+        "cap_V_supply_d_t_i",
+        lambda *args, **kwargs: calls.append(("cap", args, kwargs)) or after,
+    )
+
+    result = sut._get_capped_supply_airflows(
+        cap,
+        setting,
+        house,
+        *inputs,
+        print_exec=print_exec,
+    )
+
+    assert result == (before, after)
+    assert calls == [
+        (
+            "calculate",
+            (
+                inputs[0],
+                inputs[1],
+                inputs[2],
+                inputs[3],
+                inputs[4],
+                inputs[5],
+                inputs[6],
+                True,
+                6,
+                inputs[7],
+            ),
+        ),
+        (
+            "cap",
+            (
+                cap,
+                before,
+                inputs[6],
+                inputs[5],
+                6,
+                inputs[8],
+                inputs[9],
+            ),
+            {"print_exec": print_exec},
+        ),
+    ]

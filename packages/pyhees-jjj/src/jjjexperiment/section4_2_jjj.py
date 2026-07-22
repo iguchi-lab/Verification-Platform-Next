@@ -469,6 +469,31 @@ def _get_heat_source_outlet_temperatures(
 
     return Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t
 
+def _get_capped_supply_airflows(
+        v_supply_cap_dto: VSupplyCapDto,
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        L_star_H_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+        Theta_sur_d_t_i: np.ndarray,
+        l_duct_i: np.ndarray,
+        Theta_star_HBR_d_t: np.ndarray,
+        V_vent_g_i: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        Theta_hs_out_d_t: np.ndarray,
+        V_hs_dsgn_H: float | None,
+        V_hs_dsgn_C: float | None,
+        print_exec: bool,
+    ) -> tuple[np.ndarray, np.ndarray]:
+    """Calculate and cap formula (43) while preserving JJJ diagnostics."""
+    # (43)　暖冷房区画𝑖の吹き出し風量
+    V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
+                                                , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
+    V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
+                                                , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=print_exec)
+
+    return V_supply_d_t_i_before, V_supply_d_t_i
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1352,12 +1377,25 @@ def calc_Q_UT_A(
                 L_star_CS_d_t_i,
                 Theta_NR_d_t,
             )
-            # (43)　暖冷房区画𝑖の吹き出し風量
-            V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
-                                                        , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
-            V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
-                                                        , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
-
+            (
+                V_supply_d_t_i_before,
+                V_supply_d_t_i,
+            ) = _get_capped_supply_airflows(
+                v_supply_cap_dto,
+                ac_setting,
+                house,
+                L_star_H_d_t_i,
+                L_star_CS_d_t_i,
+                Theta_sur_d_t_i,
+                l_duct_i,
+                Theta_star_HBR_d_t,
+                V_vent_g_i,
+                V_dash_supply_d_t_i,
+                Theta_hs_out_d_t,
+                V_hs_dsgn_H,
+                V_hs_dsgn_C,
+                print_exec=False,
+            )
             # (41)　暖冷房区画𝑖の吹き出し温度
             Theta_supply_d_t_i = dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
                                                        V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
@@ -1663,12 +1701,25 @@ def calc_Q_UT_A(
             L_star_CS_d_t_i,
             Theta_NR_d_t,
         )
-        # (43)　暖冷房区画𝑖の吹き出し風量
-        V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
-                                                    , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
-        V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
-                                                    , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
-
+        (
+            V_supply_d_t_i_before,
+            V_supply_d_t_i,
+        ) = _get_capped_supply_airflows(
+            v_supply_cap_dto,
+            ac_setting,
+            house,
+            L_star_H_d_t_i,
+            L_star_CS_d_t_i,
+            Theta_sur_d_t_i,
+            l_duct_i,
+            Theta_star_HBR_d_t,
+            V_vent_g_i,
+            V_dash_supply_d_t_i,
+            Theta_hs_out_d_t,
+            V_hs_dsgn_H,
+            V_hs_dsgn_C,
+            print_exec=True,
+        )
         # (41)　暖冷房区画𝑖の吹き出し温度
         Theta_supply_d_t_i = dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
                                                        V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
