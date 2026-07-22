@@ -1495,6 +1495,70 @@ def _get_balanced_latent_cooling_loads(df_output, load, region):
     )
     return L_star_CL_d_t_i, df_output
 
+def _prepare_climate_conditions(df_output, house, new_ufac, climateFile):
+    """Load climate arrays and preserve their direct output-column writes."""
+    climate = ClimateService(house.region, new_ufac, climateFile)
+    Theta_ex_d_t = climate.get_Theta_ex_d_t()
+    X_ex_d_t = climate.get_X_ex_d_t()
+    J_d_t = climate.get_J_d_t()
+    h_ex_d_t = climate.get_h_ex_d_t()
+    df_output['Theta_ex_d_t'] = Theta_ex_d_t
+    df_output['X_ex_d_t'] = X_ex_d_t
+    df_output['J_d_t'] = J_d_t
+    df_output['h_ex_d_t'] = h_ex_d_t
+    return climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t
+
+def _prepare_dwelling_areas_and_water_heat(df_output2, df_output3, house):
+    """Prepare dwelling areas and formula (67) in their original order."""
+    A_HCZ_i = np.array([
+        ld.get_A_HCZ_i(i, house.A_A, house.A_MR, house.A_OR)
+        for i in range(1, 6)
+    ])
+    A_HCZ_R_i = np.array([ld.get_A_HCZ_R_i(i) for i in range(1, 6)])
+    A_NR = ld.get_A_NR(house.A_A, house.A_MR, house.A_OR)
+    df_output2['A_HCZ_i'] = A_HCZ_i
+    df_output2['A_HCZ_R_i'] = A_HCZ_R_i
+    df_output3['A_NR'] = [A_NR]
+    L_wtr = dc.get_L_wtr()
+    df_output3['L_wtr'] = [L_wtr]
+    return A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr
+
+def _prepare_occupancy_state(df_output, house, A_NR):
+    """Calculate formula (66) values and preserve direct output writes."""
+    n_p_NR_d_t = dc.calc_n_p_NR_d_t(A_NR)
+    df_output['n_p_NR_d_t'] = n_p_NR_d_t
+    n_p_OR_d_t = dc.calc_n_p_OR_d_t(house.A_OR)
+    df_output['n_p_OR_d_t'] = n_p_OR_d_t
+    n_p_MR_d_t = dc.calc_n_p_MR_d_t(house.A_MR)
+    df_output['n_p_MR_d_t'] = n_p_MR_d_t
+    n_p_d_t = dc.get_n_p_d_t(n_p_MR_d_t, n_p_OR_d_t, n_p_NR_d_t)
+    df_output['n_p_d_t'] = n_p_d_t
+    return n_p_d_t
+
+def _prepare_internal_moisture_state(df_output, house, A_NR):
+    """Calculate formula (65) values and preserve direct output writes."""
+    w_gen_NR_d_t = dc.calc_w_gen_NR_d_t(A_NR)
+    df_output['w_gen_NR_d_t'] = w_gen_NR_d_t
+    w_gen_OR_d_t = dc.calc_w_gen_OR_d_t(house.A_OR)
+    df_output['w_gen_OR_d_t'] = w_gen_OR_d_t
+    w_gen_MR_d_t = dc.calc_w_gen_MR_d_t(house.A_MR)
+    df_output['w_gen_MR_d_t'] = w_gen_MR_d_t
+    w_gen_d_t = dc.get_w_gen_d_t(w_gen_MR_d_t, w_gen_OR_d_t, w_gen_NR_d_t)
+    df_output['w_gen_d_t'] = w_gen_d_t
+    return w_gen_d_t
+
+def _prepare_internal_heat_state(df_output, house, A_NR):
+    """Calculate formula (64) values and preserve direct output writes."""
+    q_gen_NR_d_t = dc.calc_q_gen_NR_d_t(A_NR)
+    df_output['q_gen_NR_d_t'] = q_gen_NR_d_t
+    q_gen_OR_d_t = dc.calc_q_gen_OR_d_t(house.A_OR)
+    df_output['q_gen_OR_d_t'] = q_gen_OR_d_t
+    q_gen_MR_d_t = dc.calc_q_gen_MR_d_t(house.A_MR)
+    df_output['q_gen_MR_d_t'] = q_gen_MR_d_t
+    q_gen_d_t = dc.get_q_gen_d_t(q_gen_MR_d_t, q_gen_OR_d_t, q_gen_NR_d_t)
+    df_output['q_gen_d_t'] = q_gen_d_t
+    return q_gen_d_t
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1529,42 +1593,15 @@ def calc_Q_UT_A(
     df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
 
     # 気象条件
-    climate = ClimateService(house.region, new_ufac, climateFile)
-    Theta_ex_d_t = climate.get_Theta_ex_d_t()
-    X_ex_d_t = climate.get_X_ex_d_t()
-    J_d_t = climate.get_J_d_t()
-    h_ex_d_t = climate.get_h_ex_d_t()
-
-    df_output['Theta_ex_d_t']  = Theta_ex_d_t
-    df_output['X_ex_d_t']      = X_ex_d_t
-    df_output['J_d_t']    = J_d_t
-    df_output['h_ex_d_t'] = h_ex_d_t
+    climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t = \
+        _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
 
     #主たる居室・その他居室・非居室の面積
-    A_HCZ_i = np.array([ld.get_A_HCZ_i(i, house.A_A, house.A_MR, house.A_OR) for i in range(1, 6)])
-    A_HCZ_R_i = np.array([ld.get_A_HCZ_R_i(i) for i in range(1, 6)])
-    A_NR = ld.get_A_NR(house.A_A, house.A_MR, house.A_OR)
-
-    df_output2['A_HCZ_i'] = A_HCZ_i
-    df_output2['A_HCZ_R_i'] = A_HCZ_R_i
-    df_output3['A_NR'] = [A_NR]
-
-    # (67)  水の蒸発潜熱
-    L_wtr = dc.get_L_wtr()
-    df_output3['L_wtr'] = [L_wtr]
+    A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr = _prepare_dwelling_areas_and_water_heat(
+        df_output2, df_output3, house)
 
     # (66d)　非居室の在室人数
-    n_p_NR_d_t = dc.calc_n_p_NR_d_t(A_NR)
-    df_output['n_p_NR_d_t'] = n_p_NR_d_t
-    # (66c)　その他居室の在室人数
-    n_p_OR_d_t = dc.calc_n_p_OR_d_t(house.A_OR)
-    df_output['n_p_OR_d_t'] = n_p_OR_d_t
-    # (66b)　主たる居室の在室人数
-    n_p_MR_d_t = dc.calc_n_p_MR_d_t(house.A_MR)
-    df_output['n_p_MR_d_t'] = n_p_MR_d_t
-    # (66a)　在室人数
-    n_p_d_t = dc.get_n_p_d_t(n_p_MR_d_t, n_p_OR_d_t, n_p_NR_d_t)
-    df_output['n_p_d_t'] = n_p_d_t
+    n_p_d_t = _prepare_occupancy_state(df_output, house, A_NR)
 
     # 人体発熱
     q_p_H = dc.get_q_p_H()
@@ -1575,30 +1612,10 @@ def calc_Q_UT_A(
     df_output3['q_p_CL'] = [q_p_CL]
 
     # (65d)　非居室の内部発湿
-    w_gen_NR_d_t = dc.calc_w_gen_NR_d_t(A_NR)
-    df_output['w_gen_NR_d_t'] = w_gen_NR_d_t
-    # (65c)　その他居室の内部発湿
-    w_gen_OR_d_t = dc.calc_w_gen_OR_d_t(house.A_OR)
-    df_output['w_gen_OR_d_t'] = w_gen_OR_d_t
-    # (65b)　主たる居室の内部発湿
-    w_gen_MR_d_t = dc.calc_w_gen_MR_d_t(house.A_MR)
-    df_output['w_gen_MR_d_t'] = w_gen_MR_d_t
-    # (65a)　内部発湿
-    w_gen_d_t = dc.get_w_gen_d_t(w_gen_MR_d_t, w_gen_OR_d_t, w_gen_NR_d_t)
-    df_output['w_gen_d_t'] = w_gen_d_t
+    w_gen_d_t = _prepare_internal_moisture_state(df_output, house, A_NR)
 
     # (64d)　非居室の内部発熱
-    q_gen_NR_d_t = dc.calc_q_gen_NR_d_t(A_NR)
-    df_output['q_gen_NR_d_t'] = q_gen_NR_d_t
-    # (64c)　その他居室の内部発熱
-    q_gen_OR_d_t = dc.calc_q_gen_OR_d_t(house.A_OR)
-    df_output['q_gen_OR_d_t'] = q_gen_OR_d_t
-    # (64b)　主たる居室の内部発熱
-    q_gen_MR_d_t = dc.calc_q_gen_MR_d_t(house.A_MR)
-    df_output['q_gen_MR_d_t'] = q_gen_MR_d_t
-    # (64a)　内部発熱
-    q_gen_d_t = dc.get_q_gen_d_t(q_gen_MR_d_t, q_gen_OR_d_t, q_gen_NR_d_t)
-    df_output['q_gen_d_t'] = q_gen_d_t
+    q_gen_d_t = _prepare_internal_heat_state(df_output, house, A_NR)
 
     # (63)　局所排気量
     V_vent_l_NR_d_t = dc.get_V_vent_l_NR_d_t()

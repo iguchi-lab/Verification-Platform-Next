@@ -2362,3 +2362,174 @@ def test_balanced_latent_cooling_loads_preserve_formula_10_assign_generation(
     )
     for index, (_, value) in enumerate(columns):
         np.testing.assert_array_equal(value, loads[index])
+
+def test_prepare_climate_conditions_preserves_fetch_and_write_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Climate:
+        def __init__(self, region, new_ufac, climate_file):
+            events.append(("init", region, new_ufac, climate_file))
+
+        def get_Theta_ex_d_t(self):
+            events.append(("fetch", "Theta"))
+            return values[0]
+
+        def get_X_ex_d_t(self):
+            events.append(("fetch", "X"))
+            return values[1]
+
+        def get_J_d_t(self):
+            events.append(("fetch", "J"))
+            return values[2]
+
+        def get_h_ex_d_t(self):
+            events.append(("fetch", "h"))
+            return values[3]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    new_ufac = object()
+    climate_file = object()
+    monkeypatch.setattr(sut, "ClimateService", Climate)
+
+    result = sut._prepare_climate_conditions(
+        Frame(), SimpleNamespace(region=6), new_ufac, climate_file
+    )
+
+    assert isinstance(result[0], Climate)
+    assert result[1:] == tuple(values)
+    assert events == [
+        ("init", 6, new_ufac, climate_file),
+        ("fetch", "Theta"), ("fetch", "X"),
+        ("fetch", "J"), ("fetch", "h"),
+        ("write", "Theta_ex_d_t", values[0]),
+        ("write", "X_ex_d_t", values[1]),
+        ("write", "J_d_t", values[2]),
+        ("write", "h_ex_d_t", values[3]),
+    ]
+
+def test_prepare_dwelling_areas_and_water_heat_preserves_order(monkeypatch):
+    events = []
+
+    class Frame:
+        def __init__(self, name):
+            self.name = name
+
+        def __setitem__(self, key, value):
+            events.append(("write", self.name, key, value))
+
+    monkeypatch.setattr(
+        sut.ld, "get_A_HCZ_i",
+        lambda i, *areas: events.append(("HCZ", i, areas)) or float(i),
+    )
+    monkeypatch.setattr(
+        sut.ld, "get_A_HCZ_R_i",
+        lambda i: events.append(("HCZR", i)) or float(i + 10),
+    )
+    monkeypatch.setattr(
+        sut.ld, "get_A_NR",
+        lambda *areas: events.append(("NR", areas)) or 40.0,
+    )
+    monkeypatch.setattr(
+        sut.dc, "get_L_wtr",
+        lambda: events.append(("water",)) or 2500.0,
+    )
+
+    result = sut._prepare_dwelling_areas_and_water_heat(
+        Frame("df2"), Frame("df3"),
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+    )
+
+    np.testing.assert_array_equal(result[0], np.arange(1.0, 6.0))
+    np.testing.assert_array_equal(result[1], np.arange(11.0, 16.0))
+    assert result[2:] == (40.0, 2500.0)
+    assert [event[0] for event in events[:11]] == [
+        "HCZ", "HCZ", "HCZ", "HCZ", "HCZ",
+        "HCZR", "HCZR", "HCZR", "HCZR", "HCZR", "NR",
+    ]
+    assert [(event[1], event[2]) for event in events[11:14]] == [
+        ("df2", "A_HCZ_i"), ("df2", "A_HCZ_R_i"), ("df3", "A_NR"),
+    ]
+    assert events[14] == ("water",)
+    assert events[15][0:3] == ("write", "df3", "L_wtr")
+
+def test_prepare_occupancy_state_preserves_formula_66_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    monkeypatch.setattr(sut.dc, "calc_n_p_NR_d_t", lambda x: events.append(("NR", x)) or values[0])
+    monkeypatch.setattr(sut.dc, "calc_n_p_OR_d_t", lambda x: events.append(("OR", x)) or values[1])
+    monkeypatch.setattr(sut.dc, "calc_n_p_MR_d_t", lambda x: events.append(("MR", x)) or values[2])
+    monkeypatch.setattr(sut.dc, "get_n_p_d_t", lambda *x: events.append(("total", x)) or values[3])
+
+    result = sut._prepare_occupancy_state(
+        Frame(), SimpleNamespace(A_OR=50.0, A_MR=30.0), 40.0
+    )
+
+    assert result is values[3]
+    assert [event[0] for event in events] == [
+        "NR", "write", "OR", "write", "MR", "write", "total", "write"
+    ]
+    assert events[6][1] == (values[2], values[1], values[0])
+    assert [events[i][1] for i in (1, 3, 5, 7)] == [
+        "n_p_NR_d_t", "n_p_OR_d_t", "n_p_MR_d_t", "n_p_d_t"
+    ]
+
+def test_prepare_internal_moisture_state_preserves_formula_65_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    monkeypatch.setattr(sut.dc, "calc_w_gen_NR_d_t", lambda x: events.append(("NR", x)) or values[0])
+    monkeypatch.setattr(sut.dc, "calc_w_gen_OR_d_t", lambda x: events.append(("OR", x)) or values[1])
+    monkeypatch.setattr(sut.dc, "calc_w_gen_MR_d_t", lambda x: events.append(("MR", x)) or values[2])
+    monkeypatch.setattr(sut.dc, "get_w_gen_d_t", lambda *x: events.append(("total", x)) or values[3])
+
+    result = sut._prepare_internal_moisture_state(
+        Frame(), SimpleNamespace(A_OR=50.0, A_MR=30.0), 40.0
+    )
+
+    assert result is values[3]
+    assert [event[0] for event in events] == [
+        "NR", "write", "OR", "write", "MR", "write", "total", "write"
+    ]
+    assert events[6][1] == (values[2], values[1], values[0])
+    assert [events[i][1] for i in (1, 3, 5, 7)] == [
+        "w_gen_NR_d_t", "w_gen_OR_d_t", "w_gen_MR_d_t", "w_gen_d_t"
+    ]
+
+def test_prepare_internal_heat_state_preserves_formula_64_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    monkeypatch.setattr(sut.dc, "calc_q_gen_NR_d_t", lambda x: events.append(("NR", x)) or values[0])
+    monkeypatch.setattr(sut.dc, "calc_q_gen_OR_d_t", lambda x: events.append(("OR", x)) or values[1])
+    monkeypatch.setattr(sut.dc, "calc_q_gen_MR_d_t", lambda x: events.append(("MR", x)) or values[2])
+    monkeypatch.setattr(sut.dc, "get_q_gen_d_t", lambda *x: events.append(("total", x)) or values[3])
+
+    result = sut._prepare_internal_heat_state(
+        Frame(), SimpleNamespace(A_OR=50.0, A_MR=30.0), 40.0
+    )
+
+    assert result is values[3]
+    assert [event[0] for event in events] == [
+        "NR", "write", "OR", "write", "MR", "write", "total", "write"
+    ]
+    assert events[6][1] == (values[2], values[1], values[0])
+    assert [events[i][1] for i in (1, 3, 5, 7)] == [
+        "q_gen_NR_d_t", "q_gen_OR_d_t", "q_gen_MR_d_t", "q_gen_d_t"
+    ]
