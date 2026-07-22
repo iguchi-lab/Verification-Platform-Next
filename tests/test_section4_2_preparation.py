@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 import jjjexperiment.section4_2_jjj as sut
@@ -226,3 +227,268 @@ def test_prepare_underfloor_ground_response_preserves_order_and_season(
 def test_prepare_underfloor_ground_response_rejects_unknown_setting():
     with pytest.raises(ValueError):
         sut._prepare_underfloor_ground_response(object(), object())
+
+@pytest.mark.parametrize(
+    ("carryover", "expected"),
+    (
+        (sut.過剰熱量繰越計算.行う, [0.0, 2.0]),
+        (sut.過剰熱量繰越計算.行わない, [-1.0, 2.0]),
+    ),
+)
+def test_get_actual_loads_preserves_formula_order_and_clipping(
+    monkeypatch,
+    carryover,
+    expected,
+):
+    calls = []
+    inputs = [object() for _ in range(5)]
+
+    def result(name, *args):
+        calls.append((name, args))
+        return np.array([-1.0, 2.0])
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_dash_CL_d_t_i",
+        lambda *args: result("CL", *args),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_dash_CS_d_t_i",
+        lambda *args: result("CS", *args),
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_dash_H_d_t_i",
+        lambda *args: result("H", *args),
+    )
+
+    actual = sut._get_actual_loads(
+        SimpleNamespace(carry_over_heat=carryover),
+        *inputs,
+        6,
+    )
+
+    for value in actual:
+        np.testing.assert_array_equal(value, expected)
+    assert calls == [
+        ("CL", (inputs[0], inputs[1], inputs[2], 6)),
+        ("CS", (inputs[0], inputs[3], inputs[4], 6)),
+        ("H", (inputs[0], inputs[3], inputs[4], 6)),
+    ]
+
+def test_get_unprocessed_loads_preserves_formula_order_and_arguments(monkeypatch):
+    calls = []
+    inputs = [object() for _ in range(6)]
+    outputs = [object() for _ in range(3)]
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_UT_CL_d_t_i",
+        lambda *args: calls.append(("CL", args)) or outputs[0],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_UT_CS_d_t_i",
+        lambda *args: calls.append(("CS", args)) or outputs[1],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_UT_H_d_t_i",
+        lambda *args: calls.append(("H", args)) or outputs[2],
+    )
+
+    assert sut._get_unprocessed_loads(*inputs) == tuple(outputs)
+    assert calls == [
+        ("CL", (inputs[0], inputs[1])),
+        ("CS", (inputs[2], inputs[3])),
+        ("H", (inputs[4], inputs[5])),
+    ]
+
+def test_get_unprocessed_energy_for_heating(monkeypatch):
+    monkeypatch.setattr(sut, "get_alpha_UT_H_A", lambda region: region / 2)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_E_C_UT_d_t",
+        lambda *args: pytest.fail("cooling calculation must not run"),
+    )
+    heating_load = np.array([[1.0, 2.0], [3.0, 4.0]])
+
+    value, output_name = sut._get_unprocessed_energy(
+        _setting(sut.HeatingAcSetting),
+        object(),
+        object(),
+        heating_load,
+        6,
+    )
+
+    np.testing.assert_array_equal(value, [12.0, 18.0])
+    assert output_name == "E_UT_H_d_t"
+
+
+def test_get_unprocessed_energy_for_cooling(monkeypatch):
+    calls = []
+    latent = object()
+    sensible = object()
+    expected = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_E_C_UT_d_t",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    assert sut._get_unprocessed_energy(
+        _setting(sut.CoolingAcSetting),
+        latent,
+        sensible,
+        object(),
+        7,
+    ) == (expected, "E_UT_C_d_t")
+    assert calls == [(latent, sensible, 7)]
+
+
+def test_get_unprocessed_energy_rejects_unknown_setting():
+    with pytest.raises(
+        ValueError,
+        match="ac_setting must be HeatingAcSetting or CoolingAcSetting",
+    ):
+        sut._get_unprocessed_energy(object(), object(), object(), object(), 6)
+
+def test_export_underfloor_output_preserves_filename_and_call_order(monkeypatch):
+    calls = []
+    setting = _setting(sut.HeatingAcSetting)
+    frame = SimpleNamespace(
+        export_to_csv=lambda filename: calls.append(("export", filename))
+    )
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "version_info",
+        lambda: calls.append(("version",)) or "v-test",
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_output_suffix",
+        lambda value: calls.append(("suffix", value)) or "_H",
+    )
+
+    sut._export_underfloor_output(
+        "case",
+        setting,
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
+        frame,
+    )
+
+    assert calls == [
+        ("version",),
+        ("suffix", setting),
+        ("export", "casev-test_H_output_uf.csv"),
+    ]
+
+
+def test_export_underfloor_output_does_nothing_when_disabled(monkeypatch):
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "version_info",
+        lambda: pytest.fail("version must not be requested"),
+    )
+    frame = SimpleNamespace(
+        export_to_csv=lambda filename: pytest.fail("CSV must not be exported")
+    )
+
+    sut._export_underfloor_output(
+        "case",
+        object(),
+        SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
+        frame,
+    )
+
+@pytest.mark.parametrize(
+    ("capacities", "season"),
+    (
+        ((1.0, None), "H"),
+        ((None, 2.0), "C"),
+    ),
+)
+def test_export_standard_outputs_preserves_capacity_and_file_order(
+    monkeypatch,
+    capacities,
+    season,
+):
+    calls = []
+    setting = object()
+    house = object()
+
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_H",
+        lambda ac, value: calls.append(("capacity", "H", ac, value))
+        or capacities[0],
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_C",
+        lambda ac, value: calls.append(("capacity", "C", ac, value))
+        or capacities[1],
+    )
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "version_info",
+        lambda: calls.append(("version",)) or "v-test",
+    )
+
+    def frame(number):
+        return SimpleNamespace(
+            to_csv=lambda filename, encoding: calls.append(
+                ("export", number, filename, encoding)
+            )
+        )
+
+    sut._export_standard_outputs(
+        "case",
+        setting,
+        house,
+        frame(3),
+        frame(4),
+        frame(5),
+    )
+
+    assert calls == [
+        ("capacity", "H", setting, house),
+        ("capacity", "C", setting, house),
+        ("version",),
+        ("export", 3, f"casev-test_{season}_output3.csv", "cp932"),
+        ("version",),
+        ("export", 4, f"casev-test_{season}_output4.csv", "cp932"),
+        ("version",),
+        ("export", 5, f"casev-test_{season}_output5.csv", "cp932"),
+    ]
+
+
+@pytest.mark.parametrize("capacities", ((None, None), (1.0, 2.0)))
+def test_export_standard_outputs_rejects_ambiguous_capacities(
+    monkeypatch,
+    capacities,
+):
+    calls = []
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_H",
+        lambda *args: calls.append("H") or capacities[0],
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_C",
+        lambda *args: calls.append("C") or capacities[1],
+    )
+
+    with pytest.raises(Exception):
+        sut._export_standard_outputs(
+            "case",
+            object(),
+            object(),
+            object(),
+            object(),
+            object(),
+        )
+
+    assert calls == ["H", "C"]

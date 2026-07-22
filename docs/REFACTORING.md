@@ -83,6 +83,7 @@
 - [PR #34](https://github.com/iguchi-lab/Verification-Platform-Next/pull/34): `section4_2.py` と `section4_2_a.py` の利用APIを固定し、旧import互換性を維持しながらJJJ変更版を `_jjj` 命名へ移行しました。
 - [PR #36](https://github.com/iguchi-lab/Verification-Platform-Next/pull/36): 床下空調の建研節・式に対応する5モジュールを、旧import互換性と計算結果を維持しながら `_jjj` 命名へ移行しました。
 - [PR #38](https://github.com/iguchi-lab/Verification-Platform-Next/pull/38): `calc_Q_UT_A` の公開契約、計算順序、建研由来コード、Phase 5結果を維持しながら、判定・事前計算の5責務を独立した内部関数へ分離しました。
+- [PR #40](https://github.com/iguchi-lab/Verification-Platform-Next/pull/40): `calc_Q_UT_A` の式番号、負荷計算順序、CSV仕様を維持しながら、実負荷・未処理負荷・一次エネルギー・CSV出力の5責務を独立した内部関数へ分離しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
@@ -93,7 +94,7 @@
 1. `jjjexperiment`のモジュールと公開APIを棚卸しし、利用箇所のないコード、建研モジュールに対応する変更版、独自機能の境界を区別する。
 2. `carryover_heat/section4_2.py`など節番号を持つ残存独自モジュールが、建研対応版か純粋な独自機能かを判定し、前者は`_jjj`命名、後者は責務を表す名前へ段階的に移行する。
 3. `jjjexperiment`に残るワイルドカードimportを棚卸しし、同じ依存元を持つ3〜5境界ずつ明示的なimportへ置き換える。
-4. `calc_Q_UT_A` の次段階として、年間ループを変えずに、持ち越し計算の調整、結果組み立て、CSV出力を独立した内部責務へ分離する。ただし、建研コードに対応する処理の順序、式番号コメント、名前は維持する。
+4. `calc_Q_UT_A` の次段階として、年間ループを変えずに、出力DataFrameへの列組み立てを入力、設備中間値、負荷、最終出力のまとまりで独立した内部責務へ分離する。ただし、建研コードに対応する処理の順序、式番号コメント、列名は維持する。
 5. 既存の`pyhees -> jjjexperiment`逆依存を独立して検証できる境界へ分け、同種の3〜5境界ずつ削減する。
 6. カレントディレクトリ、グローバル状態、暗黙のファイル名などの副作用を境界へ集約する。
 7. 辞書と長い引数列を、既存契約と建研コードとの対応を保ったまま内部DTOや型付き結果へ段階的に整理する。

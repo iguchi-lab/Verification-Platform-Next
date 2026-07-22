@@ -201,6 +201,113 @@ def _prepare_underfloor_ground_response(
     return Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m
 
 
+def _get_actual_loads(
+        carryover_heat_dto: CarryoverHeatDto,
+        V_supply_d_t_i: np.ndarray,
+        X_HBR_d_t_i: np.ndarray,
+        X_supply_d_t_i: np.ndarray,
+        Theta_supply_d_t_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        region: int,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (7) through (5) in their original order."""
+    # (7)　間仕切りの熱取得を含む実際の冷房潜熱負荷
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CL_d_t_i = np.clip(
+            dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, region),  # 従来式
+            0, None)
+    else:
+        L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, region)
+
+    # (6)　間仕切りの熱取得を含む実際の冷房顕熱負荷
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_CS_d_t_i = np.clip(
+            dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region),  # 従来式
+            0, None)
+    else:
+        L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+
+    # (5)　間仕切りの熱損失を含む実際の暖房負荷
+    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
+        L_dash_H_d_t_i = np.clip(
+            dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region),  # 従来式
+            0, None)
+    else:
+        L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+
+    return L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i
+
+def _get_unprocessed_loads(
+        L_star_CL_d_t_i: np.ndarray,
+        L_dash_CL_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+        L_dash_CS_d_t_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+        L_dash_H_d_t_i: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (4) through (2) in their original order."""
+    # (4)　冷房設備機器の未処理冷房潜熱負荷
+    Q_UT_CL_d_t_i = dc.get_Q_UT_CL_d_t_i(L_star_CL_d_t_i, L_dash_CL_d_t_i)
+    # (3)　冷房設備機器の未処理冷房顕熱負荷
+    Q_UT_CS_d_t_i = dc.get_Q_UT_CS_d_t_i(L_star_CS_d_t_i, L_dash_CS_d_t_i)
+    # (2)　暖房設備機器等の未処理暖房負荷
+    Q_UT_H_d_t_i = dc.get_Q_UT_H_d_t_i(L_star_H_d_t_i, L_dash_H_d_t_i)
+
+    return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i
+
+def _get_unprocessed_energy(
+        ac_setting: ActiveAcSetting,
+        Q_UT_CL_d_t_i: np.ndarray,
+        Q_UT_CS_d_t_i: np.ndarray,
+        Q_UT_H_d_t_i: np.ndarray,
+        region: int,
+    ) -> tuple[np.ndarray, str]:
+    match ac_setting:
+        case HeatingAcSetting():
+            # 暖房: 未処理暖房負荷の設計一次エネルギー消費量相当値
+            alpha_UT_H_A: float = get_alpha_UT_H_A(region)
+            Q_UT_H_A_d_t: np.ndarray = np.sum(Q_UT_H_d_t_i, axis=0)
+            return Q_UT_H_A_d_t * alpha_UT_H_A, 'E_UT_H_d_t'
+        case CoolingAcSetting():
+            # (1)　冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値
+            return dc.get_E_C_UT_d_t(Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, region), 'E_UT_C_d_t'
+        case _:
+            raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
+
+def _export_underfloor_output(
+        case_name: CaseName,
+        ac_setting: ActiveAcSetting,
+        new_ufac: UnderfloorAc,
+        new_ufac_df: UfVarsDataFrame,
+    ) -> None:
+    # 床下空調新ロジック調査用変数の出力
+    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
+        # ネスト関数内で更新されているデータフレーム
+        new_ufac_df.export_to_csv(filename)
+
+def _export_standard_outputs(
+        case_name: CaseName,
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        df_output3: pd.DataFrame,
+        df_output2: pd.DataFrame,
+        df_output: pd.DataFrame,
+    ) -> None:
+    match(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
+        case(None, None):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+        case(_, None):
+            df_output3.to_csv(case_name + jjj_consts.version_info() + '_H_output3.csv', encoding = 'cp932')
+            df_output2.to_csv(case_name + jjj_consts.version_info() + '_H_output4.csv', encoding = 'cp932')
+            df_output.to_csv(case_name  + jjj_consts.version_info() + '_H_output5.csv', encoding = 'cp932')
+        case(None, _):
+            df_output3.to_csv(case_name + jjj_consts.version_info() + '_C_output3.csv', encoding = 'cp932')
+            df_output2.to_csv(case_name + jjj_consts.version_info() + '_C_output4.csv', encoding = 'cp932')
+            df_output.to_csv(case_name  + jjj_consts.version_info() + '_C_output5.csv', encoding = 'cp932')
+        case(_, _):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1469,13 +1576,15 @@ def calc_Q_UT_A(
     df_output['Theta_hs_in_d_t'] = Theta_hs_in_d_t
 
     """ まとめ - 実際の暖冷房負荷 """
-    # (7)　間仕切りの熱取得を含む実際の冷房潜熱負荷
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        L_dash_CL_d_t_i = np.clip(
-            dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region), # 従来式
-            0, None)
-    else:
-        L_dash_CL_d_t_i = dc.get_L_dash_CL_d_t_i(V_supply_d_t_i, X_HBR_d_t_i, X_supply_d_t_i, house.region)
+    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
+        carryover_heat_dto,
+        V_supply_d_t_i,
+        X_HBR_d_t_i,
+        X_supply_d_t_i,
+        Theta_supply_d_t_i,
+        Theta_HBR_d_t_i,
+        house.region,
+    )
     df_output = df_output.assign(
         L_dash_CL_d_t_1 = L_dash_CL_d_t_i[0],
         L_dash_CL_d_t_2 = L_dash_CL_d_t_i[1],
@@ -1483,13 +1592,6 @@ def calc_Q_UT_A(
         L_dash_CL_d_t_4 = L_dash_CL_d_t_i[3],
         L_dash_CL_d_t_5 = L_dash_CL_d_t_i[4]
     )
-    # (6)　間仕切りの熱取得を含む実際の冷房顕熱負荷
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        L_dash_CS_d_t_i = np.clip(
-            dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
-            0, None)
-    else:
-        L_dash_CS_d_t_i = dc.get_L_dash_CS_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_CS_d_t_1 = L_dash_CS_d_t_i[0],
         L_dash_CS_d_t_2 = L_dash_CS_d_t_i[1],
@@ -1497,13 +1599,6 @@ def calc_Q_UT_A(
         L_dash_CS_d_t_4 = L_dash_CS_d_t_i[3],
         L_dash_CS_d_t_5 = L_dash_CS_d_t_i[4]
     )
-    # (5)　間仕切りの熱損失を含む実際の暖房負荷
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        L_dash_H_d_t_i = np.clip(
-            dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region), # 従来式
-            0, None)
-    else:
-        L_dash_H_d_t_i = dc.get_L_dash_H_d_t_i(V_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, house.region)
     df_output = df_output.assign(
         L_dash_H_d_t_1 = L_dash_H_d_t_i[0],
         L_dash_H_d_t_2 = L_dash_H_d_t_i[1],
@@ -1511,10 +1606,15 @@ def calc_Q_UT_A(
         L_dash_H_d_t_4 = L_dash_H_d_t_i[3],
         L_dash_H_d_t_5 = L_dash_H_d_t_i[4]
     )
-
     """ まとめ - 未処理負荷 """
-    # (4)　冷房設備機器の未処理冷房潜熱負荷
-    Q_UT_CL_d_t_i = dc.get_Q_UT_CL_d_t_i(L_star_CL_d_t_i, L_dash_CL_d_t_i)
+    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
+        L_star_CL_d_t_i,
+        L_dash_CL_d_t_i,
+        L_star_CS_d_t_i,
+        L_dash_CS_d_t_i,
+        L_star_H_d_t_i,
+        L_dash_H_d_t_i,
+    )
     df_output = df_output.assign(
         Q_UT_CL_d_t_1 = Q_UT_CL_d_t_i[0],
         Q_UT_CL_d_t_2 = Q_UT_CL_d_t_i[1],
@@ -1522,8 +1622,6 @@ def calc_Q_UT_A(
         Q_UT_CL_d_t_4 = Q_UT_CL_d_t_i[3],
         Q_UT_CL_d_t_5 = Q_UT_CL_d_t_i[4]
     )
-    # (3)　冷房設備機器の未処理冷房顕熱負荷
-    Q_UT_CS_d_t_i = dc.get_Q_UT_CS_d_t_i(L_star_CS_d_t_i, L_dash_CS_d_t_i)
     df_output = df_output.assign(
         Q_UT_CS_d_t_1 = Q_UT_CS_d_t_i[0],
         Q_UT_CS_d_t_2 = Q_UT_CS_d_t_i[1],
@@ -1531,8 +1629,6 @@ def calc_Q_UT_A(
         Q_UT_CS_d_t_4 = Q_UT_CS_d_t_i[3],
         Q_UT_CS_d_t_5 = Q_UT_CS_d_t_i[4]
     )
-    # (2)　暖房設備機器等の未処理暖房負荷
-    Q_UT_H_d_t_i = dc.get_Q_UT_H_d_t_i(L_star_H_d_t_i, L_dash_H_d_t_i)
     df_output = df_output.assign(
         Q_UT_H_d_t_1 = Q_UT_H_d_t_i[0],
         Q_UT_H_d_t_2 = Q_UT_H_d_t_i[1],
@@ -1540,42 +1636,29 @@ def calc_Q_UT_A(
         Q_UT_H_d_t_4 = Q_UT_H_d_t_i[3],
         Q_UT_H_d_t_5 = Q_UT_H_d_t_i[4]
     )
-
     """ まとめ - 一次エネルギー """
-    match ac_setting:
-        case HeatingAcSetting():
-            # 暖房: 未処理暖房負荷の設計一次エネルギー消費量相当値
-            alpha_UT_H_A: float = get_alpha_UT_H_A(house.region)
-            Q_UT_H_A_d_t: np.ndarray = np.sum(Q_UT_H_d_t_i, axis=0)
-            E_UT_d_t = Q_UT_H_A_d_t * alpha_UT_H_A
-            df_output['E_UT_H_d_t'] = E_UT_d_t
-        case CoolingAcSetting():
-            # (1)　冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値
-            E_UT_d_t = dc.get_E_C_UT_d_t(Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, house.region)
-            df_output['E_UT_C_d_t'] = E_UT_d_t
-        case _:
-            raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
-
-    # 床下空調新ロジック調査用変数の出力
-    if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
-        # ネスト関数内で更新されているデータフレーム
-        new_ufac_df.export_to_csv(filename)
-
-    match(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
-        case(None, None):
-            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
-        case(_, None):
-            df_output3.to_csv(case_name + jjj_consts.version_info() + '_H_output3.csv', encoding = 'cp932')
-            df_output2.to_csv(case_name + jjj_consts.version_info() + '_H_output4.csv', encoding = 'cp932')
-            df_output.to_csv(case_name  + jjj_consts.version_info() + '_H_output5.csv', encoding = 'cp932')
-        case(None, _):
-            df_output3.to_csv(case_name + jjj_consts.version_info() + '_C_output3.csv', encoding = 'cp932')
-            df_output2.to_csv(case_name + jjj_consts.version_info() + '_C_output4.csv', encoding = 'cp932')
-            df_output.to_csv(case_name  + jjj_consts.version_info() + '_C_output5.csv', encoding = 'cp932')
-        case(_, _):
-            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
-
+    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
+        ac_setting,
+        Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i,
+        Q_UT_H_d_t_i,
+        house.region,
+    )
+    df_output[E_UT_output_name] = E_UT_d_t
+    _export_underfloor_output(
+        case_name,
+        ac_setting,
+        new_ufac,
+        new_ufac_df,
+    )
+    _export_standard_outputs(
+        case_name,
+        ac_setting,
+        house,
+        df_output3,
+        df_output2,
+        df_output,
+    )
     return E_UT_d_t, \
             Theta_hs_out_d_t, Theta_hs_in_d_t, \
             X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t
