@@ -118,3 +118,12 @@ def test_legacy_underfloor_section4_2_import_aliases_jjj_module():
     )
 
     assert legacy is implementation
+
+
+def test_legacy_underfloor_section4_2_f40_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.underfloor_ac.section4_2_f40")
+    implementation = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section4_2_f40_jjj"
+    )
+
+    assert legacy is implementation
