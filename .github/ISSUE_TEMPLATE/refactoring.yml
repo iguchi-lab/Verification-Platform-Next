@@ -34,6 +34,19 @@ body:
       required: true
 
   - type: textarea
+    id: work_package
+    attributes:
+      label: 作業パッケージとPR分割
+      description: 20〜30件の境界一覧、8〜12境界ずつのPR分割、PR間の依存順を記載してください。
+      placeholder: |
+        作業パッケージ：20境界
+        PR 1：境界1〜10
+        PR 2：境界11〜20
+        依存順：PR 1をmergeしてmainへ同期後、PR 2を開始
+    validations:
+      required: true
+
+  - type: textarea
     id: non_goals
     attributes:
       label: 非対象
@@ -74,6 +87,8 @@ body:
       label: 検証計画
       description: 追加する回帰テストと実行する既存テストを記載してください。
       value: |
+        - [ ] 5境界ごとの対象テスト
+        - [ ] 5境界ごとの `ruff check .`
         - [ ] 変更対象の回帰テスト
         - [ ] `python -m pytest -q`
         - [ ] `ruff check .`
@@ -90,6 +105,8 @@ body:
       placeholder: |
         ブランチ：
         関連PR：
+        完了境界数：
+        次のチェックポイント：
         完了済み：
         次の1操作：
         実行済みテスト：
