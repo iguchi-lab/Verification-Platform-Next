@@ -3851,3 +3851,18 @@ def test_dwelling_areas_and_water_heat_result_preserves_tuple_contract():
         "A_NR",
         "L_wtr",
     )
+
+
+def test_balanced_room_and_duct_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(5))
+    result = sut._BalancedRoomAndDuctStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "X_star_HBR_d_t",
+        "Theta_star_HBR_d_t",
+        "Theta_attic_d_t",
+        "Theta_sur_d_t_i",
+        "df_output",
+    )

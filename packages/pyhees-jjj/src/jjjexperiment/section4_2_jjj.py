@@ -113,6 +113,13 @@ class _DwellingAreasAndWaterHeatResult(NamedTuple):
     A_NR: object
     L_wtr: object
 
+class _BalancedRoomAndDuctStateResult(NamedTuple):
+    X_star_HBR_d_t: object
+    Theta_star_HBR_d_t: object
+    Theta_attic_d_t: object
+    Theta_sur_d_t_i: object
+    df_output: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1776,7 +1783,7 @@ def _prepare_balanced_room_and_duct_state(
         Theta_sur_d_t_i_4=Theta_sur_d_t_i[3],
         Theta_sur_d_t_i_5=Theta_sur_d_t_i[4],
     )
-    return (
+    return _BalancedRoomAndDuctStateResult(
         X_star_HBR_d_t,
         Theta_star_HBR_d_t,
         Theta_attic_d_t,
