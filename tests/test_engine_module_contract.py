@@ -2,6 +2,8 @@ import ast
 import importlib
 from pathlib import Path
 
+import pytest
+
 from jjjexperiment import main
 
 
@@ -25,6 +27,28 @@ EXPECTED_SECTION4_2_A_MAIN_API = {
     "calc_E_E_H_d_t_type1_and_type3",
     "calc_E_E_H_d_t_type2",
     "calc_E_E_H_d_t_type4",
+}
+
+EXPECTED_UNDERFLOOR_SECTION_API = {
+    "section3_1_e": {
+        "THETA_UF_COOL",
+        "THETA_UF_WARM",
+        "calc_Theta_uf_d_t_2023",
+        "calc_sum_Theta_dash_g_surf_A_m_runup",
+        "get_Theta_uf_d_t_runup",
+    },
+    "section4_2": {
+        "calc_Theta_uf",
+        "calc_delta_L_room2uf_i",
+        "calc_delta_L_uf2gnd",
+        "calc_delta_L_uf2outdoor",
+        "get_A_s_ufac_i",
+        "get_r_A_NR_uf_1F_excl_bath",
+        "get_r_A_uf_i",
+    },
+    "section4_2_f40": {"calc_Q_hat_hs"},
+    "section4_2_f46_f48": {"get_Theta_HBR_i", "get_Theta_NR"},
+    "section4_2_f52": {"get_Theta_star_NR"},
 }
 
 
@@ -66,3 +90,60 @@ def test_legacy_section4_2_a_import_aliases_jjj_module():
 
     assert legacy is implementation
     assert main.jjj_dc_a is implementation
+
+
+@pytest.mark.parametrize(
+    ("module_name", "expected_api"),
+    EXPECTED_UNDERFLOOR_SECTION_API.items(),
+)
+def test_underfloor_section_module_api_contract(module_name, expected_api):
+    module = importlib.import_module(f"jjjexperiment.underfloor_ac.{module_name}")
+
+    assert all(hasattr(module, name) for name in expected_api)
+
+
+def test_legacy_underfloor_section3_1_e_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.underfloor_ac.section3_1_e")
+    implementation = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section3_1_e_jjj"
+    )
+
+    assert legacy is implementation
+
+
+def test_legacy_underfloor_section4_2_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.underfloor_ac.section4_2")
+    implementation = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section4_2_jjj"
+    )
+
+    assert legacy is implementation
+
+
+def test_legacy_underfloor_section4_2_f40_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.underfloor_ac.section4_2_f40")
+    implementation = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section4_2_f40_jjj"
+    )
+
+    assert legacy is implementation
+
+
+def test_legacy_underfloor_section4_2_f46_f48_import_aliases_jjj_module():
+    legacy = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section4_2_f46_f48"
+    )
+    implementation = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section4_2_f46_f48_jjj"
+    )
+
+    assert legacy is implementation
+
+
+def test_legacy_underfloor_section4_2_f52_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.underfloor_ac.section4_2_f52")
+    implementation = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section4_2_f52_jjj"
+    )
+
+    assert legacy is implementation

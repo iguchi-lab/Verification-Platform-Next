@@ -45,15 +45,15 @@ import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
 from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 新床下空調
-import jjjexperiment.underfloor_ac.section4_2 as jjj_ufac_dc
-from jjjexperiment.underfloor_ac.section3_1_e import (
+import jjjexperiment.underfloor_ac.section4_2_jjj as jjj_ufac_dc
+from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
     calc_Theta_uf_d_t_2023,
     calc_sum_Theta_dash_g_surf_A_m_runup,
     THETA_UF_WARM,
     THETA_UF_COOL,
 )
-from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
-from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
+from jjjexperiment.underfloor_ac.section4_2_f52_jjj import get_Theta_star_NR
+from jjjexperiment.underfloor_ac.section4_2_f46_f48_jjj import get_Theta_HBR_i, get_Theta_NR
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 # F25-1 最小風量・最低電力直接入力
 from jjjexperiment.v_min_input.logic import rescale_V_vent_g_i
