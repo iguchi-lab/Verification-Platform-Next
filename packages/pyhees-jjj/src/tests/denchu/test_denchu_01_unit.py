@@ -1,13 +1,17 @@
-import pytest
 import math
 
-import sys, os
+import sys
 from os.path import dirname, abspath
 # sys.path.append(dirname(__file__))
 sys.path.append(dirname(dirname(abspath(__file__))))
 # sys.path.append(os.pardir)
 print(sys.path)
-from jjjexperiment.denchu.denchu_1 import *
+from jjjexperiment.denchu.denchu_1 import (
+    absolute_humid,
+    calc_Pa_wexler,
+    dry_air_density,
+    get_Ca,
+)
 
 class Test_計算式_乾燥空気密度:
     """ 乾燥空気の密度[kg/m3]の計算が正しい

@@ -1,14 +1,11 @@
-import pytest
 import math
 
-from jjjexperiment.denchu.denchu_1 import *
-from jjjexperiment.denchu.denchu_2 import *
+from jjjexperiment.denchu.denchu_1 import calc_R_and_Pc_C, calc_R_and_Pc_H
+from jjjexperiment.denchu.denchu_2 import simu_R
 
 from jjjexperiment.denchu.inputs.heating import DenchuCatalogSpecification as H_CatalogSpec
 from jjjexperiment.denchu.inputs.cooling import DenchuCatalogSpecification as C_CatalogSpec
 from jjjexperiment.denchu.utils import absolute_humid
-
-from jjjexperiment.logger import LimitedLoggerAdapter as _logger
 
 """ 論文におけるエアコンの使用条件 """
 
