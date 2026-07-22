@@ -3571,3 +3571,26 @@ def test_prepare_heat_source_inlet_humidity_output_preserves_formula_13(
         ("formula", source),
         ("setitem", "X_hs_in_d_t", value),
     ]
+
+
+def test_prepare_heat_source_inlet_temperature_output_preserves_formula_12(
+        monkeypatch):
+    events = []
+    value = object()
+    source = object()
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("setitem", key, item))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_hs_in_d_t",
+        lambda arg: events.append(("formula", arg)) or value)
+
+    assert sut._prepare_heat_source_inlet_temperature_output(
+        frame, source) == (value, frame)
+    assert events == [
+        ("formula", source),
+        ("setitem", "Theta_hs_in_d_t", value),
+    ]

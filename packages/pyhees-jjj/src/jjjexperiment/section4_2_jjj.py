@@ -2074,6 +2074,14 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_heat_source_inlet_temperature_output(
+        df_output, Theta_NR_d_t):
+    """Calculate and record formula (12) by direct assignment."""
+    Theta_hs_in_d_t = dc.get_Theta_hs_in_d_t(Theta_NR_d_t)
+    df_output['Theta_hs_in_d_t'] = Theta_hs_in_d_t
+    return Theta_hs_in_d_t, df_output
+
+
 def _prepare_heat_source_inlet_humidity_output(df_output, X_NR_d_t):
     """Calculate and record formula (13) by direct assignment."""
     X_hs_in_d_t = dc.get_X_hs_in_d_t(X_NR_d_t)
@@ -2780,8 +2788,9 @@ def calc_Q_UT_A(
         df_output, X_NR_d_t)
 
     # (12)　熱源機の入口における空気温度
-    Theta_hs_in_d_t = dc.get_Theta_hs_in_d_t(Theta_NR_d_t)
-    df_output['Theta_hs_in_d_t'] = Theta_hs_in_d_t
+    Theta_hs_in_d_t, df_output = \
+        _prepare_heat_source_inlet_temperature_output(
+            df_output, Theta_NR_d_t)
 
     """ まとめ - 実際の暖冷房負荷 """
     L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
