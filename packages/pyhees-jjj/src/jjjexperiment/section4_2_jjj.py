@@ -1159,6 +1159,58 @@ def _get_new_underfloor_requested_temperatures(
     })
     return Theta_req_d_t_i
 
+def _get_new_underfloor_supply_temperatures(
+        house,
+        skin,
+        load,
+        new_ufac,
+        new_ufac_df,
+        Theta_supply_d_t_i,
+        Theta_hs_out_d_t,
+        Theta_ex_d_t,
+        V_dash_supply_d_t_i,
+    ):
+    """Apply the new-underfloor second pass and retain its diagnostic outputs."""
+    # 新床下空調-2nd: θuf の本計算
+    Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
+        region=house.region,
+        A_A=house.A_A,
+        A_MR=house.A_MR,
+        A_OR=house.A_OR,
+        Q=skin.Q,
+        r_A_ufvnt=skin.r_A_ufac,  # 床下換気ではなく床下空調のため
+        underfloor_insulation=skin.underfloor_insulation,
+        Theta_sa_d_t=Theta_hs_out_d_t,
+        Theta_ex_d_t=Theta_ex_d_t,
+        V_sa_d_t_A=np.sum(V_dash_supply_d_t_i[:2, :], axis=0),
+        H_OR_C="",
+        L_dash_H_R_d_t_i=load.L_dash_H_R_d_t_i,
+        L_dash_CS_R_d_t_i=load.L_dash_CS_R_d_t_i,
+        calc_backwards=False,  # ここでは θuf の従来計算のみ
+        new_ufac=new_ufac,
+        new_ufac_df=new_ufac_df,
+    )
+
+    # 床下・床上の熱貫流分だけ 目標床下温度からわずかな中和がある
+    Theta_supply_d_t_i = np.vstack([
+        # NOTE: i=1,2(1階居室)は床下を通して出口温度が中和されたものになる
+        np.tile(Theta_uf_d_t, (2, 1)),
+        # CHECK: i=3,4,5(2階居室)は床下通さないので中和がなく高温なのは問題ないか
+        Theta_supply_d_t_i[2:, :],
+    ])
+    assert np.shape(Theta_supply_d_t_i) == (5, 8760), "想定外の行列数です"
+
+    new_ufac_df.update_df({
+        "Theta_hs_out_d_t": Theta_hs_out_d_t,
+        "Theta_uf_d_t": Theta_uf_d_t,
+        "Theta_supply_d_t_1": Theta_supply_d_t_i[0],
+        "Theta_supply_d_t_2": Theta_supply_d_t_i[1],
+        "Theta_supply_d_t_3": Theta_supply_d_t_i[2],
+        "Theta_supply_d_t_4": Theta_supply_d_t_i[3],
+        "Theta_supply_d_t_5": Theta_supply_d_t_i[4],
+    })
+    return Theta_supply_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1810,43 +1862,11 @@ def calc_Q_UT_A(
 
         # 実行条件: 床下新空調ロジックのみ
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            # θuf の本計算
-            Theta_uf_d_t, Theta_g_surf_d_t, *others  \
-                = algo.calc_Theta(  # 新床下空調-2nd
-                    region = house.region,
-                    A_A = house.A_A,
-                    A_MR = house.A_MR,
-                    A_OR = house.A_OR,
-                    Q = skin.Q,
-                    r_A_ufvnt = skin.r_A_ufac,  # 床下換気ではなく床下空調のため
-                    underfloor_insulation = skin.underfloor_insulation,
-                    Theta_sa_d_t = Theta_hs_out_d_t,  # ★
-                    Theta_ex_d_t = Theta_ex_d_t,
-                    # 熱源機出口温度から吹き出し温度を計算する
-                    V_sa_d_t_A = np.sum(V_dash_supply_d_t_i[:2, :], axis=0),  # i=1,2
-                    H_OR_C = "",
-                    L_dash_H_R_d_t_i = load.L_dash_H_R_d_t_i,
-                    L_dash_CS_R_d_t_i = load.L_dash_CS_R_d_t_i,
-                    calc_backwards = False,  # ここでは θuf の従来計算のみ
-                    new_ufac = new_ufac,
-                    new_ufac_df = new_ufac_df
-                )
-
-            # 床下・床上の熱貫流分だけ 目標床下温度からわずかな中和がある
-            Theta_supply_d_t_i  \
-                = np.vstack([
-                    # NOTE: i=1,2(1階居室)は床下を通して出口温度が中和されたものになる
-                    np.tile(Theta_uf_d_t, (2, 1)),
-                    # CHECK: i=3,4,5(2階居室)は床下通さないので中和がなく高温なのは問題ないか
-                    Theta_supply_d_t_i[2:, :]
-                ])
-            assert np.shape(Theta_supply_d_t_i)==(5, 8760), "想定外の行列数です"
-
-            new_ufac_df.update_df({
-                "Theta_hs_out_d_t": Theta_hs_out_d_t,
-                "Theta_uf_d_t": Theta_uf_d_t,
-                "Theta_supply_d_t_1": Theta_supply_d_t_i[0], "Theta_supply_d_t_2": Theta_supply_d_t_i[1], "Theta_supply_d_t_3": Theta_supply_d_t_i[2], "Theta_supply_d_t_4": Theta_supply_d_t_i[3], "Theta_supply_d_t_5": Theta_supply_d_t_i[4]
-            })
+            # New underfloor AC, second pass: forward solve and retain diagnostics.
+            Theta_supply_d_t_i = _get_new_underfloor_supply_temperatures(
+                house, skin, load, new_ufac, new_ufac_df,
+                Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
+                V_dash_supply_d_t_i)
         elif skin.underfloor_air_conditioning_air_supply == True:
             for i in range(2):  #i=0,1
                 Theta_uf_d_t, Theta_g_surf_d_t, *others  \

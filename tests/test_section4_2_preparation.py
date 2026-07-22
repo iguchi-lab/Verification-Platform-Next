@@ -1821,3 +1821,51 @@ def test_new_underfloor_requested_temperatures_preserve_reverse_solve_and_limits
     update_values = events[2][1]
     assert update_values["Theta_uf_d_t_2023"] is theta_uf_2023
     np.testing.assert_array_equal(update_values["Theta_req_d_t_1"], result[0])
+
+
+def test_new_underfloor_supply_temperatures_preserve_forward_solve_and_outputs(
+    monkeypatch,
+):
+    events = []
+    theta_uf = np.full(8760, 11.0)
+    theta_supply = np.vstack([np.full(8760, float(i + 1)) for i in range(5)])
+    theta_hs_out = np.full(8760, 30.0)
+    theta_ex = np.full(8760, 5.0)
+    airflows = np.vstack([np.full(8760, float(i + 2)) for i in range(5)])
+    new_ufac = object()
+
+    class FrameRecorder:
+        def update_df(self, values):
+            events.append(("update", values))
+
+    frame = FrameRecorder()
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(Q=2.7, r_A_ufac=0.5, underfloor_insulation=True)
+    load = SimpleNamespace(
+        L_dash_H_R_d_t_i=object(),
+        L_dash_CS_R_d_t_i=object(),
+    )
+
+    def calc_theta(**kwargs):
+        events.append(("forward_solve", kwargs))
+        return theta_uf, object(), object()
+
+    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
+
+    result = sut._get_new_underfloor_supply_temperatures(
+        house, skin, load, new_ufac, frame,
+        theta_supply, theta_hs_out, theta_ex, airflows
+    )
+
+    np.testing.assert_array_equal(result[0], theta_uf)
+    np.testing.assert_array_equal(result[1], theta_uf)
+    np.testing.assert_array_equal(result[2:], theta_supply[2:])
+    assert [event[0] for event in events] == ["forward_solve", "update"]
+    forward_kwargs = events[0][1]
+    assert forward_kwargs["calc_backwards"] is False
+    assert forward_kwargs["Theta_sa_d_t"] is theta_hs_out
+    np.testing.assert_array_equal(forward_kwargs["V_sa_d_t_A"], airflows[0] + airflows[1])
+    update_values = events[1][1]
+    assert update_values["Theta_hs_out_d_t"] is theta_hs_out
+    assert update_values["Theta_uf_d_t"] is theta_uf
+    np.testing.assert_array_equal(update_values["Theta_supply_d_t_1"], result[0])
