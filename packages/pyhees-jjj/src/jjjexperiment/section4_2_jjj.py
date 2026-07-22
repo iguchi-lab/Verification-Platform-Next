@@ -584,6 +584,59 @@ def _get_rac_heating_capacity(
 
     return q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t
 
+def _get_rac_cooling_capacity(
+        cool_CRAC: CoolCRACSpec,
+        load: Load_DTI,
+        Theta_ex_d_t: np.ndarray,
+        log_intermediates: bool,
+    ) -> tuple[float, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate the RAC maximum cooling capacity in its original order."""
+    # 最大冷房能力比
+    q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
+    if log_intermediates:
+        _logger.debug(f"q_r_max_C: {q_r_max_C}")
+
+    # 最大冷房出力比
+    Q_r_max_C_d_t = rac.calc_Q_r_max_C_d_t(q_r_max_C, cool_CRAC.q_rtd, Theta_ex_d_t)
+    if log_intermediates:
+        _logger.NDdebug("Theta_ex_d_t", Theta_ex_d_t)
+        _logger.NDdebug("Q_r_max_C_d_t", Q_r_max_C_d_t)
+
+    # 最大冷房出力
+    Q_max_C_d_t = rac.calc_Q_max_C_d_t(Q_r_max_C_d_t, cool_CRAC.q_rtd, cool_CRAC.input_C_af)
+    if log_intermediates:
+        _logger.NDdebug("Q_max_C_d_t", Q_max_C_d_t)
+
+    # 冷房負荷最小顕熱比
+    SHF_L_min_c = rac.get_SHF_L_min_c()
+
+    # 最大冷房潜熱負荷
+    L_max_CL_d_t = rac.get_L_max_CL_d_t(np.sum(load.L_CS_d_t_i, axis=0), SHF_L_min_c)
+
+    # 補正冷房潜熱負荷
+    L_dash_CL_d_t = rac.get_L_dash_CL_d_t(L_max_CL_d_t, np.sum(load.L_CL_d_t_i, axis=0))
+    L_dash_C_d_t = rac.get_L_dash_C_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_CL_d_t)
+
+    # 冷房負荷補正顕熱比
+    SHF_dash_d_t = rac.get_SHF_dash_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_C_d_t)
+
+    # 最大冷房顕熱出力, 最大冷房潜熱出力
+    Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
+    Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
+
+    return (
+        q_r_max_C,
+        Q_r_max_C_d_t,
+        Q_max_C_d_t,
+        SHF_L_min_c,
+        L_max_CL_d_t,
+        L_dash_CL_d_t,
+        L_dash_C_d_t,
+        SHF_dash_d_t,
+        Q_max_CS_d_t,
+        Q_max_CL_d_t,
+    )
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1347,29 +1400,13 @@ def calc_Q_UT_A(
                 q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
                     heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=False)
                 Q_hs_max_H_d_t = Q_max_H_d_t
-                # 最大冷房能力比
-                q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
-                # 最大冷房出力比
-                Q_r_max_C_d_t = rac.calc_Q_r_max_C_d_t(q_r_max_C, cool_CRAC.q_rtd, Theta_ex_d_t)
-                # 最大冷房出力
-                Q_max_C_d_t = rac.calc_Q_max_C_d_t(Q_r_max_C_d_t, cool_CRAC.q_rtd, cool_CRAC.input_C_af)
-                Q_hs_max_C_d_t = Q_max_C_d_t
-                # 冷房負荷最小顕熱比
-                SHF_L_min_c = rac.get_SHF_L_min_c()
-                # 最大冷房潜熱負荷
-                L_max_CL_d_t = rac.get_L_max_CL_d_t(np.sum(load.L_CS_d_t_i, axis=0), SHF_L_min_c)
-                # 補正冷房潜熱負荷
-                L_dash_CL_d_t = rac.get_L_dash_CL_d_t(L_max_CL_d_t, np.sum(load.L_CL_d_t_i, axis=0))
-                L_dash_C_d_t = rac.get_L_dash_C_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_CL_d_t)
-                # 冷房負荷補正顕熱比
-                SHF_dash_d_t = rac.get_SHF_dash_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_C_d_t)
-                # 最大冷房顕熱出力, 最大冷房潜熱出力
-                Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
-                Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
+                (
+                    q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c, L_max_CL_d_t,
+                    L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t, Q_max_CS_d_t, Q_max_CL_d_t,
+                ) = _get_rac_cooling_capacity(cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
                 Q_hs_max_C_d_t = Q_max_C_d_t
                 Q_hs_max_CL_d_t = Q_max_CL_d_t
                 Q_hs_max_CS_d_t = Q_max_CS_d_t
-
             else:
                 raise Exception('設備機器の種類の入力が不正です。')
             ####################################################################################################################
@@ -1542,36 +1579,10 @@ def calc_Q_UT_A(
             q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
                 heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=True)
             Q_hs_max_H_d_t = Q_max_H_d_t
-            # 最大冷房能力比
-            q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
-            _logger.debug(f"q_r_max_C: {q_r_max_C}")
-
-            # 最大冷房出力比
-            Q_r_max_C_d_t = rac.calc_Q_r_max_C_d_t(q_r_max_C, cool_CRAC.q_rtd, Theta_ex_d_t)
-            _logger.NDdebug("Theta_ex_d_t", Theta_ex_d_t)
-            _logger.NDdebug("Q_r_max_C_d_t", Q_r_max_C_d_t)
-
-            # 最大冷房出力
-            Q_max_C_d_t = rac.calc_Q_max_C_d_t(Q_r_max_C_d_t, cool_CRAC.q_rtd, cool_CRAC.input_C_af)
-            _logger.NDdebug("Q_max_C_d_t", Q_max_C_d_t)
-            Q_hs_max_C_d_t = Q_max_C_d_t
-
-            # 冷房負荷最小顕熱比
-            SHF_L_min_c = rac.get_SHF_L_min_c()
-
-            # 最大冷房潜熱負荷
-            L_max_CL_d_t = rac.get_L_max_CL_d_t(np.sum(load.L_CS_d_t_i, axis=0), SHF_L_min_c)
-
-            # 補正冷房潜熱負荷
-            L_dash_CL_d_t = rac.get_L_dash_CL_d_t(L_max_CL_d_t, np.sum(load.L_CL_d_t_i, axis=0))
-            L_dash_C_d_t = rac.get_L_dash_C_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_CL_d_t)
-
-            # 冷房負荷補正顕熱比
-            SHF_dash_d_t = rac.get_SHF_dash_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_C_d_t)
-
-            # 最大冷房顕熱出力, 最大冷房潜熱出力
-            Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
-            Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
+            (
+                q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c, L_max_CL_d_t,
+                L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t, Q_max_CS_d_t, Q_max_CL_d_t,
+            ) = _get_rac_cooling_capacity(cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
             Q_hs_max_C_d_t = Q_max_C_d_t
             Q_hs_max_CL_d_t = Q_max_CL_d_t
             Q_hs_max_CS_d_t = Q_max_CS_d_t

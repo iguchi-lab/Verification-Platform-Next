@@ -1352,3 +1352,82 @@ def test_rac_heating_capacity_preserves_formula_and_log_order(
     if log_intermediates:
         expected.append(("NDdebug", "Q_max_H_d_t", outputs[2]))
     assert calls == expected
+
+@pytest.mark.parametrize("log_intermediates", (False, True))
+def test_rac_cooling_capacity_preserves_formula_and_log_order(
+    monkeypatch,
+    log_intermediates,
+):
+    calls = []
+    cooling = SimpleNamespace(q_max=10.0, q_rtd=8.0, input_C_af=1.2)
+    sensible_by_room = object()
+    latent_by_room = object()
+    load = SimpleNamespace(
+        L_CS_d_t_i=sensible_by_room,
+        L_CL_d_t_i=latent_by_room,
+    )
+    theta = object()
+    sensible_total = object()
+    latent_total = object()
+    outputs = (1.25,) + tuple(object() for _ in range(9))
+
+    def sum_values(value, axis):
+        calls.append(("sum", value, axis))
+        return sensible_total if value is sensible_by_room else latent_total
+
+    monkeypatch.setattr(sut.np, "sum", sum_values)
+    functions = (
+        ("get_q_r_max_C", "ratio", outputs[0]),
+        ("calc_Q_r_max_C_d_t", "output_ratio", outputs[1]),
+        ("calc_Q_max_C_d_t", "output", outputs[2]),
+        ("get_SHF_L_min_c", "minimum_shf", outputs[3]),
+        ("get_L_max_CL_d_t", "max_latent", outputs[4]),
+        ("get_L_dash_CL_d_t", "latent", outputs[5]),
+        ("get_L_dash_C_d_t", "total", outputs[6]),
+        ("get_SHF_dash_d_t", "shf", outputs[7]),
+        ("get_Q_max_CS_d_t", "max_sensible", outputs[8]),
+        ("get_Q_max_CL_d_t", "max_latent_output", outputs[9]),
+    )
+    for function_name, event_name, output in functions:
+        monkeypatch.setattr(
+            sut.rac,
+            function_name,
+            lambda *args, event_name=event_name, output=output: calls.append(
+                (event_name, args)
+            )
+            or output,
+        )
+    monkeypatch.setattr(sut._logger, "debug", lambda message: calls.append(("debug", message)))
+    monkeypatch.setattr(sut._logger, "NDdebug", lambda name, value: calls.append(("NDdebug", name, value)))
+
+    result = sut._get_rac_cooling_capacity(
+        cooling, load, theta, log_intermediates
+    )
+
+    assert result == outputs
+    expected = [("ratio", (10.0, 8.0))]
+    if log_intermediates:
+        expected.append(("debug", "q_r_max_C: 1.25"))
+    expected.append(("output_ratio", (outputs[0], 8.0, theta)))
+    if log_intermediates:
+        expected.extend((
+            ("NDdebug", "Theta_ex_d_t", theta),
+            ("NDdebug", "Q_r_max_C_d_t", outputs[1]),
+        ))
+    expected.append(("output", (outputs[1], 8.0, 1.2)))
+    if log_intermediates:
+        expected.append(("NDdebug", "Q_max_C_d_t", outputs[2]))
+    expected.extend((
+        ("minimum_shf", ()),
+        ("sum", sensible_by_room, 0),
+        ("max_latent", (sensible_total, outputs[3])),
+        ("sum", latent_by_room, 0),
+        ("latent", (outputs[4], latent_total)),
+        ("sum", sensible_by_room, 0),
+        ("total", (sensible_total, outputs[5])),
+        ("sum", sensible_by_room, 0),
+        ("shf", (sensible_total, outputs[6])),
+        ("max_sensible", (outputs[2], outputs[7])),
+        ("max_latent_output", (outputs[2], outputs[7], outputs[5])),
+    ))
+    assert calls == expected
