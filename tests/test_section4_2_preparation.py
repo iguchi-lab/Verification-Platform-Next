@@ -588,3 +588,56 @@ def test_record_heat_source_outlet_outputs_preserves_write_order():
             ),
         ),
     ]
+
+@pytest.mark.parametrize("before_is_none", (False, True))
+def test_record_supply_state_outputs_preserves_assign_order(before_is_none):
+    frame = _FrameRecorder()
+    before_values = [object() for _ in range(5)]
+    before = None if before_is_none else before_values
+    supply = [object() for _ in range(5)]
+    theta_supply = [object() for _ in range(5)]
+    theta_hbr = [object() for _ in range(5)]
+    theta_nr = object()
+
+    result = sut._record_supply_state_outputs(
+        frame,
+        before,
+        supply,
+        theta_supply,
+        theta_hbr,
+        theta_nr,
+    )
+
+    expected_before = [None] * 5 if before_is_none else before_values
+    assert result.generation == 4
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple(
+                (f"V_supply_d_t_{i + 1}_before", expected_before[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            1,
+            tuple((f"V_supply_d_t_{i + 1}", supply[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            2,
+            tuple(
+                (f"Theta_supply_d_t_{i + 1}", theta_supply[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            3,
+            tuple(
+                (f"Theta_HBR_d_t_{i + 1}", theta_hbr[i])
+                for i in range(5)
+            ) + (("Theta_NR_d_t", theta_nr),),
+        ),
+    ]

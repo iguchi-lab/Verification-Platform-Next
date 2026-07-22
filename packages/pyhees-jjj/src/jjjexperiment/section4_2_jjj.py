@@ -368,6 +368,45 @@ def _record_heat_source_outlet_outputs(
         Theta_hs_out_d_t=Theta_hs_out_d_t,
     )
 
+def _record_supply_state_outputs(
+        df_output: pd.DataFrame,
+        V_supply_d_t_i_before: np.ndarray | None,
+        V_supply_d_t_i: np.ndarray,
+        Theta_supply_d_t_i: np.ndarray,
+        Theta_HBR_d_t_i: np.ndarray,
+        Theta_NR_d_t: np.ndarray,
+    ) -> pd.DataFrame:
+    # NOTE: 2024/02/14 WG の話で出力してほしいデータになりました
+    df_output = df_output.assign(
+        V_supply_d_t_1_before=V_supply_d_t_i_before[0] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_2_before=V_supply_d_t_i_before[1] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_3_before=V_supply_d_t_i_before[2] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_4_before=V_supply_d_t_i_before[3] if V_supply_d_t_i_before is not None else None,
+        V_supply_d_t_5_before=V_supply_d_t_i_before[4] if V_supply_d_t_i_before is not None else None,
+    )
+    df_output = df_output.assign(
+        V_supply_d_t_1=V_supply_d_t_i[0],
+        V_supply_d_t_2=V_supply_d_t_i[1],
+        V_supply_d_t_3=V_supply_d_t_i[2],
+        V_supply_d_t_4=V_supply_d_t_i[3],
+        V_supply_d_t_5=V_supply_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        Theta_supply_d_t_1=Theta_supply_d_t_i[0],
+        Theta_supply_d_t_2=Theta_supply_d_t_i[1],
+        Theta_supply_d_t_3=Theta_supply_d_t_i[2],
+        Theta_supply_d_t_4=Theta_supply_d_t_i[3],
+        Theta_supply_d_t_5=Theta_supply_d_t_i[4],
+    )
+    return df_output.assign(
+        Theta_HBR_d_t_1=Theta_HBR_d_t_i[0],
+        Theta_HBR_d_t_2=Theta_HBR_d_t_i[1],
+        Theta_HBR_d_t_3=Theta_HBR_d_t_i[2],
+        Theta_HBR_d_t_4=Theta_HBR_d_t_i[3],
+        Theta_HBR_d_t_5=Theta_HBR_d_t_i[4],
+        Theta_NR_d_t=Theta_NR_d_t,
+    )
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1538,40 +1577,15 @@ def calc_Q_UT_A(
         Theta_hs_out_max_H_d_t,
         Theta_hs_out_d_t,
     )
-    """吹出口 - 吹出口"""
-    # NOTE: 2024/02/14 WG の話で出力してほしいデータになりました
-    df_output = df_output.assign(
-        V_supply_d_t_1_before = V_supply_d_t_i_before[0] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_2_before = V_supply_d_t_i_before[1] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_3_before = V_supply_d_t_i_before[2] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_4_before = V_supply_d_t_i_before[3] if V_supply_d_t_i_before is not None else None,
-        V_supply_d_t_5_before = V_supply_d_t_i_before[4] if V_supply_d_t_i_before is not None else None,
+    """ 吹出口 - 吹出口 / 実際 """
+    df_output = _record_supply_state_outputs(
+        df_output,
+        V_supply_d_t_i_before,
+        V_supply_d_t_i,
+        Theta_supply_d_t_i,
+        Theta_HBR_d_t_i,
+        Theta_NR_d_t,
     )
-    df_output = df_output.assign(
-        V_supply_d_t_1 = V_supply_d_t_i[0],
-        V_supply_d_t_2 = V_supply_d_t_i[1],
-        V_supply_d_t_3 = V_supply_d_t_i[2],
-        V_supply_d_t_4 = V_supply_d_t_i[3],
-        V_supply_d_t_5 = V_supply_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        Theta_supply_d_t_1 = Theta_supply_d_t_i[0],
-        Theta_supply_d_t_2 = Theta_supply_d_t_i[1],
-        Theta_supply_d_t_3 = Theta_supply_d_t_i[2],
-        Theta_supply_d_t_4 = Theta_supply_d_t_i[3],
-        Theta_supply_d_t_5 = Theta_supply_d_t_i[4]
-    )
-
-    """ 吹出口 - 実際 """
-    df_output = df_output.assign(
-        Theta_HBR_d_t_1 = Theta_HBR_d_t_i[0],
-        Theta_HBR_d_t_2 = Theta_HBR_d_t_i[1],
-        Theta_HBR_d_t_3 = Theta_HBR_d_t_i[2],
-        Theta_HBR_d_t_4 = Theta_HBR_d_t_i[3],
-        Theta_HBR_d_t_5 = Theta_HBR_d_t_i[4],
-        Theta_NR_d_t = Theta_NR_d_t
-    )
-
     """ 吹出口 - 熱源機の出口 """
     # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以下だった場合の為に再計算
     # (14)　熱源機の出口における空気温度
