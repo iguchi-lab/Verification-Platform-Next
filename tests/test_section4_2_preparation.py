@@ -3478,3 +3478,27 @@ def test_prepare_heat_source_outlet_temperature_output_preserves_formula_14(
     assert events[0][1][0] is setting.VAV
     assert events[0][1][5] == house.region
     assert events[1] == ("setitem", "Theta_hs_out_d_t", temperature)
+
+
+def test_prepare_supply_humidity_output_preserves_formula_42_column_order(
+        monkeypatch):
+    events = []
+    humidity = [object() for _ in range(5)]
+
+    class Frame:
+        def assign(self, **values):
+            events.append(("assign", tuple(values), values))
+            return self
+
+    frame = Frame()
+    inputs = [object() for _ in range(4)]
+    monkeypatch.setattr(
+        sut.dc, "get_X_supply_d_t_i",
+        lambda *a: events.append(("formula", a)) or humidity)
+
+    result = sut._prepare_supply_humidity_output(frame, *inputs)
+
+    assert result == (humidity, frame)
+    assert events[0] == ("formula", tuple(inputs))
+    assert events[1][1] == tuple(f"X_supply_d_t_{i}" for i in range(1, 6))
+    assert list(events[1][2].values()) == humidity

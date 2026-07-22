@@ -2074,6 +2074,22 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_supply_humidity_output(
+        df_output, X_star_HBR_d_t, X_hs_out_d_t,
+        L_star_CL_d_t_i, region):
+    """Calculate formula (42) and preserve five-column assign order."""
+    X_supply_d_t_i = dc.get_X_supply_d_t_i(
+        X_star_HBR_d_t, X_hs_out_d_t, L_star_CL_d_t_i, region)
+    df_output = df_output.assign(
+        X_supply_d_t_1=X_supply_d_t_i[0],
+        X_supply_d_t_2=X_supply_d_t_i[1],
+        X_supply_d_t_3=X_supply_d_t_i[2],
+        X_supply_d_t_4=X_supply_d_t_i[3],
+        X_supply_d_t_5=X_supply_d_t_i[4],
+    )
+    return X_supply_d_t_i, df_output
+
+
 def _prepare_heat_source_outlet_temperature_output(
         df_output, ac_setting, house, Theta_req_d_t_i,
         V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
@@ -2719,14 +2735,9 @@ def calc_Q_UT_A(
 
     """ 吹出口 - 吹出口 """
     # (42)　暖冷房区画𝑖の吹き出し絶対湿度
-    X_supply_d_t_i = dc.get_X_supply_d_t_i(X_star_HBR_d_t, X_hs_out_d_t, L_star_CL_d_t_i, house.region)
-    df_output = df_output.assign(
-        X_supply_d_t_1 = X_supply_d_t_i[0],
-        X_supply_d_t_2 = X_supply_d_t_i[1],
-        X_supply_d_t_3 = X_supply_d_t_i[2],
-        X_supply_d_t_4 = X_supply_d_t_i[3],
-        X_supply_d_t_5 = X_supply_d_t_i[4]
-    )
+    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(
+        df_output, X_star_HBR_d_t, X_hs_out_d_t,
+        L_star_CL_d_t_i, house.region)
 
     """ 熱源機の入口 - 熱源機の風量の計算 """
     # (35)　熱源機の風量のうちの全般換気分
