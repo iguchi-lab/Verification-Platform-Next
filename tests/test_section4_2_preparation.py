@@ -3350,3 +3350,40 @@ def test_log_actual_temperature_state_preserves_diagnostic_order(monkeypatch):
         ("Theta_HBR_d_t_5", room[4]),
         ("Theta_NR_d_t", non_room),
     ]
+
+
+@pytest.mark.parametrize(("mode", "rated", "suffix"), (
+    ("disabled", (object(), None), None),
+    ("heating", (object(), None), "_H_carryover_output.csv"),
+    ("cooling", (None, object()), "_C_carryover_output.csv"),
+))
+def test_export_carryover_diagnostics_preserves_columns_and_filename(
+        monkeypatch, mode, rated, suffix):
+    events = []
+
+    class Frame:
+        def assign(self, **values):
+            events.append(("assign", tuple(values), values))
+            return self
+
+        def to_csv(self, path, **kwargs):
+            events.append(("csv", path, kwargs))
+
+    enabled = sut.過剰熱量繰越計算.行う
+    carryover = SimpleNamespace(
+        carry_over_heat=enabled if mode != "disabled" else object())
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *a: rated[0])
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *a: rated[1])
+    monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_version")
+    values = [object() for _ in range(5)]
+
+    sut._export_carryover_diagnostics(
+        "case", object(), object(), carryover, Frame(), values)
+
+    if mode == "disabled":
+        assert events == []
+    else:
+        assert events[0][1] == tuple(
+            f"carryovers_i_{i}" for i in range(1, 6))
+        assert events[1] == (
+            "csv", "case_version" + suffix, {"encoding": "cp932"})

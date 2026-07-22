@@ -2074,6 +2074,37 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _export_carryover_diagnostics(
+        case_name, ac_setting, house, carryover_heat_dto,
+        df_carryover_output, carryovers):
+    """Export carryover diagnostics with the legacy mode-specific filename."""
+    if carryover_heat_dto.carry_over_heat != 過剰熱量繰越計算.行う:
+        return
+    df_carryover_output = df_carryover_output.assign(
+        carryovers_i_1=carryovers[0],
+        carryovers_i_2=carryovers[1],
+        carryovers_i_3=carryovers[2],
+        carryovers_i_4=carryovers[3],
+        carryovers_i_5=carryovers[4],
+    )
+    match (_get_q_hs_rtd_H(ac_setting, house),
+           _get_q_hs_rtd_C(ac_setting, house)):
+        case (None, None):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+        case (_, None):
+            df_carryover_output.to_csv(
+                case_name + jjj_consts.version_info()
+                + '_H_carryover_output.csv',
+                encoding='cp932')
+        case (None, _):
+            df_carryover_output.to_csv(
+                case_name + jjj_consts.version_info()
+                + '_C_carryover_output.csv',
+                encoding='cp932')
+        case (_, _):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+
+
 def _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t):
     """Preserve room then non-room diagnostic write order."""
     for i in range(5):
@@ -2583,27 +2614,9 @@ def calc_Q_UT_A(
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
     _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t)
 
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        df_carryover_output = df_carryover_output.assign(
-            carryovers_i_1 = carryovers[0],
-            carryovers_i_2 = carryovers[1],
-            carryovers_i_3 = carryovers[2],
-            carryovers_i_4 = carryovers[3],
-            carryovers_i_5 = carryovers[4]
-        )
-        match (_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
-            case (None, None):
-                raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
-            case (_, None):
-                df_carryover_output.to_csv(
-                    case_name + jjj_consts.version_info() + '_H_carryover_output.csv',
-                    encoding = 'cp932')
-            case (None, _):
-                df_carryover_output.to_csv(
-                    case_name + jjj_consts.version_info() + '_C_carryover_output.csv',
-                    encoding = 'cp932')
-            case (_, _):
-                raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+    _export_carryover_diagnostics(
+        case_name, ac_setting, house, carryover_heat_dto,
+        df_carryover_output, carryovers if "carryovers" in locals() else None)
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
     df_output = _record_balanced_load_outputs(
