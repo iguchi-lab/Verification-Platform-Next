@@ -2074,6 +2074,19 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_heat_source_outlet_temperature_output(
+        df_output, ac_setting, house, Theta_req_d_t_i,
+        V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+        Theta_NR_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t):
+    """Calculate and record formula (14) by direct column assignment."""
+    Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(
+        ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
+    df_output['Theta_hs_out_d_t'] = Theta_hs_out_d_t
+    return Theta_hs_out_d_t, df_output
+
+
 def _record_common_outlet_and_supply_outputs(
         df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
@@ -2696,12 +2709,13 @@ def calc_Q_UT_A(
         V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
         Theta_HBR_d_t_i, Theta_NR_d_t)
     """ 吹出口 - 熱源機の出口 """
-    # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以下だった場合の為に再計算
     # (14)　熱源機の出口における空気温度
-    Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
-                                            L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
-                                            Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
-    df_output['Theta_hs_out_d_t'] = Theta_hs_out_d_t
+    Theta_hs_out_d_t, df_output = \
+        _prepare_heat_source_outlet_temperature_output(
+            df_output, ac_setting, house, Theta_req_d_t_i,
+            V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+            Theta_NR_d_t, Theta_hs_out_max_H_d_t,
+            Theta_hs_out_min_C_d_t)
 
     """ 吹出口 - 吹出口 """
     # (42)　暖冷房区画𝑖の吹き出し絶対湿度

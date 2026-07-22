@@ -3451,3 +3451,30 @@ def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
     assert events[1][1][0] is outlet_frame
     assert events[0][1][1:] == tuple(inputs[:9])
     assert events[1][1][1:] == tuple(inputs[9:])
+
+
+def test_prepare_heat_source_outlet_temperature_output_preserves_formula_14(
+        monkeypatch):
+    events = []
+    temperature = object()
+    setting = SimpleNamespace(VAV=object())
+    house = SimpleNamespace(region=6)
+    inputs = [object() for _ in range(7)]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("setitem", key, value))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_hs_out_d_t",
+        lambda *a: events.append(("formula", a)) or temperature)
+
+    result = sut._prepare_heat_source_outlet_temperature_output(
+        frame, setting, house, *inputs)
+
+    assert result == (temperature, frame)
+    assert [event[0] for event in events] == ["formula", "setitem"]
+    assert events[0][1][0] is setting.VAV
+    assert events[0][1][5] == house.region
+    assert events[1] == ("setitem", "Theta_hs_out_d_t", temperature)
