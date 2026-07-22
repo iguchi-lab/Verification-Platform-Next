@@ -2139,12 +2139,14 @@ def _prepare_no_carryover_capacity_state(
         L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
         L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
         SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
-        (
-            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-            C_df_H_d_t, Q_hs_max_H_d_t,
-        ) = _get_standard_heat_source_capacity_limits(
+        standard_capacity = _get_standard_heat_source_capacity_limits(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
             L_star_dash_CL_d_t, climate.get_C_df_H_d_t)
+        Q_hs_max_C_d_t = standard_capacity.Q_hs_max_C_d_t
+        Q_hs_max_CL_d_t = standard_capacity.Q_hs_max_CL_d_t
+        Q_hs_max_CS_d_t = standard_capacity.Q_hs_max_CS_d_t
+        C_df_H_d_t = standard_capacity.C_df_H_d_t
+        Q_hs_max_H_d_t = standard_capacity.Q_hs_max_H_d_t
     elif ac_setting.type in [
             計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
             計算モデル.電中研モデル]:
@@ -2621,13 +2623,15 @@ def _prepare_carryover_capacity_state(
         L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
         L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
         SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
-        (
-            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-            C_df_H_d_t, Q_hs_max_H_d_t,
-        ) = _get_standard_heat_source_capacity_limits(
+        standard_capacity = _get_standard_heat_source_capacity_limits(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
             L_star_dash_CL_d_t,
             lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t))
+        Q_hs_max_C_d_t = standard_capacity.Q_hs_max_C_d_t
+        Q_hs_max_CL_d_t = standard_capacity.Q_hs_max_CL_d_t
+        Q_hs_max_CS_d_t = standard_capacity.Q_hs_max_CS_d_t
+        C_df_H_d_t = standard_capacity.C_df_H_d_t
+        Q_hs_max_H_d_t = standard_capacity.Q_hs_max_H_d_t
     elif ac_setting.type in [
             計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
             計算モデル.電中研モデル]:
