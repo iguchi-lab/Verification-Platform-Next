@@ -3665,3 +3665,24 @@ def test_prepare_unprocessed_energy_state_preserves_calculate_record_order(
         ("calculate", tuple(inputs)),
         ("record", (original, output_name, energy)),
     ]
+
+
+def test_export_and_build_calculation_result_preserves_order(monkeypatch):
+    events = []
+    inputs = [object() for _ in range(15)]
+    monkeypatch.setattr(
+        sut, "_export_underfloor_output",
+        lambda *args: events.append(("underfloor", args)))
+    monkeypatch.setattr(
+        sut, "_export_standard_outputs",
+        lambda *args: events.append(("standard", args)))
+
+    result = sut._export_and_build_calculation_result(*inputs)
+
+    assert events == [
+        ("underfloor", (inputs[0], inputs[1], inputs[3], inputs[4])),
+        ("standard", (
+            inputs[0], inputs[1], inputs[2],
+            inputs[5], inputs[6], inputs[7])),
+    ]
+    assert result == tuple(inputs[8:])

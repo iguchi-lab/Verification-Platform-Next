@@ -2074,6 +2074,22 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _export_and_build_calculation_result(
+        case_name, ac_setting, house, new_ufac, new_ufac_df,
+        df_output3, df_output2, df_output, E_UT_d_t,
+        Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t,
+        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t):
+    """Export underfloor and standard outputs, then preserve return order."""
+    _export_underfloor_output(
+        case_name, ac_setting, new_ufac, new_ufac_df)
+    _export_standard_outputs(
+        case_name, ac_setting, house, df_output3, df_output2, df_output)
+    return (
+        E_UT_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t,
+        X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t,
+    )
+
+
 def _prepare_unprocessed_energy_state(
         df_output, ac_setting, Q_UT_CL_d_t_i,
         Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region):
@@ -2855,20 +2871,8 @@ def calc_Q_UT_A(
     E_UT_d_t, df_output = _prepare_unprocessed_energy_state(
         df_output, ac_setting, Q_UT_CL_d_t_i,
         Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region)
-    _export_underfloor_output(
-        case_name,
-        ac_setting,
-        new_ufac,
-        new_ufac_df,
-    )
-    _export_standard_outputs(
-        case_name,
-        ac_setting,
-        house,
-        df_output3,
-        df_output2,
-        df_output,
-    )
-    return E_UT_d_t, \
-            Theta_hs_out_d_t, Theta_hs_in_d_t, \
-            X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t
+    return _export_and_build_calculation_result(
+        case_name, ac_setting, house, new_ufac, new_ufac_df,
+        df_output3, df_output2, df_output, E_UT_d_t,
+        Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t,
+        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t)
