@@ -2818,7 +2818,8 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
         sut,
         "_get_supply_airflow_before_vav",
         lambda *args: events.append(("supply_airflow", args))
-        or (r_static, r_hourly, v_supply),
+        or sut._SupplyAirflowBeforeVavResult(
+            r_static, r_hourly, v_supply),
     )
     monkeypatch.setattr(
         sut,

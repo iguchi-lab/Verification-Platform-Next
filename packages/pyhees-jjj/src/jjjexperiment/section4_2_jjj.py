@@ -1930,11 +1930,7 @@ def _prepare_pre_vav_airflow_state(
             Q_hat_hs_CS_d_t,
         )
         df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
-        (
-            r_supply_des_i,
-            r_supply_des_d_t_i,
-            V_dash_supply_d_t_i,
-        ) = _get_supply_airflow_before_vav(
+        supply_airflow = _get_supply_airflow_before_vav(
             ac_setting,
             house,
             load,
@@ -1942,6 +1938,9 @@ def _prepare_pre_vav_airflow_state(
             V_dash_hs_supply_d_t,
             V_vent_g_i,
         )
+        r_supply_des_i = supply_airflow.r_supply_des_i
+        r_supply_des_d_t_i = supply_airflow.r_supply_des_d_t_i
+        V_dash_supply_d_t_i = supply_airflow.V_dash_supply_d_t_i
         if not should_adjust:
             break
 
