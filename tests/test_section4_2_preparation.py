@@ -1264,3 +1264,38 @@ def test_balanced_cooling_loads_preserve_formula_order(monkeypatch):
         (names[4], (outputs[1], outputs[3])),
         (names[5], (outputs[1], outputs[4])),
     ]
+
+def test_standard_heat_source_capacity_limits_preserve_formula_order(monkeypatch):
+    calls = []
+    setting = SimpleNamespace(type=object())
+    house = object()
+    heating = SimpleNamespace(input_C_af=1.1)
+    cooling = SimpleNamespace(input_C_af=1.2)
+    shf = object()
+    latent = object()
+    outputs = [object() for _ in range(5)]
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *args: calls.append(("rated_C", args)) or 200.0)
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *args: calls.append(("rated_H", args)) or 100.0)
+    monkeypatch.setattr(sut.dc, "get_Q_hs_max_C_d_t_2024", lambda *args: calls.append(("max_C", args)) or outputs[0])
+    monkeypatch.setattr(sut.dc, "get_Q_hs_max_CL_d_t", lambda *args: calls.append(("max_CL", args)) or outputs[1])
+    monkeypatch.setattr(sut.dc, "get_Q_hs_max_CS_d_t", lambda *args: calls.append(("max_CS", args)) or outputs[2])
+    monkeypatch.setattr(sut.dc, "get_Q_hs_max_H_d_t_2024", lambda *args: calls.append(("max_H", args)) or outputs[4])
+
+    def get_defrost():
+        calls.append(("defrost", ()))
+        return outputs[3]
+
+    result = sut._get_standard_heat_source_capacity_limits(
+        setting, house, heating, cooling, shf, latent, get_defrost
+    )
+
+    assert result == tuple(outputs)
+    assert calls == [
+        ("rated_C", (setting, house)),
+        ("max_C", (setting.type, 200.0, 1.2)),
+        ("max_CL", (outputs[0], shf, latent)),
+        ("max_CS", (outputs[0], shf)),
+        ("defrost", ()),
+        ("rated_H", (setting, house)),
+        ("max_H", (setting.type, 100.0, outputs[3], 1.1)),
+    ]

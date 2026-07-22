@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import NewType
+from typing import Callable, NewType
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -535,6 +535,29 @@ def _get_balanced_cooling_loads(
         L_star_dash_C_d_t,
         SHF_dash_d_t,
     )
+
+def _get_standard_heat_source_capacity_limits(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        heat_CRAC: HeatCRACSpec,
+        cool_CRAC: CoolCRACSpec,
+        SHF_dash_d_t: np.ndarray,
+        L_star_dash_CL_d_t: np.ndarray,
+        get_C_df_H_d_t: Callable[[], np.ndarray],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (27) through (23) in their original order."""
+    # (27)
+    Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
+    # (26)
+    Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
+    # (25)
+    Q_hs_max_CS_d_t = dc.get_Q_hs_max_CS_d_t(Q_hs_max_C_d_t, SHF_dash_d_t)
+    # (24) デフロストに関する暖房出力補正係数
+    C_df_H_d_t = get_C_df_H_d_t()
+    # (23)
+    Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
+
+    return Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t, C_df_H_d_t, Q_hs_max_H_d_t
 
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
@@ -1284,17 +1307,12 @@ def calc_Q_UT_A(
                     L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
                     L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
                 ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
-                # (27)
-                Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
-                # (26)
-                Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
-                # (25)
-                Q_hs_max_CS_d_t = dc.get_Q_hs_max_CS_d_t(Q_hs_max_C_d_t, SHF_dash_d_t)
-                # (24)
-                C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-                # (23)
-                Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
-
+                (
+                    Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+                    C_df_H_d_t, Q_hs_max_H_d_t,
+                ) = _get_standard_heat_source_capacity_limits(
+                    ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t, L_star_dash_CL_d_t,
+                    lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t))
             elif ac_setting.type in [
                     計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
                     計算モデル.電中研モデル
@@ -1486,17 +1504,12 @@ def calc_Q_UT_A(
                 L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
                 L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
             ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
-            # (27)
-            Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
-            # (26)
-            Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
-            # (25)
-            Q_hs_max_CS_d_t = dc.get_Q_hs_max_CS_d_t(Q_hs_max_C_d_t, SHF_dash_d_t)
-            # (24) デフロストに関する暖房出力補正係数
-            C_df_H_d_t = climate.get_C_df_H_d_t()
-            # (23)
-            Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
-
+            (
+                Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+                C_df_H_d_t, Q_hs_max_H_d_t,
+            ) = _get_standard_heat_source_capacity_limits(
+                ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t, L_star_dash_CL_d_t,
+                climate.get_C_df_H_d_t)
         elif ac_setting.type in [
                 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
                 計算モデル.電中研モデル
