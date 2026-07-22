@@ -59,7 +59,6 @@ EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS = {
     "latent_load/test_latent_load_integration.py",
     "test_integration_execution.py",
     "underfloor_ac/test_4_2_f46_f48.py",
-    "v_min_input/test_v_min_input_integration.py",
 }
 
 
