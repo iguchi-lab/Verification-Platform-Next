@@ -3749,3 +3749,12 @@ def test_capped_supply_airflows_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("V_supply_d_t_i_before", "V_supply_d_t_i",)
+
+
+def test_balanced_cooling_loads_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(6))
+    result = sut._BalancedCoolingLoadsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("L_star_CL_d_t", "L_star_CS_d_t", "L_star_CL_max_d_t", "L_star_dash_CL_d_t", "L_star_dash_C_d_t", "SHF_dash_d_t",)

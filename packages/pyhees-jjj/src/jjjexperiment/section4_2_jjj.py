@@ -125,6 +125,15 @@ class _CappedSupplyAirflowsResult(NamedTuple):
     V_supply_d_t_i: object
 
 
+class _BalancedCoolingLoadsResult(NamedTuple):
+    L_star_CL_d_t: object
+    L_star_CS_d_t: object
+    L_star_CL_max_d_t: object
+    L_star_dash_CL_d_t: object
+    L_star_dash_C_d_t: object
+    SHF_dash_d_t: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -576,7 +585,7 @@ def _get_balanced_cooling_loads(
     # (28)
     SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
 
-    return (
+    return _BalancedCoolingLoadsResult(
         L_star_CL_d_t,
         L_star_CS_d_t,
         L_star_CL_max_d_t,
