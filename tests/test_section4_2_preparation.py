@@ -2300,3 +2300,32 @@ def test_actual_room_humidities_preserve_formula_47_assign_generation(
     )
     for index, (_, value) in enumerate(columns):
         np.testing.assert_array_equal(value, humidity[index])
+
+def test_partition_heat_transfers_preserve_formula_11_assign_generation(
+    monkeypatch,
+):
+    events = []
+    inputs = [object() for _ in range(4)]
+    transfers = np.arange(15.0).reshape(5, 3)
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_star_trs_prt_d_t_i",
+        lambda *args: events.append(("formula", args)) or transfers,
+    )
+
+    result, next_frame = sut._get_partition_heat_transfers(frame, *inputs)
+
+    assert result is transfers
+    assert next_frame.generation == 1
+    assert events[0] == ("formula", tuple(inputs))
+    assert events[1][0:2] == ("assign", 0)
+    columns = events[1][2]
+    assert tuple(name for name, _ in columns) == (
+        "Q_star_trs_prt_d_t_i_1", "Q_star_trs_prt_d_t_i_2",
+        "Q_star_trs_prt_d_t_i_3", "Q_star_trs_prt_d_t_i_4",
+        "Q_star_trs_prt_d_t_i_5",
+    )
+    for index, (_, value) in enumerate(columns):
+        np.testing.assert_array_equal(value, transfers[index])

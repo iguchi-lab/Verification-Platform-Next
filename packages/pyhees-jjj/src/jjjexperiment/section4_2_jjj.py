@@ -1463,6 +1463,25 @@ def _get_actual_room_humidities(df_output, X_star_HBR_d_t):
     )
     return X_HBR_d_t_i, df_output
 
+def _get_partition_heat_transfers(
+        df_output,
+        U_prt,
+        A_prt_i,
+        Theta_star_HBR_d_t,
+        Theta_star_NR_d_t,
+    ):
+    """Calculate formula (11) and record the five partition-transfer columns."""
+    Q_star_trs_prt_d_t_i = dc.get_Q_star_trs_prt_d_t_i(
+        U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
+    df_output = df_output.assign(
+        Q_star_trs_prt_d_t_i_1=Q_star_trs_prt_d_t_i[0],
+        Q_star_trs_prt_d_t_i_2=Q_star_trs_prt_d_t_i[1],
+        Q_star_trs_prt_d_t_i_3=Q_star_trs_prt_d_t_i[2],
+        Q_star_trs_prt_d_t_i_4=Q_star_trs_prt_d_t_i[3],
+        Q_star_trs_prt_d_t_i_5=Q_star_trs_prt_d_t_i[4],
+    )
+    return Q_star_trs_prt_d_t_i, df_output
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1790,14 +1809,8 @@ def calc_Q_UT_A(
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(1) """
     # (11)　熱損失を含む負荷バランス時の非居室への熱移動
-    Q_star_trs_prt_d_t_i = dc.get_Q_star_trs_prt_d_t_i(U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
-    df_output = df_output.assign(
-        Q_star_trs_prt_d_t_i_1 = Q_star_trs_prt_d_t_i[0],
-        Q_star_trs_prt_d_t_i_2 = Q_star_trs_prt_d_t_i[1],
-        Q_star_trs_prt_d_t_i_3 = Q_star_trs_prt_d_t_i[2],
-        Q_star_trs_prt_d_t_i_4 = Q_star_trs_prt_d_t_i[3],
-        Q_star_trs_prt_d_t_i_5 = Q_star_trs_prt_d_t_i[4]
-    )
+    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
+        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
 
     # (10)　熱取得を含む負荷バランス時の冷房潜熱負荷
     L_star_CL_d_t_i = dc.get_L_star_CL_d_t_i(load.L_CS_d_t_i, load.L_CL_d_t_i, house.region)
