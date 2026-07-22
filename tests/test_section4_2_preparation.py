@@ -1934,3 +1934,69 @@ def test_legacy_underfloor_supply_temperatures_preserve_where_operation(
     assert len(calls) == 2
     assert len(where_calls) == 2
     assert [call[5] for call in calls] == [r_a_ufac, r_a_ufac]
+
+
+def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
+    monkeypatch,
+):
+    calc_calls = []
+    updates = []
+    hours = 24 * 365
+    heating = np.zeros(hours, dtype=bool)
+    cooling = np.zeros(hours, dtype=bool)
+    middle = np.zeros(hours, dtype=bool)
+    heating[2] = True
+    cooling[1] = True
+    load_h = np.zeros((5, hours))
+    load_cs = np.zeros((5, hours))
+    load_h[1, 2] = 1.0
+    load_cs[0, 1] = 1.0
+    load = SimpleNamespace(
+        L_H_d_t_i=load_h,
+        L_CS_d_t_i=load_cs,
+        L_CL_d_t_i=np.full((5, hours), 3.0),
+    )
+    l_star_h = np.full((5, hours), 10.0)
+    l_star_cs = np.full((5, hours), 20.0)
+    theta_room = np.arange(float(hours))
+    theta_ex = np.zeros(hours)
+    area = object()
+    new_ufac = SimpleNamespace(U_s_floor_ins=0.8)
+
+    class FrameRecorder:
+        def update_df(self, values):
+            updates.append(values)
+
+    def calc_delta(u_value, area_value, temperature_difference):
+        calc_calls.append((u_value, area_value, temperature_difference))
+        return np.full((5, 1), 2.0)
+
+    monkeypatch.setattr(sut.jjj_ufac_dc, "calc_delta_L_room2uf_i", calc_delta)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_season_array_d_t",
+        lambda region: (heating, cooling, middle),
+    )
+
+    result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(
+        SimpleNamespace(region=6), new_ufac, FrameRecorder(), load, area,
+        theta_room, theta_ex, l_star_h, l_star_cs
+    )
+
+    assert result_h is l_star_h
+    assert result_cs is l_star_cs
+    assert len(calc_calls) == hours
+    assert calc_calls[0] == (0.8, area, 0.0)
+    assert calc_calls[-1] == (0.8, area, float(hours - 1))
+    assert result_cs[0, 1] == 18.0
+    assert result_h[1, 2] == 8.0
+    assert np.count_nonzero(result_cs != 20.0) == 1
+    assert np.count_nonzero(result_h != 10.0) == 1
+    assert len(updates) == 1
+    assert tuple(updates[0]) == (
+        "L_H_d_t_1", "L_H_d_t_2", "L_H_d_t_3", "L_H_d_t_4", "L_H_d_t_5",
+        "L_CS_d_t_1", "L_CS_d_t_2", "L_CS_d_t_3", "L_CS_d_t_4", "L_CS_d_t_5",
+        "L_CL_d_t_1", "L_CL_d_t_2", "L_CL_d_t_3", "L_CL_d_t_4", "L_CL_d_t_5",
+        "L_star_CS_d_t_1", "L_star_CS_d_t_2", "L_star_CS_d_t_3", "L_star_CS_d_t_4", "L_star_CS_d_t_5",
+        "L_star_H_d_t_1", "L_star_H_d_t_2", "L_star_H_d_t_3", "L_star_H_d_t_4", "L_star_H_d_t_5",
+    )

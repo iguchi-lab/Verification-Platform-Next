@@ -1242,6 +1242,68 @@ def _adjust_legacy_underfloor_supply_temperatures(
 
     return Theta_supply_d_t_i
 
+def _adjust_new_underfloor_balanced_loads(
+        house,
+        new_ufac,
+        new_ufac_df,
+        load,
+        A_s_ufac_i,
+        Theta_star_HBR_d_t,
+        Theta_ex_d_t,
+        L_star_H_d_t_i,
+        L_star_CS_d_t_i,
+    ):
+    """Apply the new-underfloor corrections to formulas (8) and (9)."""
+    # 部屋→床下への熱移動分が戻ってくるため負荷控除する
+    delta_L_uf2room_d_t_i = np.hstack([
+        jjj_ufac_dc.calc_delta_L_room2uf_i(
+            new_ufac.U_s_floor_ins,
+            A_s_ufac_i,
+            np.abs(Theta_star_HBR_d_t[t] - Theta_ex_d_t[t]),
+        ) for t in range(24 * 365)
+    ])
+    H, C, M = dc.get_season_array_d_t(house.region)
+
+    # (9)-補正
+    Cf = np.logical_and(C, load.L_CS_d_t_i[:5, :] > 0)
+    assert Cf.shape == (5, 24 * 365)
+    L_star_CS_d_t_i[Cf] -= delta_L_uf2room_d_t_i[:5, :][Cf]
+
+    # (8)-補正
+    Hf = np.logical_and(H, load.L_H_d_t_i[:5, :] > 0)
+    assert Hf.shape == (5, 24 * 365)
+    L_star_H_d_t_i[Hf] -= delta_L_uf2room_d_t_i[:5, :][Hf]
+
+    # 床下空調 新ロジック 調査用出力ファイル
+    new_ufac_df.update_df({
+        "L_H_d_t_1": load.L_H_d_t_i[0],
+        "L_H_d_t_2": load.L_H_d_t_i[1],
+        "L_H_d_t_3": load.L_H_d_t_i[2],
+        "L_H_d_t_4": load.L_H_d_t_i[3],
+        "L_H_d_t_5": load.L_H_d_t_i[4],
+        "L_CS_d_t_1": load.L_CS_d_t_i[0],
+        "L_CS_d_t_2": load.L_CS_d_t_i[1],
+        "L_CS_d_t_3": load.L_CS_d_t_i[2],
+        "L_CS_d_t_4": load.L_CS_d_t_i[3],
+        "L_CS_d_t_5": load.L_CS_d_t_i[4],
+        "L_CL_d_t_1": load.L_CL_d_t_i[0],
+        "L_CL_d_t_2": load.L_CL_d_t_i[1],
+        "L_CL_d_t_3": load.L_CL_d_t_i[2],
+        "L_CL_d_t_4": load.L_CL_d_t_i[3],
+        "L_CL_d_t_5": load.L_CL_d_t_i[4],
+        "L_star_CS_d_t_1": L_star_CS_d_t_i[0],
+        "L_star_CS_d_t_2": L_star_CS_d_t_i[1],
+        "L_star_CS_d_t_3": L_star_CS_d_t_i[2],
+        "L_star_CS_d_t_4": L_star_CS_d_t_i[3],
+        "L_star_CS_d_t_5": L_star_CS_d_t_i[4],
+        "L_star_H_d_t_1": L_star_H_d_t_i[0],
+        "L_star_H_d_t_2": L_star_H_d_t_i[1],
+        "L_star_H_d_t_3": L_star_H_d_t_i[2],
+        "L_star_H_d_t_4": L_star_H_d_t_i[3],
+        "L_star_H_d_t_5": L_star_H_d_t_i[4],
+    })
+    return L_star_H_d_t_i, L_star_CS_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1779,32 +1841,10 @@ def calc_Q_UT_A(
         L_star_H_d_t_i = dc.get_L_star_H_d_t_i(load.L_H_d_t_i, Q_star_trs_prt_d_t_i, house.region)
 
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-            # 部屋→床下への熱移動分が戻ってくるため負荷控除する
-            delta_L_uf2room_d_t_i = np.hstack([
-                jjj_ufac_dc.calc_delta_L_room2uf_i(
-                    new_ufac.U_s_floor_ins,
-                    A_s_ufac_i,
-                    np.abs(Theta_star_HBR_d_t[t] - Theta_ex_d_t[t])
-                ) for t in range(24*365)
-            ])
-            H, C, M = dc.get_season_array_d_t(house.region)
-            # (9)-補正
-            Cf = np.logical_and(C, load.L_CS_d_t_i[:5, :] > 0)
-            assert Cf.shape == (5, 24*365)
-            L_star_CS_d_t_i[Cf] -= delta_L_uf2room_d_t_i[:5, :][Cf]
-            # (8)-補正
-            Hf = np.logical_and(H, load.L_H_d_t_i[:5, :] > 0)
-            assert Hf.shape == (5, 24*365)
-            L_star_H_d_t_i[Hf] -= delta_L_uf2room_d_t_i[:5, :][Hf]
-
-            # 床下空調 新ロジック 調査用出力ファイル
-            new_ufac_df.update_df({
-                "L_H_d_t_1": load.L_H_d_t_i[0],   "L_H_d_t_2": load.L_H_d_t_i[1],   "L_H_d_t_3": load.L_H_d_t_i[2],   "L_H_d_t_4": load.L_H_d_t_i[3],   "L_H_d_t_5": load.L_H_d_t_i[4],
-                "L_CS_d_t_1": load.L_CS_d_t_i[0], "L_CS_d_t_2": load.L_CS_d_t_i[1], "L_CS_d_t_3": load.L_CS_d_t_i[2], "L_CS_d_t_4": load.L_CS_d_t_i[3], "L_CS_d_t_5": load.L_CS_d_t_i[4],
-                "L_CL_d_t_1": load.L_CL_d_t_i[0], "L_CL_d_t_2": load.L_CL_d_t_i[1], "L_CL_d_t_3": load.L_CL_d_t_i[2], "L_CL_d_t_4": load.L_CL_d_t_i[3], "L_CL_d_t_5": load.L_CL_d_t_i[4],
-                "L_star_CS_d_t_1": L_star_CS_d_t_i[0], "L_star_CS_d_t_2": L_star_CS_d_t_i[1], "L_star_CS_d_t_3": L_star_CS_d_t_i[2], "L_star_CS_d_t_4": L_star_CS_d_t_i[3], "L_star_CS_d_t_5": L_star_CS_d_t_i[4],
-                "L_star_H_d_t_1": L_star_H_d_t_i[0],  "L_star_H_d_t_2": L_star_H_d_t_i[1],   "L_star_H_d_t_3": L_star_H_d_t_i[2],   "L_star_H_d_t_4": L_star_H_d_t_i[3],   "L_star_H_d_t_5": L_star_H_d_t_i[4],
-            })
+            L_star_H_d_t_i, L_star_CS_d_t_i = _adjust_new_underfloor_balanced_loads(
+                house, new_ufac, new_ufac_df, load, A_s_ufac_i,
+                Theta_star_HBR_d_t, Theta_ex_d_t,
+                L_star_H_d_t_i, L_star_CS_d_t_i)
 
         ####################################################################################################################
         if ac_setting.type in [
