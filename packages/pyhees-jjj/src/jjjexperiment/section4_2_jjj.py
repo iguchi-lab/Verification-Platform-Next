@@ -1211,6 +1211,37 @@ def _get_new_underfloor_supply_temperatures(
     })
     return Theta_supply_d_t_i
 
+def _adjust_legacy_underfloor_supply_temperatures(
+        ac_setting,
+        house,
+        skin,
+        load,
+        Theta_supply_d_t_i,
+        Theta_ex_d_t,
+        V_dash_supply_d_t_i,
+    ):
+    """Apply the legacy underfloor second pass with its original where operation."""
+    # 旧床下空調-2nd
+    for i in range(2):  # i=0,1
+        Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
+            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q,
+            skin.r_A_ufac, skin.underfloor_insulation, Theta_supply_d_t_i[i],
+            Theta_ex_d_t, V_dash_supply_d_t_i[i], '', load.L_H_d_t_i,
+            load.L_CS_d_t_i)
+
+        match ac_setting:
+            case HeatingAcSetting():
+                mask = Theta_supply_d_t_i[i] > Theta_uf_d_t
+            case CoolingAcSetting():
+                mask = Theta_supply_d_t_i[i] < Theta_uf_d_t
+            case _:
+                raise ValueError
+
+        Theta_supply_d_t_i[i] = np.where(
+            mask, Theta_uf_d_t, Theta_supply_d_t_i[i])
+
+    return Theta_supply_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1868,22 +1899,10 @@ def calc_Q_UT_A(
                 Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
                 V_dash_supply_d_t_i)
         elif skin.underfloor_air_conditioning_air_supply == True:
-            for i in range(2):  #i=0,1
-                Theta_uf_d_t, Theta_g_surf_d_t, *others  \
-                    = algo.calc_Theta(  # 旧床下空調-2nd
-                        house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.r_A_ufac, skin.underfloor_insulation,
-                        Theta_supply_d_t_i[i], Theta_ex_d_t, V_dash_supply_d_t_i[i],
-                        '', load.L_H_d_t_i, load.L_CS_d_t_i)
-
-                match ac_setting:
-                    case HeatingAcSetting():
-                        mask = Theta_supply_d_t_i[i] > Theta_uf_d_t
-                    case CoolingAcSetting():
-                        mask = Theta_supply_d_t_i[i] < Theta_uf_d_t
-                    case _:
-                        raise ValueError
-
-                Theta_supply_d_t_i[i] = np.where(mask, Theta_uf_d_t, Theta_supply_d_t_i[i])
+            # Legacy underfloor AC, second pass: preserve the original where operation.
+            Theta_supply_d_t_i = _adjust_legacy_underfloor_supply_temperatures(
+                ac_setting, house, skin, load, Theta_supply_d_t_i,
+                Theta_ex_d_t, V_dash_supply_d_t_i)
 
         _logger.NDdebug("Theta_supply_d_t_1", Theta_supply_d_t_i[0])
         _logger.NDdebug("Theta_supply_d_t_2", Theta_supply_d_t_i[1])
