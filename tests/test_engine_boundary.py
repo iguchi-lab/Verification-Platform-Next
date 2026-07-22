@@ -53,8 +53,6 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS = {
-    ("test_denchu_02_modeling.py", "jjjexperiment.denchu.denchu_1"),
-    ("test_denchu_02_modeling.py", "jjjexperiment.denchu.denchu_2"),
     ("test_denchu_03_estimate.py", "jjjexperiment.denchu.denchu_1"),
     ("test_denchu_03_estimate.py", "jjjexperiment.denchu.denchu_2"),
 }
