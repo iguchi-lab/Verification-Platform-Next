@@ -48,7 +48,6 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 # modules must make their dependencies explicit; shrink this migration allowlist as
 # each remaining boundary is refactored.
 EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS = {
-    ("denchu/denchu_1.py", "jjjexperiment.denchu.utils"),
     ("denchu/denchu_2.py", "jjjexperiment.denchu.denchu_1"),
     (
         "underfloor_ac/section4_2_f46_f48.py",
