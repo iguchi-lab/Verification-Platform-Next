@@ -1,5 +1,6 @@
 import ast
 import importlib
+import inspect
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,25 @@ EXPECTED_SECTION4_2_MAIN_API = {
     "VHS_DSGN_H",
     "calc_Q_UT_A",
 }
+
+EXPECTED_CALC_Q_UT_A_PARAMETERS = (
+    "case_name",
+    "climateFile",
+    "house",
+    "ac_setting",
+    "skin",
+    "heat_CRAC",
+    "cool_CRAC",
+    "new_ufac",
+    "new_ufac_df",
+    "v_min_heat_input",
+    "v_min_cool_input",
+    "V_hs_dsgn_H",
+    "V_hs_dsgn_C",
+    "v_supply_cap_dto",
+    "carryover_heat_dto",
+    "load",
+)
 
 EXPECTED_SECTION4_2_A_MAIN_API = {
     "calc_E_E_C_d_t_type1_and_type3",
@@ -69,6 +89,12 @@ def _accessed_attributes(alias: str) -> set[str]:
 def test_main_section4_2_api_contract():
     assert _accessed_attributes("jjj_dc") == EXPECTED_SECTION4_2_MAIN_API
     assert all(hasattr(main.jjj_dc, name) for name in EXPECTED_SECTION4_2_MAIN_API)
+
+
+def test_calc_q_ut_a_signature_contract():
+    assert tuple(inspect.signature(main.jjj_dc.calc_Q_UT_A).parameters) == (
+        EXPECTED_CALC_Q_UT_A_PARAMETERS
+    )
 
 
 def test_legacy_section4_2_import_aliases_jjj_module():
