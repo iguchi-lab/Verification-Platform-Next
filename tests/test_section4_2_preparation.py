@@ -3088,7 +3088,8 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
     context = [object() for _ in range(15)]
     monkeypatch.setattr(
         sut, "_get_heat_source_outlet_requirements",
-        lambda *a: events.append(("requirements", a)) or (x_min, x_req, theta_req))
+        lambda *a: events.append(("requirements", a))
+        or sut._HeatSourceOutletRequirementsResult(x_min, x_req, theta_req))
     monkeypatch.setattr(
         sut, "_get_new_underfloor_requested_temperatures",
         lambda *a: events.append(("new", a)) or adjusted)
@@ -3225,7 +3226,8 @@ def test_prepare_carryover_outlet_requirements_preserves_first_pass(
     monkeypatch.setattr(
         sut, "_get_heat_source_outlet_requirements",
         lambda *a: events.append(("requirements", a))
-        or (humidity_min, humidity_req, temperature_req))
+        or sut._HeatSourceOutletRequirementsResult(
+            humidity_min, humidity_req, temperature_req))
     monkeypatch.setattr(
         sut, "_adjust_legacy_underfloor_requested_temperatures",
         lambda *a: events.append(("adjust", a)) or adjusted)

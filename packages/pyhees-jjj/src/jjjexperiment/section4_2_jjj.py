@@ -2195,12 +2195,14 @@ def _prepare_no_carryover_outlet_requirements(
         Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
         Theta_ex_d_t, Theta_in_d_t):
     """Prepare outlet requirements and the optional first underfloor pass."""
-    X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
-        _get_heat_source_outlet_requirements(
-            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
-            X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
-            Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
-            l_duct_i, house.region)
+    outlet_requirements = _get_heat_source_outlet_requirements(
+        X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+        X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+        Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+        l_duct_i, house.region)
+    X_hs_out_min_C_d_t = outlet_requirements.X_hs_out_min_C_d_t
+    X_req_d_t_i = outlet_requirements.X_req_d_t_i
+    Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(
             ac_setting, house, skin, load, new_ufac, new_ufac_df,
@@ -2564,12 +2566,14 @@ def _prepare_carryover_outlet_requirements(
         L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
         L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, Theta_ex_d_t):
     """Prepare carryover outlet requirements and legacy first floor pass."""
-    X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
-        _get_heat_source_outlet_requirements(
-            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
-            X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
-            Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
-            l_duct_i, house.region)
+    outlet_requirements = _get_heat_source_outlet_requirements(
+        X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+        X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+        Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+        l_duct_i, house.region)
+    X_hs_out_min_C_d_t = outlet_requirements.X_hs_out_min_C_d_t
+    X_req_d_t_i = outlet_requirements.X_req_d_t_i
+    Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
     if skin.underfloor_air_conditioning_air_supply:
         Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
             ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
