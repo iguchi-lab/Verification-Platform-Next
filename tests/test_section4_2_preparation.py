@@ -3451,3 +3451,238 @@ def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
     assert events[1][1][0] is outlet_frame
     assert events[0][1][1:] == tuple(inputs[:9])
     assert events[1][1][1:] == tuple(inputs[9:])
+
+
+def test_prepare_heat_source_outlet_temperature_output_preserves_formula_14(
+        monkeypatch):
+    events = []
+    temperature = object()
+    setting = SimpleNamespace(VAV=object())
+    house = SimpleNamespace(region=6)
+    inputs = [object() for _ in range(7)]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("setitem", key, value))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_hs_out_d_t",
+        lambda *a: events.append(("formula", a)) or temperature)
+
+    result = sut._prepare_heat_source_outlet_temperature_output(
+        frame, setting, house, *inputs)
+
+    assert result == (temperature, frame)
+    assert [event[0] for event in events] == ["formula", "setitem"]
+    assert events[0][1][0] is setting.VAV
+    assert events[0][1][5] == house.region
+    assert events[1] == ("setitem", "Theta_hs_out_d_t", temperature)
+
+
+def test_prepare_supply_humidity_output_preserves_formula_42_column_order(
+        monkeypatch):
+    events = []
+    humidity = [object() for _ in range(5)]
+
+    class Frame:
+        def assign(self, **values):
+            events.append(("assign", tuple(values), values))
+            return self
+
+    frame = Frame()
+    inputs = [object() for _ in range(4)]
+    monkeypatch.setattr(
+        sut.dc, "get_X_supply_d_t_i",
+        lambda *a: events.append(("formula", a)) or humidity)
+
+    result = sut._prepare_supply_humidity_output(frame, *inputs)
+
+    assert result == (humidity, frame)
+    assert events[0] == ("formula", tuple(inputs))
+    assert events[1][1] == tuple(f"X_supply_d_t_{i}" for i in range(1, 6))
+    assert list(events[1][2].values()) == humidity
+
+
+def test_prepare_heat_source_ventilation_airflow_output_preserves_formula_35(
+        monkeypatch):
+    events = []
+    value = object()
+    inputs = [object(), object()]
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("setitem", key, item))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_V_hs_vent_d_t",
+        lambda *args: events.append(("formula", args)) or value)
+
+    assert sut._prepare_heat_source_ventilation_airflow_output(
+        frame, *inputs) == (value, frame)
+    assert events == [
+        ("formula", tuple(inputs)),
+        ("setitem", "V_hs_vent_d_t", value),
+    ]
+
+
+def test_prepare_heat_source_supply_airflow_output_preserves_formula_34(
+        monkeypatch):
+    events = []
+    value = object()
+    source = object()
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("setitem", key, item))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_V_hs_supply_d_t",
+        lambda arg: events.append(("formula", arg)) or value)
+
+    assert sut._prepare_heat_source_supply_airflow_output(
+        frame, source) == (value, frame)
+    assert events == [
+        ("formula", source),
+        ("setitem", "V_hs_supply_d_t", value),
+    ]
+
+
+def test_prepare_heat_source_inlet_humidity_output_preserves_formula_13(
+        monkeypatch):
+    events = []
+    value = object()
+    source = object()
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("setitem", key, item))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_X_hs_in_d_t",
+        lambda arg: events.append(("formula", arg)) or value)
+
+    assert sut._prepare_heat_source_inlet_humidity_output(
+        frame, source) == (value, frame)
+    assert events == [
+        ("formula", source),
+        ("setitem", "X_hs_in_d_t", value),
+    ]
+
+
+def test_prepare_heat_source_inlet_temperature_output_preserves_formula_12(
+        monkeypatch):
+    events = []
+    value = object()
+    source = object()
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("setitem", key, item))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_hs_in_d_t",
+        lambda arg: events.append(("formula", arg)) or value)
+
+    assert sut._prepare_heat_source_inlet_temperature_output(
+        frame, source) == (value, frame)
+    assert events == [
+        ("formula", source),
+        ("setitem", "Theta_hs_in_d_t", value),
+    ]
+
+
+def test_prepare_actual_load_state_preserves_calculate_record_order(
+        monkeypatch):
+    events = []
+    loads = tuple(object() for _ in range(3))
+    original = object()
+    recorded = object()
+    inputs = [object() for _ in range(7)]
+    monkeypatch.setattr(
+        sut, "_get_actual_loads",
+        lambda *args: events.append(("calculate", args)) or loads)
+    monkeypatch.setattr(
+        sut, "_record_actual_load_outputs",
+        lambda *args: events.append(("record", args)) or recorded)
+
+    result = sut._prepare_actual_load_state(original, *inputs)
+
+    assert result == (*loads, recorded)
+    assert events == [
+        ("calculate", tuple(inputs)),
+        ("record", (original, *loads)),
+    ]
+
+
+def test_prepare_unprocessed_load_state_preserves_calculate_record_order(
+        monkeypatch):
+    events = []
+    loads = tuple(object() for _ in range(3))
+    original = object()
+    recorded = object()
+    inputs = [object() for _ in range(6)]
+    monkeypatch.setattr(
+        sut, "_get_unprocessed_loads",
+        lambda *args: events.append(("calculate", args)) or loads)
+    monkeypatch.setattr(
+        sut, "_record_unprocessed_load_outputs",
+        lambda *args: events.append(("record", args)) or recorded)
+
+    result = sut._prepare_unprocessed_load_state(original, *inputs)
+
+    assert result == (*loads, recorded)
+    assert events == [
+        ("calculate", tuple(inputs)),
+        ("record", (original, *loads)),
+    ]
+
+
+def test_prepare_unprocessed_energy_state_preserves_calculate_record_order(
+        monkeypatch):
+    events = []
+    energy = object()
+    output_name = object()
+    original = object()
+    recorded = object()
+    inputs = [object() for _ in range(5)]
+    monkeypatch.setattr(
+        sut, "_get_unprocessed_energy",
+        lambda *args: events.append(("calculate", args))
+        or (energy, output_name))
+    monkeypatch.setattr(
+        sut, "_record_unprocessed_energy_output",
+        lambda *args: events.append(("record", args)) or recorded)
+
+    result = sut._prepare_unprocessed_energy_state(original, *inputs)
+
+    assert result == (energy, recorded)
+    assert events == [
+        ("calculate", tuple(inputs)),
+        ("record", (original, output_name, energy)),
+    ]
+
+
+def test_export_and_build_calculation_result_preserves_order(monkeypatch):
+    events = []
+    inputs = [object() for _ in range(15)]
+    monkeypatch.setattr(
+        sut, "_export_underfloor_output",
+        lambda *args: events.append(("underfloor", args)))
+    monkeypatch.setattr(
+        sut, "_export_standard_outputs",
+        lambda *args: events.append(("standard", args)))
+
+    result = sut._export_and_build_calculation_result(*inputs)
+
+    assert events == [
+        ("underfloor", (inputs[0], inputs[1], inputs[3], inputs[4])),
+        ("standard", (
+            inputs[0], inputs[1], inputs[2],
+            inputs[5], inputs[6], inputs[7])),
+    ]
+    assert result == tuple(inputs[8:])

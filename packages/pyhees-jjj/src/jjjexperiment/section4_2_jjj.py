@@ -2074,6 +2074,122 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _export_and_build_calculation_result(
+        case_name, ac_setting, house, new_ufac, new_ufac_df,
+        df_output3, df_output2, df_output, E_UT_d_t,
+        Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t,
+        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t):
+    """Export underfloor and standard outputs, then preserve return order."""
+    _export_underfloor_output(
+        case_name, ac_setting, new_ufac, new_ufac_df)
+    _export_standard_outputs(
+        case_name, ac_setting, house, df_output3, df_output2, df_output)
+    return (
+        E_UT_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t,
+        X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t,
+    )
+
+
+def _prepare_unprocessed_energy_state(
+        df_output, ac_setting, Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region):
+    """Calculate and record unprocessed primary energy."""
+    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
+        ac_setting, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region)
+    df_output = _record_unprocessed_energy_output(
+        df_output, E_UT_output_name, E_UT_d_t)
+    return E_UT_d_t, df_output
+
+
+def _prepare_unprocessed_load_state(
+        df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
+        L_star_CS_d_t_i, L_dash_CS_d_t_i,
+        L_star_H_d_t_i, L_dash_H_d_t_i):
+    """Calculate and record unprocessed cooling and heating loads."""
+    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
+        L_star_CL_d_t_i, L_dash_CL_d_t_i,
+        L_star_CS_d_t_i, L_dash_CS_d_t_i,
+        L_star_H_d_t_i, L_dash_H_d_t_i)
+    df_output = _record_unprocessed_load_outputs(
+        df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i)
+    return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, df_output
+
+
+def _prepare_actual_load_state(
+        df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
+        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
+    """Calculate and record actual cooling and heating loads."""
+    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
+        carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
+        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+    df_output = _record_actual_load_outputs(
+        df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i)
+    return (
+        L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i, df_output,
+    )
+
+
+def _prepare_heat_source_inlet_temperature_output(
+        df_output, Theta_NR_d_t):
+    """Calculate and record formula (12) by direct assignment."""
+    Theta_hs_in_d_t = dc.get_Theta_hs_in_d_t(Theta_NR_d_t)
+    df_output['Theta_hs_in_d_t'] = Theta_hs_in_d_t
+    return Theta_hs_in_d_t, df_output
+
+
+def _prepare_heat_source_inlet_humidity_output(df_output, X_NR_d_t):
+    """Calculate and record formula (13) by direct assignment."""
+    X_hs_in_d_t = dc.get_X_hs_in_d_t(X_NR_d_t)
+    df_output['X_hs_in_d_t'] = X_hs_in_d_t
+    return X_hs_in_d_t, df_output
+
+
+def _prepare_heat_source_supply_airflow_output(
+        df_output, V_supply_d_t_i):
+    """Calculate and record formula (34) by direct assignment."""
+    V_hs_supply_d_t = dc.get_V_hs_supply_d_t(V_supply_d_t_i)
+    df_output['V_hs_supply_d_t'] = V_hs_supply_d_t
+    return V_hs_supply_d_t, df_output
+
+
+def _prepare_heat_source_ventilation_airflow_output(
+        df_output, V_vent_g_i, general_ventilation):
+    """Calculate and record formula (35) by direct assignment."""
+    V_hs_vent_d_t = dc.get_V_hs_vent_d_t(
+        V_vent_g_i, general_ventilation)
+    df_output['V_hs_vent_d_t'] = V_hs_vent_d_t
+    return V_hs_vent_d_t, df_output
+
+
+def _prepare_supply_humidity_output(
+        df_output, X_star_HBR_d_t, X_hs_out_d_t,
+        L_star_CL_d_t_i, region):
+    """Calculate formula (42) and preserve five-column assign order."""
+    X_supply_d_t_i = dc.get_X_supply_d_t_i(
+        X_star_HBR_d_t, X_hs_out_d_t, L_star_CL_d_t_i, region)
+    df_output = df_output.assign(
+        X_supply_d_t_1=X_supply_d_t_i[0],
+        X_supply_d_t_2=X_supply_d_t_i[1],
+        X_supply_d_t_3=X_supply_d_t_i[2],
+        X_supply_d_t_4=X_supply_d_t_i[3],
+        X_supply_d_t_5=X_supply_d_t_i[4],
+    )
+    return X_supply_d_t_i, df_output
+
+
+def _prepare_heat_source_outlet_temperature_output(
+        df_output, ac_setting, house, Theta_req_d_t_i,
+        V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+        Theta_NR_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t):
+    """Calculate and record formula (14) by direct column assignment."""
+    Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(
+        ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
+        L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
+        Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
+    df_output['Theta_hs_out_d_t'] = Theta_hs_out_d_t
+    return Theta_hs_out_d_t, df_output
+
+
 def _record_common_outlet_and_supply_outputs(
         df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
@@ -2696,100 +2812,67 @@ def calc_Q_UT_A(
         V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
         Theta_HBR_d_t_i, Theta_NR_d_t)
     """ 吹出口 - 熱源機の出口 """
-    # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以下だった場合の為に再計算
     # (14)　熱源機の出口における空気温度
-    Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
-                                            L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
-                                            Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
-    df_output['Theta_hs_out_d_t'] = Theta_hs_out_d_t
+    Theta_hs_out_d_t, df_output = \
+        _prepare_heat_source_outlet_temperature_output(
+            df_output, ac_setting, house, Theta_req_d_t_i,
+            V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+            Theta_NR_d_t, Theta_hs_out_max_H_d_t,
+            Theta_hs_out_min_C_d_t)
 
     """ 吹出口 - 吹出口 """
     # (42)　暖冷房区画𝑖の吹き出し絶対湿度
-    X_supply_d_t_i = dc.get_X_supply_d_t_i(X_star_HBR_d_t, X_hs_out_d_t, L_star_CL_d_t_i, house.region)
-    df_output = df_output.assign(
-        X_supply_d_t_1 = X_supply_d_t_i[0],
-        X_supply_d_t_2 = X_supply_d_t_i[1],
-        X_supply_d_t_3 = X_supply_d_t_i[2],
-        X_supply_d_t_4 = X_supply_d_t_i[3],
-        X_supply_d_t_5 = X_supply_d_t_i[4]
-    )
+    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(
+        df_output, X_star_HBR_d_t, X_hs_out_d_t,
+        L_star_CL_d_t_i, house.region)
 
     """ 熱源機の入口 - 熱源機の風量の計算 """
     # (35)　熱源機の風量のうちの全般換気分
-    V_hs_vent_d_t = dc.get_V_hs_vent_d_t(V_vent_g_i, ac_setting.general_ventilation)  # 従来式通り
-    df_output['V_hs_vent_d_t'] = V_hs_vent_d_t
+    V_hs_vent_d_t, df_output = \
+        _prepare_heat_source_ventilation_airflow_output(
+            df_output, V_vent_g_i, ac_setting.general_ventilation)
 
     # (34)　熱源機の風量
-    V_hs_supply_d_t = dc.get_V_hs_supply_d_t(V_supply_d_t_i)
-    df_output['V_hs_supply_d_t'] = V_hs_supply_d_t
+    V_hs_supply_d_t, df_output = \
+        _prepare_heat_source_supply_airflow_output(
+            df_output, V_supply_d_t_i)
 
     """ 熱源機の入口 - 熱源機の入口 """
     # (13)　熱源機の入口における絶対湿度
-    X_hs_in_d_t = dc.get_X_hs_in_d_t(X_NR_d_t)
-    df_output['X_hs_in_d_t'] = X_hs_in_d_t
+    X_hs_in_d_t, df_output = _prepare_heat_source_inlet_humidity_output(
+        df_output, X_NR_d_t)
 
     # (12)　熱源機の入口における空気温度
-    Theta_hs_in_d_t = dc.get_Theta_hs_in_d_t(Theta_NR_d_t)
-    df_output['Theta_hs_in_d_t'] = Theta_hs_in_d_t
+    Theta_hs_in_d_t, df_output = \
+        _prepare_heat_source_inlet_temperature_output(
+            df_output, Theta_NR_d_t)
 
     """ まとめ - 実際の暖冷房負荷 """
-    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
-        carryover_heat_dto,
-        V_supply_d_t_i,
-        X_HBR_d_t_i,
-        X_supply_d_t_i,
-        Theta_supply_d_t_i,
-        Theta_HBR_d_t_i,
-        house.region,
-    )
-    df_output = _record_actual_load_outputs(
-        df_output,
+    (
         L_dash_CL_d_t_i,
         L_dash_CS_d_t_i,
         L_dash_H_d_t_i,
-    )
+        df_output,
+    ) = _prepare_actual_load_state(
+        df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
+        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i,
+        house.region)
     """ まとめ - 未処理負荷 """
-    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
-        L_star_CL_d_t_i,
-        L_dash_CL_d_t_i,
-        L_star_CS_d_t_i,
-        L_dash_CS_d_t_i,
-        L_star_H_d_t_i,
-        L_dash_H_d_t_i,
-    )
-    df_output = _record_unprocessed_load_outputs(
-        df_output,
+    (
         Q_UT_CL_d_t_i,
         Q_UT_CS_d_t_i,
         Q_UT_H_d_t_i,
-    )
+        df_output,
+    ) = _prepare_unprocessed_load_state(
+        df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
+        L_star_CS_d_t_i, L_dash_CS_d_t_i,
+        L_star_H_d_t_i, L_dash_H_d_t_i)
     """ まとめ - 一次エネルギー """
-    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
-        ac_setting,
-        Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i,
-        Q_UT_H_d_t_i,
-        house.region,
-    )
-    df_output = _record_unprocessed_energy_output(
-        df_output,
-        E_UT_output_name,
-        E_UT_d_t,
-    )
-    _export_underfloor_output(
-        case_name,
-        ac_setting,
-        new_ufac,
-        new_ufac_df,
-    )
-    _export_standard_outputs(
-        case_name,
-        ac_setting,
-        house,
-        df_output3,
-        df_output2,
-        df_output,
-    )
-    return E_UT_d_t, \
-            Theta_hs_out_d_t, Theta_hs_in_d_t, \
-            X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t
+    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(
+        df_output, ac_setting, Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region)
+    return _export_and_build_calculation_result(
+        case_name, ac_setting, house, new_ufac, new_ufac_df,
+        df_output3, df_output2, df_output, E_UT_d_t,
+        Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t,
+        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t)
