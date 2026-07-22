@@ -139,6 +139,26 @@ class _CarryoverHourlyStateResult(NamedTuple):
     C: object
     M: object
 
+class _CapacityStateResult(NamedTuple):
+    Q_hs_max_C_d_t: object
+    Q_hs_max_CL_d_t: object
+    Q_hs_max_CS_d_t: object
+    Q_hs_max_H_d_t: object
+    L_star_CL_d_t: object
+    L_star_CS_d_t: object
+    L_star_dash_CL_d_t: object
+    L_star_dash_C_d_t: object
+    C_df_H_d_t: object
+    Q_r_max_H_d_t: object
+    Q_r_max_C_d_t: object
+    L_max_CL_d_t: object
+    L_dash_CL_d_t: object
+    L_dash_C_d_t: object
+    q_r_max_H: object
+    q_r_max_C: object
+    SHF_L_min_c: object
+    SHF_dash_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2132,7 +2152,7 @@ def _prepare_no_carryover_capacity_state(
         Q_hs_max_CS_d_t = Q_max_CS_d_t
     else:
         raise Exception('設備機器の種類の入力が不正です。')
-    return (
+    return _CapacityStateResult(
         Q_hs_max_C_d_t,
         Q_hs_max_CL_d_t,
         Q_hs_max_CS_d_t,
@@ -2600,13 +2620,25 @@ def _prepare_carryover_capacity_state(
         Q_hs_max_CS_d_t = Q_max_CS_d_t
     else:
         raise Exception('設備機器の種類の入力が不正です。')
-    return (
-        Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-        Q_hs_max_H_d_t, L_star_CL_d_t, L_star_CS_d_t,
-        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_H, q_r_max_C,
-        SHF_L_min_c, SHF_dash_d_t,
+    return _CapacityStateResult(
+        Q_hs_max_C_d_t,
+        Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t,
+        Q_hs_max_H_d_t,
+        L_star_CL_d_t,
+        L_star_CS_d_t,
+        L_star_dash_CL_d_t,
+        L_star_dash_C_d_t,
+        C_df_H_d_t,
+        Q_r_max_H_d_t,
+        Q_r_max_C_d_t,
+        L_max_CL_d_t,
+        L_dash_CL_d_t,
+        L_dash_C_d_t,
+        q_r_max_H,
+        q_r_max_C,
+        SHF_L_min_c,
+        SHF_dash_d_t,
     )
 
 

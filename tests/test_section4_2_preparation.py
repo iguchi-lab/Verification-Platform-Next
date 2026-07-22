@@ -3901,3 +3901,31 @@ def test_carryover_hourly_state_result_preserves_tuple_contract():
         "C",
         "M",
     )
+
+
+def test_capacity_state_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(18))
+    result = sut._CapacityStateResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "Q_hs_max_C_d_t",
+        "Q_hs_max_CL_d_t",
+        "Q_hs_max_CS_d_t",
+        "Q_hs_max_H_d_t",
+        "L_star_CL_d_t",
+        "L_star_CS_d_t",
+        "L_star_dash_CL_d_t",
+        "L_star_dash_C_d_t",
+        "C_df_H_d_t",
+        "Q_r_max_H_d_t",
+        "Q_r_max_C_d_t",
+        "L_max_CL_d_t",
+        "L_dash_CL_d_t",
+        "L_dash_C_d_t",
+        "q_r_max_H",
+        "q_r_max_C",
+        "SHF_L_min_c",
+        "SHF_dash_d_t",
+    )
