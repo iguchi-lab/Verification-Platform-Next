@@ -52,10 +52,7 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 # each remaining boundary is refactored.
 EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
-EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS = {
-    ("test_denchu_03_estimate.py", "jjjexperiment.denchu.denchu_1"),
-    ("test_denchu_03_estimate.py", "jjjexperiment.denchu.denchu_2"),
-}
+EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
