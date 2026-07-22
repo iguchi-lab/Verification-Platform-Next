@@ -3617,7 +3617,7 @@ def test_prepare_heat_source_inlet_temperature_output_preserves_formula_12(
 def test_prepare_actual_load_state_preserves_calculate_record_order(
         monkeypatch):
     events = []
-    loads = tuple(object() for _ in range(3))
+    loads = sut._ActualLoadsResult(*(object() for _ in range(3)))
     original = object()
     recorded = object()
     inputs = [object() for _ in range(7)]

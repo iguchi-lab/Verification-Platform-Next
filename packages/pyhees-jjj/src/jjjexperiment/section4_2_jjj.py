@@ -2328,9 +2328,12 @@ def _prepare_actual_load_state(
         df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
     """Calculate and record actual cooling and heating loads."""
-    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
+    actual_loads = _get_actual_loads(
         carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+    L_dash_CL_d_t_i = actual_loads.L_dash_CL_d_t_i
+    L_dash_CS_d_t_i = actual_loads.L_dash_CS_d_t_i
+    L_dash_H_d_t_i = actual_loads.L_dash_H_d_t_i
     df_output = _record_actual_load_outputs(
         df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i)
     return (
