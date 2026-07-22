@@ -47,9 +47,7 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 # Package __init__.py files may deliberately re-export a public API. Implementation
 # modules must make their dependencies explicit; shrink this migration allowlist as
 # each remaining boundary is refactored.
-EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS = {
-    ("denchu/denchu_2.py", "jjjexperiment.denchu.denchu_1"),
-}
+EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
