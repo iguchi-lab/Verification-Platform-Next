@@ -903,3 +903,40 @@ def test_supply_airflow_before_vav_preserves_standard_formula_order(monkeypatch)
         ("ratios", areas),
         ("supply", (ratios, heat_source_airflow, ventilation)),
     ]
+
+def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
+    calls = []
+    area = np.arange(1.0, 13.0).reshape(12, 1)
+    theta_out = np.arange(24 * 365, dtype=float)
+    theta_in = theta_out - 2.0
+    output = np.full(24 * 365, 100.0)
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "get_A_s_ufac_i",
+        lambda *args: calls.append(("area", args)) or (area, 0.4),
+    )
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_delta_L_room2uf_i",
+        lambda insulation, values, delta: calls.append(
+            ("transfer", insulation, values, delta)
+        ) or np.full((12, 1), delta),
+    )
+
+    result = sut._adjust_heat_source_output_for_room_to_underfloor_transfer(
+        SimpleNamespace(U_s_vert=0.7, U_s_floor_ins=0.3),
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+        theta_out,
+        theta_in,
+        output,
+    )
+
+    assert result[0] is output
+    np.testing.assert_array_equal(output, np.full(24 * 365, 76.0))
+    assert result[1] == 0.7
+    assert result[2] is area
+    assert result[3] == 0.4
+    assert calls[0] == ("area", (120.0, 30.0, 50.0))
+    assert len(calls) == 1 + 24 * 365
+    assert calls[1][1:] == (0.3, area, 2.0)
+    assert calls[-1][1:] == (0.3, area, 2.0)

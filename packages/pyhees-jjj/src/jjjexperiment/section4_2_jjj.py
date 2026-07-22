@@ -280,6 +280,37 @@ def _get_supply_airflow_before_vav(
 
     return r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i
 
+def _adjust_heat_source_output_for_room_to_underfloor_transfer(
+        new_ufac: UnderfloorAc,
+        house: HouseInfo,
+        Theta_ex_d_t: np.ndarray,
+        Theta_in_d_t: np.ndarray,
+        Q_hat_hs_d_t: np.ndarray,
+    ) -> tuple[np.ndarray, float, np.ndarray, float]:
+    """Apply the first formula (40)-2nd transfer without changing mutation."""
+    # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
+    # 1. 床下 -> 居室全体 (目標方向の熱移動)
+    #260112 IGUCHI 床の熱貫流率は、入力値を使う！
+    U_s_input = new_ufac.U_s_vert  # 床板(床チャンバー上面)の熱貫流率 [W/(m2・K)]
+    A_s_ufac_i, r_A_s_ufac = jjj_ufac_dc.get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
+    #260112 IGUCHI デバッグ用
+    #print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
+    assert A_s_ufac_i.ndim == 2
+    delta_L_room2uf_d_t_i  \
+        = np.hstack([
+            jjj_ufac_dc.calc_delta_L_room2uf_i(
+                new_ufac.U_s_floor_ins,
+                A_s_ufac_i,
+                np.abs(Theta_ex_d_t[t] - Theta_in_d_t[t])
+            ) for t in range(24*365)  # 各要素が shape(12,1)
+        ])
+    assert delta_L_room2uf_d_t_i.ndim == 2
+    Q_hat_hs_d_t -= np.sum(delta_L_room2uf_d_t_i, axis=0)
+    #260112 IGUCHI デバッグ用
+    #print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
+
+    return Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -790,27 +821,18 @@ def calc_Q_UT_A(
         if not should_be_adjusted_Q_hat_hs_d_t:
             break
 
-        # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
-        # 1. 床下 -> 居室全体 (目標方向の熱移動)
-        #260112 IGUCHI 床の熱貫流率は、入力値を使う！
-        U_s_input = new_ufac.U_s_vert  # 床板(床チャンバー上面)の熱貫流率 [W/(m2・K)]
-        A_s_ufac_i, r_A_s_ufac = jjj_ufac_dc.get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
-        #260112 IGUCHI デバッグ用
-        #print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
-        assert A_s_ufac_i.ndim == 2
-        delta_L_room2uf_d_t_i  \
-            = np.hstack([
-                jjj_ufac_dc.calc_delta_L_room2uf_i(
-                    new_ufac.U_s_floor_ins,
-                    A_s_ufac_i,
-                    np.abs(Theta_ex_d_t[t] - Theta_in_d_t[t])
-                ) for t in range(24*365)  # 各要素が shape(12,1)
-            ])
-        assert delta_L_room2uf_d_t_i.ndim == 2
-        Q_hat_hs_d_t -= np.sum(delta_L_room2uf_d_t_i, axis=0)
-        #260112 IGUCHI デバッグ用
-        #print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
-
+        (
+            Q_hat_hs_d_t,
+            U_s_input,
+            A_s_ufac_i,
+            r_A_s_ufac,
+        ) = _adjust_heat_source_output_for_room_to_underfloor_transfer(
+            new_ufac,
+            house,
+            Theta_ex_d_t,
+            Theta_in_d_t,
+            Q_hat_hs_d_t,
+        )
         # 2. 床下 -> 外気 (逃げ方向)
         # 一階負荷 暖冷房
         match ac_setting:
