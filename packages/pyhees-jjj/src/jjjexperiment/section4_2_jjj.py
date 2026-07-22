@@ -2074,6 +2074,13 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_heat_source_inlet_humidity_output(df_output, X_NR_d_t):
+    """Calculate and record formula (13) by direct assignment."""
+    X_hs_in_d_t = dc.get_X_hs_in_d_t(X_NR_d_t)
+    df_output['X_hs_in_d_t'] = X_hs_in_d_t
+    return X_hs_in_d_t, df_output
+
+
 def _prepare_heat_source_supply_airflow_output(
         df_output, V_supply_d_t_i):
     """Calculate and record formula (34) by direct assignment."""
@@ -2769,8 +2776,8 @@ def calc_Q_UT_A(
 
     """ 熱源機の入口 - 熱源機の入口 """
     # (13)　熱源機の入口における絶対湿度
-    X_hs_in_d_t = dc.get_X_hs_in_d_t(X_NR_d_t)
-    df_output['X_hs_in_d_t'] = X_hs_in_d_t
+    X_hs_in_d_t, df_output = _prepare_heat_source_inlet_humidity_output(
+        df_output, X_NR_d_t)
 
     # (12)　熱源機の入口における空気温度
     Theta_hs_in_d_t = dc.get_Theta_hs_in_d_t(Theta_NR_d_t)
