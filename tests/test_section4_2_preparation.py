@@ -3822,3 +3822,18 @@ def test_unprocessed_loads_result_preserves_tuple_contract():
         "Q_UT_CS_d_t_i",
         "Q_UT_H_d_t_i",
     )
+
+
+def test_climate_conditions_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(5))
+    result = sut._ClimateConditionsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "climate",
+        "Theta_ex_d_t",
+        "X_ex_d_t",
+        "J_d_t",
+        "h_ex_d_t",
+    )

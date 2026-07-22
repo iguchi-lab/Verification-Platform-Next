@@ -100,6 +100,13 @@ class _UnprocessedLoadsResult(NamedTuple):
     Q_UT_CS_d_t_i: object
     Q_UT_H_d_t_i: object
 
+class _ClimateConditionsResult(NamedTuple):
+    climate: object
+    Theta_ex_d_t: object
+    X_ex_d_t: object
+    J_d_t: object
+    h_ex_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1618,7 +1625,13 @@ def _prepare_climate_conditions(df_output, house, new_ufac, climateFile):
     df_output['X_ex_d_t'] = X_ex_d_t
     df_output['J_d_t'] = J_d_t
     df_output['h_ex_d_t'] = h_ex_d_t
-    return climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t
+    return _ClimateConditionsResult(
+        climate,
+        Theta_ex_d_t,
+        X_ex_d_t,
+        J_d_t,
+        h_ex_d_t,
+    )
 
 def _prepare_dwelling_areas_and_water_heat(df_output2, df_output3, house):
     """Prepare dwelling areas and formula (67) in their original order."""
