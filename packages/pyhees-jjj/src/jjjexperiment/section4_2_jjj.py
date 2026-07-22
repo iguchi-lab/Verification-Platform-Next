@@ -2900,17 +2900,16 @@ def calc_Q_UT_A(
         # NOTE: 過剰熱繰越と併用しないオプションはインプットデータクラスの段階で強制オフしている
 
         # 過剰熱繰越ループの配列・季節状態を初期化
-        (
-            L_star_CS_d_t_i,
-            L_star_H_d_t_i,
-            Theta_star_hs_in_d_t,
-            Theta_HBR_d_t_i,
-            Theta_NR_d_t,
-            carryovers,
-            H,
-            C,
-            M,
-        ) = _initialize_carryover_hourly_state(house.region)
+        carryover_hourly_state = _initialize_carryover_hourly_state(house.region)
+        L_star_CS_d_t_i = carryover_hourly_state.L_star_CS_d_t_i
+        L_star_H_d_t_i = carryover_hourly_state.L_star_H_d_t_i
+        Theta_star_hs_in_d_t = carryover_hourly_state.Theta_star_hs_in_d_t
+        Theta_HBR_d_t_i = carryover_hourly_state.Theta_HBR_d_t_i
+        Theta_NR_d_t = carryover_hourly_state.Theta_NR_d_t
+        carryovers = carryover_hourly_state.carryovers
+        H = carryover_hourly_state.H
+        C = carryover_hourly_state.C
+        M = carryover_hourly_state.M
         for t in range(0, 24 * 365):
             # TODO: 先頭時の扱いを考慮
             isFirst = (t == 0)
