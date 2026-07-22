@@ -1712,6 +1712,113 @@ def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
         sum_Theta_dash_g_surf_A_m,
         should_adjust,
     )
+
+
+def _prepare_pre_vav_airflow_state(
+        df_output, df_output2, ac_setting, house, skin, load, new_ufac,
+        climate, A_HCZ_i, V_hs_dsgn_H, V_hs_dsgn_C, V_hs_min,
+        Q_hs_rtd_H, Q_hs_rtd_C, Q_hat_hs_d_t, Q_hat_hs_CS_d_t,
+        V_vent_g_i, Theta_in_d_t, Theta_ex_d_t, Phi_A_0, Theta_g_avg,
+        sum_Theta_dash_g_surf_A_m, should_adjust):
+    """Prepare pre-VAV airflow, including the optional underfloor recalculation."""
+    A_s_ufac_i = None
+    Theta_uf_d_t = None
+    while True:
+        V_dash_hs_supply_d_t = _get_heat_source_supply_airflow_before_vav(
+            ac_setting,
+            house,
+            skin,
+            V_hs_dsgn_H,
+            V_hs_dsgn_C,
+            V_hs_min,
+            Q_hs_rtd_H,
+            Q_hs_rtd_C,
+            Q_hat_hs_d_t,
+            Q_hat_hs_CS_d_t,
+        )
+        df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
+        (
+            r_supply_des_i,
+            r_supply_des_d_t_i,
+            V_dash_supply_d_t_i,
+        ) = _get_supply_airflow_before_vav(
+            ac_setting,
+            house,
+            load,
+            A_HCZ_i,
+            V_dash_hs_supply_d_t,
+            V_vent_g_i,
+        )
+        if not should_adjust:
+            break
+
+        (
+            Q_hat_hs_d_t,
+            U_s_input,
+            A_s_ufac_i,
+            r_A_s_ufac,
+        ) = _adjust_heat_source_output_for_room_to_underfloor_transfer(
+            new_ufac,
+            house,
+            Theta_ex_d_t,
+            Theta_in_d_t,
+            Q_hat_hs_d_t,
+        )
+        Q_hat_hs_d_t, Theta_uf_d_t = \
+            _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
+                ac_setting,
+                house,
+                skin,
+                load,
+                new_ufac,
+                climate,
+                A_s_ufac_i,
+                r_A_s_ufac,
+                U_s_input,
+                Theta_in_d_t,
+                Theta_ex_d_t,
+                V_dash_supply_d_t_i,
+                Q_hat_hs_d_t,
+            )
+        Q_hat_hs_d_t = \
+            _adjust_heat_source_output_for_underfloor_to_ground_transfer(
+                ac_setting,
+                house,
+                A_s_ufac_i,
+                Phi_A_0,
+                Theta_uf_d_t,
+                sum_Theta_dash_g_surf_A_m,
+                Theta_g_avg,
+                Q_hat_hs_d_t,
+            )
+        # 補正完了した Q^hs を使って V'supply を再計算する
+        should_adjust = False
+
+    df_output2['r_supply_des_i'] = r_supply_des_i
+    df_output = df_output.assign(
+        r_supply_des_d_t_1=r_supply_des_d_t_i[0],
+        r_supply_des_d_t_2=r_supply_des_d_t_i[1],
+        r_supply_des_d_t_3=r_supply_des_d_t_i[2],
+        r_supply_des_d_t_4=r_supply_des_d_t_i[3],
+        r_supply_des_d_t_5=r_supply_des_d_t_i[4],
+    )
+    df_output = df_output.assign(
+        V_dash_supply_d_t_1=V_dash_supply_d_t_i[0],
+        V_dash_supply_d_t_2=V_dash_supply_d_t_i[1],
+        V_dash_supply_d_t_3=V_dash_supply_d_t_i[2],
+        V_dash_supply_d_t_4=V_dash_supply_d_t_i[3],
+        V_dash_supply_d_t_5=V_dash_supply_d_t_i[4],
+    )
+    return (
+        A_s_ufac_i,
+        Theta_uf_d_t,
+        r_supply_des_i,
+        r_supply_des_d_t_i,
+        V_dash_supply_d_t_i,
+        df_output,
+    )
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1846,92 +1953,37 @@ def calc_Q_UT_A(
     ) = _prepare_underfloor_adjustment_state(
         ac_setting, new_ufac, Theta_ex_d_t)
 
-    while True:
-        V_dash_hs_supply_d_t = _get_heat_source_supply_airflow_before_vav(
-            ac_setting,
-            house,
-            skin,
-            V_hs_dsgn_H,
-            V_hs_dsgn_C,
-            V_hs_min,
-            Q_hs_rtd_H,
-            Q_hs_rtd_C,
-            Q_hat_hs_d_t,
-            Q_hat_hs_CS_d_t,
-        )
-        df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
-        (
-            r_supply_des_i,
-            r_supply_des_d_t_i,
-            V_dash_supply_d_t_i,
-        ) = _get_supply_airflow_before_vav(
-            ac_setting,
-            house,
-            load,
-            A_HCZ_i,
-            V_dash_hs_supply_d_t,
-            V_vent_g_i,
-        )
-        if not should_be_adjusted_Q_hat_hs_d_t:
-            break
-
-        (
-            Q_hat_hs_d_t,
-            U_s_input,
-            A_s_ufac_i,
-            r_A_s_ufac,
-        ) = _adjust_heat_source_output_for_room_to_underfloor_transfer(
-            new_ufac,
-            house,
-            Theta_ex_d_t,
-            Theta_in_d_t,
-            Q_hat_hs_d_t,
-        )
-        (
-            Q_hat_hs_d_t,
-            Theta_uf_d_t,
-        ) = _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
-            ac_setting,
-            house,
-            skin,
-            load,
-            new_ufac,
-            climate,
-            A_s_ufac_i,
-            r_A_s_ufac,
-            U_s_input,
-            Theta_in_d_t,
-            Theta_ex_d_t,
-            V_dash_supply_d_t_i,
-            Q_hat_hs_d_t,
-        )
-        Q_hat_hs_d_t = _adjust_heat_source_output_for_underfloor_to_ground_transfer(
-            ac_setting,
-            house,
-            A_s_ufac_i,
-            Phi_A_0,
-            Theta_uf_d_t,
-            sum_Theta_dash_g_surf_A_m,
-            Theta_g_avg,
-            Q_hat_hs_d_t,
-        )
-        # 補正完了した Q^hs を使って V'supply を再計算する
-        should_be_adjusted_Q_hat_hs_d_t = False
-
-    df_output2['r_supply_des_i'] = r_supply_des_i
-    df_output = df_output.assign(
-        r_supply_des_d_t_1 = r_supply_des_d_t_i[0],
-        r_supply_des_d_t_2 = r_supply_des_d_t_i[1],
-        r_supply_des_d_t_3 = r_supply_des_d_t_i[2],
-        r_supply_des_d_t_4 = r_supply_des_d_t_i[3],
-        r_supply_des_d_t_5 = r_supply_des_d_t_i[4]
-    )
-    df_output = df_output.assign(
-        V_dash_supply_d_t_1 = V_dash_supply_d_t_i[0],
-        V_dash_supply_d_t_2 = V_dash_supply_d_t_i[1],
-        V_dash_supply_d_t_3 = V_dash_supply_d_t_i[2],
-        V_dash_supply_d_t_4 = V_dash_supply_d_t_i[3],
-        V_dash_supply_d_t_5 = V_dash_supply_d_t_i[4]
+    (
+        A_s_ufac_i,
+        Theta_uf_d_t,
+        r_supply_des_i,
+        r_supply_des_d_t_i,
+        V_dash_supply_d_t_i,
+        df_output,
+    ) = _prepare_pre_vav_airflow_state(
+        df_output,
+        df_output2,
+        ac_setting,
+        house,
+        skin,
+        load,
+        new_ufac,
+        climate,
+        A_HCZ_i,
+        V_hs_dsgn_H,
+        V_hs_dsgn_C,
+        V_hs_min,
+        Q_hs_rtd_H,
+        Q_hs_rtd_C,
+        Q_hat_hs_d_t,
+        Q_hat_hs_CS_d_t,
+        V_vent_g_i,
+        Theta_in_d_t,
+        Theta_ex_d_t,
+        Phi_A_0,
+        Theta_g_avg,
+        sum_Theta_dash_g_surf_A_m,
+        should_be_adjusted_Q_hat_hs_d_t,
     )
 
     # (53)　負荷バランス時の非居室の絶対湿度

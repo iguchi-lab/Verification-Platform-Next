@@ -2788,3 +2788,79 @@ def test_prepare_underfloor_adjustment_state_preserves_ground_response_and_flag(
     assert result[:4] == ground
     assert result[4] is enabled
     assert events == [("ground", (setting, theta_ex))]
+
+@pytest.mark.parametrize("should_adjust", (False, True))
+def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
+        monkeypatch, should_adjust):
+    events = []
+    df_output = _FrameRecorder(events)
+
+    class Output2:
+        def __setitem__(self, key, value):
+            events.append(("output2", key, value))
+
+    hs_first, hs_second = object(), object()
+    hs_outputs = [hs_first, hs_second]
+    r_static = tuple(object() for _ in range(5))
+    r_hourly = tuple(object() for _ in range(5))
+    v_supply = tuple(object() for _ in range(5))
+    q_initial, q_room, q_outdoor, q_ground = [object() for _ in range(4)]
+    u_s, a_s, r_a, theta_uf = [object() for _ in range(4)]
+
+    monkeypatch.setattr(
+        sut,
+        "_get_heat_source_supply_airflow_before_vav",
+        lambda *args: events.append(("heat_airflow", args)) or hs_outputs.pop(0),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_supply_airflow_before_vav",
+        lambda *args: events.append(("supply_airflow", args))
+        or (r_static, r_hourly, v_supply),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_adjust_heat_source_output_for_room_to_underfloor_transfer",
+        lambda *args: events.append(("room", args)) or (q_room, u_s, a_s, r_a),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_adjust_heat_source_output_for_underfloor_to_outdoor_transfer",
+        lambda *args: events.append(("outdoor", args)) or (q_outdoor, theta_uf),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_adjust_heat_source_output_for_underfloor_to_ground_transfer",
+        lambda *args: events.append(("ground", args)) or q_ground,
+    )
+
+    context = [object() for _ in range(18)]
+    q_sensible = object()
+    result = sut._prepare_pre_vav_airflow_state(
+        df_output,
+        Output2(),
+        *context[:12],
+        q_initial,
+        q_sensible,
+        *context[12:],
+        should_adjust,
+    )
+
+    expected_names = ["heat_airflow", "setitem", "supply_airflow"]
+    if should_adjust:
+        expected_names += ["room", "outdoor", "ground", "heat_airflow", "setitem", "supply_airflow"]
+    expected_names += ["output2", "assign", "assign"]
+    assert [event[0] for event in events] == expected_names
+    assert result[0] is (a_s if should_adjust else None)
+    assert result[1] is (theta_uf if should_adjust else None)
+    assert result[2:5] == (r_static, r_hourly, v_supply)
+    assert result[5].generation == 2
+    assert events[-3] == ("output2", "r_supply_des_i", r_static)
+    assert tuple(name for name, _ in events[-2][2]) == tuple(
+        f"r_supply_des_d_t_{i}" for i in range(1, 6))
+    assert tuple(name for name, _ in events[-1][2]) == tuple(
+        f"V_dash_supply_d_t_{i}" for i in range(1, 6))
+    heat_calls = [event for event in events if event[0] == "heat_airflow"]
+    assert heat_calls[0][1][-2] is q_initial
+    if should_adjust:
+        assert heat_calls[1][1][-2] is q_ground
