@@ -73,6 +73,13 @@
 - [PR #14](https://github.com/iguchi-lab/Verification-Platform-Next/pull/14): jjjexperiment.common のワイルドカードimportを14モジュールから一括廃止し、AST境界テストで再導入を防止しました。
 - [PR #16](https://github.com/iguchi-lab/Verification-Platform-Next/pull/16): 独立した3〜5境界を1つのIssue・ブランチ・PRで扱うバッチ運用と、履歴を残すマージ方式を文書化しました。
 - [PR #18](https://github.com/iguchi-lab/Verification-Platform-Next/pull/18): options由来のワイルドカードimportを5境界で廃止し、境界ごとのcommitとAST契約テストを追加しました。
+- [PR #20](https://github.com/iguchi-lab/Verification-Platform-Next/pull/20): 建研コードとの対応を追跡できるよう、JJJ変更版を `<建研モジュール名>_jjj.py` とする命名規則と段階的な移行手順を文書化しました。
+- [PR #22](https://github.com/iguchi-lab/Verification-Platform-Next/pull/22): `jjjexperiment.inputs.options` の残存ワイルドカードimportを4つの実装境界で廃止し、実装側の許可集合を空にしました。
+- [PR #24](https://github.com/iguchi-lab/Verification-Platform-Next/pull/24): 電中研と床下空調の2つの実装境界を明示importへ整理し、実装モジュール全体の残存ワイルドカードimportをAST契約で固定しました。
+- [PR #26](https://github.com/iguchi-lab/Verification-Platform-Next/pull/26): `denchu_2` の公開37名と `denchu_1` 由来27名の再公開契約を固定したうえで、実装モジュールのワイルドカードimport許可集合を空にしました。
+- [PR #28](https://github.com/iguchi-lab/Verification-Platform-Next/pull/28): 電中研モデルのテスト3境界を明示importへ置き換え、電中研テストのワイルドカードimport許可集合を空にしました。
+- [PR #30](https://github.com/iguchi-lab/Verification-Platform-Next/pull/30): ルート・統合テスト5境界のoptionsワイルドカードimportを廃止し、残存する潜熱評価と床下空調の2境界まで許可リストを縮小しました。
+- [PR #32](https://github.com/iguchi-lab/Verification-Platform-Next/pull/32): テスト・テスト支援層の残存ワイルドカードimportを4境界で廃止し、建研由来APIを直接検証するoriginテストだけを明示的な例外として固定しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
