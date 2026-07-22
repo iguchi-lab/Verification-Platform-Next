@@ -2924,3 +2924,27 @@ def test_prepare_balanced_non_room_temperature_preserves_formula_52_branch(
             inputs[5], 2.4, inputs[0], inputs[3], inputs[4], inputs[2],
             inputs[1], load.L_H_d_t_i, load.L_CS_d_t_i, 6,
         )
+
+def test_prepare_actual_humidity_state_preserves_formula_49_47_order(monkeypatch):
+    events = []
+    frame, next_frame = object(), object()
+    x_nr, x_hbr = object(), object()
+    star_nr, star_hbr = object(), object()
+    monkeypatch.setattr(
+        sut,
+        "_get_actual_non_room_humidity",
+        lambda *args: events.append(("non_room", args)) or x_nr,
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_actual_room_humidities",
+        lambda *args: events.append(("room", args)) or (x_hbr, next_frame),
+    )
+
+    result = sut._prepare_actual_humidity_state(frame, star_nr, star_hbr)
+
+    assert result == (x_nr, x_hbr, next_frame)
+    assert events == [
+        ("non_room", (frame, star_nr)),
+        ("room", (frame, star_hbr)),
+    ]

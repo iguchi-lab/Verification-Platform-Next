@@ -1872,6 +1872,14 @@ def _prepare_balanced_non_room_temperature(
         )
     df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
     return Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath
+
+def _prepare_actual_humidity_state(
+        df_output, X_star_NR_d_t, X_star_HBR_d_t):
+    """Calculate formulas (49) and (47) in source order."""
+    X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
+    X_HBR_d_t_i, df_output = _get_actual_room_humidities(
+        df_output, X_star_HBR_d_t)
+    return X_NR_d_t, X_HBR_d_t_i, df_output
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -2067,13 +2075,9 @@ def calc_Q_UT_A(
             Theta_in_d_t,
             Theta_uf_d_t,
         )
-    # (49)　実際の非居室の絶対湿度
-    X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
-
-    # (47)　実際の居室の絶対湿度
-    X_HBR_d_t_i, df_output = _get_actual_room_humidities(
-        df_output, X_star_HBR_d_t)
-
+    # (49), (47)　実際の非居室・居室の絶対湿度
+    X_NR_d_t, X_HBR_d_t_i, df_output = _prepare_actual_humidity_state(
+        df_output, X_star_NR_d_t, X_star_HBR_d_t)
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(1) """
     # (11)　熱損失を含む負荷バランス時の非居室への熱移動
     Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
