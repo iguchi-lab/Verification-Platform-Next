@@ -1644,3 +1644,293 @@ def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):
     np.testing.assert_array_equal(args[12], area_partition.reshape(-1, 1))
     assert args[13] == 2.7
     assert args[14] == (0 if t == 0 else theta_nr[t - 1])
+
+
+@pytest.mark.parametrize(
+    ("setting_type", "theta_uf", "expected_first", "expected_second"),
+    (
+        (sut.HeatingAcSetting, np.array([5.0, 25.0, 30.0]), np.array([15.0, 20.0, 30.0]), np.array([15.0, 20.0, 40.0])),
+        (sut.CoolingAcSetting, np.array([15.0, 15.0, 30.0]), np.array([5.0, 20.0, 30.0]), np.array([5.0, 20.0, 35.0])),
+    ),
+)
+def test_legacy_underfloor_requested_temperatures_preserve_first_pass_formula(
+    monkeypatch, setting_type, theta_uf, expected_first, expected_second
+):
+    calls = []
+    theta_req = np.array([
+        [10.0, 20.0, 30.0],
+        [10.0, 20.0, 35.0],
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ])
+    theta_ex = np.array([0.0, 1.0, 2.0])
+    airflows = np.arange(15.0).reshape(5, 3)
+    r_a_ufvnt = object()
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(Q=2.7, underfloor_insulation=True)
+    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
+
+    def calc_theta(*args):
+        calls.append(args)
+        return theta_uf, object(), object()
+
+    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
+
+    result = sut._adjust_legacy_underfloor_requested_temperatures(
+        _setting(setting_type), house, skin, load, r_a_ufvnt,
+        theta_req, theta_ex, airflows
+    )
+
+    assert result is theta_req
+    np.testing.assert_array_equal(result[0], expected_first)
+    np.testing.assert_array_equal(result[1], expected_second)
+    np.testing.assert_array_equal(result[2:], np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ]))
+    assert len(calls) == 2
+    assert [call[5] for call in calls] == [r_a_ufvnt, r_a_ufvnt]
+    for index, call in enumerate(calls):
+        np.testing.assert_array_equal(call[9], airflows[index])
+
+@pytest.mark.parametrize(
+    ("setting_type", "expected_first", "expected_second"),
+    (
+        (sut.HeatingAcSetting, np.array([10.0, 15.0, 30.0]), np.array([5.0, 15.0, 30.0])),
+        (sut.CoolingAcSetting, np.array([15.0, 20.0, 30.0]), np.array([15.0, 25.0, 35.0])),
+    ),
+)
+def test_carryover_underfloor_supply_temperatures_preserve_clipping(
+    monkeypatch, setting_type, expected_first, expected_second
+):
+    calls = []
+    theta_supply = np.array([
+        [10.0, 20.0, 30.0],
+        [5.0, 25.0, 35.0],
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ])
+    theta_uf = np.array([15.0, 15.0, 30.0])
+    theta_ex = np.array([0.0, 1.0, 2.0])
+    airflows = np.arange(15.0).reshape(5, 3)
+    r_a_ufvnt = object()
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(
+        Q=2.7,
+        YUCACO_r_A_ufvnt=r_a_ufvnt,
+        underfloor_insulation=True,
+    )
+    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
+
+    def calc_theta(*args):
+        calls.append(args)
+        return theta_uf, object(), object()
+
+    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
+
+    result = sut._adjust_carryover_underfloor_supply_temperatures(
+        _setting(setting_type), house, skin, load,
+        theta_supply, theta_ex, airflows
+    )
+
+    assert result is theta_supply
+    np.testing.assert_array_equal(result[0], expected_first)
+    np.testing.assert_array_equal(result[1], expected_second)
+    np.testing.assert_array_equal(result[2:], np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ]))
+    assert len(calls) == 2
+    assert [call[5] for call in calls] == [r_a_ufvnt, r_a_ufvnt]
+
+
+@pytest.mark.parametrize(
+    ("setting_type", "heating_capacity", "cooling_capacity", "limit", "expected_first", "expected_third"),
+    (
+        (sut.HeatingAcSetting, 1000.0, None, 12.0, 12.0, 20.0),
+        (sut.CoolingAcSetting, None, 1000.0, 8.0, 8.0, 8.0),
+    ),
+)
+def test_new_underfloor_requested_temperatures_preserve_reverse_solve_and_limits(
+    monkeypatch,
+    setting_type,
+    heating_capacity,
+    cooling_capacity,
+    limit,
+    expected_first,
+    expected_third,
+):
+    events = []
+    theta_uf_2023 = np.full(8760, 14.0)
+    theta_uf_supply = np.full(8760, 10.0)
+    theta_req = np.full((5, 8760), 20.0)
+    theta_ex = np.full(8760, 5.0)
+    airflows = np.vstack([np.full(8760, float(i + 1)) for i in range(5)])
+    l_star_h = object()
+    l_star_cs = object()
+    new_ufac = object()
+
+    class FrameRecorder:
+        def update_df(self, values):
+            events.append(("update", values))
+
+    frame = FrameRecorder()
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(Q=2.7, r_A_ufac=0.5, underfloor_insulation=True)
+    load = SimpleNamespace(
+        L_dash_H_R_d_t_i=object(),
+        L_dash_CS_R_d_t_i=object(),
+    )
+
+    def calc_theta_uf(*args):
+        events.append(("expected_underfloor", args))
+        return theta_uf_2023
+
+    def calc_theta(**kwargs):
+        events.append(("reverse_solve", kwargs))
+        return object(), object(), theta_uf_supply
+
+    monkeypatch.setattr(sut, "calc_Theta_uf_d_t_2023", calc_theta_uf)
+    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *_: heating_capacity)
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *_: cooling_capacity)
+
+    result = sut._get_new_underfloor_requested_temperatures(
+        _setting(setting_type), house, skin, load, new_ufac, frame,
+        theta_req, theta_ex, airflows, np.array([limit]),
+        l_star_h, l_star_cs
+    )
+
+    np.testing.assert_array_equal(result[0], np.full(8760, expected_first))
+    np.testing.assert_array_equal(result[1], np.full(8760, expected_first))
+    np.testing.assert_array_equal(result[2], np.full(8760, expected_third))
+    assert [event[0] for event in events] == [
+        "expected_underfloor", "reverse_solve", "update"
+    ]
+    expected_args = events[0][1]
+    assert expected_args[0] is l_star_h
+    assert expected_args[1] is l_star_cs
+    reverse_kwargs = events[1][1]
+    assert reverse_kwargs["calc_backwards"] is True
+    assert reverse_kwargs["Theta_sa_d_t"] is theta_uf_2023
+    np.testing.assert_array_equal(reverse_kwargs["V_sa_d_t_A"], airflows[0] + airflows[1])
+    update_values = events[2][1]
+    assert update_values["Theta_uf_d_t_2023"] is theta_uf_2023
+    np.testing.assert_array_equal(update_values["Theta_req_d_t_1"], result[0])
+
+
+def test_new_underfloor_supply_temperatures_preserve_forward_solve_and_outputs(
+    monkeypatch,
+):
+    events = []
+    theta_uf = np.full(8760, 11.0)
+    theta_supply = np.vstack([np.full(8760, float(i + 1)) for i in range(5)])
+    theta_hs_out = np.full(8760, 30.0)
+    theta_ex = np.full(8760, 5.0)
+    airflows = np.vstack([np.full(8760, float(i + 2)) for i in range(5)])
+    new_ufac = object()
+
+    class FrameRecorder:
+        def update_df(self, values):
+            events.append(("update", values))
+
+    frame = FrameRecorder()
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(Q=2.7, r_A_ufac=0.5, underfloor_insulation=True)
+    load = SimpleNamespace(
+        L_dash_H_R_d_t_i=object(),
+        L_dash_CS_R_d_t_i=object(),
+    )
+
+    def calc_theta(**kwargs):
+        events.append(("forward_solve", kwargs))
+        return theta_uf, object(), object()
+
+    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
+
+    result = sut._get_new_underfloor_supply_temperatures(
+        house, skin, load, new_ufac, frame,
+        theta_supply, theta_hs_out, theta_ex, airflows
+    )
+
+    np.testing.assert_array_equal(result[0], theta_uf)
+    np.testing.assert_array_equal(result[1], theta_uf)
+    np.testing.assert_array_equal(result[2:], theta_supply[2:])
+    assert [event[0] for event in events] == ["forward_solve", "update"]
+    forward_kwargs = events[0][1]
+    assert forward_kwargs["calc_backwards"] is False
+    assert forward_kwargs["Theta_sa_d_t"] is theta_hs_out
+    np.testing.assert_array_equal(forward_kwargs["V_sa_d_t_A"], airflows[0] + airflows[1])
+    update_values = events[1][1]
+    assert update_values["Theta_hs_out_d_t"] is theta_hs_out
+    assert update_values["Theta_uf_d_t"] is theta_uf
+    np.testing.assert_array_equal(update_values["Theta_supply_d_t_1"], result[0])
+
+@pytest.mark.parametrize(
+    ("setting_type", "expected_first", "expected_second"),
+    (
+        (sut.HeatingAcSetting, np.array([10.0, 15.0, 30.0]), np.array([5.0, 15.0, 30.0])),
+        (sut.CoolingAcSetting, np.array([15.0, 20.0, 30.0]), np.array([15.0, 25.0, 35.0])),
+    ),
+)
+def test_legacy_underfloor_supply_temperatures_preserve_where_operation(
+    monkeypatch, setting_type, expected_first, expected_second
+):
+    calls = []
+    where_calls = []
+    theta_supply = np.array([
+        [10.0, 20.0, 30.0],
+        [5.0, 25.0, 35.0],
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ])
+    theta_uf = np.array([15.0, 15.0, 30.0])
+    theta_ex = np.array([0.0, 1.0, 2.0])
+    airflows = np.arange(15.0).reshape(5, 3)
+    r_a_ufac = object()
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(
+        Q=2.7,
+        r_A_ufac=r_a_ufac,
+        underfloor_insulation=True,
+    )
+    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
+    original_where = np.where
+
+    def calc_theta(*args):
+        calls.append(args)
+        return theta_uf, object(), object()
+
+    def recording_where(*args):
+        where_calls.append(args)
+        return original_where(*args)
+
+    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
+    monkeypatch.setattr(sut.np, "where", recording_where)
+    monkeypatch.setattr(
+        sut.np,
+        "clip",
+        lambda *_args, **_kwargs: pytest.fail("legacy phase must retain np.where"),
+    )
+
+    result = sut._adjust_legacy_underfloor_supply_temperatures(
+        _setting(setting_type), house, skin, load,
+        theta_supply, theta_ex, airflows
+    )
+
+    assert result is theta_supply
+    np.testing.assert_array_equal(result[0], expected_first)
+    np.testing.assert_array_equal(result[1], expected_second)
+    np.testing.assert_array_equal(result[2:], np.array([
+        [1.0, 2.0, 3.0],
+        [4.0, 5.0, 6.0],
+        [7.0, 8.0, 9.0],
+    ]))
+    assert len(calls) == 2
+    assert len(where_calls) == 2
+    assert [call[5] for call in calls] == [r_a_ufac, r_a_ufac]
