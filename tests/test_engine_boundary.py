@@ -49,10 +49,6 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 # each remaining boundary is refactored.
 EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS = {
     ("denchu/denchu_2.py", "jjjexperiment.denchu.denchu_1"),
-    (
-        "underfloor_ac/section4_2_f46_f48.py",
-        "jjjexperiment.inputs.di_container",
-    ),
 }
 
 
