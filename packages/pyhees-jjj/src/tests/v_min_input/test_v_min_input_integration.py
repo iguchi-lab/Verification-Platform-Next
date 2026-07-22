@@ -2,7 +2,11 @@ import json
 import copy
 
 from jjjexperiment.main import calc
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import (
+    ファン消費電力算定方法,
+    最低電力直接入力,
+    最低風量直接入力,
+)
 
 from test_utils.utils import *
 
