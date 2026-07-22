@@ -66,8 +66,6 @@ EXPECTED_OPTIONS_TEST_WILDCARD_IMPORTERS = {
 EXPECTED_ENGINE_TEST_WILDCARD_IMPORTS = {
     ("tests/latent_load/test_latent_load_integration.py", "jjjexperiment.inputs.options"),
     ("tests/origin/test_4_2_formula_45.py", "pyhees.section4_2"),
-    ("tests/test_dicontainer.py", "jjjexperiment.inputs.di_container"),
-    ("tests/test_dicontainer.py", "test_utils.utils"),
     ("tests/underfloor_ac/test_4_2_f46_f48.py", "jjjexperiment.common"),
     (
         "tests/underfloor_ac/test_4_2_f46_f48.py",
