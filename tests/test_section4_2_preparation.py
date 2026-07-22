@@ -3134,3 +3134,40 @@ def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mo
     assert [e[0] for e in events] == expected
     assert result[:6] == (x_out, *temperatures, *airflows)
     assert result[6] == (base_supply if mode == "none" else adjusted_supply)
+
+
+@pytest.mark.parametrize("standard", (True, False))
+def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, standard):
+    events = []
+    model = (sut.計算モデル.ダクト式セントラル空調機 if standard
+             else sut.計算モデル.電中研モデル)
+    setting = SimpleNamespace(type=model)
+    inputs = [object() for _ in range(8)]
+    standard_loads = tuple(object() for _ in range(6))
+    standard_caps = tuple(object() for _ in range(5))
+    heat_caps = tuple(object() for _ in range(3))
+    cool_caps = tuple(object() for _ in range(10))
+    monkeypatch.setattr(
+        sut, "_get_balanced_cooling_loads",
+        lambda *a: events.append(("loads", a)) or standard_loads)
+    monkeypatch.setattr(
+        sut, "_get_standard_heat_source_capacity_limits",
+        lambda *a: events.append(("standard", a)) or standard_caps)
+    monkeypatch.setattr(
+        sut.dc, "get_C_df_H_d_t",
+        lambda *a: events.append(("defrost", a)) or "defrost")
+    monkeypatch.setattr(
+        sut, "_get_rac_heating_capacity",
+        lambda *a, **k: events.append(("rac_heat", a, k)) or heat_caps)
+    monkeypatch.setattr(
+        sut, "_get_rac_cooling_capacity",
+        lambda *a, **k: events.append(("rac_cool", a, k)) or cool_caps)
+
+    result = sut._prepare_carryover_capacity_state(setting, *inputs)
+
+    expected = (["loads", "standard"] if standard
+                else ["defrost", "rac_heat", "rac_cool"])
+    assert [event[0] for event in events] == expected
+    assert result[:4] == (
+        (standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
+        if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
