@@ -1231,3 +1231,36 @@ def test_supply_air_temperatures_preserve_formula_arguments(monkeypatch):
 
     assert result is expected
     assert calls == [((*inputs, 7))]
+
+def test_balanced_cooling_loads_preserve_formula_order(monkeypatch):
+    calls = []
+    latent_by_room = object()
+    sensible_by_room = object()
+    outputs = [object() for _ in range(6)]
+    names = (
+        "get_L_star_CL_d_t",
+        "get_L_star_CS_d_t",
+        "get_L_star_CL_max_d_t",
+        "get_L_star_dash_CL_d_t",
+        "get_L_star_dash_C_d_t",
+        "get_SHF_dash_d_t",
+    )
+    for index, name in enumerate(names):
+        monkeypatch.setattr(
+            sut.dc,
+            name,
+            lambda *args, index=index, name=name: calls.append((name, args))
+            or outputs[index],
+        )
+
+    result = sut._get_balanced_cooling_loads(latent_by_room, sensible_by_room)
+
+    assert result == tuple(outputs)
+    assert calls == [
+        (names[0], (latent_by_room,)),
+        (names[1], (sensible_by_room,)),
+        (names[2], (outputs[1],)),
+        (names[3], (outputs[2], outputs[0])),
+        (names[4], (outputs[1], outputs[3])),
+        (names[5], (outputs[1], outputs[4])),
+    ]

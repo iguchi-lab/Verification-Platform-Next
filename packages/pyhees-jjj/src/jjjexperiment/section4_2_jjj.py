@@ -509,6 +509,33 @@ def _get_supply_air_temperatures(
     return dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
                                    V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
 
+def _get_balanced_cooling_loads(
+        L_star_CL_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (33) through (28) in their original order."""
+    # (33)
+    L_star_CL_d_t = dc.get_L_star_CL_d_t(L_star_CL_d_t_i)
+    # (32)
+    L_star_CS_d_t = dc.get_L_star_CS_d_t(L_star_CS_d_t_i)
+    # (31)
+    L_star_CL_max_d_t = dc.get_L_star_CL_max_d_t(L_star_CS_d_t)
+    # (30)
+    L_star_dash_CL_d_t = dc.get_L_star_dash_CL_d_t(L_star_CL_max_d_t, L_star_CL_d_t)
+    # (29)
+    L_star_dash_C_d_t = dc.get_L_star_dash_C_d_t(L_star_CS_d_t, L_star_dash_CL_d_t)
+    # (28)
+    SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
+
+    return (
+        L_star_CL_d_t,
+        L_star_CS_d_t,
+        L_star_CL_max_d_t,
+        L_star_dash_CL_d_t,
+        L_star_dash_C_d_t,
+        SHF_dash_d_t,
+    )
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1253,18 +1280,10 @@ def calc_Q_UT_A(
                     計算モデル.ダクト式セントラル空調機,
                     計算モデル.RAC活用型全館空調_潜熱評価モデル
                 ]:
-                # (33)
-                L_star_CL_d_t = dc.get_L_star_CL_d_t(L_star_CL_d_t_i)
-                # (32)
-                L_star_CS_d_t = dc.get_L_star_CS_d_t(L_star_CS_d_t_i)
-                # (31)
-                L_star_CL_max_d_t = dc.get_L_star_CL_max_d_t(L_star_CS_d_t)
-                # (30)
-                L_star_dash_CL_d_t = dc.get_L_star_dash_CL_d_t(L_star_CL_max_d_t, L_star_CL_d_t)
-                # (29)
-                L_star_dash_C_d_t = dc.get_L_star_dash_C_d_t(L_star_CS_d_t, L_star_dash_CL_d_t)
-                # (28)
-                SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
+                (
+                    L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
+                    L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
+                ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
                 # (27)
                 Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
                 # (26)
@@ -1463,18 +1482,10 @@ def calc_Q_UT_A(
                 計算モデル.ダクト式セントラル空調機,
                 計算モデル.RAC活用型全館空調_潜熱評価モデル
             ]:
-            # (33)
-            L_star_CL_d_t = dc.get_L_star_CL_d_t(L_star_CL_d_t_i)
-            # (32)
-            L_star_CS_d_t = dc.get_L_star_CS_d_t(L_star_CS_d_t_i)
-            # (31)
-            L_star_CL_max_d_t = dc.get_L_star_CL_max_d_t(L_star_CS_d_t)
-            # (30)
-            L_star_dash_CL_d_t = dc.get_L_star_dash_CL_d_t(L_star_CL_max_d_t, L_star_CL_d_t)
-            # (29)
-            L_star_dash_C_d_t = dc.get_L_star_dash_C_d_t(L_star_CS_d_t, L_star_dash_CL_d_t)
-            # (28)
-            SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
+            (
+                L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
+                L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
+            ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
             # (27)
             Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
             # (26)
