@@ -2235,11 +2235,13 @@ def _prepare_no_carryover_supply_state(
     Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
     Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
     Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
-    V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+    capped_airflows = _get_capped_supply_airflows(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
         V_vent_g_i, V_dash_supply_d_t_i, Theta_hs_out_d_t,
         V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
+    V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
+    V_supply_d_t_i = capped_airflows.V_supply_d_t_i
     Theta_supply_d_t_i = _get_supply_air_temperatures(
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
         l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
@@ -2535,11 +2537,13 @@ def _prepare_carryover_supply_state(
     Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
     Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
     Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
-    V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+    capped_airflows = _get_capped_supply_airflows(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i,
         Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
         Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
+    V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
+    V_supply_d_t_i = capped_airflows.V_supply_d_t_i
     Theta_supply_d_t_i = _get_supply_air_temperatures(
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
         l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)

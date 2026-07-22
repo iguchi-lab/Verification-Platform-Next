@@ -3110,7 +3110,8 @@ def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mo
     x_out = object()
     temperatures = sut._HeatSourceOutletTemperaturesResult(
         *(object() for _ in range(3)))
-    airflows = tuple(object() for _ in range(2))
+    airflows = sut._CappedSupplyAirflowsResult(
+        *(object() for _ in range(2)))
     base_supply = tuple(object() for _ in range(5))
     adjusted_supply = tuple(object() for _ in range(5))
     theta_nr = object()
@@ -3251,7 +3252,8 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
     outlet_humidity = object()
     outlet_temperatures = sut._HeatSourceOutletTemperaturesResult(
         *(object() for _ in range(3)))
-    airflows = tuple(object() for _ in range(2))
+    airflows = sut._CappedSupplyAirflowsResult(
+        *(object() for _ in range(2)))
     supply_temperature = object()
     adjusted = object()
     house = SimpleNamespace(region=6)
