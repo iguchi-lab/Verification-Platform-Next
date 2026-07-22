@@ -85,6 +85,36 @@ class ActiveAcSetting:
 
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
+def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
+    match ac_setting:
+        case HeatingAcSetting():
+            return '_H'
+        case CoolingAcSetting():
+            return '_C'
+        case _:
+            raise ValueError
+
+
+def _get_q_hs_rtd_H(ac_setting: ActiveAcSetting, house: HouseInfo) -> float | None:
+    match ac_setting:
+        case HeatingAcSetting():
+            return HeatQuantityService(ac_setting, house.region, house.A_A).q_hs_rtd
+        case CoolingAcSetting():
+            return None
+        case _:
+            raise ValueError
+
+
+def _get_q_hs_rtd_C(ac_setting: ActiveAcSetting, house: HouseInfo) -> float | None:
+    match ac_setting:
+        case HeatingAcSetting():
+            return None
+        case CoolingAcSetting():
+            return CoolQuantityService(ac_setting, house.region, house.A_A).q_hs_rtd
+        case _:
+            raise ValueError
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -105,23 +135,7 @@ def calc_Q_UT_A(
         load: Load_DTI):
     """未処理負荷と機器の計算に必要な変数を取得"""
 
-    # NOTE: 暖房・冷房で二回実行される。q_hs_rtd_H, q_hs_rtd_C のどちらが None かで判別している
-    def flg_char() -> str:
-        match ac_setting:
-            case HeatingAcSetting(): return '_H'
-            case CoolingAcSetting(): return '_C'
-            case _: raise ValueError
-    def q_hs_rtd_H() -> float | None:
-        match ac_setting:
-            case HeatingAcSetting(): return HeatQuantityService(ac_setting, house.region, house.A_A).q_hs_rtd
-            case CoolingAcSetting(): return None
-            case _: raise ValueError
-    def q_hs_rtd_C() -> float | None:
-        match ac_setting:
-            case HeatingAcSetting(): return None
-            case CoolingAcSetting(): return CoolQuantityService(ac_setting, house.region, house.A_A).q_hs_rtd
-            case _: raise ValueError
-
+    # NOTE: 暖房・冷房で二回実行される。定格能力のどちらが None かで判別している
     match V_hs_dsgn_H, V_hs_dsgn_C:
         case 0, _:
             V_hs_dsgn_H = None
@@ -298,9 +312,9 @@ def calc_Q_UT_A(
             計算モデル.RAC活用型全館空調_潜熱評価モデル
         ]:
         # (38)
-        Q_hs_rtd_C = dc.get_Q_hs_rtd_C(q_hs_rtd_C())
+        Q_hs_rtd_C = dc.get_Q_hs_rtd_C(_get_q_hs_rtd_C(ac_setting, house))
         # (37)
-        Q_hs_rtd_H = dc.get_Q_hs_rtd_H(q_hs_rtd_H())
+        Q_hs_rtd_H = dc.get_Q_hs_rtd_H(_get_q_hs_rtd_H(ac_setting, house))
     elif ac_setting.type in [
             計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
             計算モデル.電中研モデル
@@ -427,7 +441,7 @@ def calc_Q_UT_A(
 
         Theta_uf_d_t  \
             = np.array([
-                jjj_ufac_dc.calc_Theta_uf(q_hs_rtd_H(), q_hs_rtd_C(),
+                jjj_ufac_dc.calc_Theta_uf(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house),
                     L_d_t_flr1st[t],
                     np.sum(A_s_ufac_i),
                     U_s_input,
@@ -464,7 +478,7 @@ def calc_Q_UT_A(
 
         delta_L_uf2gnd_d_t = np.vectorize(jjj_ufac_dc.calc_delta_L_uf2gnd)
         delta_L_uf2gnd_d_t = \
-            delta_L_uf2gnd_d_t(q_hs_rtd_H(), q_hs_rtd_C(),
+            delta_L_uf2gnd_d_t(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house),
                 A_s_ufac_A, jjj_consts.R_g, Phi_A_0, Theta_uf_d_t, sum_Theta_dash_g_surf_A_m, Theta_g_avg)
         Q_hat_hs_d_t += delta_L_uf2gnd_d_t
 
@@ -679,7 +693,7 @@ def calc_Q_UT_A(
                 # (28)
                 SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
                 # (27)
-                Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, q_hs_rtd_C(), cool_CRAC.input_C_af)
+                Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
                 # (26)
                 Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
                 # (25)
@@ -687,7 +701,7 @@ def calc_Q_UT_A(
                 # (24)
                 C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
                 # (23)
-                Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, q_hs_rtd_H(), C_df_H_d_t, heat_CRAC.input_C_af)
+                Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
 
             elif ac_setting.type in [
                     計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
@@ -907,7 +921,7 @@ def calc_Q_UT_A(
             # (28)
             SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
             # (27)
-            Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, q_hs_rtd_C(), cool_CRAC.input_C_af)
+            Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
             # (26)
             Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
             # (25)
@@ -915,7 +929,7 @@ def calc_Q_UT_A(
             # (24) デフロストに関する暖房出力補正係数
             C_df_H_d_t = climate.get_C_df_H_d_t()
             # (23)
-            Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, q_hs_rtd_H(), C_df_H_d_t, heat_CRAC.input_C_af)
+            Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
 
         elif ac_setting.type in [
                 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
@@ -1025,7 +1039,7 @@ def calc_Q_UT_A(
                 ])
             assert np.shape(Theta_req_d_t_i)==(5, 8760), "想定外の行列数"
 
-            match (q_hs_rtd_H(), q_hs_rtd_C()):
+            match (_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
                 case (None, None):
                     raise Exception("どちらかのみを前提")
                 case (_, None):
@@ -1234,7 +1248,7 @@ def calc_Q_UT_A(
             carryovers_i_4 = carryovers[3],
             carryovers_i_5 = carryovers[4]
         )
-        match (q_hs_rtd_H(), q_hs_rtd_C()):
+        match (_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
             case (None, None):
                 raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
             case (_, None):
@@ -1484,11 +1498,11 @@ def calc_Q_UT_A(
 
     # 床下空調新ロジック調査用変数の出力
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        filename = case_name + jjj_consts.version_info() + flg_char() + "_output_uf.csv"
+        filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
         # ネスト関数内で更新されているデータフレーム
         new_ufac_df.export_to_csv(filename)
 
-    match(q_hs_rtd_H(), q_hs_rtd_C()):
+    match(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
         case(None, None):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
         case(_, None):
