@@ -1,7 +1,7 @@
 import pandas as pd
 from dataclasses import dataclass
 # JJJ
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import 床下空調ロジック
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 __all__ = ['UnderfloorAc', 'UfVarsDataFrame']

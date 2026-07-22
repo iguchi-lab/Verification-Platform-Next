@@ -9,7 +9,7 @@ import pyhees.section4_3
 from jjjexperiment.common import Array8760
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res  # デバッグ用ロガー
 import jjjexperiment.constants as jjj_consts
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import 計算モデル
 import jjjexperiment.latent_load.section4_2_a as jjj_latent
 
 from jjjexperiment.denchu.inputs.heating import DenchuCatalogSpecification as H_CatalogSpec, RealInnerCondition as H_RealInnerCondition

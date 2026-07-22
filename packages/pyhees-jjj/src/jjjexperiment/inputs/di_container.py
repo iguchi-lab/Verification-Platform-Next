@@ -1,7 +1,12 @@
 from typing import NewType
 from injector import Injector, singleton, provider, Module
 # JJJ 共通
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import (
+    ファン消費電力から換気分を引く,
+    最低風量直接入力,
+    床下空調ロジック,
+    過剰熱量繰越計算,
+)
 import jjjexperiment.inputs.common as common_input
 from jjjexperiment.inputs.ac_setting import HeatingAcSetting, CoolingAcSetting
 import jjjexperiment.inputs.cooling as common_cooling_input

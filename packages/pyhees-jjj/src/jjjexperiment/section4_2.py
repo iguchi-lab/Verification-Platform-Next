@@ -22,7 +22,13 @@ import pyhees.section4_2_a as dc_a
 from jjjexperiment.common import Array5x8760, jjj_cloning
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
-from jjjexperiment.inputs.options import *
+from jjjexperiment.inputs.options import (
+    VAVありなしの吹出風量,
+    最低風量直接入力,
+    床下空調ロジック,
+    計算モデル,
+    過剰熱量繰越計算,
+)
 # データクラス
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin
 from jjjexperiment.inputs.ac_setting import HeatingAcSetting, CoolingAcSetting
