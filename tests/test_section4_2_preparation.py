@@ -276,3 +276,31 @@ def test_get_actual_loads_preserves_formula_order_and_clipping(
         ("CS", (inputs[0], inputs[3], inputs[4], 6)),
         ("H", (inputs[0], inputs[3], inputs[4], 6)),
     ]
+
+def test_get_unprocessed_loads_preserves_formula_order_and_arguments(monkeypatch):
+    calls = []
+    inputs = [object() for _ in range(6)]
+    outputs = [object() for _ in range(3)]
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_UT_CL_d_t_i",
+        lambda *args: calls.append(("CL", args)) or outputs[0],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_UT_CS_d_t_i",
+        lambda *args: calls.append(("CS", args)) or outputs[1],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_UT_H_d_t_i",
+        lambda *args: calls.append(("H", args)) or outputs[2],
+    )
+
+    assert sut._get_unprocessed_loads(*inputs) == tuple(outputs)
+    assert calls == [
+        ("CL", (inputs[0], inputs[1])),
+        ("CS", (inputs[2], inputs[3])),
+        ("H", (inputs[4], inputs[5])),
+    ]

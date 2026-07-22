@@ -237,6 +237,24 @@ def _get_actual_loads(
 
     return L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i
 
+def _get_unprocessed_loads(
+        L_star_CL_d_t_i: np.ndarray,
+        L_dash_CL_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+        L_dash_CS_d_t_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+        L_dash_H_d_t_i: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (4) through (2) in their original order."""
+    # (4)　冷房設備機器の未処理冷房潜熱負荷
+    Q_UT_CL_d_t_i = dc.get_Q_UT_CL_d_t_i(L_star_CL_d_t_i, L_dash_CL_d_t_i)
+    # (3)　冷房設備機器の未処理冷房顕熱負荷
+    Q_UT_CS_d_t_i = dc.get_Q_UT_CS_d_t_i(L_star_CS_d_t_i, L_dash_CS_d_t_i)
+    # (2)　暖房設備機器等の未処理暖房負荷
+    Q_UT_H_d_t_i = dc.get_Q_UT_H_d_t_i(L_star_H_d_t_i, L_dash_H_d_t_i)
+
+    return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1536,8 +1554,14 @@ def calc_Q_UT_A(
         L_dash_H_d_t_5 = L_dash_H_d_t_i[4]
     )
     """ まとめ - 未処理負荷 """
-    # (4)　冷房設備機器の未処理冷房潜熱負荷
-    Q_UT_CL_d_t_i = dc.get_Q_UT_CL_d_t_i(L_star_CL_d_t_i, L_dash_CL_d_t_i)
+    Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i = _get_unprocessed_loads(
+        L_star_CL_d_t_i,
+        L_dash_CL_d_t_i,
+        L_star_CS_d_t_i,
+        L_dash_CS_d_t_i,
+        L_star_H_d_t_i,
+        L_dash_H_d_t_i,
+    )
     df_output = df_output.assign(
         Q_UT_CL_d_t_1 = Q_UT_CL_d_t_i[0],
         Q_UT_CL_d_t_2 = Q_UT_CL_d_t_i[1],
@@ -1545,8 +1569,6 @@ def calc_Q_UT_A(
         Q_UT_CL_d_t_4 = Q_UT_CL_d_t_i[3],
         Q_UT_CL_d_t_5 = Q_UT_CL_d_t_i[4]
     )
-    # (3)　冷房設備機器の未処理冷房顕熱負荷
-    Q_UT_CS_d_t_i = dc.get_Q_UT_CS_d_t_i(L_star_CS_d_t_i, L_dash_CS_d_t_i)
     df_output = df_output.assign(
         Q_UT_CS_d_t_1 = Q_UT_CS_d_t_i[0],
         Q_UT_CS_d_t_2 = Q_UT_CS_d_t_i[1],
@@ -1554,8 +1576,6 @@ def calc_Q_UT_A(
         Q_UT_CS_d_t_4 = Q_UT_CS_d_t_i[3],
         Q_UT_CS_d_t_5 = Q_UT_CS_d_t_i[4]
     )
-    # (2)　暖房設備機器等の未処理暖房負荷
-    Q_UT_H_d_t_i = dc.get_Q_UT_H_d_t_i(L_star_H_d_t_i, L_dash_H_d_t_i)
     df_output = df_output.assign(
         Q_UT_H_d_t_1 = Q_UT_H_d_t_i[0],
         Q_UT_H_d_t_2 = Q_UT_H_d_t_i[1],
@@ -1563,7 +1583,6 @@ def calc_Q_UT_A(
         Q_UT_H_d_t_4 = Q_UT_H_d_t_i[3],
         Q_UT_H_d_t_5 = Q_UT_H_d_t_i[4]
     )
-
     """ まとめ - 一次エネルギー """
     match ac_setting:
         case HeatingAcSetting():
