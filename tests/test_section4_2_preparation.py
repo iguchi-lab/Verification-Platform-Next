@@ -3003,3 +3003,134 @@ def test_initialize_carryover_hourly_state_preserves_shapes_and_season_order(mon
         ("zeros", (5, 24 * 365)),
         ("season", 6),
     ]
+
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_no_carryover_balanced_loads_preserves_formula_and_adjustment_order(
+        monkeypatch, enabled):
+    events = []
+    sensible_c, heating = object(), object()
+    adjusted_h, adjusted_c = object(), object()
+    flag = sut.床下空調ロジック.変更する if enabled else object()
+    house = SimpleNamespace(region=6)
+    new_ufac = SimpleNamespace(new_ufac_flg=flag)
+    load = SimpleNamespace(L_CS_d_t_i=object(), L_H_d_t_i=object())
+    inputs = [object() for _ in range(5)]
+    monkeypatch.setattr(sut.dc, "get_L_star_CS_d_t_i", lambda *a: events.append(("cool", a)) or sensible_c)
+    monkeypatch.setattr(sut.dc, "get_L_star_H_d_t_i", lambda *a: events.append(("heat", a)) or heating)
+    monkeypatch.setattr(
+        sut, "_adjust_new_underfloor_balanced_loads",
+        lambda *a: events.append(("adjust", a)) or (adjusted_h, adjusted_c))
+
+    result = sut._prepare_no_carryover_balanced_loads(
+        house, new_ufac, inputs[0], load, *inputs[1:])
+
+    assert result == ((adjusted_h, adjusted_c) if enabled else (heating, sensible_c))
+    assert [e[0] for e in events] == (["cool", "heat", "adjust"] if enabled else ["cool", "heat"])
+    assert events[0][1] == (load.L_CS_d_t_i, inputs[4], 6)
+    assert events[1][1] == (load.L_H_d_t_i, inputs[4], 6)
+
+@pytest.mark.parametrize("standard", (True, False))
+def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch, standard):
+    events = []
+    model = (sut.計算モデル.ダクト式セントラル空調機 if standard
+             else sut.計算モデル.電中研モデル)
+    setting = SimpleNamespace(type=model)
+    inputs = [object() for _ in range(8)]
+    standard_loads = tuple(object() for _ in range(6))
+    standard_caps = tuple(object() for _ in range(5))
+    heat_caps = tuple(object() for _ in range(3))
+    cool_caps = tuple(object() for _ in range(10))
+
+    class Climate:
+        def get_C_df_H_d_t(self):
+            events.append(("defrost",))
+            return "defrost"
+
+    monkeypatch.setattr(sut, "_get_balanced_cooling_loads", lambda *a: events.append(("loads", a)) or standard_loads)
+    monkeypatch.setattr(sut, "_get_standard_heat_source_capacity_limits", lambda *a: events.append(("standard", a)) or standard_caps)
+    monkeypatch.setattr(sut, "_get_rac_heating_capacity", lambda *a, **k: events.append(("rac_heat", a, k)) or heat_caps)
+    monkeypatch.setattr(sut, "_get_rac_cooling_capacity", lambda *a, **k: events.append(("rac_cool", a, k)) or cool_caps)
+    monkeypatch.setattr(sut._logger, "debug", lambda message: events.append(("log", message)))
+
+    result = sut._prepare_no_carryover_capacity_state(
+        setting, *inputs[:4], Climate(), *inputs[4:])
+
+    assert result[:4] == ((standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
+                      if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
+    assert [e[0] for e in events] == (["loads", "standard"] if standard else ["defrost", "log", "rac_heat", "rac_cool"])
+
+def test_prepare_balanced_heat_source_inlet_state_preserves_formula_20_19_order(monkeypatch):
+    events = []
+    humidity, temperature = object(), object()
+    star_humidity, star_temperature = object(), object()
+    monkeypatch.setattr(sut.dc, "get_X_star_hs_in_d_t", lambda x: events.append(("humidity", x)) or humidity)
+    monkeypatch.setattr(sut.dc, "get_Theta_star_hs_in_d_t", lambda x: events.append(("temperature", x)) or temperature)
+
+    result = sut._prepare_balanced_heat_source_inlet_state(
+        star_humidity, star_temperature)
+
+    assert result == (humidity, temperature)
+    assert events == [("humidity", star_humidity), ("temperature", star_temperature)]
+
+@pytest.mark.parametrize("mode", ("none", "new", "legacy"))
+def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypatch, mode):
+    events = []
+    x_min, x_req, theta_req, adjusted = [object() for _ in range(4)]
+    new_ufac = SimpleNamespace(
+        new_ufac_flg=(sut.床下空調ロジック.変更する if mode == "new" else object()))
+    skin = SimpleNamespace(
+        underfloor_air_conditioning_air_supply=(mode == "legacy"), r_A_ufac=0.5)
+    house = SimpleNamespace(region=6)
+    context = [object() for _ in range(15)]
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_requirements",
+        lambda *a: events.append(("requirements", a)) or (x_min, x_req, theta_req))
+    monkeypatch.setattr(
+        sut, "_get_new_underfloor_requested_temperatures",
+        lambda *a: events.append(("new", a)) or adjusted)
+    monkeypatch.setattr(
+        sut, "_adjust_legacy_underfloor_requested_temperatures",
+        lambda *a: events.append(("legacy", a)) or np.zeros((5, 8760)))
+
+    result = sut._prepare_no_carryover_outlet_requirements(
+        context[0], house, skin, context[1], new_ufac, *context[2:])
+
+    assert result[:2] == (x_min, x_req)
+    assert [e[0] for e in events] == ["requirements"] + ([] if mode == "none" else [mode])
+    assert result[2] is (theta_req if mode == "none" else adjusted) if mode != "legacy" else result[2].shape == (5, 8760)
+
+@pytest.mark.parametrize("mode", ("none", "new", "legacy"))
+def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mode):
+    events = []
+    x_out = object()
+    temperatures = tuple(object() for _ in range(3))
+    airflows = tuple(object() for _ in range(2))
+    base_supply = tuple(object() for _ in range(5))
+    adjusted_supply = tuple(object() for _ in range(5))
+    theta_nr = object()
+    house = SimpleNamespace(region=6)
+    skin = SimpleNamespace(underfloor_air_conditioning_air_supply=(mode == "legacy"))
+    new_ufac = SimpleNamespace(
+        new_ufac_flg=(sut.床下空調ロジック.変更する if mode == "new" else object()))
+    context = [object() for _ in range(22)]
+    monkeypatch.setattr(sut, "_get_heat_source_outlet_humidity", lambda *a: events.append(("humidity", a)) or x_out)
+    monkeypatch.setattr(sut.np, "zeros", lambda shape: events.append(("zeros", shape)) or theta_nr)
+    monkeypatch.setattr(sut, "_get_heat_source_outlet_temperatures", lambda *a: events.append(("temperatures", a)) or temperatures)
+    monkeypatch.setattr(sut, "_get_capped_supply_airflows", lambda *a, **k: events.append(("airflows", a, k)) or airflows)
+    monkeypatch.setattr(sut, "_get_supply_air_temperatures", lambda *a: events.append(("supply", a)) or base_supply)
+    monkeypatch.setattr(sut, "_get_new_underfloor_supply_temperatures", lambda *a: events.append(("new", a)) or adjusted_supply)
+    monkeypatch.setattr(sut, "_adjust_legacy_underfloor_supply_temperatures", lambda *a: events.append(("legacy", a)) or adjusted_supply)
+    monkeypatch.setattr(sut._logger, "NDdebug", lambda *a: events.append(("debug", a)))
+
+    result = sut._prepare_no_carryover_supply_state(
+        context[0], context[1], house, skin, context[2], new_ufac,
+        context[3], *context[4:22])
+
+    expected = ["humidity", "zeros", "temperatures", "airflows", "supply"]
+    expected += ["debug"] * 5
+    if mode != "none":
+        expected.append(mode)
+    expected += ["debug"] * 5
+    assert [e[0] for e in events] == expected
+    assert result[:6] == (x_out, *temperatures, *airflows)
+    assert result[6] == (base_supply if mode == "none" else adjusted_supply)
