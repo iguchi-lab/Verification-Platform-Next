@@ -1387,6 +1387,114 @@ def _get_actual_non_room_temperatures_without_carryover(
         A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i, V_supply_d_t_i,
         U_prt, A_prt_i, skin.Q)
 
+def _get_new_balanced_non_room_temperature(
+        house,
+        skin,
+        climate,
+        load,
+        A_NR,
+        A_prt_i,
+        U_prt,
+        V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i,
+        Theta_star_HBR_d_t,
+        Theta_in_d_t,
+        Theta_uf_d_t,
+    ):
+    """Calculate formula (52) for the new underfloor-air-conditioning path."""
+    V_dash_supply_d_t_A = np.sum(V_dash_supply_d_t_i[0:5, :], axis=0)
+    L_H_NR_d_t_A = np.sum(load.L_H_d_t_i[5:, :], axis=0)
+    L_CS_NR_d_t_A = np.sum(load.L_CS_d_t_i[5:, :], axis=0)
+
+    assert A_prt_i.shape == (5,)
+    A_prt_A = np.sum(A_prt_i)
+    HCM = np.array(climate.get_HCM_d_t())
+    r_A_NR_uf_1F_excl_bath = jjj_ufac_dc.get_r_A_NR_uf_1F_excl_bath()
+
+    # デバッグ用 250501 IGUCHI
+    # print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
+    # print("Q", skin.Q)
+    # print("A_NR", A_NR)
+    # print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
+    # print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
+    # print("U_prt", U_prt)
+    # print("A_prt_A", A_prt_A)
+    # print("L_H_NR_A[4848]", L_H_NR_d_t_A[4848])
+    # print("L_CS_NR_A[4848]", L_CS_NR_d_t_A[4848])
+    # print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
+    # print("HCM[4848]", HCM[4848])
+    Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
+    Theta_star_NR_d_t = Theta_star_NR_d_t(
+        Theta_star_HBR=Theta_star_HBR_d_t,
+        Q=skin.Q,
+        A_NR=A_NR,
+        V_vent_l_NR=V_vent_l_NR_d_t,
+        V_dash_supply_A=V_dash_supply_d_t_A,
+        U_prt=U_prt,
+        A_prt_A=A_prt_A,
+        L_H_NR_A=L_H_NR_d_t_A,
+        L_CS_NR_A=L_CS_NR_d_t_A,
+        # この時点では仮置きの値を使用⇒夏期は27℃とする必要がある 250501 井口
+        Theta_NR=Theta_in_d_t,
+        Theta_uf=Theta_uf_d_t,
+        HCM=HCM,
+        r_A_NR_1F_excl_bath=r_A_NR_uf_1F_excl_bath,
+    )
+    # print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
+    # print("Theta_NR[0]: ", Theta_in_d_t[0])
+    # print("Theta_uf[0]: ", Theta_uf_d_t[0])
+    return Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath
+
+def _get_actual_non_room_humidity(df_output, X_star_NR_d_t):
+    """Calculate formula (49) and record its output column."""
+    X_NR_d_t = dc.get_X_NR_d_t(X_star_NR_d_t)
+    df_output['X_NR_d_t'] = X_NR_d_t
+    return X_NR_d_t
+
+def _get_actual_room_humidities(df_output, X_star_HBR_d_t):
+    """Calculate formula (47) and record the five room output columns."""
+    X_HBR_d_t_i = dc.get_X_HBR_d_t_i(X_star_HBR_d_t)
+    df_output = df_output.assign(
+        X_HBR_d_t_1=X_HBR_d_t_i[0],
+        X_HBR_d_t_2=X_HBR_d_t_i[1],
+        X_HBR_d_t_3=X_HBR_d_t_i[2],
+        X_HBR_d_t_4=X_HBR_d_t_i[3],
+        X_HBR_d_t_5=X_HBR_d_t_i[4],
+    )
+    return X_HBR_d_t_i, df_output
+
+def _get_partition_heat_transfers(
+        df_output,
+        U_prt,
+        A_prt_i,
+        Theta_star_HBR_d_t,
+        Theta_star_NR_d_t,
+    ):
+    """Calculate formula (11) and record the five partition-transfer columns."""
+    Q_star_trs_prt_d_t_i = dc.get_Q_star_trs_prt_d_t_i(
+        U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
+    df_output = df_output.assign(
+        Q_star_trs_prt_d_t_i_1=Q_star_trs_prt_d_t_i[0],
+        Q_star_trs_prt_d_t_i_2=Q_star_trs_prt_d_t_i[1],
+        Q_star_trs_prt_d_t_i_3=Q_star_trs_prt_d_t_i[2],
+        Q_star_trs_prt_d_t_i_4=Q_star_trs_prt_d_t_i[3],
+        Q_star_trs_prt_d_t_i_5=Q_star_trs_prt_d_t_i[4],
+    )
+    return Q_star_trs_prt_d_t_i, df_output
+
+def _get_balanced_latent_cooling_loads(df_output, load, region):
+    """Calculate formula (10) and record the five latent-load columns."""
+    L_star_CL_d_t_i = dc.get_L_star_CL_d_t_i(
+        load.L_CS_d_t_i, load.L_CL_d_t_i, region)
+    df_output = df_output.assign(
+        L_star_CL_d_t_i_1=L_star_CL_d_t_i[0],
+        L_star_CL_d_t_i_2=L_star_CL_d_t_i[1],
+        L_star_CL_d_t_i_3=L_star_CL_d_t_i[2],
+        L_star_CL_d_t_i_4=L_star_CL_d_t_i[3],
+        L_star_CL_d_t_i_5=L_star_CL_d_t_i[4],
+    )
+    return L_star_CL_d_t_i, df_output
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1691,60 +1799,11 @@ def calc_Q_UT_A(
 
     # (52)　負荷バランス時の非居室の室温
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        V_dash_supply_d_t_A = np.sum(V_dash_supply_d_t_i[0:5, :], axis=0)
-        L_H_NR_d_t_A = np.sum(load.L_H_d_t_i[5:, :], axis=0)
-        L_CS_NR_d_t_A = np.sum(load.L_CS_d_t_i[5:, :], axis=0)
-
-        assert A_prt_i.shape == (5,)
-        A_prt_A = np.sum(A_prt_i)
-        HCM = np.array(climate.get_HCM_d_t())
-
-        r_A_NR_uf_1F_excl_bath = jjj_ufac_dc.get_r_A_NR_uf_1F_excl_bath()
-
-        #デバッグ用 250501 IGUCHI
-        #print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
-        #print("Q", skin.Q)
-        #print("A_NR", A_NR)
-        #print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        #print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
-        #print("A_NR", A_NR)
-        #print("V_vent_l_NR_d_t[4848]", V_vent_l_NR_d_t[4848])
-        #print("V_dash_supply_A[4848]", V_dash_supply_d_t_A[4848])
-        #print("U_prt", U_prt)
-        #print("A_prt_A", A_prt_A)
-        #print("L_H_NR_A[4848]", L_H_NR_d_t_A[4848])
-        #print("L_CS_NR_A[4848]", L_CS_NR_d_t_A[4848])
-        #print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
-        #print("HCM[4848]", HCM[4848])
-
-        Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
-        Theta_star_NR_d_t = \
-            Theta_star_NR_d_t(
-                Theta_star_HBR = Theta_star_HBR_d_t,  # (8760,)
-                Q = skin.Q,
-                A_NR = A_NR,
-                V_vent_l_NR = V_vent_l_NR_d_t,  # (8760,)
-                V_dash_supply_A = V_dash_supply_d_t_A,  # (8760,)
-                U_prt = U_prt,
-                A_prt_A = A_prt_A,
-                L_H_NR_A = L_H_NR_d_t_A,  # (8760,)
-                L_CS_NR_A = L_CS_NR_d_t_A,  # (8760,)
-                Theta_NR = Theta_in_d_t,  # この時点では仮置きの値を使用⇒夏期は27℃とする必要がある　250501 井口
-                Theta_uf = Theta_uf_d_t,  # (8760,)
-                HCM = HCM,  # (8760,)
-                r_A_NR_1F_excl_bath = r_A_NR_uf_1F_excl_bath
-            )
-        #print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
-        #print("Q: ", skin.Q)
-        #print("V_vent_l_NR[0]: ", V_vent_l_NR_d_t[0])
-        #print("V_dash_supply_A[0]: ", V_dash_supply_d_t_A[0])
-        #print("U_prt; ", U_prt)
-        #print("A_prt_A: ", A_prt_A)
-        #print("L_H_NR_A[0]: ", L_H_NR_d_t_A[0])
-        #print("L_CS_NR_A[0]: ", L_CS_NR_d_t_A[0])
-        #print("Theta_NR[0]: ", Theta_in_d_t[0])
-        #print("Theta_uf[0]: ", Theta_uf_d_t[0])
-        #print("HCM[0]: ", HCM[0])
+        Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
+            _get_new_balanced_non_room_temperature(
+                house, skin, climate, load, A_NR, A_prt_i, U_prt,
+                V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_star_HBR_d_t,
+                Theta_in_d_t, Theta_uf_d_t)
     else:
         Theta_star_NR_d_t = \
             dc.get_Theta_star_NR_d_t(
@@ -1755,39 +1814,20 @@ def calc_Q_UT_A(
     df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
 
     # (49)　実際の非居室の絶対湿度
-    X_NR_d_t = dc.get_X_NR_d_t(X_star_NR_d_t)
-    df_output['X_NR_d_t'] = X_NR_d_t
+    X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
 
     # (47)　実際の居室の絶対湿度
-    X_HBR_d_t_i = dc.get_X_HBR_d_t_i(X_star_HBR_d_t)
-    df_output = df_output.assign(
-        X_HBR_d_t_1 = X_HBR_d_t_i[0],
-        X_HBR_d_t_2 = X_HBR_d_t_i[1],
-        X_HBR_d_t_3 = X_HBR_d_t_i[2],
-        X_HBR_d_t_4 = X_HBR_d_t_i[3],
-        X_HBR_d_t_5 = X_HBR_d_t_i[4]
-    )
+    X_HBR_d_t_i, df_output = _get_actual_room_humidities(
+        df_output, X_star_HBR_d_t)
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(1) """
     # (11)　熱損失を含む負荷バランス時の非居室への熱移動
-    Q_star_trs_prt_d_t_i = dc.get_Q_star_trs_prt_d_t_i(U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
-    df_output = df_output.assign(
-        Q_star_trs_prt_d_t_i_1 = Q_star_trs_prt_d_t_i[0],
-        Q_star_trs_prt_d_t_i_2 = Q_star_trs_prt_d_t_i[1],
-        Q_star_trs_prt_d_t_i_3 = Q_star_trs_prt_d_t_i[2],
-        Q_star_trs_prt_d_t_i_4 = Q_star_trs_prt_d_t_i[3],
-        Q_star_trs_prt_d_t_i_5 = Q_star_trs_prt_d_t_i[4]
-    )
+    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
+        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
 
     # (10)　熱取得を含む負荷バランス時の冷房潜熱負荷
-    L_star_CL_d_t_i = dc.get_L_star_CL_d_t_i(load.L_CS_d_t_i, load.L_CL_d_t_i, house.region)
-    df_output = df_output.assign(
-        L_star_CL_d_t_i_1 = L_star_CL_d_t_i[0],
-        L_star_CL_d_t_i_2 = L_star_CL_d_t_i[1],
-        L_star_CL_d_t_i_3 = L_star_CL_d_t_i[2],
-        L_star_CL_d_t_i_4 = L_star_CL_d_t_i[3],
-        L_star_CL_d_t_i_5 = L_star_CL_d_t_i[4]
-    )
+    L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
+        df_output, load, house.region)
 
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう

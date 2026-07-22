@@ -2177,3 +2177,188 @@ def test_actual_non_room_temperatures_without_carryover_preserve_legacy_formula(
         values[0], values[1], values[2], values[3], values[4],
         values[5], values[6], values[7], values[8], 2.7,
     )]
+
+def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
+    monkeypatch,
+):
+    calls = []
+    result = object()
+    r_area = object()
+    theta_star_hbr = np.array([20.0, 21.0, 22.0])
+    theta_in = np.array([15.0, 16.0, 17.0])
+    theta_uf = np.array([18.0, 19.0, 20.0])
+    vent_nr = np.array([1.0, 2.0, 3.0])
+    dash_supply = np.arange(15.0).reshape(5, 3)
+    load_h = np.arange(21.0).reshape(7, 3)
+    load_cs = load_h + 30.0
+    area_partition = np.arange(5.0)
+    hcm = np.array([1, 2, 3])
+
+    class Climate:
+        def get_HCM_d_t(self):
+            calls.append(("hcm",))
+            return hcm
+
+    def vectorize(function):
+        calls.append(("vectorize", function))
+
+        def invoke(**kwargs):
+            calls.append(("invoke", kwargs))
+            return result
+
+        return invoke
+
+    monkeypatch.setattr(sut.np, "vectorize", vectorize)
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "get_r_A_NR_uf_1F_excl_bath",
+        lambda: calls.append(("area_ratio",)) or r_area,
+    )
+
+    actual, actual_r_area = sut._get_new_balanced_non_room_temperature(
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+        SimpleNamespace(Q=2.7), Climate(),
+        SimpleNamespace(L_H_d_t_i=load_h, L_CS_d_t_i=load_cs),
+        45.0, area_partition, 0.5, vent_nr, dash_supply,
+        theta_star_hbr, theta_in, theta_uf
+    )
+
+    assert actual is result
+    assert actual_r_area is r_area
+    assert [call[0] for call in calls] == [
+        "hcm", "area_ratio", "vectorize", "invoke"
+    ]
+    assert calls[2][1] is sut.get_Theta_star_NR
+    kwargs = calls[3][1]
+    np.testing.assert_array_equal(
+        kwargs["V_dash_supply_A"], np.sum(dash_supply[0:5, :], axis=0)
+    )
+    np.testing.assert_array_equal(
+        kwargs["L_H_NR_A"], np.sum(load_h[5:, :], axis=0)
+    )
+    np.testing.assert_array_equal(
+        kwargs["L_CS_NR_A"], np.sum(load_cs[5:, :], axis=0)
+    )
+    assert kwargs["A_prt_A"] == np.sum(area_partition)
+    assert kwargs["Q"] == 2.7
+    assert kwargs["A_NR"] == 45.0
+    assert kwargs["U_prt"] == 0.5
+    assert kwargs["Theta_NR"] is theta_in
+    assert kwargs["Theta_uf"] is theta_uf
+    np.testing.assert_array_equal(kwargs["HCM"], hcm)
+    assert kwargs["r_A_NR_1F_excl_bath"] is r_area
+
+def test_actual_non_room_humidity_preserves_formula_49_and_output_order(
+    monkeypatch,
+):
+    events = []
+    theta_star = object()
+    humidity = object()
+
+    class FrameRecorder:
+        def __setitem__(self, key, value):
+            events.append(("setitem", key, value))
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_NR_d_t",
+        lambda value: events.append(("formula", value)) or humidity,
+    )
+
+    result = sut._get_actual_non_room_humidity(FrameRecorder(), theta_star)
+
+    assert result is humidity
+    assert events == [
+        ("formula", theta_star),
+        ("setitem", "X_NR_d_t", humidity),
+    ]
+
+def test_actual_room_humidities_preserve_formula_47_assign_generation(
+    monkeypatch,
+):
+    events = []
+    theta_star = object()
+    humidity = np.arange(15.0).reshape(5, 3)
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_HBR_d_t_i",
+        lambda value: events.append(("formula", value)) or humidity,
+    )
+
+    result, next_frame = sut._get_actual_room_humidities(frame, theta_star)
+
+    assert result is humidity
+    assert next_frame.generation == 1
+    assert events[0] == ("formula", theta_star)
+    assert events[1][0:2] == ("assign", 0)
+    columns = events[1][2]
+    assert tuple(name for name, _ in columns) == (
+        "X_HBR_d_t_1", "X_HBR_d_t_2", "X_HBR_d_t_3",
+        "X_HBR_d_t_4", "X_HBR_d_t_5",
+    )
+    for index, (_, value) in enumerate(columns):
+        np.testing.assert_array_equal(value, humidity[index])
+
+def test_partition_heat_transfers_preserve_formula_11_assign_generation(
+    monkeypatch,
+):
+    events = []
+    inputs = [object() for _ in range(4)]
+    transfers = np.arange(15.0).reshape(5, 3)
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Q_star_trs_prt_d_t_i",
+        lambda *args: events.append(("formula", args)) or transfers,
+    )
+
+    result, next_frame = sut._get_partition_heat_transfers(frame, *inputs)
+
+    assert result is transfers
+    assert next_frame.generation == 1
+    assert events[0] == ("formula", tuple(inputs))
+    assert events[1][0:2] == ("assign", 0)
+    columns = events[1][2]
+    assert tuple(name for name, _ in columns) == (
+        "Q_star_trs_prt_d_t_i_1", "Q_star_trs_prt_d_t_i_2",
+        "Q_star_trs_prt_d_t_i_3", "Q_star_trs_prt_d_t_i_4",
+        "Q_star_trs_prt_d_t_i_5",
+    )
+    for index, (_, value) in enumerate(columns):
+        np.testing.assert_array_equal(value, transfers[index])
+
+def test_balanced_latent_cooling_loads_preserve_formula_10_assign_generation(
+    monkeypatch,
+):
+    events = []
+    sensible = object()
+    latent = object()
+    loads = np.arange(15.0).reshape(5, 3)
+    load = SimpleNamespace(L_CS_d_t_i=sensible, L_CL_d_t_i=latent)
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_L_star_CL_d_t_i",
+        lambda *args: events.append(("formula", args)) or loads,
+    )
+
+    result, next_frame = sut._get_balanced_latent_cooling_loads(
+        frame, load, 6
+    )
+
+    assert result is loads
+    assert next_frame.generation == 1
+    assert events[0] == ("formula", (sensible, latent, 6))
+    assert events[1][0:2] == ("assign", 0)
+    columns = events[1][2]
+    assert tuple(name for name, _ in columns) == (
+        "L_star_CL_d_t_i_1", "L_star_CL_d_t_i_2",
+        "L_star_CL_d_t_i_3", "L_star_CL_d_t_i_4",
+        "L_star_CL_d_t_i_5",
+    )
+    for index, (_, value) in enumerate(columns):
+        np.testing.assert_array_equal(value, loads[index])
