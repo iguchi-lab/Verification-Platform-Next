@@ -442,6 +442,33 @@ def _get_heat_source_outlet_humidity(
     # (15)　熱源機の出口における絶対湿度
     return dc.get_X_hs_out_d_t(X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i, region)
 
+def _get_heat_source_outlet_temperatures(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        Theta_star_hs_in_d_t: np.ndarray,
+        Q_hs_max_CS_d_t: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        Q_hs_max_H_d_t: np.ndarray,
+        Theta_req_d_t_i: np.ndarray,
+        L_star_H_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+        Theta_NR_d_t: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (17), (16), and (14) in their original order."""
+    # (17)　冷房時の熱源機の出口における空気温度の最低値
+    Theta_hs_out_min_C_d_t = dc.get_Theta_hs_out_min_C_d_t(Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i)
+
+    # (16)　暖房時の熱源機の出口における空気温度の最高値
+    Theta_hs_out_max_H_d_t = dc.get_Theta_hs_out_max_H_d_t(Theta_star_hs_in_d_t, Q_hs_max_H_d_t, V_dash_supply_d_t_i)
+
+    # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以上だった場合の順序で計算
+    # (14)　熱源機の出口における空気温度
+    Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
+                                            L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
+                                            Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
+
+    return Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -1309,18 +1336,22 @@ def calc_Q_UT_A(
                 L_star_CL_d_t_i,
                 house.region,
             )
-            # (17)　冷房時の熱源機の出口における空気温度の最低値
-            Theta_hs_out_min_C_d_t = dc.get_Theta_hs_out_min_C_d_t(Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i)
-
-            # (16)　暖房時の熱源機の出口における空気温度の最高値
-            Theta_hs_out_max_H_d_t = dc.get_Theta_hs_out_max_H_d_t(Theta_star_hs_in_d_t, Q_hs_max_H_d_t, V_dash_supply_d_t_i)
-
-            # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以上だった場合の順序で計算
-            # (14)　熱源機の出口における空気温度
-            Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
-                                                    L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
-                                                    Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
-
+            (
+                Theta_hs_out_min_C_d_t,
+                Theta_hs_out_max_H_d_t,
+                Theta_hs_out_d_t,
+            ) = _get_heat_source_outlet_temperatures(
+                ac_setting,
+                house,
+                Theta_star_hs_in_d_t,
+                Q_hs_max_CS_d_t,
+                V_dash_supply_d_t_i,
+                Q_hs_max_H_d_t,
+                Theta_req_d_t_i,
+                L_star_H_d_t_i,
+                L_star_CS_d_t_i,
+                Theta_NR_d_t,
+            )
             # (43)　暖冷房区画𝑖の吹き出し風量
             V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                         , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
@@ -1616,18 +1647,22 @@ def calc_Q_UT_A(
         # 式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
         Theta_NR_d_t = np.zeros(24 * 365)
 
-        # (17)　冷房時の熱源機の出口における空気温度の最低値
-        Theta_hs_out_min_C_d_t = dc.get_Theta_hs_out_min_C_d_t(Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i)
-
-        # (16)　暖房時の熱源機の出口における空気温度の最高値
-        Theta_hs_out_max_H_d_t = dc.get_Theta_hs_out_max_H_d_t(Theta_star_hs_in_d_t, Q_hs_max_H_d_t, V_dash_supply_d_t_i)
-
-        # L_star_H_d_t_i，L_star_CS_d_t_iの暖冷房区画1～5を合算し0以上だった場合の順序で計算
-        # (14)　熱源機の出口における空気温度
-        Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
-                                                L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
-                                                Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
-
+        (
+            Theta_hs_out_min_C_d_t,
+            Theta_hs_out_max_H_d_t,
+            Theta_hs_out_d_t,
+        ) = _get_heat_source_outlet_temperatures(
+            ac_setting,
+            house,
+            Theta_star_hs_in_d_t,
+            Q_hs_max_CS_d_t,
+            V_dash_supply_d_t_i,
+            Q_hs_max_H_d_t,
+            Theta_req_d_t_i,
+            L_star_H_d_t_i,
+            L_star_CS_d_t_i,
+            Theta_NR_d_t,
+        )
         # (43)　暖冷房区画𝑖の吹き出し風量
         V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                     , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)

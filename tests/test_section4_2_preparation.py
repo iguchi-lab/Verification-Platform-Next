@@ -1104,3 +1104,51 @@ def test_heat_source_outlet_humidity_preserves_formula_arguments(monkeypatch):
 
     assert result is expected
     assert calls == [((*inputs, 7))]
+
+def test_heat_source_outlet_temperatures_preserve_formula_order(monkeypatch):
+    calls = []
+    setting = SimpleNamespace(VAV=True)
+    house = SimpleNamespace(region=6)
+    inputs = [object() for _ in range(8)]
+    outputs = [object() for _ in range(3)]
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_hs_out_min_C_d_t",
+        lambda *args: calls.append(("minimum", args)) or outputs[0],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_hs_out_max_H_d_t",
+        lambda *args: calls.append(("maximum", args)) or outputs[1],
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_Theta_hs_out_d_t",
+        lambda *args: calls.append(("outlet", args)) or outputs[2],
+    )
+
+    result = sut._get_heat_source_outlet_temperatures(
+        setting,
+        house,
+        *inputs,
+    )
+
+    assert result == tuple(outputs)
+    assert calls == [
+        ("minimum", (inputs[0], inputs[1], inputs[2])),
+        ("maximum", (inputs[0], inputs[3], inputs[2])),
+        (
+            "outlet",
+            (
+                True,
+                inputs[4],
+                inputs[2],
+                inputs[5],
+                inputs[6],
+                6,
+                inputs[7],
+                outputs[1],
+                outputs[0],
+            ),
+        ),
+    ]
