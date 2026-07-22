@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import NewType
+from typing import Callable, NewType
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -508,6 +508,134 @@ def _get_supply_air_temperatures(
     # (41)　暖冷房区画𝑖の吹き出し温度
     return dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
                                    V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
+
+def _get_balanced_cooling_loads(
+        L_star_CL_d_t_i: np.ndarray,
+        L_star_CS_d_t_i: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (33) through (28) in their original order."""
+    # (33)
+    L_star_CL_d_t = dc.get_L_star_CL_d_t(L_star_CL_d_t_i)
+    # (32)
+    L_star_CS_d_t = dc.get_L_star_CS_d_t(L_star_CS_d_t_i)
+    # (31)
+    L_star_CL_max_d_t = dc.get_L_star_CL_max_d_t(L_star_CS_d_t)
+    # (30)
+    L_star_dash_CL_d_t = dc.get_L_star_dash_CL_d_t(L_star_CL_max_d_t, L_star_CL_d_t)
+    # (29)
+    L_star_dash_C_d_t = dc.get_L_star_dash_C_d_t(L_star_CS_d_t, L_star_dash_CL_d_t)
+    # (28)
+    SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
+
+    return (
+        L_star_CL_d_t,
+        L_star_CS_d_t,
+        L_star_CL_max_d_t,
+        L_star_dash_CL_d_t,
+        L_star_dash_C_d_t,
+        SHF_dash_d_t,
+    )
+
+def _get_standard_heat_source_capacity_limits(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        heat_CRAC: HeatCRACSpec,
+        cool_CRAC: CoolCRACSpec,
+        SHF_dash_d_t: np.ndarray,
+        L_star_dash_CL_d_t: np.ndarray,
+        get_C_df_H_d_t: Callable[[], np.ndarray],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate formulas (27) through (23) in their original order."""
+    # (27)
+    Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
+    # (26)
+    Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
+    # (25)
+    Q_hs_max_CS_d_t = dc.get_Q_hs_max_CS_d_t(Q_hs_max_C_d_t, SHF_dash_d_t)
+    # (24) デフロストに関する暖房出力補正係数
+    C_df_H_d_t = get_C_df_H_d_t()
+    # (23)
+    Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
+
+    return Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t, C_df_H_d_t, Q_hs_max_H_d_t
+
+def _get_rac_heating_capacity(
+        heat_CRAC: HeatCRACSpec,
+        cool_CRAC: CoolCRACSpec,
+        Theta_ex_d_t: np.ndarray,
+        h_ex_d_t: np.ndarray,
+        log_intermediates: bool,
+    ) -> tuple[float, np.ndarray, np.ndarray]:
+    """Calculate the RAC maximum heating capacity in its original order."""
+    # 最大暖房能力比
+    q_r_max_H = rac.get_q_r_max_H(heat_CRAC.q_max, heat_CRAC.q_rtd)
+    if log_intermediates:
+        _logger.debug(f'q_r_max_H: {q_r_max_H}')  # here
+
+    # 最大暖房出力比
+    Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(cool_CRAC.q_rtd, q_r_max_H, Theta_ex_d_t)
+    if log_intermediates:
+        _logger.NDdebug("Q_r_max_H_d_t", Q_r_max_H_d_t)  # here
+
+    # 最大暖房出力
+    Q_max_H_d_t = rac.calc_Q_max_H_d_t(Q_r_max_H_d_t, heat_CRAC.q_rtd, Theta_ex_d_t, h_ex_d_t, heat_CRAC.input_C_af)
+    if log_intermediates:
+        _logger.NDdebug("Q_max_H_d_t", Q_max_H_d_t)
+
+    return q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t
+
+def _get_rac_cooling_capacity(
+        cool_CRAC: CoolCRACSpec,
+        load: Load_DTI,
+        Theta_ex_d_t: np.ndarray,
+        log_intermediates: bool,
+    ) -> tuple[float, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Calculate the RAC maximum cooling capacity in its original order."""
+    # 最大冷房能力比
+    q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
+    if log_intermediates:
+        _logger.debug(f"q_r_max_C: {q_r_max_C}")
+
+    # 最大冷房出力比
+    Q_r_max_C_d_t = rac.calc_Q_r_max_C_d_t(q_r_max_C, cool_CRAC.q_rtd, Theta_ex_d_t)
+    if log_intermediates:
+        _logger.NDdebug("Theta_ex_d_t", Theta_ex_d_t)
+        _logger.NDdebug("Q_r_max_C_d_t", Q_r_max_C_d_t)
+
+    # 最大冷房出力
+    Q_max_C_d_t = rac.calc_Q_max_C_d_t(Q_r_max_C_d_t, cool_CRAC.q_rtd, cool_CRAC.input_C_af)
+    if log_intermediates:
+        _logger.NDdebug("Q_max_C_d_t", Q_max_C_d_t)
+
+    # 冷房負荷最小顕熱比
+    SHF_L_min_c = rac.get_SHF_L_min_c()
+
+    # 最大冷房潜熱負荷
+    L_max_CL_d_t = rac.get_L_max_CL_d_t(np.sum(load.L_CS_d_t_i, axis=0), SHF_L_min_c)
+
+    # 補正冷房潜熱負荷
+    L_dash_CL_d_t = rac.get_L_dash_CL_d_t(L_max_CL_d_t, np.sum(load.L_CL_d_t_i, axis=0))
+    L_dash_C_d_t = rac.get_L_dash_C_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_CL_d_t)
+
+    # 冷房負荷補正顕熱比
+    SHF_dash_d_t = rac.get_SHF_dash_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_C_d_t)
+
+    # 最大冷房顕熱出力, 最大冷房潜熱出力
+    Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
+    Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
+
+    return (
+        q_r_max_C,
+        Q_r_max_C_d_t,
+        Q_max_C_d_t,
+        SHF_L_min_c,
+        L_max_CL_d_t,
+        L_dash_CL_d_t,
+        L_dash_C_d_t,
+        SHF_dash_d_t,
+        Q_max_CS_d_t,
+        Q_max_CL_d_t,
+    )
 
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
@@ -1253,65 +1381,32 @@ def calc_Q_UT_A(
                     計算モデル.ダクト式セントラル空調機,
                     計算モデル.RAC活用型全館空調_潜熱評価モデル
                 ]:
-                # (33)
-                L_star_CL_d_t = dc.get_L_star_CL_d_t(L_star_CL_d_t_i)
-                # (32)
-                L_star_CS_d_t = dc.get_L_star_CS_d_t(L_star_CS_d_t_i)
-                # (31)
-                L_star_CL_max_d_t = dc.get_L_star_CL_max_d_t(L_star_CS_d_t)
-                # (30)
-                L_star_dash_CL_d_t = dc.get_L_star_dash_CL_d_t(L_star_CL_max_d_t, L_star_CL_d_t)
-                # (29)
-                L_star_dash_C_d_t = dc.get_L_star_dash_C_d_t(L_star_CS_d_t, L_star_dash_CL_d_t)
-                # (28)
-                SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
-                # (27)
-                Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
-                # (26)
-                Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
-                # (25)
-                Q_hs_max_CS_d_t = dc.get_Q_hs_max_CS_d_t(Q_hs_max_C_d_t, SHF_dash_d_t)
-                # (24)
-                C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-                # (23)
-                Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
-
+                (
+                    L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
+                    L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
+                ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
+                (
+                    Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+                    C_df_H_d_t, Q_hs_max_H_d_t,
+                ) = _get_standard_heat_source_capacity_limits(
+                    ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t, L_star_dash_CL_d_t,
+                    lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t))
             elif ac_setting.type in [
                     計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
                     計算モデル.電中研モデル
                 ]:
                 # (24)　デフロストに関する暖房出力補正係数
                 C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-                # 最大暖房能力比
-                q_r_max_H = rac.get_q_r_max_H(heat_CRAC.q_max, heat_CRAC.q_rtd)
-                # 最大暖房出力比
-                Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(cool_CRAC.q_rtd, q_r_max_H, Theta_ex_d_t)
-                # 最大暖房出力
-                Q_max_H_d_t = rac.calc_Q_max_H_d_t(Q_r_max_H_d_t, heat_CRAC.q_rtd, Theta_ex_d_t, h_ex_d_t, heat_CRAC.input_C_af)
+                q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+                    heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=False)
                 Q_hs_max_H_d_t = Q_max_H_d_t
-                # 最大冷房能力比
-                q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
-                # 最大冷房出力比
-                Q_r_max_C_d_t = rac.calc_Q_r_max_C_d_t(q_r_max_C, cool_CRAC.q_rtd, Theta_ex_d_t)
-                # 最大冷房出力
-                Q_max_C_d_t = rac.calc_Q_max_C_d_t(Q_r_max_C_d_t, cool_CRAC.q_rtd, cool_CRAC.input_C_af)
-                Q_hs_max_C_d_t = Q_max_C_d_t
-                # 冷房負荷最小顕熱比
-                SHF_L_min_c = rac.get_SHF_L_min_c()
-                # 最大冷房潜熱負荷
-                L_max_CL_d_t = rac.get_L_max_CL_d_t(np.sum(load.L_CS_d_t_i, axis=0), SHF_L_min_c)
-                # 補正冷房潜熱負荷
-                L_dash_CL_d_t = rac.get_L_dash_CL_d_t(L_max_CL_d_t, np.sum(load.L_CL_d_t_i, axis=0))
-                L_dash_C_d_t = rac.get_L_dash_C_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_CL_d_t)
-                # 冷房負荷補正顕熱比
-                SHF_dash_d_t = rac.get_SHF_dash_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_C_d_t)
-                # 最大冷房顕熱出力, 最大冷房潜熱出力
-                Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
-                Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
+                (
+                    q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c, L_max_CL_d_t,
+                    L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t, Q_max_CS_d_t, Q_max_CL_d_t,
+                ) = _get_rac_cooling_capacity(cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
                 Q_hs_max_C_d_t = Q_max_C_d_t
                 Q_hs_max_CL_d_t = Q_max_CL_d_t
                 Q_hs_max_CS_d_t = Q_max_CS_d_t
-
             else:
                 raise Exception('設備機器の種類の入力が不正です。')
             ####################################################################################################################
@@ -1463,29 +1558,16 @@ def calc_Q_UT_A(
                 計算モデル.ダクト式セントラル空調機,
                 計算モデル.RAC活用型全館空調_潜熱評価モデル
             ]:
-            # (33)
-            L_star_CL_d_t = dc.get_L_star_CL_d_t(L_star_CL_d_t_i)
-            # (32)
-            L_star_CS_d_t = dc.get_L_star_CS_d_t(L_star_CS_d_t_i)
-            # (31)
-            L_star_CL_max_d_t = dc.get_L_star_CL_max_d_t(L_star_CS_d_t)
-            # (30)
-            L_star_dash_CL_d_t = dc.get_L_star_dash_CL_d_t(L_star_CL_max_d_t, L_star_CL_d_t)
-            # (29)
-            L_star_dash_C_d_t = dc.get_L_star_dash_C_d_t(L_star_CS_d_t, L_star_dash_CL_d_t)
-            # (28)
-            SHF_dash_d_t = dc.get_SHF_dash_d_t(L_star_CS_d_t, L_star_dash_C_d_t)
-            # (27)
-            Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
-            # (26)
-            Q_hs_max_CL_d_t = dc.get_Q_hs_max_CL_d_t(Q_hs_max_C_d_t, SHF_dash_d_t, L_star_dash_CL_d_t)
-            # (25)
-            Q_hs_max_CS_d_t = dc.get_Q_hs_max_CS_d_t(Q_hs_max_C_d_t, SHF_dash_d_t)
-            # (24) デフロストに関する暖房出力補正係数
-            C_df_H_d_t = climate.get_C_df_H_d_t()
-            # (23)
-            Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
-
+            (
+                L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
+                L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
+            ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
+            (
+                Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
+                C_df_H_d_t, Q_hs_max_H_d_t,
+            ) = _get_standard_heat_source_capacity_limits(
+                ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t, L_star_dash_CL_d_t,
+                climate.get_C_df_H_d_t)
         elif ac_setting.type in [
                 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
                 計算モデル.電中研モデル
@@ -1494,49 +1576,13 @@ def calc_Q_UT_A(
             C_df_H_d_t = climate.get_C_df_H_d_t()
             _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
 
-            # 最大暖房能力比
-            q_r_max_H = rac.get_q_r_max_H(heat_CRAC.q_max, heat_CRAC.q_rtd)
-            _logger.debug(f'q_r_max_H: {q_r_max_H}')  # here
-
-            # 最大暖房出力比
-            Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(cool_CRAC.q_rtd, q_r_max_H, Theta_ex_d_t)
-            _logger.NDdebug("Q_r_max_H_d_t", Q_r_max_H_d_t)  # here
-
-            # 最大暖房出力
-            Q_max_H_d_t = rac.calc_Q_max_H_d_t(Q_r_max_H_d_t, heat_CRAC.q_rtd, Theta_ex_d_t, h_ex_d_t, heat_CRAC.input_C_af)
-            _logger.NDdebug("Q_max_H_d_t", Q_max_H_d_t)
+            q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+                heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t, log_intermediates=True)
             Q_hs_max_H_d_t = Q_max_H_d_t
-
-            # 最大冷房能力比
-            q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
-            _logger.debug(f"q_r_max_C: {q_r_max_C}")
-
-            # 最大冷房出力比
-            Q_r_max_C_d_t = rac.calc_Q_r_max_C_d_t(q_r_max_C, cool_CRAC.q_rtd, Theta_ex_d_t)
-            _logger.NDdebug("Theta_ex_d_t", Theta_ex_d_t)
-            _logger.NDdebug("Q_r_max_C_d_t", Q_r_max_C_d_t)
-
-            # 最大冷房出力
-            Q_max_C_d_t = rac.calc_Q_max_C_d_t(Q_r_max_C_d_t, cool_CRAC.q_rtd, cool_CRAC.input_C_af)
-            _logger.NDdebug("Q_max_C_d_t", Q_max_C_d_t)
-            Q_hs_max_C_d_t = Q_max_C_d_t
-
-            # 冷房負荷最小顕熱比
-            SHF_L_min_c = rac.get_SHF_L_min_c()
-
-            # 最大冷房潜熱負荷
-            L_max_CL_d_t = rac.get_L_max_CL_d_t(np.sum(load.L_CS_d_t_i, axis=0), SHF_L_min_c)
-
-            # 補正冷房潜熱負荷
-            L_dash_CL_d_t = rac.get_L_dash_CL_d_t(L_max_CL_d_t, np.sum(load.L_CL_d_t_i, axis=0))
-            L_dash_C_d_t = rac.get_L_dash_C_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_CL_d_t)
-
-            # 冷房負荷補正顕熱比
-            SHF_dash_d_t = rac.get_SHF_dash_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_C_d_t)
-
-            # 最大冷房顕熱出力, 最大冷房潜熱出力
-            Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
-            Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
+            (
+                q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c, L_max_CL_d_t,
+                L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t, Q_max_CS_d_t, Q_max_CL_d_t,
+            ) = _get_rac_cooling_capacity(cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
             Q_hs_max_C_d_t = Q_max_C_d_t
             Q_hs_max_CL_d_t = Q_max_CL_d_t
             Q_hs_max_CS_d_t = Q_max_CS_d_t
