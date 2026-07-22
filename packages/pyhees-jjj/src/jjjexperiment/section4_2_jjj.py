@@ -1593,6 +1593,24 @@ def _prepare_partition_state(df_output2, df_output3, house, skin, A_HCZ_i, A_NR)
     df_output2['A_prt_i'] = A_prt_i
     return U_prt, A_prt_i
 
+
+def _prepare_duct_geometry_state(
+        df_output, df_output2, house, Theta_ex_d_t, J_d_t):
+    """Calculate formulas (59), (58), (57), and (56) in source order."""
+    Theta_SAT_d_t = dc.get_Theta_SAT_d_t(Theta_ex_d_t, J_d_t)
+    df_output['Theta_SAT_d_t'] = Theta_SAT_d_t
+
+    l_duct_ex_i = dc.get_l_duct_ex_i(house.A_A)
+    df_output2['l_duct_ex_i'] = l_duct_ex_i
+
+    l_duct_in_i = dc.get_l_duct_in_i(house.A_A)
+    df_output2['l_duct_in_i'] = l_duct_in_i
+
+    l_duct_i = dc.get_l_duct__i(l_duct_in_i, l_duct_ex_i)
+    df_output2['l_duct_i'] = l_duct_i
+    return Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1669,22 +1687,10 @@ def calc_Q_UT_A(
     U_prt, A_prt_i = _prepare_partition_state(
         df_output2, df_output3, house, skin, A_HCZ_i, A_NR)
 
-    # (59)　等価外気温度
-    Theta_SAT_d_t = dc.get_Theta_SAT_d_t(Theta_ex_d_t, J_d_t)
-    df_output['Theta_SAT_d_t'] = Theta_SAT_d_t
-
-    # (58)　断熱区画外を通るダクトの長さ
-    l_duct_ex_i = dc.get_l_duct_ex_i(house.A_A)
-    df_output2['l_duct_ex_i'] = l_duct_ex_i
-
-    # (57)　断熱区画内を通るダクト長さ
-    l_duct_in_i = dc.get_l_duct_in_i(house.A_A)
-    df_output2['l_duct_in_i'] = l_duct_in_i
-
-    # (56)　ダクト長さ
-    l_duct_i = dc.get_l_duct__i(l_duct_in_i, l_duct_ex_i)
-    df_output2['l_duct_i'] = l_duct_i
-
+    # (59), (58), (57), (56)　等価外気温度とダクト長さ
+    Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i = \
+        _prepare_duct_geometry_state(
+            df_output, df_output2, house, Theta_ex_d_t, J_d_t)
     # (51)　負荷バランス時の居室の絶対湿度
     X_star_HBR_d_t = dc.get_X_star_HBR_d_t(X_ex_d_t, house.region)  # X_ex_d_t [g/kg(DA)] 想定
     df_output['X_star_HBR_d_t'] = X_star_HBR_d_t

@@ -2597,3 +2597,46 @@ def test_prepare_partition_state_preserves_formula_61_60_order(monkeypatch):
     assert [(events[i][1], events[i][2]) for i in (1, 3, 4)] == [
         ("df3", "U_prt"), ("df3", "r_env"), ("df2", "A_prt_i")
     ]
+
+def test_prepare_duct_geometry_state_preserves_formula_59_to_56_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Frame:
+        def __init__(self, name):
+            self.name = name
+
+        def __setitem__(self, key, value):
+            events.append(("write", self.name, key, value))
+
+    monkeypatch.setattr(
+        sut.dc, "get_Theta_SAT_d_t",
+        lambda *args: events.append(("sat", args)) or values[0])
+    monkeypatch.setattr(
+        sut.dc, "get_l_duct_ex_i",
+        lambda *args: events.append(("ex", args)) or values[1])
+    monkeypatch.setattr(
+        sut.dc, "get_l_duct_in_i",
+        lambda *args: events.append(("in", args)) or values[2])
+    monkeypatch.setattr(
+        sut.dc, "get_l_duct__i",
+        lambda *args: events.append(("total", args)) or values[3])
+
+    theta_ex, solar = object(), object()
+    result = sut._prepare_duct_geometry_state(
+        Frame("df"), Frame("df2"), SimpleNamespace(A_A=120.0), theta_ex, solar)
+
+    assert result == tuple(values)
+    assert [event[0] for event in events] == [
+        "sat", "write", "ex", "write", "in", "write", "total", "write"
+    ]
+    assert events[0][1] == (theta_ex, solar)
+    assert events[2][1] == (120.0,)
+    assert events[4][1] == (120.0,)
+    assert events[6][1] == (values[2], values[1])
+    assert [(events[i][1], events[i][2]) for i in (1, 3, 5, 7)] == [
+        ("df", "Theta_SAT_d_t"),
+        ("df2", "l_duct_ex_i"),
+        ("df2", "l_duct_in_i"),
+        ("df2", "l_duct_i"),
+    ]
