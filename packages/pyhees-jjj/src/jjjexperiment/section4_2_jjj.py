@@ -1445,6 +1445,12 @@ def _get_new_balanced_non_room_temperature(
     # print("Theta_uf[0]: ", Theta_uf_d_t[0])
     return Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath
 
+def _get_actual_non_room_humidity(df_output, X_star_NR_d_t):
+    """Calculate formula (49) and record its output column."""
+    X_NR_d_t = dc.get_X_NR_d_t(X_star_NR_d_t)
+    df_output['X_NR_d_t'] = X_NR_d_t
+    return X_NR_d_t
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1764,8 +1770,7 @@ def calc_Q_UT_A(
     df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
 
     # (49)　実際の非居室の絶対湿度
-    X_NR_d_t = dc.get_X_NR_d_t(X_star_NR_d_t)
-    df_output['X_NR_d_t'] = X_NR_d_t
+    X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
 
     # (47)　実際の居室の絶対湿度
     X_HBR_d_t_i = dc.get_X_HBR_d_t_i(X_star_HBR_d_t)

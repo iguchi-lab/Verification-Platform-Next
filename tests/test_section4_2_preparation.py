@@ -2247,3 +2247,28 @@ def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
     assert kwargs["Theta_uf"] is theta_uf
     np.testing.assert_array_equal(kwargs["HCM"], hcm)
     assert kwargs["r_A_NR_1F_excl_bath"] is r_area
+
+def test_actual_non_room_humidity_preserves_formula_49_and_output_order(
+    monkeypatch,
+):
+    events = []
+    theta_star = object()
+    humidity = object()
+
+    class FrameRecorder:
+        def __setitem__(self, key, value):
+            events.append(("setitem", key, value))
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_NR_d_t",
+        lambda value: events.append(("formula", value)) or humidity,
+    )
+
+    result = sut._get_actual_non_room_humidity(FrameRecorder(), theta_star)
+
+    assert result is humidity
+    assert events == [
+        ("formula", theta_star),
+        ("setitem", "X_NR_d_t", humidity),
+    ]
