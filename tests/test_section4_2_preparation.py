@@ -3044,7 +3044,8 @@ def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch,
         *(object() for _ in range(6)))
     standard_caps = sut._StandardCapacityLimitsResult(
         *(object() for _ in range(5)))
-    heat_caps = tuple(object() for _ in range(3))
+    heat_caps = sut._RacHeatingCapacityResult(
+        *(object() for _ in range(3)))
     cool_caps = tuple(object() for _ in range(10))
 
     class Climate:
@@ -3156,7 +3157,8 @@ def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, st
         *(object() for _ in range(6)))
     standard_caps = sut._StandardCapacityLimitsResult(
         *(object() for _ in range(5)))
-    heat_caps = tuple(object() for _ in range(3))
+    heat_caps = sut._RacHeatingCapacityResult(
+        *(object() for _ in range(3)))
     cool_caps = tuple(object() for _ in range(10))
     monkeypatch.setattr(
         sut, "_get_balanced_cooling_loads",

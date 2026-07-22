@@ -2152,9 +2152,12 @@ def _prepare_no_carryover_capacity_state(
             計算モデル.電中研モデル]:
         C_df_H_d_t = climate.get_C_df_H_d_t()
         _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
-        q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+        rac_heating = _get_rac_heating_capacity(
             heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
             log_intermediates=True)
+        q_r_max_H = rac_heating.q_r_max_H
+        Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
+        Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
         (
             q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
@@ -2636,9 +2639,12 @@ def _prepare_carryover_capacity_state(
             計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
             計算モデル.電中研モデル]:
         C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-        q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+        rac_heating = _get_rac_heating_capacity(
             heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
             log_intermediates=False)
+        q_r_max_H = rac_heating.q_r_max_H
+        Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
+        Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
         (
             q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
