@@ -2272,3 +2272,31 @@ def test_actual_non_room_humidity_preserves_formula_49_and_output_order(
         ("formula", theta_star),
         ("setitem", "X_NR_d_t", humidity),
     ]
+
+def test_actual_room_humidities_preserve_formula_47_assign_generation(
+    monkeypatch,
+):
+    events = []
+    theta_star = object()
+    humidity = np.arange(15.0).reshape(5, 3)
+    frame = _FrameRecorder(events)
+
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_HBR_d_t_i",
+        lambda value: events.append(("formula", value)) or humidity,
+    )
+
+    result, next_frame = sut._get_actual_room_humidities(frame, theta_star)
+
+    assert result is humidity
+    assert next_frame.generation == 1
+    assert events[0] == ("formula", theta_star)
+    assert events[1][0:2] == ("assign", 0)
+    columns = events[1][2]
+    assert tuple(name for name, _ in columns) == (
+        "X_HBR_d_t_1", "X_HBR_d_t_2", "X_HBR_d_t_3",
+        "X_HBR_d_t_4", "X_HBR_d_t_5",
+    )
+    for index, (_, value) in enumerate(columns):
+        np.testing.assert_array_equal(value, humidity[index])

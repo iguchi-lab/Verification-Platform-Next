@@ -1451,6 +1451,18 @@ def _get_actual_non_room_humidity(df_output, X_star_NR_d_t):
     df_output['X_NR_d_t'] = X_NR_d_t
     return X_NR_d_t
 
+def _get_actual_room_humidities(df_output, X_star_HBR_d_t):
+    """Calculate formula (47) and record the five room output columns."""
+    X_HBR_d_t_i = dc.get_X_HBR_d_t_i(X_star_HBR_d_t)
+    df_output = df_output.assign(
+        X_HBR_d_t_1=X_HBR_d_t_i[0],
+        X_HBR_d_t_2=X_HBR_d_t_i[1],
+        X_HBR_d_t_3=X_HBR_d_t_i[2],
+        X_HBR_d_t_4=X_HBR_d_t_i[3],
+        X_HBR_d_t_5=X_HBR_d_t_i[4],
+    )
+    return X_HBR_d_t_i, df_output
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1773,14 +1785,8 @@ def calc_Q_UT_A(
     X_NR_d_t = _get_actual_non_room_humidity(df_output, X_star_NR_d_t)
 
     # (47)　実際の居室の絶対湿度
-    X_HBR_d_t_i = dc.get_X_HBR_d_t_i(X_star_HBR_d_t)
-    df_output = df_output.assign(
-        X_HBR_d_t_1 = X_HBR_d_t_i[0],
-        X_HBR_d_t_2 = X_HBR_d_t_i[1],
-        X_HBR_d_t_3 = X_HBR_d_t_i[2],
-        X_HBR_d_t_4 = X_HBR_d_t_i[3],
-        X_HBR_d_t_5 = X_HBR_d_t_i[4]
-    )
+    X_HBR_d_t_i, df_output = _get_actual_room_humidities(
+        df_output, X_star_HBR_d_t)
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(1) """
     # (11)　熱損失を含む負荷バランス時の非居室への熱移動
