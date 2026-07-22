@@ -2757,7 +2757,8 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
     monkeypatch.setattr(
         sut,
         "_get_rated_heat_source_capacities",
-        lambda *args: events.append(("prepare", args)) or (heating, cooling),
+        lambda *args: events.append(("prepare", args))
+        or sut._RatedHeatSourceCapacitiesResult(heating, cooling),
     )
 
     result = sut._prepare_rated_heat_source_capacity_state(Frame(), *inputs)

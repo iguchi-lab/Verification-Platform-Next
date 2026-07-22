@@ -1877,12 +1877,14 @@ def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
 def _prepare_rated_heat_source_capacity_state(
         df_output3, ac_setting, house, heat_CRAC, cool_CRAC):
     """Prepare rated heat-source capacities and preserve output write order."""
-    Q_hs_rtd_H, Q_hs_rtd_C = _get_rated_heat_source_capacities(
+    rated_capacities = _get_rated_heat_source_capacities(
         ac_setting,
         house,
         heat_CRAC,
         cool_CRAC,
     )
+    Q_hs_rtd_H = rated_capacities.Q_hs_rtd_H
+    Q_hs_rtd_C = rated_capacities.Q_hs_rtd_C
     df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]
     df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
     return Q_hs_rtd_H, Q_hs_rtd_C
