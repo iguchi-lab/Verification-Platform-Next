@@ -3640,3 +3640,28 @@ def test_prepare_unprocessed_load_state_preserves_calculate_record_order(
         ("calculate", tuple(inputs)),
         ("record", (original, *loads)),
     ]
+
+
+def test_prepare_unprocessed_energy_state_preserves_calculate_record_order(
+        monkeypatch):
+    events = []
+    energy = object()
+    output_name = object()
+    original = object()
+    recorded = object()
+    inputs = [object() for _ in range(5)]
+    monkeypatch.setattr(
+        sut, "_get_unprocessed_energy",
+        lambda *args: events.append(("calculate", args))
+        or (energy, output_name))
+    monkeypatch.setattr(
+        sut, "_record_unprocessed_energy_output",
+        lambda *args: events.append(("record", args)) or recorded)
+
+    result = sut._prepare_unprocessed_energy_state(original, *inputs)
+
+    assert result == (energy, recorded)
+    assert events == [
+        ("calculate", tuple(inputs)),
+        ("record", (original, output_name, energy)),
+    ]

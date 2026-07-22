@@ -2074,6 +2074,17 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_unprocessed_energy_state(
+        df_output, ac_setting, Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region):
+    """Calculate and record unprocessed primary energy."""
+    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
+        ac_setting, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region)
+    df_output = _record_unprocessed_energy_output(
+        df_output, E_UT_output_name, E_UT_d_t)
+    return E_UT_d_t, df_output
+
+
 def _prepare_unprocessed_load_state(
         df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
@@ -2841,18 +2852,9 @@ def calc_Q_UT_A(
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
         L_star_H_d_t_i, L_dash_H_d_t_i)
     """ まとめ - 一次エネルギー """
-    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
-        ac_setting,
-        Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i,
-        Q_UT_H_d_t_i,
-        house.region,
-    )
-    df_output = _record_unprocessed_energy_output(
-        df_output,
-        E_UT_output_name,
-        E_UT_d_t,
-    )
+    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(
+        df_output, ac_setting, Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region)
     _export_underfloor_output(
         case_name,
         ac_setting,
