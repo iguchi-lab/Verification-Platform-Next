@@ -100,3 +100,12 @@ def test_underfloor_section_module_api_contract(module_name, expected_api):
     module = importlib.import_module(f"jjjexperiment.underfloor_ac.{module_name}")
 
     assert all(hasattr(module, name) for name in expected_api)
+
+
+def test_legacy_underfloor_section3_1_e_import_aliases_jjj_module():
+    legacy = importlib.import_module("jjjexperiment.underfloor_ac.section3_1_e")
+    implementation = importlib.import_module(
+        "jjjexperiment.underfloor_ac.section3_1_e_jjj"
+    )
+
+    assert legacy is implementation

@@ -4,7 +4,7 @@ import numpy as np
 # JJJ
 from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.inputs.common import HouseInfo
-from jjjexperiment.underfloor_ac.section3_1_e import get_Theta_uf_d_t_runup
+from jjjexperiment.underfloor_ac.section3_1_e_jjj import get_Theta_uf_d_t_runup
 from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath
 from test_utils.utils import load_input_yaml
 
@@ -74,7 +74,7 @@ class Test_床下地盤熱損失助走計算:
 
     def test_暖房期_旧暫定値と近似一致(self):
         """THETA_UF_WARM で助走した結果が旧暫定値 11.2224 と 3% 以内に収まること"""
-        from jjjexperiment.underfloor_ac.section3_1_e import (
+        from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
             calc_sum_Theta_dash_g_surf_A_m_runup,
             THETA_UF_WARM,
         )
@@ -90,7 +90,7 @@ class Test_床下地盤熱損失助走計算:
 
     def test_冷房期_旧暫定値と近似一致(self):
         """THETA_UF_COOL で助走した結果が旧暫定値 9.15940 と 3% 以内に収まること"""
-        from jjjexperiment.underfloor_ac.section3_1_e import (
+        from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
             calc_sum_Theta_dash_g_surf_A_m_runup,
             THETA_UF_COOL,
         )
@@ -106,7 +106,7 @@ class Test_床下地盤熱損失助走計算:
 
     def test_暖房期は冷房期より大きい(self):
         """暖房期（高温）の助走結果は冷房期（低温）より大きくなること"""
-        from jjjexperiment.underfloor_ac.section3_1_e import (
+        from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
             calc_sum_Theta_dash_g_surf_A_m_runup,
             THETA_UF_WARM,
             THETA_UF_COOL,
@@ -119,7 +119,7 @@ class Test_床下地盤熱損失助走計算:
 
     def test_高いTheta_g_avgは結果を小さくする(self):
         """Theta_g_avg が高いほど sum_Theta_dash_g_surf_A_m が小さくなること"""
-        from jjjexperiment.underfloor_ac.section3_1_e import (
+        from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
             calc_sum_Theta_dash_g_surf_A_m_runup,
             THETA_UF_WARM,
         )
