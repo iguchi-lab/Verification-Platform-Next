@@ -286,6 +286,28 @@ def _export_underfloor_output(
         # ネスト関数内で更新されているデータフレーム
         new_ufac_df.export_to_csv(filename)
 
+def _export_standard_outputs(
+        case_name: CaseName,
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        df_output3: pd.DataFrame,
+        df_output2: pd.DataFrame,
+        df_output: pd.DataFrame,
+    ) -> None:
+    match(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
+        case(None, None):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+        case(_, None):
+            df_output3.to_csv(case_name + jjj_consts.version_info() + '_H_output3.csv', encoding = 'cp932')
+            df_output2.to_csv(case_name + jjj_consts.version_info() + '_H_output4.csv', encoding = 'cp932')
+            df_output.to_csv(case_name  + jjj_consts.version_info() + '_H_output5.csv', encoding = 'cp932')
+        case(None, _):
+            df_output3.to_csv(case_name + jjj_consts.version_info() + '_C_output3.csv', encoding = 'cp932')
+            df_output2.to_csv(case_name + jjj_consts.version_info() + '_C_output4.csv', encoding = 'cp932')
+            df_output.to_csv(case_name  + jjj_consts.version_info() + '_C_output5.csv', encoding = 'cp932')
+        case(_, _):
+            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1629,20 +1651,14 @@ def calc_Q_UT_A(
         new_ufac,
         new_ufac_df,
     )
-    match(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
-        case(None, None):
-            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
-        case(_, None):
-            df_output3.to_csv(case_name + jjj_consts.version_info() + '_H_output3.csv', encoding = 'cp932')
-            df_output2.to_csv(case_name + jjj_consts.version_info() + '_H_output4.csv', encoding = 'cp932')
-            df_output.to_csv(case_name  + jjj_consts.version_info() + '_H_output5.csv', encoding = 'cp932')
-        case(None, _):
-            df_output3.to_csv(case_name + jjj_consts.version_info() + '_C_output3.csv', encoding = 'cp932')
-            df_output2.to_csv(case_name + jjj_consts.version_info() + '_C_output4.csv', encoding = 'cp932')
-            df_output.to_csv(case_name  + jjj_consts.version_info() + '_C_output5.csv', encoding = 'cp932')
-        case(_, _):
-            raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
-
+    _export_standard_outputs(
+        case_name,
+        ac_setting,
+        house,
+        df_output3,
+        df_output2,
+        df_output,
+    )
     return E_UT_d_t, \
             Theta_hs_out_d_t, Theta_hs_in_d_t, \
             X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t

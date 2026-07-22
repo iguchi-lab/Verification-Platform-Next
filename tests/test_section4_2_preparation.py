@@ -401,3 +401,94 @@ def test_export_underfloor_output_does_nothing_when_disabled(monkeypatch):
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
         frame,
     )
+
+@pytest.mark.parametrize(
+    ("capacities", "season"),
+    (
+        ((1.0, None), "H"),
+        ((None, 2.0), "C"),
+    ),
+)
+def test_export_standard_outputs_preserves_capacity_and_file_order(
+    monkeypatch,
+    capacities,
+    season,
+):
+    calls = []
+    setting = object()
+    house = object()
+
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_H",
+        lambda ac, value: calls.append(("capacity", "H", ac, value))
+        or capacities[0],
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_C",
+        lambda ac, value: calls.append(("capacity", "C", ac, value))
+        or capacities[1],
+    )
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "version_info",
+        lambda: calls.append(("version",)) or "v-test",
+    )
+
+    def frame(number):
+        return SimpleNamespace(
+            to_csv=lambda filename, encoding: calls.append(
+                ("export", number, filename, encoding)
+            )
+        )
+
+    sut._export_standard_outputs(
+        "case",
+        setting,
+        house,
+        frame(3),
+        frame(4),
+        frame(5),
+    )
+
+    assert calls == [
+        ("capacity", "H", setting, house),
+        ("capacity", "C", setting, house),
+        ("version",),
+        ("export", 3, f"casev-test_{season}_output3.csv", "cp932"),
+        ("version",),
+        ("export", 4, f"casev-test_{season}_output4.csv", "cp932"),
+        ("version",),
+        ("export", 5, f"casev-test_{season}_output5.csv", "cp932"),
+    ]
+
+
+@pytest.mark.parametrize("capacities", ((None, None), (1.0, 2.0)))
+def test_export_standard_outputs_rejects_ambiguous_capacities(
+    monkeypatch,
+    capacities,
+):
+    calls = []
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_H",
+        lambda *args: calls.append("H") or capacities[0],
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_C",
+        lambda *args: calls.append("C") or capacities[1],
+    )
+
+    with pytest.raises(Exception):
+        sut._export_standard_outputs(
+            "case",
+            object(),
+            object(),
+            object(),
+            object(),
+            object(),
+        )
+
+    assert calls == ["H", "C"]
