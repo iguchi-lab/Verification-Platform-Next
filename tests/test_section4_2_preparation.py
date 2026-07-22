@@ -3837,3 +3837,17 @@ def test_climate_conditions_result_preserves_tuple_contract():
         "J_d_t",
         "h_ex_d_t",
     )
+
+
+def test_dwelling_areas_and_water_heat_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(4))
+    result = sut._DwellingAreasAndWaterHeatResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "A_HCZ_i",
+        "A_HCZ_R_i",
+        "A_NR",
+        "L_wtr",
+    )

@@ -107,6 +107,12 @@ class _ClimateConditionsResult(NamedTuple):
     J_d_t: object
     h_ex_d_t: object
 
+class _DwellingAreasAndWaterHeatResult(NamedTuple):
+    A_HCZ_i: object
+    A_HCZ_R_i: object
+    A_NR: object
+    L_wtr: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1646,7 +1652,12 @@ def _prepare_dwelling_areas_and_water_heat(df_output2, df_output3, house):
     df_output3['A_NR'] = [A_NR]
     L_wtr = dc.get_L_wtr()
     df_output3['L_wtr'] = [L_wtr]
-    return A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr
+    return _DwellingAreasAndWaterHeatResult(
+        A_HCZ_i,
+        A_HCZ_R_i,
+        A_NR,
+        L_wtr,
+    )
 
 def _prepare_occupancy_state(df_output, house, A_NR):
     """Calculate formula (66) values and preserve direct output writes."""
