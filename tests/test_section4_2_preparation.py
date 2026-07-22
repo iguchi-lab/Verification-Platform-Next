@@ -3776,3 +3776,23 @@ def test_rac_heating_capacity_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("q_r_max_H", "Q_r_max_H_d_t", "Q_max_H_d_t",)
+
+
+def test_rac_cooling_capacity_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(10))
+    result = sut._RacCoolingCapacityResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == (
+        "q_r_max_C",
+        "Q_r_max_C_d_t",
+        "Q_max_C_d_t",
+        "SHF_L_min_c",
+        "L_max_CL_d_t",
+        "L_dash_CL_d_t",
+        "L_dash_C_d_t",
+        "SHF_dash_d_t",
+        "Q_max_CS_d_t",
+        "Q_max_CL_d_t",
+    )

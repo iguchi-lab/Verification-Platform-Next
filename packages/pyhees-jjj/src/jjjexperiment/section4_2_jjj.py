@@ -78,6 +78,18 @@ class Load_DTI:
 VHS_DSGN_H = NewType('VHS_DSGN_H', float)
 VHS_DSGN_C = NewType('VHS_DSGN_C', float)
 
+class _RacCoolingCapacityResult(NamedTuple):
+    q_r_max_C: object
+    Q_r_max_C_d_t: object
+    Q_max_C_d_t: object
+    SHF_L_min_c: object
+    L_max_CL_d_t: object
+    L_dash_CL_d_t: object
+    L_dash_C_d_t: object
+    SHF_dash_d_t: object
+    Q_max_CS_d_t: object
+    Q_max_CL_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -706,7 +718,7 @@ def _get_rac_cooling_capacity(
     Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
     Q_max_CL_d_t = rac.get_Q_max_CL_d_t(Q_max_C_d_t, SHF_dash_d_t, L_dash_CL_d_t)
 
-    return (
+    return _RacCoolingCapacityResult(
         q_r_max_C,
         Q_r_max_C_d_t,
         Q_max_C_d_t,
