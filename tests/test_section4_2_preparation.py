@@ -2864,3 +2864,26 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     assert heat_calls[0][1][-2] is q_initial
     if should_adjust:
         assert heat_calls[1][1][-2] is q_ground
+
+def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monkeypatch):
+    events = []
+    value = object()
+    frame = _FrameRecorder(events)
+    house = SimpleNamespace(region=6)
+    load = SimpleNamespace(L_CL_d_t_i=object())
+    inputs = [object() for _ in range(4)]
+    monkeypatch.setattr(
+        sut.dc,
+        "get_X_star_NR_d_t",
+        lambda *args: events.append(("formula", args)) or value,
+    )
+
+    result = sut._prepare_balanced_non_room_humidity(
+        frame, house, load, *inputs)
+
+    assert result is value
+    assert events[0] == (
+        "formula",
+        (inputs[0], load.L_CL_d_t_i, inputs[1], inputs[2], inputs[3], 6),
+    )
+    assert events[1] == ("setitem", 0, "X_star_NR_d_t", value)

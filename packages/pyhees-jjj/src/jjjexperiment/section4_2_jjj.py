@@ -1819,6 +1819,21 @@ def _prepare_pre_vav_airflow_state(
     )
 
 
+
+def _prepare_balanced_non_room_humidity(
+        df_output, house, load, X_star_HBR_d_t, L_wtr,
+        V_vent_l_NR_d_t, V_dash_supply_d_t_i):
+    """Calculate formula (53) and preserve its direct output write."""
+    X_star_NR_d_t = dc.get_X_star_NR_d_t(
+        X_star_HBR_d_t,
+        load.L_CL_d_t_i,
+        L_wtr,
+        V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i,
+        house.region,
+    )
+    df_output['X_star_NR_d_t'] = X_star_NR_d_t
+    return X_star_NR_d_t
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1987,9 +2002,15 @@ def calc_Q_UT_A(
     )
 
     # (53)　負荷バランス時の非居室の絶対湿度
-    X_star_NR_d_t = dc.get_X_star_NR_d_t(X_star_HBR_d_t, load.L_CL_d_t_i, L_wtr, V_vent_l_NR_d_t, V_dash_supply_d_t_i, house.region)
-    df_output['X_star_NR_d_t'] = X_star_NR_d_t
-
+    X_star_NR_d_t = _prepare_balanced_non_room_humidity(
+        df_output,
+        house,
+        load,
+        X_star_HBR_d_t,
+        L_wtr,
+        V_vent_l_NR_d_t,
+        V_dash_supply_d_t_i,
+    )
     # (52)　負荷バランス時の非居室の室温
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
