@@ -8,7 +8,7 @@ from jjjexperiment.common import JJJ_HCM
 from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.inputs.environment_service import EnvironmentService
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin
-from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath
+from jjjexperiment.underfloor_ac.section4_2_jjj import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath
 from jjjexperiment.underfloor_ac.section4_2_f46_f48 import get_Theta_HBR_i, get_Theta_NR
 
 from test_utils.utils import load_input_yaml

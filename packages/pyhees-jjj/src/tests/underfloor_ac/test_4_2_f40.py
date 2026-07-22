@@ -10,7 +10,7 @@ from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.inputs.common import HouseInfo, OuterSkin
 from jjjexperiment.inputs.climate_service import ClimateService
 
-from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, calc_Theta_uf, calc_delta_L_room2uf_i, calc_delta_L_uf2outdoor, calc_delta_L_uf2gnd
+from jjjexperiment.underfloor_ac.section4_2_jjj import get_A_s_ufac_i, calc_Theta_uf, calc_delta_L_room2uf_i, calc_delta_L_uf2outdoor, calc_delta_L_uf2gnd
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc
 
 import jjjexperiment.constants as jjj_consts

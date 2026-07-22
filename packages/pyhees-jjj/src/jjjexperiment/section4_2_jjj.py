@@ -45,7 +45,7 @@ import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
 from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 新床下空調
-import jjjexperiment.underfloor_ac.section4_2 as jjj_ufac_dc
+import jjjexperiment.underfloor_ac.section4_2_jjj as jjj_ufac_dc
 from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
     calc_Theta_uf_d_t_2023,
     calc_sum_Theta_dash_g_surf_A_m_runup,

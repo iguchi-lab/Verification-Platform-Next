@@ -5,7 +5,7 @@ import numpy as np
 from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.inputs.common import HouseInfo
 from jjjexperiment.underfloor_ac.section3_1_e_jjj import get_Theta_uf_d_t_runup
-from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath
+from jjjexperiment.underfloor_ac.section4_2_jjj import get_A_s_ufac_i, get_r_A_NR_uf_1F_excl_bath
 from test_utils.utils import load_input_yaml
 
 class Test_床下空調時_共通:

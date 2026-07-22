@@ -17,7 +17,7 @@ from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.environment_service import EnvironmentService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
 
-from jjjexperiment.underfloor_ac.section4_2 import get_A_s_ufac_i, calc_delta_L_room2uf_i
+from jjjexperiment.underfloor_ac.section4_2_jjj import get_A_s_ufac_i, calc_delta_L_room2uf_i
 
 from test_utils.utils import load_input_yaml
 

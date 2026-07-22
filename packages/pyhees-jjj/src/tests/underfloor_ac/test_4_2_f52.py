@@ -1,7 +1,7 @@
 import pytest
 
 from jjjexperiment.common import JJJ_HCM
-from jjjexperiment.underfloor_ac.section4_2 import get_r_A_NR_uf_1F_excl_bath
+from jjjexperiment.underfloor_ac.section4_2_jjj import get_r_A_NR_uf_1F_excl_bath
 from jjjexperiment.underfloor_ac.section4_2_f52 import get_Theta_star_NR
 
 @pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
