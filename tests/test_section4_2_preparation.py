@@ -641,3 +641,38 @@ def test_record_supply_state_outputs_preserves_assign_order(before_is_none):
             ) + (("Theta_NR_d_t", theta_nr),),
         ),
     ]
+
+def test_record_actual_load_outputs_preserves_assign_order():
+    frame = _FrameRecorder()
+    latent = [object() for _ in range(5)]
+    sensible = [object() for _ in range(5)]
+    heating = [object() for _ in range(5)]
+
+    result = sut._record_actual_load_outputs(
+        frame,
+        latent,
+        sensible,
+        heating,
+    )
+
+    assert result.generation == 3
+    assert frame.events == [
+        (
+            "assign",
+            0,
+            tuple((f"L_dash_CL_d_t_{i + 1}", latent[i]) for i in range(5)),
+        ),
+        (
+            "assign",
+            1,
+            tuple(
+                (f"L_dash_CS_d_t_{i + 1}", sensible[i])
+                for i in range(5)
+            ),
+        ),
+        (
+            "assign",
+            2,
+            tuple((f"L_dash_H_d_t_{i + 1}", heating[i]) for i in range(5)),
+        ),
+    ]
