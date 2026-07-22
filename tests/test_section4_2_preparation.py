@@ -2757,7 +2757,8 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
     monkeypatch.setattr(
         sut,
         "_get_rated_heat_source_capacities",
-        lambda *args: events.append(("prepare", args)) or (heating, cooling),
+        lambda *args: events.append(("prepare", args))
+        or sut._RatedHeatSourceCapacitiesResult(heating, cooling),
     )
 
     result = sut._prepare_rated_heat_source_capacity_state(Frame(), *inputs)
@@ -2773,7 +2774,8 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
 def test_prepare_underfloor_adjustment_state_preserves_ground_response_and_flag(
         monkeypatch, enabled):
     events = []
-    ground = tuple(object() for _ in range(4))
+    ground = sut._UnderfloorGroundResponseResult(
+        *(object() for _ in range(4)))
     setting, theta_ex = object(), object()
     flag = sut.床下空調ロジック.変更する if enabled else object()
     monkeypatch.setattr(
@@ -2816,12 +2818,14 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
         sut,
         "_get_supply_airflow_before_vav",
         lambda *args: events.append(("supply_airflow", args))
-        or (r_static, r_hourly, v_supply),
+        or sut._SupplyAirflowBeforeVavResult(
+            r_static, r_hourly, v_supply),
     )
     monkeypatch.setattr(
         sut,
         "_adjust_heat_source_output_for_room_to_underfloor_transfer",
-        lambda *args: events.append(("room", args)) or (q_room, u_s, a_s, r_a),
+        lambda *args: events.append(("room", args))
+        or sut._RoomToUnderfloorTransferResult(q_room, u_s, a_s, r_a),
     )
     monkeypatch.setattr(
         sut,
@@ -3036,10 +3040,14 @@ def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch,
              else sut.計算モデル.電中研モデル)
     setting = SimpleNamespace(type=model)
     inputs = [object() for _ in range(8)]
-    standard_loads = tuple(object() for _ in range(6))
-    standard_caps = tuple(object() for _ in range(5))
-    heat_caps = tuple(object() for _ in range(3))
-    cool_caps = tuple(object() for _ in range(10))
+    standard_loads = sut._BalancedCoolingLoadsResult(
+        *(object() for _ in range(6)))
+    standard_caps = sut._StandardCapacityLimitsResult(
+        *(object() for _ in range(5)))
+    heat_caps = sut._RacHeatingCapacityResult(
+        *(object() for _ in range(3)))
+    cool_caps = sut._RacCoolingCapacityResult(
+        *(object() for _ in range(10)))
 
     class Climate:
         def get_C_df_H_d_t(self):
@@ -3084,7 +3092,8 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
     context = [object() for _ in range(15)]
     monkeypatch.setattr(
         sut, "_get_heat_source_outlet_requirements",
-        lambda *a: events.append(("requirements", a)) or (x_min, x_req, theta_req))
+        lambda *a: events.append(("requirements", a))
+        or sut._HeatSourceOutletRequirementsResult(x_min, x_req, theta_req))
     monkeypatch.setattr(
         sut, "_get_new_underfloor_requested_temperatures",
         lambda *a: events.append(("new", a)) or adjusted)
@@ -3103,8 +3112,10 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
 def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mode):
     events = []
     x_out = object()
-    temperatures = tuple(object() for _ in range(3))
-    airflows = tuple(object() for _ in range(2))
+    temperatures = sut._HeatSourceOutletTemperaturesResult(
+        *(object() for _ in range(3)))
+    airflows = sut._CappedSupplyAirflowsResult(
+        *(object() for _ in range(2)))
     base_supply = tuple(object() for _ in range(5))
     adjusted_supply = tuple(object() for _ in range(5))
     theta_nr = object()
@@ -3143,10 +3154,14 @@ def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, st
              else sut.計算モデル.電中研モデル)
     setting = SimpleNamespace(type=model)
     inputs = [object() for _ in range(8)]
-    standard_loads = tuple(object() for _ in range(6))
-    standard_caps = tuple(object() for _ in range(5))
-    heat_caps = tuple(object() for _ in range(3))
-    cool_caps = tuple(object() for _ in range(10))
+    standard_loads = sut._BalancedCoolingLoadsResult(
+        *(object() for _ in range(6)))
+    standard_caps = sut._StandardCapacityLimitsResult(
+        *(object() for _ in range(5)))
+    heat_caps = sut._RacHeatingCapacityResult(
+        *(object() for _ in range(3)))
+    cool_caps = sut._RacCoolingCapacityResult(
+        *(object() for _ in range(10)))
     monkeypatch.setattr(
         sut, "_get_balanced_cooling_loads",
         lambda *a: events.append(("loads", a)) or standard_loads)
@@ -3221,7 +3236,8 @@ def test_prepare_carryover_outlet_requirements_preserves_first_pass(
     monkeypatch.setattr(
         sut, "_get_heat_source_outlet_requirements",
         lambda *a: events.append(("requirements", a))
-        or (humidity_min, humidity_req, temperature_req))
+        or sut._HeatSourceOutletRequirementsResult(
+            humidity_min, humidity_req, temperature_req))
     monkeypatch.setattr(
         sut, "_adjust_legacy_underfloor_requested_temperatures",
         lambda *a: events.append(("adjust", a)) or adjusted)
@@ -3242,8 +3258,10 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
         monkeypatch, enabled):
     events = []
     outlet_humidity = object()
-    outlet_temperatures = tuple(object() for _ in range(3))
-    airflows = tuple(object() for _ in range(2))
+    outlet_temperatures = sut._HeatSourceOutletTemperaturesResult(
+        *(object() for _ in range(3)))
+    airflows = sut._CappedSupplyAirflowsResult(
+        *(object() for _ in range(2)))
     supply_temperature = object()
     adjusted = object()
     house = SimpleNamespace(region=6)
@@ -3599,7 +3617,7 @@ def test_prepare_heat_source_inlet_temperature_output_preserves_formula_12(
 def test_prepare_actual_load_state_preserves_calculate_record_order(
         monkeypatch):
     events = []
-    loads = tuple(object() for _ in range(3))
+    loads = sut._ActualLoadsResult(*(object() for _ in range(3)))
     original = object()
     recorded = object()
     inputs = [object() for _ in range(7)]

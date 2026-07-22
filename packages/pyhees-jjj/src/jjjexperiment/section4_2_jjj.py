@@ -1877,24 +1877,26 @@ def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
 def _prepare_rated_heat_source_capacity_state(
         df_output3, ac_setting, house, heat_CRAC, cool_CRAC):
     """Prepare rated heat-source capacities and preserve output write order."""
-    Q_hs_rtd_H, Q_hs_rtd_C = _get_rated_heat_source_capacities(
+    rated_capacities = _get_rated_heat_source_capacities(
         ac_setting,
         house,
         heat_CRAC,
         cool_CRAC,
     )
+    Q_hs_rtd_H = rated_capacities.Q_hs_rtd_H
+    Q_hs_rtd_C = rated_capacities.Q_hs_rtd_C
     df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]
     df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
     return Q_hs_rtd_H, Q_hs_rtd_C
 
 def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
     """Prepare ground response and whether heat-source output needs adjustment."""
-    (
-        Theta_in_d_t,
-        Phi_A_0,
-        Theta_g_avg,
-        sum_Theta_dash_g_surf_A_m,
-    ) = _prepare_underfloor_ground_response(ac_setting, Theta_ex_d_t)
+    ground_response = _prepare_underfloor_ground_response(
+        ac_setting, Theta_ex_d_t)
+    Theta_in_d_t = ground_response.Theta_in_d_t
+    Phi_A_0 = ground_response.Phi_A_0
+    Theta_g_avg = ground_response.Theta_g_avg
+    sum_Theta_dash_g_surf_A_m = ground_response.sum_Theta_dash_g_surf_A_m
     should_adjust = new_ufac.new_ufac_flg == 床下空調ロジック.変更する
     return (
         Theta_in_d_t,
@@ -1928,11 +1930,7 @@ def _prepare_pre_vav_airflow_state(
             Q_hat_hs_CS_d_t,
         )
         df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
-        (
-            r_supply_des_i,
-            r_supply_des_d_t_i,
-            V_dash_supply_d_t_i,
-        ) = _get_supply_airflow_before_vav(
+        supply_airflow = _get_supply_airflow_before_vav(
             ac_setting,
             house,
             load,
@@ -1940,21 +1938,23 @@ def _prepare_pre_vav_airflow_state(
             V_dash_hs_supply_d_t,
             V_vent_g_i,
         )
+        r_supply_des_i = supply_airflow.r_supply_des_i
+        r_supply_des_d_t_i = supply_airflow.r_supply_des_d_t_i
+        V_dash_supply_d_t_i = supply_airflow.V_dash_supply_d_t_i
         if not should_adjust:
             break
 
-        (
-            Q_hat_hs_d_t,
-            U_s_input,
-            A_s_ufac_i,
-            r_A_s_ufac,
-        ) = _adjust_heat_source_output_for_room_to_underfloor_transfer(
+        room_transfer = _adjust_heat_source_output_for_room_to_underfloor_transfer(
             new_ufac,
             house,
             Theta_ex_d_t,
             Theta_in_d_t,
             Q_hat_hs_d_t,
         )
+        Q_hat_hs_d_t = room_transfer.Q_hat_hs_d_t
+        U_s_input = room_transfer.U_s_input
+        A_s_ufac_i = room_transfer.A_s_ufac_i
+        r_A_s_ufac = room_transfer.r_A_s_ufac
         Q_hat_hs_d_t, Theta_uf_d_t = \
             _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
                 ac_setting,
@@ -2131,31 +2131,46 @@ def _prepare_no_carryover_capacity_state(
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル]:
-        (
-            L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
-            L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
-        ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
-        (
-            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-            C_df_H_d_t, Q_hs_max_H_d_t,
-        ) = _get_standard_heat_source_capacity_limits(
+        balanced_cooling = _get_balanced_cooling_loads(
+            L_star_CL_d_t_i, L_star_CS_d_t_i)
+        L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
+        L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
+        L_star_CL_max_d_t = balanced_cooling.L_star_CL_max_d_t
+        L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
+        L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
+        SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
+        standard_capacity = _get_standard_heat_source_capacity_limits(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
             L_star_dash_CL_d_t, climate.get_C_df_H_d_t)
+        Q_hs_max_C_d_t = standard_capacity.Q_hs_max_C_d_t
+        Q_hs_max_CL_d_t = standard_capacity.Q_hs_max_CL_d_t
+        Q_hs_max_CS_d_t = standard_capacity.Q_hs_max_CS_d_t
+        C_df_H_d_t = standard_capacity.C_df_H_d_t
+        Q_hs_max_H_d_t = standard_capacity.Q_hs_max_H_d_t
     elif ac_setting.type in [
             計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
             計算モデル.電中研モデル]:
         C_df_H_d_t = climate.get_C_df_H_d_t()
         _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
-        q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+        rac_heating = _get_rac_heating_capacity(
             heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
             log_intermediates=True)
+        q_r_max_H = rac_heating.q_r_max_H
+        Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
+        Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        (
-            q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
-            L_max_CL_d_t, L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t,
-            Q_max_CS_d_t, Q_max_CL_d_t,
-        ) = _get_rac_cooling_capacity(
+        rac_cooling = _get_rac_cooling_capacity(
             cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
+        q_r_max_C = rac_cooling.q_r_max_C
+        Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
+        Q_max_C_d_t = rac_cooling.Q_max_C_d_t
+        SHF_L_min_c = rac_cooling.SHF_L_min_c
+        L_max_CL_d_t = rac_cooling.L_max_CL_d_t
+        L_dash_CL_d_t = rac_cooling.L_dash_CL_d_t
+        L_dash_C_d_t = rac_cooling.L_dash_C_d_t
+        SHF_dash_d_t = rac_cooling.SHF_dash_d_t
+        Q_max_CS_d_t = rac_cooling.Q_max_CS_d_t
+        Q_max_CL_d_t = rac_cooling.Q_max_CL_d_t
         Q_hs_max_C_d_t = Q_max_C_d_t
         Q_hs_max_CL_d_t = Q_max_CL_d_t
         Q_hs_max_CS_d_t = Q_max_CS_d_t
@@ -2195,12 +2210,14 @@ def _prepare_no_carryover_outlet_requirements(
         Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
         Theta_ex_d_t, Theta_in_d_t):
     """Prepare outlet requirements and the optional first underfloor pass."""
-    X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
-        _get_heat_source_outlet_requirements(
-            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
-            X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
-            Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
-            l_duct_i, house.region)
+    outlet_requirements = _get_heat_source_outlet_requirements(
+        X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+        X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+        Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+        l_duct_i, house.region)
+    X_hs_out_min_C_d_t = outlet_requirements.X_hs_out_min_C_d_t
+    X_req_d_t_i = outlet_requirements.X_req_d_t_i
+    Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(
             ac_setting, house, skin, load, new_ufac, new_ufac_df,
@@ -2226,19 +2243,20 @@ def _prepare_no_carryover_supply_state(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
     Theta_NR_d_t = np.zeros(24 * 365)
-    (
-        Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t,
-    ) = _get_heat_source_outlet_temperatures(
+    outlet_temperatures = _get_heat_source_outlet_temperatures(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
         V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
-    V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+    Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
+    Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
+    Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
+    capped_airflows = _get_capped_supply_airflows(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
         V_vent_g_i, V_dash_supply_d_t_i, Theta_hs_out_d_t,
         V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
+    V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
+    V_supply_d_t_i = capped_airflows.V_supply_d_t_i
     Theta_supply_d_t_i = _get_supply_air_temperatures(
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
         l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
@@ -2310,9 +2328,12 @@ def _prepare_actual_load_state(
         df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
     """Calculate and record actual cooling and heating loads."""
-    L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i = _get_actual_loads(
+    actual_loads = _get_actual_loads(
         carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+    L_dash_CL_d_t_i = actual_loads.L_dash_CL_d_t_i
+    L_dash_CS_d_t_i = actual_loads.L_dash_CS_d_t_i
+    L_dash_H_d_t_i = actual_loads.L_dash_H_d_t_i
     df_output = _record_actual_load_outputs(
         df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i)
     return (
@@ -2527,19 +2548,20 @@ def _prepare_carryover_supply_state(
     X_hs_out_d_t = _get_heat_source_outlet_humidity(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
-    (
-        Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t,
-        Theta_hs_out_d_t,
-    ) = _get_heat_source_outlet_temperatures(
+    outlet_temperatures = _get_heat_source_outlet_temperatures(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
         V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
-    V_supply_d_t_i_before, V_supply_d_t_i = _get_capped_supply_airflows(
+    Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
+    Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
+    Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
+    capped_airflows = _get_capped_supply_airflows(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i,
         Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
         Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
+    V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
+    V_supply_d_t_i = capped_airflows.V_supply_d_t_i
     Theta_supply_d_t_i = _get_supply_air_temperatures(
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
         l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
@@ -2564,12 +2586,14 @@ def _prepare_carryover_outlet_requirements(
         L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
         L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, Theta_ex_d_t):
     """Prepare carryover outlet requirements and legacy first floor pass."""
-    X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
-        _get_heat_source_outlet_requirements(
-            X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
-            X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
-            Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
-            l_duct_i, house.region)
+    outlet_requirements = _get_heat_source_outlet_requirements(
+        X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
+        X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
+        Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+        l_duct_i, house.region)
+    X_hs_out_min_C_d_t = outlet_requirements.X_hs_out_min_C_d_t
+    X_req_d_t_i = outlet_requirements.X_req_d_t_i
+    Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
     if skin.underfloor_air_conditioning_air_supply:
         Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
             ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
@@ -2603,31 +2627,46 @@ def _prepare_carryover_capacity_state(
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル]:
-        (
-            L_star_CL_d_t, L_star_CS_d_t, L_star_CL_max_d_t,
-            L_star_dash_CL_d_t, L_star_dash_C_d_t, SHF_dash_d_t,
-        ) = _get_balanced_cooling_loads(L_star_CL_d_t_i, L_star_CS_d_t_i)
-        (
-            Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t,
-            C_df_H_d_t, Q_hs_max_H_d_t,
-        ) = _get_standard_heat_source_capacity_limits(
+        balanced_cooling = _get_balanced_cooling_loads(
+            L_star_CL_d_t_i, L_star_CS_d_t_i)
+        L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
+        L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
+        L_star_CL_max_d_t = balanced_cooling.L_star_CL_max_d_t
+        L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
+        L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
+        SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
+        standard_capacity = _get_standard_heat_source_capacity_limits(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
             L_star_dash_CL_d_t,
             lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t))
+        Q_hs_max_C_d_t = standard_capacity.Q_hs_max_C_d_t
+        Q_hs_max_CL_d_t = standard_capacity.Q_hs_max_CL_d_t
+        Q_hs_max_CS_d_t = standard_capacity.Q_hs_max_CS_d_t
+        C_df_H_d_t = standard_capacity.C_df_H_d_t
+        Q_hs_max_H_d_t = standard_capacity.Q_hs_max_H_d_t
     elif ac_setting.type in [
             計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
             計算モデル.電中研モデル]:
         C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-        q_r_max_H, Q_r_max_H_d_t, Q_max_H_d_t = _get_rac_heating_capacity(
+        rac_heating = _get_rac_heating_capacity(
             heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
             log_intermediates=False)
+        q_r_max_H = rac_heating.q_r_max_H
+        Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
+        Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        (
-            q_r_max_C, Q_r_max_C_d_t, Q_max_C_d_t, SHF_L_min_c,
-            L_max_CL_d_t, L_dash_CL_d_t, L_dash_C_d_t, SHF_dash_d_t,
-            Q_max_CS_d_t, Q_max_CL_d_t,
-        ) = _get_rac_cooling_capacity(
+        rac_cooling = _get_rac_cooling_capacity(
             cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
+        q_r_max_C = rac_cooling.q_r_max_C
+        Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
+        Q_max_C_d_t = rac_cooling.Q_max_C_d_t
+        SHF_L_min_c = rac_cooling.SHF_L_min_c
+        L_max_CL_d_t = rac_cooling.L_max_CL_d_t
+        L_dash_CL_d_t = rac_cooling.L_dash_CL_d_t
+        L_dash_C_d_t = rac_cooling.L_dash_C_d_t
+        SHF_dash_d_t = rac_cooling.SHF_dash_d_t
+        Q_max_CS_d_t = rac_cooling.Q_max_CS_d_t
+        Q_max_CL_d_t = rac_cooling.Q_max_CL_d_t
         Q_hs_max_C_d_t = Q_max_C_d_t
         Q_hs_max_CL_d_t = Q_max_CL_d_t
         Q_hs_max_CS_d_t = Q_max_CS_d_t
