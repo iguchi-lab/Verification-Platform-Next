@@ -727,3 +727,333 @@ def test_record_unprocessed_energy_output_preserves_direct_assignment():
     assert frame.events == [
         ("setitem", 0, "E_UT_H_d_t", energy),
     ]
+
+
+def test_heat_source_supply_airflow_before_vav_uses_cav_seasons(monkeypatch):
+    heating = np.zeros(24 * 365, dtype=bool)
+    cooling = np.zeros(24 * 365, dtype=bool)
+    mid = np.zeros(24 * 365, dtype=bool)
+    heating[0] = True
+    cooling[1] = True
+    mid[2] = True
+    monkeypatch.setattr(
+        sut.dc_a,
+        "get_season_array_d_t",
+        lambda region: (heating, cooling, mid),
+    )
+
+    result = sut._get_heat_source_supply_airflow_before_vav(
+        SimpleNamespace(type=object()),
+        SimpleNamespace(region=6),
+        SimpleNamespace(hs_CAV=True),
+        1200.0,
+        1500.0,
+        300.0,
+        100.0,
+        200.0,
+        object(),
+        object(),
+    )
+
+    np.testing.assert_array_equal(result[:3], [1200.0, 1500.0, 0.0])
+    np.testing.assert_array_equal(result[3:], np.zeros(24 * 365 - 3))
+
+
+@pytest.mark.parametrize(
+    ("capacities", "load_index", "cooling"),
+    (
+        ((100.0, None), 0, False),
+        ((None, 200.0), 1, True),
+    ),
+)
+def test_heat_source_supply_airflow_before_vav_preserves_2023_branch(
+    monkeypatch,
+    capacities,
+    load_index,
+    cooling,
+):
+    calls = []
+    loads = (object(), object())
+    expected = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_hs_supply_d_t_2023",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_heat_source_supply_airflow_before_vav(
+        SimpleNamespace(type=sut.計算モデル.RAC活用型全館空調_潜熱評価モデル),
+        SimpleNamespace(region=7),
+        SimpleNamespace(hs_CAV=False),
+        1200.0,
+        1500.0,
+        300.0,
+        *capacities,
+        *loads,
+    )
+
+    assert result is expected
+    assert calls == [(loads[load_index], 7, cooling)]
+
+
+def test_heat_source_supply_airflow_before_vav_preserves_standard_arguments(
+    monkeypatch,
+):
+    calls = []
+    load = object()
+    expected = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_hs_supply_d_t",
+        lambda *args: calls.append(args) or expected,
+    )
+
+    result = sut._get_heat_source_supply_airflow_before_vav(
+        SimpleNamespace(type=object()),
+        SimpleNamespace(region=5),
+        SimpleNamespace(hs_CAV=False),
+        0,
+        1800.0,
+        250.0,
+        100.0,
+        None,
+        load,
+        object(),
+    )
+
+    assert result is expected
+    assert calls == [(250.0, 0, None, 100.0, None, load, 5)]
+
+def test_supply_airflow_before_vav_preserves_vav_formula_order(monkeypatch):
+    calls = []
+    sensible = object()
+    heating = object()
+    heat_source_airflow = object()
+    ventilation = object()
+    ratios = np.arange(5 * 24 * 365).reshape(5, 24 * 365)
+    supply = object()
+    monkeypatch.setattr(
+        sut.jjj_consts,
+        "change_supply_volume_before_vav_adjust",
+        sut.VAVありなしの吹出風量.数式を統一する.value,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_r_supply_des_d_t_i_2023",
+        lambda *args: calls.append(("ratios", args)) or ratios,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_supply_d_t_i_2023",
+        lambda *args: calls.append(("supply", args)) or supply,
+    )
+
+    result = sut._get_supply_airflow_before_vav(
+        SimpleNamespace(VAV=True),
+        SimpleNamespace(region=6),
+        SimpleNamespace(L_CS_d_t_i=sensible, L_H_d_t_i=heating),
+        object(),
+        heat_source_airflow,
+        ventilation,
+    )
+
+    np.testing.assert_array_equal(result[0], ratios[:, 0:1])
+    assert result[1] is ratios
+    assert result[2] is supply
+    assert calls == [
+        ("ratios", (6, sensible, heating)),
+        ("supply", (ratios, heat_source_airflow, ventilation)),
+    ]
+
+
+def test_supply_airflow_before_vav_preserves_standard_formula_order(monkeypatch):
+    calls = []
+    areas = object()
+    heat_source_airflow = object()
+    ventilation = object()
+    ratios = np.arange(1.0, 6.0)
+    supply = object()
+    monkeypatch.setattr(
+        sut.dc,
+        "get_r_supply_des_i",
+        lambda value: calls.append(("ratios", value)) or ratios,
+    )
+    monkeypatch.setattr(
+        sut.dc,
+        "get_V_dash_supply_d_t_i",
+        lambda *args: calls.append(("supply", args)) or supply,
+    )
+
+    result = sut._get_supply_airflow_before_vav(
+        SimpleNamespace(VAV=False),
+        object(),
+        object(),
+        areas,
+        heat_source_airflow,
+        ventilation,
+    )
+
+    assert result[0] is ratios
+    np.testing.assert_array_equal(
+        result[1],
+        np.tile(ratios, 24 * 365).reshape(5, 24 * 365),
+    )
+    assert result[2] is supply
+    assert calls == [
+        ("ratios", areas),
+        ("supply", (ratios, heat_source_airflow, ventilation)),
+    ]
+
+def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
+    calls = []
+    area = np.arange(1.0, 13.0).reshape(12, 1)
+    theta_out = np.arange(24 * 365, dtype=float)
+    theta_in = theta_out - 2.0
+    output = np.full(24 * 365, 100.0)
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "get_A_s_ufac_i",
+        lambda *args: calls.append(("area", args)) or (area, 0.4),
+    )
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_delta_L_room2uf_i",
+        lambda insulation, values, delta: calls.append(
+            ("transfer", insulation, values, delta)
+        ) or np.full((12, 1), delta),
+    )
+
+    result = sut._adjust_heat_source_output_for_room_to_underfloor_transfer(
+        SimpleNamespace(U_s_vert=0.7, U_s_floor_ins=0.3),
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+        theta_out,
+        theta_in,
+        output,
+    )
+
+    assert result[0] is output
+    np.testing.assert_array_equal(output, np.full(24 * 365, 76.0))
+    assert result[1] == 0.7
+    assert result[2] is area
+    assert result[3] == 0.4
+    assert calls[0] == ("area", (120.0, 30.0, 50.0))
+    assert len(calls) == 1 + 24 * 365
+    assert calls[1][1:] == (0.3, area, 2.0)
+    assert calls[-1][1:] == (0.3, area, 2.0)
+
+def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
+    setting = _setting(sut.HeatingAcSetting)
+    area = np.ones((12, 1))
+    theta_in = np.full(24 * 365, 20.0)
+    theta_out = np.full(24 * 365, 10.0)
+    supply = np.ones((5, 24 * 365))
+    output = np.full(24 * 365, 100.0)
+    capacity_calls = []
+    theta_calls = []
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *args: capacity_calls.append("H") or 1.0)
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *args: capacity_calls.append("C") or None)
+    monkeypatch.setattr(sut.jjj_ufac_dc, "get_r_A_uf_i", lambda: np.ones((12, 1)))
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_Theta_uf",
+        lambda *args: theta_calls.append(args) or 20.0,
+    )
+    monkeypatch.setattr(sut.algo, "get_L_uf", lambda value: value + 1.0)
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_delta_L_uf2outdoor",
+        lambda phi, length, delta: delta,
+    )
+
+    result = sut._adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
+        setting,
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+        SimpleNamespace(Q=2.7),
+        SimpleNamespace(L_H_d_t_i=np.ones((12, 24 * 365))),
+        SimpleNamespace(U_s_floor_ins=0.3),
+        SimpleNamespace(get_phi=lambda q: q + 0.5),
+        area,
+        0.4,
+        0.7,
+        theta_in,
+        theta_out,
+        supply,
+        output,
+    )
+
+    assert result[0] is output
+    np.testing.assert_array_equal(output, np.full(24 * 365, 110.0))
+    np.testing.assert_array_equal(result[1], np.full(24 * 365, 20.0))
+    assert capacity_calls == ["H", "C"] * (24 * 365)
+    assert len(theta_calls) == 24 * 365
+    assert theta_calls[0][:2] == (1.0, None)
+    np.testing.assert_allclose(
+        theta_calls[0][2:],
+        (4.8, 12.0, 0.7, 0.3, 20.0, 10.0, 5.0),
+    )
+    assert theta_calls[-1] == theta_calls[0]
+
+def test_underfloor_to_ground_transfer_preserves_argument_order(monkeypatch):
+    setting = object()
+    house = object()
+    area = np.arange(1.0, 13.0).reshape(12, 1)
+    theta = np.arange(24 * 365, dtype=float)
+    output = np.full(24 * 365, 100.0)
+    calls = []
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_H",
+        lambda *args: calls.append(("capacity", "H", args)) or 1.0,
+    )
+    monkeypatch.setattr(
+        sut,
+        "_get_q_hs_rtd_C",
+        lambda *args: calls.append(("capacity", "C", args)) or 2.0,
+    )
+    monkeypatch.setattr(sut.jjj_consts, "R_g", 3.0, raising=False)
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_delta_L_uf2gnd",
+        lambda q_h, q_c, area_total, resistance, phi, theta_uf, response, average: (
+            calls.append(
+                (
+                    "transfer",
+                    q_h,
+                    q_c,
+                    area_total,
+                    resistance,
+                    phi,
+                    theta_uf,
+                    response,
+                    average,
+                )
+            )
+            or theta_uf + 1.0
+        ),
+    )
+
+    result = sut._adjust_heat_source_output_for_underfloor_to_ground_transfer(
+        setting,
+        house,
+        area,
+        0.025,
+        theta,
+        11.2,
+        15.5,
+        output,
+    )
+
+    assert result is output
+    np.testing.assert_array_equal(output, 101.0 + theta)
+    assert calls[:2] == [
+        ("capacity", "H", (setting, house)),
+        ("capacity", "C", (setting, house)),
+    ]
+    # np.vectorize evaluates the first element once for type inference.
+    assert len(calls) == 3 + 24 * 365
+    assert calls[2] == (
+        "transfer", 1.0, 2.0, 78.0, 3.0, 0.025, 0.0, 11.2, 15.5
+    )
+    assert calls[-1] == (
+        "transfer", 1.0, 2.0, 78.0, 3.0, 0.025, 8759.0, 11.2, 15.5
+    )
