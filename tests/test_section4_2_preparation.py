@@ -3758,3 +3758,12 @@ def test_balanced_cooling_loads_result_preserves_tuple_contract():
     assert isinstance(result, tuple)
     assert tuple(result) == values
     assert result._fields == ("L_star_CL_d_t", "L_star_CS_d_t", "L_star_CL_max_d_t", "L_star_dash_CL_d_t", "L_star_dash_C_d_t", "SHF_dash_d_t",)
+
+
+def test_standard_capacity_limits_result_preserves_tuple_contract():
+    values = tuple(object() for _ in range(5))
+    result = sut._StandardCapacityLimitsResult(*values)
+
+    assert isinstance(result, tuple)
+    assert tuple(result) == values
+    assert result._fields == ("Q_hs_max_C_d_t", "Q_hs_max_CL_d_t", "Q_hs_max_CS_d_t", "C_df_H_d_t", "Q_hs_max_H_d_t",)

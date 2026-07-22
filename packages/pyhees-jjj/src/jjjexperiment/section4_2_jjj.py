@@ -134,6 +134,14 @@ class _BalancedCoolingLoadsResult(NamedTuple):
     SHF_dash_d_t: object
 
 
+class _StandardCapacityLimitsResult(NamedTuple):
+    Q_hs_max_C_d_t: object
+    Q_hs_max_CL_d_t: object
+    Q_hs_max_CS_d_t: object
+    C_df_H_d_t: object
+    Q_hs_max_H_d_t: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -615,7 +623,13 @@ def _get_standard_heat_source_capacity_limits(
     # (23)
     Q_hs_max_H_d_t = dc.get_Q_hs_max_H_d_t_2024(ac_setting.type, _get_q_hs_rtd_H(ac_setting, house), C_df_H_d_t, heat_CRAC.input_C_af)
 
-    return Q_hs_max_C_d_t, Q_hs_max_CL_d_t, Q_hs_max_CS_d_t, C_df_H_d_t, Q_hs_max_H_d_t
+    return _StandardCapacityLimitsResult(
+        Q_hs_max_C_d_t,
+        Q_hs_max_CL_d_t,
+        Q_hs_max_CS_d_t,
+        C_df_H_d_t,
+        Q_hs_max_H_d_t,
+    )
 
 def _get_rac_heating_capacity(
         heat_CRAC: HeatCRACSpec,
