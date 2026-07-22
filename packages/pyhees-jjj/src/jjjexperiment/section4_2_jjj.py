@@ -114,6 +114,12 @@ class _HeatSourceOutletRequirementsResult(NamedTuple):
     Theta_req_d_t_i: object
 
 
+class _HeatSourceOutletTemperaturesResult(NamedTuple):
+    Theta_hs_out_min_C_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_d_t: object
+
+
 # NOTE: section4_2 の同名の関数の改変版
 @jjj_cloning
 def _get_output_suffix(ac_setting: ActiveAcSetting) -> str:
@@ -498,7 +504,11 @@ def _get_heat_source_outlet_temperatures(
                                             L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
                                             Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t)
 
-    return Theta_hs_out_min_C_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_d_t
+    return _HeatSourceOutletTemperaturesResult(
+        Theta_hs_out_min_C_d_t,
+        Theta_hs_out_max_H_d_t,
+        Theta_hs_out_d_t,
+    )
 
 def _get_capped_supply_airflows(
         v_supply_cap_dto: VSupplyCapDto,
