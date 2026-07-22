@@ -1508,6 +1508,21 @@ def _prepare_climate_conditions(df_output, house, new_ufac, climateFile):
     df_output['h_ex_d_t'] = h_ex_d_t
     return climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t
 
+def _prepare_dwelling_areas_and_water_heat(df_output2, df_output3, house):
+    """Prepare dwelling areas and formula (67) in their original order."""
+    A_HCZ_i = np.array([
+        ld.get_A_HCZ_i(i, house.A_A, house.A_MR, house.A_OR)
+        for i in range(1, 6)
+    ])
+    A_HCZ_R_i = np.array([ld.get_A_HCZ_R_i(i) for i in range(1, 6)])
+    A_NR = ld.get_A_NR(house.A_A, house.A_MR, house.A_OR)
+    df_output2['A_HCZ_i'] = A_HCZ_i
+    df_output2['A_HCZ_R_i'] = A_HCZ_R_i
+    df_output3['A_NR'] = [A_NR]
+    L_wtr = dc.get_L_wtr()
+    df_output3['L_wtr'] = [L_wtr]
+    return A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1546,17 +1561,8 @@ def calc_Q_UT_A(
         _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
 
     #主たる居室・その他居室・非居室の面積
-    A_HCZ_i = np.array([ld.get_A_HCZ_i(i, house.A_A, house.A_MR, house.A_OR) for i in range(1, 6)])
-    A_HCZ_R_i = np.array([ld.get_A_HCZ_R_i(i) for i in range(1, 6)])
-    A_NR = ld.get_A_NR(house.A_A, house.A_MR, house.A_OR)
-
-    df_output2['A_HCZ_i'] = A_HCZ_i
-    df_output2['A_HCZ_R_i'] = A_HCZ_R_i
-    df_output3['A_NR'] = [A_NR]
-
-    # (67)  水の蒸発潜熱
-    L_wtr = dc.get_L_wtr()
-    df_output3['L_wtr'] = [L_wtr]
+    A_HCZ_i, A_HCZ_R_i, A_NR, L_wtr = _prepare_dwelling_areas_and_water_heat(
+        df_output2, df_output3, house)
 
     # (66d)　非居室の在室人数
     n_p_NR_d_t = dc.calc_n_p_NR_d_t(A_NR)

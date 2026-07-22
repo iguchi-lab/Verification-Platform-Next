@@ -2410,3 +2410,48 @@ def test_prepare_climate_conditions_preserves_fetch_and_write_order(monkeypatch)
         ("write", "J_d_t", values[2]),
         ("write", "h_ex_d_t", values[3]),
     ]
+
+def test_prepare_dwelling_areas_and_water_heat_preserves_order(monkeypatch):
+    events = []
+
+    class Frame:
+        def __init__(self, name):
+            self.name = name
+
+        def __setitem__(self, key, value):
+            events.append(("write", self.name, key, value))
+
+    monkeypatch.setattr(
+        sut.ld, "get_A_HCZ_i",
+        lambda i, *areas: events.append(("HCZ", i, areas)) or float(i),
+    )
+    monkeypatch.setattr(
+        sut.ld, "get_A_HCZ_R_i",
+        lambda i: events.append(("HCZR", i)) or float(i + 10),
+    )
+    monkeypatch.setattr(
+        sut.ld, "get_A_NR",
+        lambda *areas: events.append(("NR", areas)) or 40.0,
+    )
+    monkeypatch.setattr(
+        sut.dc, "get_L_wtr",
+        lambda: events.append(("water",)) or 2500.0,
+    )
+
+    result = sut._prepare_dwelling_areas_and_water_heat(
+        Frame("df2"), Frame("df3"),
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+    )
+
+    np.testing.assert_array_equal(result[0], np.arange(1.0, 6.0))
+    np.testing.assert_array_equal(result[1], np.arange(11.0, 16.0))
+    assert result[2:] == (40.0, 2500.0)
+    assert [event[0] for event in events[:11]] == [
+        "HCZ", "HCZ", "HCZ", "HCZ", "HCZ",
+        "HCZR", "HCZR", "HCZR", "HCZR", "HCZR", "NR",
+    ]
+    assert [(event[1], event[2]) for event in events[11:14]] == [
+        ("df2", "A_HCZ_i"), ("df2", "A_HCZ_R_i"), ("df3", "A_NR"),
+    ]
+    assert events[14] == ("water",)
+    assert events[15][0:3] == ("write", "df3", "L_wtr")
