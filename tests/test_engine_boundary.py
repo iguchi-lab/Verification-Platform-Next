@@ -6,6 +6,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 PYHEES_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "pyhees"
 JJJEXPERIMENT_SOURCE = REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "jjjexperiment"
 JJJEXPERIMENT_MAIN = JJJEXPERIMENT_SOURCE / "main.py"
+DENCHU_TEST_SOURCE = (
+    REPOSITORY_ROOT / "packages" / "pyhees-jjj" / "src" / "tests" / "denchu"
+)
 
 # Temporary migration allowlist. Removing an entry is encouraged; adding one is not.
 # Keep this exact so a dependency cannot be added or removed without an explicit review.
@@ -48,6 +51,14 @@ EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 # modules must make their dependencies explicit; shrink this migration allowlist as
 # each remaining boundary is refactored.
 EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
+
+EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS = {
+    ("test_denchu_01_unit.py", "jjjexperiment.denchu.denchu_1"),
+    ("test_denchu_02_modeling.py", "jjjexperiment.denchu.denchu_1"),
+    ("test_denchu_02_modeling.py", "jjjexperiment.denchu.denchu_2"),
+    ("test_denchu_03_estimate.py", "jjjexperiment.denchu.denchu_1"),
+    ("test_denchu_03_estimate.py", "jjjexperiment.denchu.denchu_2"),
+}
 
 
 def _jjjexperiment_imports(path: Path) -> set[str]:
@@ -167,5 +178,26 @@ def test_implementation_wildcard_imports_match_migration_allowlist():
         "import. If an existing wildcard import was removed, reduce "
         "EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS in the same refactoring commit.\n"
         f"expected={EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS}\n"
+        f"actual={wildcard_imports}"
+    )
+
+
+def test_denchu_test_wildcard_imports_match_migration_allowlist():
+    wildcard_imports = set()
+    for path in sorted(DENCHU_TEST_SOURCE.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        wildcard_imports.update(
+            (path.relative_to(DENCHU_TEST_SOURCE).as_posix(), node.module)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            and node.module
+            and any(alias.name == "*" for alias in node.names)
+        )
+
+    assert wildcard_imports == EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS, (
+        "Denchu tests must import their dependencies explicitly. Do not add a "
+        "wildcard import. If an existing wildcard import was removed, reduce "
+        "EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS in the same refactoring commit.\n"
+        f"expected={EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS}\n"
         f"actual={wildcard_imports}"
     )
