@@ -940,3 +940,55 @@ def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
     assert len(calls) == 1 + 24 * 365
     assert calls[1][1:] == (0.3, area, 2.0)
     assert calls[-1][1:] == (0.3, area, 2.0)
+
+def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
+    setting = _setting(sut.HeatingAcSetting)
+    area = np.ones((12, 1))
+    theta_in = np.full(24 * 365, 20.0)
+    theta_out = np.full(24 * 365, 10.0)
+    supply = np.ones((5, 24 * 365))
+    output = np.full(24 * 365, 100.0)
+    capacity_calls = []
+    theta_calls = []
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *args: capacity_calls.append("H") or 1.0)
+    monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *args: capacity_calls.append("C") or None)
+    monkeypatch.setattr(sut.jjj_ufac_dc, "get_r_A_uf_i", lambda: np.ones((12, 1)))
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_Theta_uf",
+        lambda *args: theta_calls.append(args) or 20.0,
+    )
+    monkeypatch.setattr(sut.algo, "get_L_uf", lambda value: value + 1.0)
+    monkeypatch.setattr(
+        sut.jjj_ufac_dc,
+        "calc_delta_L_uf2outdoor",
+        lambda phi, length, delta: delta,
+    )
+
+    result = sut._adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
+        setting,
+        SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+        SimpleNamespace(Q=2.7),
+        SimpleNamespace(L_H_d_t_i=np.ones((12, 24 * 365))),
+        SimpleNamespace(U_s_floor_ins=0.3),
+        SimpleNamespace(get_phi=lambda q: q + 0.5),
+        area,
+        0.4,
+        0.7,
+        theta_in,
+        theta_out,
+        supply,
+        output,
+    )
+
+    assert result[0] is output
+    np.testing.assert_array_equal(output, np.full(24 * 365, 110.0))
+    np.testing.assert_array_equal(result[1], np.full(24 * 365, 20.0))
+    assert capacity_calls == ["H", "C"] * (24 * 365)
+    assert len(theta_calls) == 24 * 365
+    assert theta_calls[0][:2] == (1.0, None)
+    np.testing.assert_allclose(
+        theta_calls[0][2:],
+        (4.8, 12.0, 0.7, 0.3, 20.0, 10.0, 5.0),
+    )
+    assert theta_calls[-1] == theta_calls[0]

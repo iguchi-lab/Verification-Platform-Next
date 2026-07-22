@@ -311,6 +311,73 @@ def _adjust_heat_source_output_for_room_to_underfloor_transfer(
 
     return Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac
 
+def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        skin: OuterSkin,
+        load: Load_DTI,
+        new_ufac: UnderfloorAc,
+        climate: ClimateService,
+        A_s_ufac_i: np.ndarray,
+        r_A_s_ufac: float,
+        U_s_input: float,
+        Theta_in_d_t: np.ndarray,
+        Theta_ex_d_t: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        Q_hat_hs_d_t: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+    """Apply the outdoor part of formula (40)-2nd in its original order."""
+    # 2. 床下 -> 外気 (逃げ方向)
+    # 一階負荷 暖冷房
+    match ac_setting:
+        case HeatingAcSetting():
+            L_d_t_flr1st = 1 * r_A_s_ufac * np.sum(load.L_H_d_t_i, axis=0)
+        case CoolingAcSetting():
+            L_d_t_flr1st = -1 * r_A_s_ufac * np.sum(load.L_CS_d_t_i, axis=0)
+            # NOTE[井口_250501]: 一階冷房負荷は顕熱のみ
+        case _:
+            raise ValueError
+
+    mask_uf_i = jjj_ufac_dc.get_r_A_uf_i() > 0  # 床下空調部屋のみ
+    V_dash_supply_flr1st_d_t  \
+        = np.sum(V_dash_supply_d_t_i[mask_uf_i.flatten()[:5], :], axis=0)
+
+    Theta_uf_d_t  \
+        = np.array([
+            jjj_ufac_dc.calc_Theta_uf(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house),
+                L_d_t_flr1st[t],
+                np.sum(A_s_ufac_i),
+                U_s_input,
+                new_ufac.U_s_floor_ins,
+                Theta_in_d_t[t], Theta_ex_d_t[t],
+                V_dash_supply_flr1st_d_t[t]
+            ) for t in range(24*365)
+        ])
+
+    #260112 IGUCHI デバッグ用
+    #print("L_d_t_flr1st[0]:", L_d_t_flr1st[0])
+    #print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
+    #print("U_s:", U_s_input)
+    #print("Theta_in_d_t[0]:", Theta_in_d_t[0])
+    #print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
+    #print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
+    #print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
+
+    L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
+    phi = climate.get_phi(skin.Q)
+
+    delta_L_uf2outdoor_d_t = np.vectorize(jjj_ufac_dc.calc_delta_L_uf2outdoor)
+    delta_L_uf2outdoor_d_t  \
+        = delta_L_uf2outdoor_d_t(phi, L_uf, (Theta_uf_d_t - Theta_ex_d_t))
+    assert np.shape(delta_L_uf2outdoor_d_t) == (24 * 365,)
+    Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
+
+    #260112 IGUCHI デバッグ用
+    #print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
+    #print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
+
+    return Q_hat_hs_d_t, Theta_uf_d_t
+
 def _get_actual_loads(
         carryover_heat_dto: CarryoverHeatDto,
         V_supply_d_t_i: np.ndarray,
@@ -833,55 +900,24 @@ def calc_Q_UT_A(
             Theta_in_d_t,
             Q_hat_hs_d_t,
         )
-        # 2. 床下 -> 外気 (逃げ方向)
-        # 一階負荷 暖冷房
-        match ac_setting:
-            case HeatingAcSetting():
-                L_d_t_flr1st = 1 * r_A_s_ufac * np.sum(load.L_H_d_t_i, axis=0)
-            case CoolingAcSetting():
-                L_d_t_flr1st = -1 * r_A_s_ufac * np.sum(load.L_CS_d_t_i, axis=0)
-                # NOTE[井口_250501]: 一階冷房負荷は顕熱のみ
-            case _:
-                raise ValueError
-
-        mask_uf_i = jjj_ufac_dc.get_r_A_uf_i() > 0  # 床下空調部屋のみ
-        V_dash_supply_flr1st_d_t  \
-            = np.sum(V_dash_supply_d_t_i[mask_uf_i.flatten()[:5], :], axis=0)
-
-        Theta_uf_d_t  \
-            = np.array([
-                jjj_ufac_dc.calc_Theta_uf(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house),
-                    L_d_t_flr1st[t],
-                    np.sum(A_s_ufac_i),
-                    U_s_input,
-                    new_ufac.U_s_floor_ins,
-                    Theta_in_d_t[t], Theta_ex_d_t[t],
-                    V_dash_supply_flr1st_d_t[t]
-                ) for t in range(24*365)
-            ])
-
-        #260112 IGUCHI デバッグ用
-        #print("L_d_t_flr1st[0]:", L_d_t_flr1st[0])
-        #print("np.sum(A_s_ufac_i):", np.sum(A_s_ufac_i))
-        #print("U_s:", U_s_input)
-        #print("Theta_in_d_t[0]:", Theta_in_d_t[0])
-        #print("Theta_ex_d_t[0]:", Theta_ex_d_t[0])
-        #print("V_dash_supply_flr1st_d_t[0]:", V_dash_supply_flr1st_d_t[0])
-        #print("Theta_uf_d_t[0] 床下温度: ", Theta_uf_d_t[0])
-
-        L_uf = algo.get_L_uf(np.sum(A_s_ufac_i))
-        phi = climate.get_phi(skin.Q)
-
-        delta_L_uf2outdoor_d_t = np.vectorize(jjj_ufac_dc.calc_delta_L_uf2outdoor)
-        delta_L_uf2outdoor_d_t  \
-            = delta_L_uf2outdoor_d_t(phi, L_uf, (Theta_uf_d_t - Theta_ex_d_t))
-        assert np.shape(delta_L_uf2outdoor_d_t) == (24 * 365,)
-        Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
-
-        #260112 IGUCHI デバッグ用
-        #print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
-        #print("Q_hat_hs_d_t[0] 床下⇒外壁を足す: ", Q_hat_hs_d_t[0])
-
+        (
+            Q_hat_hs_d_t,
+            Theta_uf_d_t,
+        ) = _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
+            ac_setting,
+            house,
+            skin,
+            load,
+            new_ufac,
+            climate,
+            A_s_ufac_i,
+            r_A_s_ufac,
+            U_s_input,
+            Theta_in_d_t,
+            Theta_ex_d_t,
+            V_dash_supply_d_t_i,
+            Q_hat_hs_d_t,
+        )
         # 3. 床下 -> 地盤 (逃げ方向)
         A_s_ufac_A = np.sum(A_s_ufac_i)
 
