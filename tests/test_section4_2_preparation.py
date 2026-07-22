@@ -3502,3 +3502,26 @@ def test_prepare_supply_humidity_output_preserves_formula_42_column_order(
     assert events[0] == ("formula", tuple(inputs))
     assert events[1][1] == tuple(f"X_supply_d_t_{i}" for i in range(1, 6))
     assert list(events[1][2].values()) == humidity
+
+
+def test_prepare_heat_source_ventilation_airflow_output_preserves_formula_35(
+        monkeypatch):
+    events = []
+    value = object()
+    inputs = [object(), object()]
+
+    class Frame:
+        def __setitem__(self, key, item):
+            events.append(("setitem", key, item))
+
+    frame = Frame()
+    monkeypatch.setattr(
+        sut.dc, "get_V_hs_vent_d_t",
+        lambda *args: events.append(("formula", args)) or value)
+
+    assert sut._prepare_heat_source_ventilation_airflow_output(
+        frame, *inputs) == (value, frame)
+    assert events == [
+        ("formula", tuple(inputs)),
+        ("setitem", "V_hs_vent_d_t", value),
+    ]

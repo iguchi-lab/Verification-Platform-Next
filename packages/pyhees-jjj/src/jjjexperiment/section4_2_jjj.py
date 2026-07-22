@@ -2074,6 +2074,15 @@ def _prepare_no_carryover_supply_state(
     )
 
 
+def _prepare_heat_source_ventilation_airflow_output(
+        df_output, V_vent_g_i, general_ventilation):
+    """Calculate and record formula (35) by direct assignment."""
+    V_hs_vent_d_t = dc.get_V_hs_vent_d_t(
+        V_vent_g_i, general_ventilation)
+    df_output['V_hs_vent_d_t'] = V_hs_vent_d_t
+    return V_hs_vent_d_t, df_output
+
+
 def _prepare_supply_humidity_output(
         df_output, X_star_HBR_d_t, X_hs_out_d_t,
         L_star_CL_d_t_i, region):
@@ -2741,8 +2750,9 @@ def calc_Q_UT_A(
 
     """ 熱源機の入口 - 熱源機の風量の計算 """
     # (35)　熱源機の風量のうちの全般換気分
-    V_hs_vent_d_t = dc.get_V_hs_vent_d_t(V_vent_g_i, ac_setting.general_ventilation)  # 従来式通り
-    df_output['V_hs_vent_d_t'] = V_hs_vent_d_t
+    V_hs_vent_d_t, df_output = \
+        _prepare_heat_source_ventilation_airflow_output(
+            df_output, V_vent_g_i, ac_setting.general_ventilation)
 
     # (34)　熱源機の風量
     V_hs_supply_d_t = dc.get_V_hs_supply_d_t(V_supply_d_t_i)
