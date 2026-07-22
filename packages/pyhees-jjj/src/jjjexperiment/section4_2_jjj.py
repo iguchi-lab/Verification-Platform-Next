@@ -1495,6 +1495,19 @@ def _get_balanced_latent_cooling_loads(df_output, load, region):
     )
     return L_star_CL_d_t_i, df_output
 
+def _prepare_climate_conditions(df_output, house, new_ufac, climateFile):
+    """Load climate arrays and preserve their direct output-column writes."""
+    climate = ClimateService(house.region, new_ufac, climateFile)
+    Theta_ex_d_t = climate.get_Theta_ex_d_t()
+    X_ex_d_t = climate.get_X_ex_d_t()
+    J_d_t = climate.get_J_d_t()
+    h_ex_d_t = climate.get_h_ex_d_t()
+    df_output['Theta_ex_d_t'] = Theta_ex_d_t
+    df_output['X_ex_d_t'] = X_ex_d_t
+    df_output['J_d_t'] = J_d_t
+    df_output['h_ex_d_t'] = h_ex_d_t
+    return climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -1529,16 +1542,8 @@ def calc_Q_UT_A(
     df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
 
     # 気象条件
-    climate = ClimateService(house.region, new_ufac, climateFile)
-    Theta_ex_d_t = climate.get_Theta_ex_d_t()
-    X_ex_d_t = climate.get_X_ex_d_t()
-    J_d_t = climate.get_J_d_t()
-    h_ex_d_t = climate.get_h_ex_d_t()
-
-    df_output['Theta_ex_d_t']  = Theta_ex_d_t
-    df_output['X_ex_d_t']      = X_ex_d_t
-    df_output['J_d_t']    = J_d_t
-    df_output['h_ex_d_t'] = h_ex_d_t
+    climate, Theta_ex_d_t, X_ex_d_t, J_d_t, h_ex_d_t = \
+        _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
 
     #主たる居室・その他居室・非居室の面積
     A_HCZ_i = np.array([ld.get_A_HCZ_i(i, house.A_A, house.A_MR, house.A_OR) for i in range(1, 6)])

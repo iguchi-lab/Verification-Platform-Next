@@ -2362,3 +2362,51 @@ def test_balanced_latent_cooling_loads_preserve_formula_10_assign_generation(
     )
     for index, (_, value) in enumerate(columns):
         np.testing.assert_array_equal(value, loads[index])
+
+def test_prepare_climate_conditions_preserves_fetch_and_write_order(monkeypatch):
+    events = []
+    values = [object() for _ in range(4)]
+
+    class Climate:
+        def __init__(self, region, new_ufac, climate_file):
+            events.append(("init", region, new_ufac, climate_file))
+
+        def get_Theta_ex_d_t(self):
+            events.append(("fetch", "Theta"))
+            return values[0]
+
+        def get_X_ex_d_t(self):
+            events.append(("fetch", "X"))
+            return values[1]
+
+        def get_J_d_t(self):
+            events.append(("fetch", "J"))
+            return values[2]
+
+        def get_h_ex_d_t(self):
+            events.append(("fetch", "h"))
+            return values[3]
+
+    class Frame:
+        def __setitem__(self, key, value):
+            events.append(("write", key, value))
+
+    new_ufac = object()
+    climate_file = object()
+    monkeypatch.setattr(sut, "ClimateService", Climate)
+
+    result = sut._prepare_climate_conditions(
+        Frame(), SimpleNamespace(region=6), new_ufac, climate_file
+    )
+
+    assert isinstance(result[0], Climate)
+    assert result[1:] == tuple(values)
+    assert events == [
+        ("init", 6, new_ufac, climate_file),
+        ("fetch", "Theta"), ("fetch", "X"),
+        ("fetch", "J"), ("fetch", "h"),
+        ("write", "Theta_ex_d_t", values[0]),
+        ("write", "X_ex_d_t", values[1]),
+        ("write", "J_d_t", values[2]),
+        ("write", "h_ex_d_t", values[3]),
+    ]
