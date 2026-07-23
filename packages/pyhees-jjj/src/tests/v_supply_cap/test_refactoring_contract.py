@@ -140,6 +140,45 @@ def test_uniform_design_cap_preserves_heating_then_cooling_ratio_application():
         supply * np.array([0.9, 0.8])[np.newaxis, :],
     )
 
+def test_prepare_increment_only_cap_state_preserves_targets_overflow_and_sums():
+    supply = np.array(
+        [
+            [200.0, 100.0],
+            [90.0, 100.0],
+            [120.0, 100.0],
+            [80.0, 100.0],
+            [100.0, 100.0],
+        ]
+    )
+    state = sut._SupplyCapState(
+        supply,
+        np.sum(supply, axis=0),
+        np.array([True, False]),
+        np.array([False, True]),
+    )
+
+    result = sut._prepare_increment_only_cap_state(
+        state,
+        np.full((5, 2), 100.0),
+        550.0,
+        480.0,
+    )
+
+    np.testing.assert_array_equal(
+        result.added_mask_d_t_i[:, 0],
+        [True, False, True, False, False],
+    )
+    np.testing.assert_array_equal(
+        result.target_mask_H_d_t_i[:, 0],
+        [True, False, True, False, False],
+    )
+    assert not np.any(result.target_mask_C_d_t_i[:, 1])
+    np.testing.assert_array_equal(result.overflow_values_H_d_t, [40.0, -50.0])
+    np.testing.assert_array_equal(result.overflow_values_C_d_t, [110.0, 20.0])
+    np.testing.assert_array_equal(result.masked_vs_H_d_t_i[:, 0], [200, 0, 120, 0, 0])
+    np.testing.assert_array_equal(result.added_sums_H_d_t_i[:, 0], [320] * 5)
+    np.testing.assert_array_equal(result.added_sums_C_d_t_i[:, 1], [0] * 5)
+
 def test_public_orchestration_preserves_invalid_logic_error_after_season_lookup(monkeypatch):
     calls = []
     monkeypatch.setattr(

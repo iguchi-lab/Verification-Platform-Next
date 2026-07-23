@@ -101,6 +101,62 @@ def _assert_design_airflow_caps(
     assert all(check[H] <= V_hs_dsgn_H)
     assert all(check[C] <= V_hs_dsgn_C)
 
+class _IncrementOnlyCapState(NamedTuple):
+    added_mask_d_t_i: np.ndarray
+    target_mask_H_d_t_i: np.ndarray
+    target_mask_C_d_t_i: np.ndarray
+    overflow_values_H_d_t: np.ndarray
+    overflow_values_C_d_t: np.ndarray
+    masked_vs_H_d_t_i: np.ndarray
+    masked_vs_C_d_t_i: np.ndarray
+    added_sums_H_d_t_i: np.ndarray
+    added_sums_C_d_t_i: np.ndarray
+
+
+def _prepare_increment_only_cap_state(
+        state: _SupplyCapState,
+        V_dash_supply_d_t_i: np.ndarray,
+        V_hs_dsgn_H: float,
+        V_hs_dsgn_C: float,
+) -> _IncrementOnlyCapState:
+    overflow_mask_H_d_t_i = np.tile(state.overflow_mask_H_d_t, (5, 1))
+    overflow_mask_C_d_t_i = np.tile(state.overflow_mask_C_d_t, (5, 1))
+
+    added_mask_d_t_i = state.V_supply_d_t_i > V_dash_supply_d_t_i
+    target_mask_H_d_t_i = np.logical_and(added_mask_d_t_i, overflow_mask_H_d_t_i)
+    target_mask_C_d_t_i = np.logical_and(added_mask_d_t_i, overflow_mask_C_d_t_i)
+
+    overflow_values_H_d_t = np.nan_to_num(
+        state.V_supply_d_t - V_hs_dsgn_H, nan=0.0,
+    )
+    overflow_values_C_d_t = np.nan_to_num(
+        state.V_supply_d_t - V_hs_dsgn_C, nan=0.0,
+    )
+
+    masked_vs_H_d_t_i = np.where(
+        target_mask_H_d_t_i, state.V_supply_d_t_i, 0,
+    )
+    added_sums_H_d_t = np.sum(masked_vs_H_d_t_i, axis=0)
+    added_sums_H_d_t_i = np.tile(added_sums_H_d_t, (5, 1))
+
+    masked_vs_C_d_t_i = np.where(
+        target_mask_C_d_t_i, state.V_supply_d_t_i, 0,
+    )
+    added_sums_C_d_t = np.sum(masked_vs_C_d_t_i, axis=0)
+    added_sums_C_d_t_i = np.tile(added_sums_C_d_t, (5, 1))
+
+    return _IncrementOnlyCapState(
+        added_mask_d_t_i,
+        target_mask_H_d_t_i,
+        target_mask_C_d_t_i,
+        overflow_values_H_d_t,
+        overflow_values_C_d_t,
+        masked_vs_H_d_t_i,
+        masked_vs_C_d_t_i,
+        added_sums_H_d_t_i,
+        added_sums_C_d_t_i,
+    )
+
 # NOTE: 過剰熱量ループ内でも使用しているため
 # @log_res(['V_supply_d_t_i'])
 def cap_V_supply_d_t_i(
@@ -158,41 +214,26 @@ def cap_V_supply_d_t_i(
             print(Vサプライの上限キャップ.設計風量_風量増室のみ)
         # 委員より提案 案2('24/01)
 
-        """ 設計風量をキャップ上限とする """
-        V_hs_dsgn_C = V_hs_dsgn_C if V_hs_dsgn_C is not None else float('inf')
-        V_hs_dsgn_H = V_hs_dsgn_H if V_hs_dsgn_H is not None else float('inf')
-
-        """ キャップを超える時刻を調べる """
-        V_supply_d_t_i = np.clip(V_supply_d_t_i, V_vent_g_i, None)
-        V_supply_d_t = np.sum(V_supply_d_t_i, axis=0)  # 1d-shape(5, )
-
-        overflow_mask_H_d_t = np.logical_and(H, V_supply_d_t > V_hs_dsgn_H)
-        overflow_mask_C_d_t = np.logical_and(C, V_supply_d_t > V_hs_dsgn_C)
-
-        # 二次元と見なして使用
-        overflow_mask_H_d_t_i = np.tile(overflow_mask_H_d_t, (5,1))
-        overflow_mask_C_d_t_i = np.tile(overflow_mask_C_d_t, (5,1))
-
-        """ 縮小対象のセルを調査 """  # 個別適用なので案2では2d-array
-        added_mask_d_t_i = V_supply_d_t_i > V_dash_supply_d_t_i
-
-        target_mask_H_d_t_i = np.logical_and(added_mask_d_t_i, overflow_mask_H_d_t_i)
-        target_mask_C_d_t_i = np.logical_and(added_mask_d_t_i, overflow_mask_C_d_t_i)
-
-        """ 縮小対象セルの削減量を計算 """
-        # 全体で削減すべき量
-        overflow_values_H_d_t = np.nan_to_num(V_supply_d_t - V_hs_dsgn_H, nan=0.0)
-        overflow_values_C_d_t = np.nan_to_num(V_supply_d_t - V_hs_dsgn_C, nan=0.0)
-        # 削減場所では限界値以上になっている
-
-        masked_vs_H_d_t_i = np.where(target_mask_H_d_t_i, V_supply_d_t_i, 0)
-        added_sums_H_d_t = np.sum(masked_vs_H_d_t_i, axis=0)
-        added_sums_H_d_t_i = np.tile(added_sums_H_d_t, (5,1))
-
-        masked_vs_C_d_t_i = np.where(target_mask_C_d_t_i, V_supply_d_t_i, 0)
-        added_sums_C_d_t = np.sum(masked_vs_C_d_t_i, axis=0)
-        added_sums_C_d_t_i = np.tile(added_sums_C_d_t, (5,1))
-
+        V_hs_dsgn_H, V_hs_dsgn_C = _normalize_design_airflows(
+            V_hs_dsgn_H, V_hs_dsgn_C,
+        )
+        state = _prepare_supply_cap_state(
+            V_supply_d_t_i, V_vent_g_i, H, C,
+            V_hs_dsgn_H, V_hs_dsgn_C,
+        )
+        increment_state = _prepare_increment_only_cap_state(
+            state, V_dash_supply_d_t_i, V_hs_dsgn_H, V_hs_dsgn_C,
+        )
+        V_supply_d_t_i = state.V_supply_d_t_i
+        added_mask_d_t_i = increment_state.added_mask_d_t_i
+        target_mask_H_d_t_i = increment_state.target_mask_H_d_t_i
+        target_mask_C_d_t_i = increment_state.target_mask_C_d_t_i
+        overflow_values_H_d_t = increment_state.overflow_values_H_d_t
+        overflow_values_C_d_t = increment_state.overflow_values_C_d_t
+        masked_vs_H_d_t_i = increment_state.masked_vs_H_d_t_i
+        masked_vs_C_d_t_i = increment_state.masked_vs_C_d_t_i
+        added_sums_H_d_t_i = increment_state.added_sums_H_d_t_i
+        added_sums_C_d_t_i = increment_state.added_sums_C_d_t_i
         default_subtract_d_t_i = np.zeros_like(V_supply_d_t_i)
 
         ratio_H_d_t_i = np.divide(masked_vs_H_d_t_i,
