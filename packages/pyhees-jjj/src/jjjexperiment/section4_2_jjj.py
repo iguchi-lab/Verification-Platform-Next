@@ -916,6 +916,13 @@ class _UnprocessedLoadOutputRecordInputs(NamedTuple):
     Q_UT_CS_d_t_i: object
     Q_UT_H_d_t_i: object
 
+
+class _ClimateConditionInputs(NamedTuple):
+    df_output: object
+    house: object
+    new_ufac: object
+    climateFile: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2387,8 +2394,12 @@ def _get_balanced_latent_cooling_loads(df_output, load, region):
     )
     return L_star_CL_d_t_i, df_output
 
-def _prepare_climate_conditions(df_output, house, new_ufac, climateFile):
+def _prepare_climate_conditions(inputs: _ClimateConditionInputs):
     """Load climate arrays and preserve their direct output-column writes."""
+    df_output = inputs.df_output
+    house = inputs.house
+    new_ufac = inputs.new_ufac
+    climateFile = inputs.climateFile
     climate = ClimateService(house.region, new_ufac, climateFile)
     Theta_ex_d_t = climate.get_Theta_ex_d_t()
     X_ex_d_t = climate.get_X_ex_d_t()
@@ -3652,7 +3663,7 @@ def calc_Q_UT_A(
     df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
 
     # 気象条件
-    climate_conditions = _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
+    climate_conditions = _prepare_climate_conditions(_ClimateConditionInputs(df_output, house, new_ufac, climateFile))
     climate = climate_conditions.climate
     Theta_ex_d_t = climate_conditions.Theta_ex_d_t
     X_ex_d_t = climate_conditions.X_ex_d_t

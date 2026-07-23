@@ -2395,9 +2395,9 @@ def test_prepare_climate_conditions_preserves_fetch_and_write_order(monkeypatch)
     climate_file = object()
     monkeypatch.setattr(sut, "ClimateService", Climate)
 
-    result = sut._prepare_climate_conditions(
+    result = sut._prepare_climate_conditions(sut._ClimateConditionInputs(
         Frame(), SimpleNamespace(region=6), new_ufac, climate_file
-    )
+    ))
 
     assert isinstance(result[0], Climate)
     assert result[1:] == tuple(values)
