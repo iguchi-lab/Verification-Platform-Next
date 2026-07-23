@@ -740,6 +740,17 @@ class _CarryoverUnderfloorSupplyTemperatureInputs(NamedTuple):
     V_dash_supply_d_t_i: object
 
 
+class _ExpectedUnderfloorTemperatureInputs(NamedTuple):
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    A_A: object
+    A_MR: object
+    A_OR: object
+    r_A_ufvnt: object
+    V_dash_supply_d_t_i: object
+    Theta_ex_d_t: object
+
+
 class _NewUnderfloorRequestedTemperatureInputs(NamedTuple):
     ac_setting: object
     house: object
@@ -2175,9 +2186,9 @@ def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTe
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     # 期待される床下温度を事前に計算(本計算は後で行う)
-    Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(
+    Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(*_ExpectedUnderfloorTemperatureInputs(
         L_star_H_d_t_i, L_star_CS_d_t_i, house.A_A, house.A_MR,
-        house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t)
+        house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t))
     # 新床下空調-1st: θuf_supply を逆算(二分探索)
     _, _, Theta_uf_supply_d_t = algo.calc_Theta(
         region=house.region,

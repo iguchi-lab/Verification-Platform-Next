@@ -1826,6 +1826,9 @@ def test_new_underfloor_requested_temperatures_preserve_reverse_solve_and_limits
     expected_args = events[0][1]
     assert expected_args[0] is l_star_h
     assert expected_args[1] is l_star_cs
+    assert sut._ExpectedUnderfloorTemperatureInputs._fields == (
+        "L_star_H_d_t_i", "L_star_CS_d_t_i", "A_A", "A_MR", "A_OR",
+        "r_A_ufvnt", "V_dash_supply_d_t_i", "Theta_ex_d_t")
     reverse_kwargs = events[1][1]
     assert reverse_kwargs["calc_backwards"] is True
     assert reverse_kwargs["Theta_sa_d_t"] is theta_uf_2023
