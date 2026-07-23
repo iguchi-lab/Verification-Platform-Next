@@ -41,3 +41,24 @@ def test_create_domain_services_preserves_constructor_arguments(monkeypatch):
         ('heat', ('heat-setting', 6, 120.0)),
         ('cool', ('cool-setting', 6, 120.0)),
     ]
+
+def test_get_virtual_heating_devices_and_modes_preserves_call_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        experiment_main,
+        'get_virtual_heating_devices',
+        lambda region, H_MR, H_OR: calls.append(('devices', region, H_MR, H_OR)) or ('spec-mr', 'spec-or'),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        'calc_heating_mode',
+        lambda **kwargs: calls.append(('modes', kwargs)) or ('mode-mr', 'mode-or'),
+    )
+
+    result = experiment_main._get_virtual_heating_devices_and_modes(6)
+
+    assert result == ('spec-mr', 'spec-or', 'mode-mr', 'mode-or')
+    assert calls == [
+        ('devices', 6, None, None),
+        ('modes', {'region': 6, 'H_MR': 'spec-mr', 'H_OR': 'spec-or'}),
+    ]

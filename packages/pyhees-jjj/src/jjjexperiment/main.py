@@ -198,6 +198,14 @@ def _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_s
     cool_quantity = CoolQuantityService(cool_ac_setting, house.region, house.A_A)
     return climate, heat_quantity, cool_quantity
 
+def _get_virtual_heating_devices_and_modes(region):
+    H_MR = None
+    H_OR = None
+
+    spec_MR, spec_OR = get_virtual_heating_devices(region, H_MR, H_OR)
+    mode_MR, mode_OR = calc_heating_mode(region=region, H_MR=spec_MR, H_OR=spec_OR)
+    return spec_MR, spec_OR, mode_MR, mode_OR
+
 @inject
 def calc_main(
     injector: Injector,
@@ -226,21 +234,7 @@ def calc_main(
     # ドメインサービス
     climate, heat_quantity, cool_quantity = _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_setting)
 
-    H_MR = None
-    """主たる居室暖房機器"""
-    H_OR = None
-    """その他居室暖房機器"""
-    H_HS = None
-    """温水暖房の種類"""
-    C_MR = None
-    """主たる居室冷房機器"""
-    C_OR = None
-    """その他居室冷房機器"""
-
-    # 実質的な暖房機器の仕様を取得
-    spec_MR, spec_OR = get_virtual_heating_devices(house.region, H_MR, H_OR)
-    # 暖房方式及び運転方法の区分
-    mode_MR, mode_OR = calc_heating_mode(region=house.region, H_MR=spec_MR, H_OR=spec_OR)
+    spec_MR, spec_OR, mode_MR, mode_OR = _get_virtual_heating_devices_and_modes(house.region)
 
     ##### 暖房負荷の取得（MJ/h）
     L_H_d_t_i: np.ndarray
