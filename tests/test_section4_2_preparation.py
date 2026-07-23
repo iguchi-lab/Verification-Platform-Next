@@ -3493,7 +3493,8 @@ def test_prepare_heat_source_outlet_temperature_output_preserves_formula_14(
         lambda *a: events.append(("formula", a)) or temperature)
 
     result = sut._prepare_heat_source_outlet_temperature_output(
-        frame, setting, house, *inputs)
+        sut._HeatSourceOutletTemperatureOutputInputs(
+            frame, setting, house, *inputs))
 
     assert result == (temperature, frame)
     assert [event[0] for event in events] == ["formula", "setitem"]

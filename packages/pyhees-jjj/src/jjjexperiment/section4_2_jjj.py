@@ -968,6 +968,19 @@ class _SupplyHumidityOutputInputs(NamedTuple):
     region: object
 
 
+class _HeatSourceOutletTemperatureOutputInputs(NamedTuple):
+    df_output: object
+    ac_setting: object
+    house: object
+    Theta_req_d_t_i: object
+    V_dash_supply_d_t_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_NR_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_min_C_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3308,10 +3321,18 @@ def _prepare_supply_humidity_output(inputs: _SupplyHumidityOutputInputs):
 
 
 def _prepare_heat_source_outlet_temperature_output(
-        df_output, ac_setting, house, Theta_req_d_t_i,
-        V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
-        Theta_NR_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t):
+        inputs: _HeatSourceOutletTemperatureOutputInputs):
     """Calculate and record formula (14) by direct column assignment."""
+    df_output = inputs.df_output
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_NR_d_t = inputs.Theta_NR_d_t
+    Theta_hs_out_max_H_d_t = inputs.Theta_hs_out_max_H_d_t
+    Theta_hs_out_min_C_d_t = inputs.Theta_hs_out_min_C_d_t
     Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(
         ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
@@ -4081,11 +4102,11 @@ def calc_Q_UT_A(
     """ 吹出口 - 熱源機の出口 """
     # (14)　熱源機の出口における空気温度
     Theta_hs_out_d_t, df_output = \
-        _prepare_heat_source_outlet_temperature_output(
+        _prepare_heat_source_outlet_temperature_output(_HeatSourceOutletTemperatureOutputInputs(
             df_output, ac_setting, house, Theta_req_d_t_i,
             V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
             Theta_NR_d_t, Theta_hs_out_max_H_d_t,
-            Theta_hs_out_min_C_d_t)
+            Theta_hs_out_min_C_d_t))
 
     """ 吹出口 - 吹出口 """
     # (42)　暖冷房区画𝑖の吹き出し絶対湿度
