@@ -236,6 +236,13 @@ def _load_cooling_load_from_csv(loadFile):
     L_CL_d_t_i = load.iloc[:, 24:].T.values
     return L_CS_d_t_i, L_CL_d_t_i
 
+def _bind_load_dti(injector, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i):
+    load_dti = jjj_dc.Load_DTI(
+        L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i,
+        L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i,
+    )
+    injector.binder.bind(jjj_dc.Load_DTI, to=load_dti)
+
 @inject
 def calc_main(
     injector: Injector,
@@ -288,7 +295,7 @@ def calc_main(
             L_CS_d_t_i, L_CL_d_t_i = _load_cooling_load_from_csv(loadFile)
 
     # 負荷をあつめたデータクラス
-    injector.binder.bind(jjj_dc.Load_DTI, to=jjj_dc.Load_DTI(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i))
+    _bind_load_dti(injector, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i)
 
     # NOTE: 出力用の下記が計算できるのは、負荷が上書きされない前提
     L_H_d_t: np.ndarray = np.sum(L_H_d_t_i, axis=0)

@@ -140,3 +140,20 @@ def test_load_cooling_load_from_csv_preserves_sensible_and_latent_columns(monkey
     np.testing.assert_array_equal(sensible, load.iloc[:, 12:24].T.values)
     np.testing.assert_array_equal(latent, load.iloc[:, 24:].T.values)
     assert calls == [('loads.csv', 8760)]
+
+def test_bind_load_dti_preserves_constructor_and_bind_order(monkeypatch):
+    created = []
+
+    class FakeLoadDTI:
+        def __init__(self, *args):
+            self.args = args
+            created.append(self)
+
+    bound = []
+    injector = SimpleNamespace(binder=SimpleNamespace(bind=lambda key, to: bound.append((key, to))))
+    monkeypatch.setattr(experiment_main.jjj_dc, 'Load_DTI', FakeLoadDTI)
+
+    experiment_main._bind_load_dti(injector, 'H', 'CS', 'CL', 'dash-H', 'dash-CS')
+
+    assert created[0].args == ('H', 'CS', 'CL', 'dash-H', 'dash-CS')
+    assert bound == [(FakeLoadDTI, created[0])]
