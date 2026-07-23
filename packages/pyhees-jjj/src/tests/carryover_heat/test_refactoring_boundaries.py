@@ -159,3 +159,14 @@ def test_get_balance_terms_48_preserves_val1_val2_val3():
     temperatures = np.arange(18.0, 23.0).reshape(5, 1)
     result = section4_2._get_balance_terms_48(k_dash, k_prt, 20.0, 18.0, temperatures, 4.0)
     assert result == (-20.0, 30.0, 19.0)
+
+
+def test_get_carryover_state_48_preserves_activation_and_capacity(monkeypatch):
+    monkeypatch.setattr(section4_2.jjj_carryover_heat, 'get_C_NR', lambda area: 3600.0 if area == 40.0 else None)
+
+    assert section4_2._get_carryover_state_48(False, True, False, 19.0, 18.0, 40.0) == (True, False, 1.0, 1.0)
+    assert section4_2._get_carryover_state_48(False, True, False, 17.0, 18.0, 40.0) == (False, False, 0, 0)
+    assert section4_2._get_carryover_state_48(False, False, True, 17.0, 18.0, 40.0) == (False, True, -1.0, 1.0)
+    assert section4_2._get_carryover_state_48(True, True, False, 19.0, 18.0, 40.0) == (True, False, 1.0, 0)
+    with pytest.raises(ValueError):
+        section4_2._get_carryover_state_48(False, True, True, 18.0, 18.0, 40.0)

@@ -305,6 +305,31 @@ def _get_balance_terms_48(k_prt_dash_i, k_prt_i, Theta_star_HBR, Theta_star_NR, 
     return val1, val2, val3
 
 
+def _get_carryover_state_48(isFirst, H, C, Theta_NR_before, Theta_star_NR, A_NR):
+    H = H and (Theta_NR_before >= Theta_star_NR)
+    C = C and (Theta_NR_before <= Theta_star_NR)
+
+    # H,C のチェック
+    if (H and C):
+        raise ValueError("想定外の季節")
+    # 暖房期に 過剰熱量が有効
+    elif H:
+        ac_theta_diff = Theta_NR_before - Theta_star_NR
+        assert ac_theta_diff >= 0, f"想定外の温度差 {Theta_NR_before} >= {Theta_star_NR}"
+    # 冷房期に 過剰熱量が有効
+    elif C:
+        ac_theta_diff = Theta_NR_before - Theta_star_NR
+        assert ac_theta_diff <= 0, f"想定外の温度差 {Theta_NR_before} <= {Theta_star_NR}"
+    else:
+        ac_theta_diff = 0  # 使用されないが定義は必要
+        pass
+
+    # (48a) NOTE: isFirst と過剰熱量無効のとき元式と一致するべき
+    C_NR = 0 if isFirst or not (H or C)  \
+        else jjj_carryover_heat.get_C_NR(A_NR) / 3600
+    return H, C, ac_theta_diff, C_NR
+
+
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
         Theta_star_NR: float,
@@ -355,27 +380,9 @@ def get_Theta_NR_2023(
     val1, val2, val3 = _get_balance_terms_48(k_prt_dash_i, k_prt_i, Theta_star_HBR, Theta_star_NR, Theta_HBR_i, k_evp)
 
     # 過剰熱量発生条件
-    H = H and (Theta_NR_before >= Theta_star_NR)
-    C = C and (Theta_NR_before <= Theta_star_NR)
-
-    # H,C のチェック
-    if (H and C):
-        raise ValueError("想定外の季節")
-    # 暖房期に 過剰熱量が有効
-    elif H:
-        ac_theta_diff = Theta_NR_before - Theta_star_NR
-        assert ac_theta_diff >= 0, f"想定外の温度差 {Theta_NR_before} >= {Theta_star_NR}"
-    # 冷房期に 過剰熱量が有効
-    elif C:
-        ac_theta_diff = Theta_NR_before - Theta_star_NR
-        assert ac_theta_diff <= 0, f"想定外の温度差 {Theta_NR_before} <= {Theta_star_NR}"
-    else:
-        ac_theta_diff = 0  # 使用されないが定義は必要
-        pass
-
-    # (48a) NOTE: isFirst と過剰熱量無効のとき元式と一致するべき
-    C_NR = 0 if isFirst or not (H or C)  \
-        else jjj_carryover_heat.get_C_NR(A_NR) / 3600
+    H, C, ac_theta_diff, C_NR = _get_carryover_state_48(
+        isFirst, H, C, Theta_NR_before, Theta_star_NR, A_NR,
+    )
     Theta_NR = Theta_star_NR + (val1 + val2 + ac_theta_diff * C_NR) / (val3 + C_NR)
 
     # TODO: Theta_NR が単増加してしまう問題がある
