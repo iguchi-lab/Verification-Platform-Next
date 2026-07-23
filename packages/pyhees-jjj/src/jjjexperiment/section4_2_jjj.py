@@ -888,6 +888,13 @@ class _RatedHeatSourceCapacitiesInputs(NamedTuple):
     heat_CRAC: object
     cool_CRAC: object
 
+
+class _RacCoolingCapacityInputs(NamedTuple):
+    cool_CRAC: object
+    load: object
+    Theta_ex_d_t: object
+    log_intermediates: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1463,13 +1470,12 @@ def _get_rac_heating_capacity(inputs: _RacHeatingCapacityInputs):
         Q_max_H_d_t,
     )
 
-def _get_rac_cooling_capacity(
-        cool_CRAC: CoolCRACSpec,
-        load: Load_DTI,
-        Theta_ex_d_t: np.ndarray,
-        log_intermediates: bool,
-    ) -> tuple[float, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _get_rac_cooling_capacity(inputs: _RacCoolingCapacityInputs):
     """Calculate the RAC maximum cooling capacity in its original order."""
+    cool_CRAC = inputs.cool_CRAC
+    load = inputs.load
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    log_intermediates = inputs.log_intermediates
     # 最大冷房能力比
     q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
     if log_intermediates:
@@ -2932,8 +2938,8 @@ def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        rac_cooling = _get_rac_cooling_capacity(
-            cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
+        rac_cooling = _get_rac_cooling_capacity(_RacCoolingCapacityInputs(
+            cool_CRAC, load, Theta_ex_d_t, log_intermediates=True))
         q_r_max_C = rac_cooling.q_r_max_C
         Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
         Q_max_C_d_t = rac_cooling.Q_max_C_d_t
@@ -3551,8 +3557,8 @@ def _prepare_carryover_capacity_state(
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        rac_cooling = _get_rac_cooling_capacity(
-            cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
+        rac_cooling = _get_rac_cooling_capacity(_RacCoolingCapacityInputs(
+            cool_CRAC, load, Theta_ex_d_t, log_intermediates=False))
         q_r_max_C = rac_cooling.q_r_max_C
         Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
         Q_max_C_d_t = rac_cooling.Q_max_C_d_t

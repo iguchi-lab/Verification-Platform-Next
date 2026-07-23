@@ -1400,9 +1400,9 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
     monkeypatch.setattr(sut._logger, "debug", lambda message: calls.append(("debug", message)))
     monkeypatch.setattr(sut._logger, "NDdebug", lambda name, value: calls.append(("NDdebug", name, value)))
 
-    result = sut._get_rac_cooling_capacity(
+    result = sut._get_rac_cooling_capacity(sut._RacCoolingCapacityInputs(
         cooling, load, theta, log_intermediates
-    )
+    ))
 
     assert result == outputs
     expected = [("ratio", (10.0, 8.0))]
