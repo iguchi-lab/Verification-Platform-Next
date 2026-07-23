@@ -57,6 +57,17 @@ import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 import jjjexperiment.v_min_input as jjj_V_min_input
 
 
+class _MinimumFanElectricityInputs(NamedTuple):
+    E_E_fan_logic: object
+    P_fan_rtd: object
+    V_hs_vent_d_t: object
+    V_hs_supply_d_t: object
+    V_hs_dsgn: object
+    E_E_fan_min: object
+    region: object
+    for_cooling: object
+
+
 class _CoolingType4ElectricityInputs(NamedTuple):
     case_name: object
     type: object
@@ -396,16 +407,16 @@ def calc_main(
                         E_E_fan_logic = v_min_heating_input.E_E_fan_logic
 
                         from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
-                        E_E_fan_H_d_t = get_E_E_fan_d_t(
-                                E_E_fan_logic
+                        E_E_fan_H_d_t = get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
+                                E_E_fan_logic,
                                 # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                , P_rac_fan_rtd_H if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else heat_quantity.P_fan_rtd
-                                , V_hs_vent_d_t  # 上書きアリ
-                                , V_hs_supply_d_t
-                                , V_hs_dsgn_H
-                                , E_E_fan_min_H
-                                , house.region
-                                , for_cooling=False)
+                                P_rac_fan_rtd_H if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else heat_quantity.P_fan_rtd,
+                                V_hs_vent_d_t,  # 上書きアリ
+                                V_hs_supply_d_t,
+                                V_hs_dsgn_H,
+                                E_E_fan_min_H,
+                                house.region,
+                                False))
                     case _:
                         raise ValueError
             case _:
@@ -611,16 +622,16 @@ def calc_main(
                         E_E_fan_logic = v_min_cooling_input.E_E_fan_logic
 
                         from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
-                        E_E_fan_C_d_t = get_E_E_fan_d_t(
-                                E_E_fan_logic
+                        E_E_fan_C_d_t = get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
+                                E_E_fan_logic,
                                 # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                , P_rac_fan_rtd_C if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else cool_quantity.P_fan_rtd
-                                , V_hs_vent_d_t  # 上書きアリ
-                                , V_hs_supply_d_t
-                                , V_hs_dsgn_C
-                                , E_E_fan_min_C
-                                , house.region
-                                , for_cooling=True)
+                                P_rac_fan_rtd_C if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else cool_quantity.P_fan_rtd,
+                                V_hs_vent_d_t,  # 上書きアリ
+                                V_hs_supply_d_t,
+                                V_hs_dsgn_C,
+                                E_E_fan_min_C,
+                                house.region,
+                                True))
                     case _:
                         raise ValueError
             case _:
