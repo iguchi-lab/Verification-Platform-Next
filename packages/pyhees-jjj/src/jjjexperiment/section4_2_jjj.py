@@ -478,6 +478,22 @@ class _ActualNonRoomTemperatureHourInputs(NamedTuple):
     Theta_NR_d_t: object
 
 
+class _UnderfloorOutdoorTransferInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    new_ufac: object
+    climate: object
+    A_s_ufac_i: object
+    r_A_s_ufac: object
+    U_s_input: object
+    Theta_in_d_t: object
+    Theta_ex_d_t: object
+    V_dash_supply_d_t_i: object
+    Q_hat_hs_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -776,22 +792,21 @@ def _adjust_heat_source_output_for_room_to_underfloor_transfer(
 
     return _RoomToUnderfloorTransferResult(Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac)
 
-def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        skin: OuterSkin,
-        load: Load_DTI,
-        new_ufac: UnderfloorAc,
-        climate: ClimateService,
-        A_s_ufac_i: np.ndarray,
-        r_A_s_ufac: float,
-        U_s_input: float,
-        Theta_in_d_t: np.ndarray,
-        Theta_ex_d_t: np.ndarray,
-        V_dash_supply_d_t_i: np.ndarray,
-        Q_hat_hs_d_t: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray]:
+def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(inputs: _UnderfloorOutdoorTransferInputs):
     """Apply the outdoor part of formula (40)-2nd in its original order."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    new_ufac = inputs.new_ufac
+    climate = inputs.climate
+    A_s_ufac_i = inputs.A_s_ufac_i
+    r_A_s_ufac = inputs.r_A_s_ufac
+    U_s_input = inputs.U_s_input
+    Theta_in_d_t = inputs.Theta_in_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
     # 2. 床下 -> 外気 (逃げ方向)
     # 一階負荷 暖冷房
     match ac_setting:
@@ -2293,7 +2308,7 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
         A_s_ufac_i = room_transfer.A_s_ufac_i
         r_A_s_ufac = room_transfer.r_A_s_ufac
         Q_hat_hs_d_t, Theta_uf_d_t = \
-            _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
+            _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(_UnderfloorOutdoorTransferInputs(
                 ac_setting,
                 house,
                 skin,
@@ -2307,7 +2322,7 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
                 Theta_ex_d_t,
                 V_dash_supply_d_t_i,
                 Q_hat_hs_d_t,
-            )
+            ))
         Q_hat_hs_d_t = \
             _adjust_heat_source_output_for_underfloor_to_ground_transfer(
                 ac_setting,

@@ -965,7 +965,7 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
         lambda phi, length, delta: delta,
     )
 
-    result = sut._adjust_heat_source_output_for_underfloor_to_outdoor_transfer(
+    result = sut._adjust_heat_source_output_for_underfloor_to_outdoor_transfer(sut._UnderfloorOutdoorTransferInputs(
         setting,
         SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
         SimpleNamespace(Q=2.7),
@@ -979,7 +979,7 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
         theta_out,
         supply,
         output,
-    )
+    ))
 
     assert result[0] is output
     np.testing.assert_array_equal(output, np.full(24 * 365, 110.0))
@@ -4363,4 +4363,26 @@ def test_actual_non_room_temperature_hour_inputs_preserve_field_order():
         "A_prt_i",
         "Q",
         "Theta_NR_d_t",
+    )
+
+
+def test_underfloor_outdoor_transfer_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(13))
+    inputs = sut._UnderfloorOutdoorTransferInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "ac_setting",
+        "house",
+        "skin",
+        "load",
+        "new_ufac",
+        "climate",
+        "A_s_ufac_i",
+        "r_A_s_ufac",
+        "U_s_input",
+        "Theta_in_d_t",
+        "Theta_ex_d_t",
+        "V_dash_supply_d_t_i",
+        "Q_hat_hs_d_t",
     )
