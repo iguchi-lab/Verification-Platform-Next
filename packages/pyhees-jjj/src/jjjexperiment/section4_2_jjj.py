@@ -535,6 +535,20 @@ class _UnderfloorGroundTransferInputs(NamedTuple):
     Theta_g_avg: object
     Q_hat_hs_d_t: object
 
+
+class _HeatSourceOutletRequirementsInputs(NamedTuple):
+    X_star_hs_in_d_t: object
+    Q_hs_max_CL_d_t: object
+    V_dash_supply_d_t_i: object
+    X_star_HBR_d_t: object
+    L_star_CL_d_t_i: object
+    Theta_sur_d_t_i: object
+    Theta_star_HBR_d_t: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    l_duct_i: object
+    region: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -921,20 +935,19 @@ def _adjust_heat_source_output_for_underfloor_to_ground_transfer(inputs: _Underf
 
     return Q_hat_hs_d_t
 
-def _get_heat_source_outlet_requirements(
-        X_star_hs_in_d_t: np.ndarray,
-        Q_hs_max_CL_d_t: np.ndarray,
-        V_dash_supply_d_t_i: np.ndarray,
-        X_star_HBR_d_t: np.ndarray,
-        L_star_CL_d_t_i: np.ndarray,
-        Theta_sur_d_t_i: np.ndarray,
-        Theta_star_HBR_d_t: np.ndarray,
-        L_star_H_d_t_i: np.ndarray,
-        L_star_CS_d_t_i: np.ndarray,
-        l_duct_i: np.ndarray,
-        region: int,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _get_heat_source_outlet_requirements(inputs: _HeatSourceOutletRequirementsInputs):
     """Calculate formulas (18), (22), and (21) in their original order."""
+    X_star_hs_in_d_t = inputs.X_star_hs_in_d_t
+    Q_hs_max_CL_d_t = inputs.Q_hs_max_CL_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    X_star_HBR_d_t = inputs.X_star_HBR_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    Theta_sur_d_t_i = inputs.Theta_sur_d_t_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    l_duct_i = inputs.l_duct_i
+    region = inputs.region
     # (18)　熱源機の出口における空気温度の最低値
     X_hs_out_min_C_d_t = dc.get_X_hs_out_min_C_d_t(X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i)
 
@@ -2623,11 +2636,11 @@ def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirem
     l_duct_i = inputs.l_duct_i
     Theta_ex_d_t = inputs.Theta_ex_d_t
     Theta_in_d_t = inputs.Theta_in_d_t
-    outlet_requirements = _get_heat_source_outlet_requirements(
+    outlet_requirements = _get_heat_source_outlet_requirements(_HeatSourceOutletRequirementsInputs(
         X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
         X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
         Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
-        l_duct_i, house.region)
+        l_duct_i, house.region))
     X_hs_out_min_C_d_t = outlet_requirements.X_hs_out_min_C_d_t
     X_req_d_t_i = outlet_requirements.X_req_d_t_i
     Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
@@ -3109,11 +3122,11 @@ def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementIn
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     l_duct_i = inputs.l_duct_i
     Theta_ex_d_t = inputs.Theta_ex_d_t
-    outlet_requirements = _get_heat_source_outlet_requirements(
+    outlet_requirements = _get_heat_source_outlet_requirements(_HeatSourceOutletRequirementsInputs(
         X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
         X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
         Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
-        l_duct_i, house.region)
+        l_duct_i, house.region))
     X_hs_out_min_C_d_t = outlet_requirements.X_hs_out_min_C_d_t
     X_req_d_t_i = outlet_requirements.X_req_d_t_i
     Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
