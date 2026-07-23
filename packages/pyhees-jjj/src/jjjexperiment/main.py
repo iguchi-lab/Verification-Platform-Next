@@ -529,6 +529,23 @@ def _get_latent_cooling_fan_power(cool_ac_setting, V_hs_vent_d_t, q_hs_C_d_t):
     return jjj_latent_dc_a.get_E_E_fan_C_d_t(
         V_hs_vent_d_t, q_hs_C_d_t, cool_ac_setting.f_SFP
     )
+def _get_standard_cooling_fan_power(cool_ac_setting, cool_quantity, P_rac_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t, region):
+    print(最低風量直接入力.入力しない)
+    P_fan_rtd = (
+        P_rac_fan_rtd_C
+        if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
+        else cool_quantity.P_fan_rtd
+    )
+    return dc_a.get_E_E_fan_C_d_t(
+        P_fan_rtd,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        V_hs_dsgn_C,
+        q_hs_C_d_t,
+        region,
+        cool_ac_setting.f_SFP,
+        cool_ac_setting.subtract_ventilation_power,
+    )
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -737,21 +754,16 @@ def calc_main(
         # [F25-01] 最低風量・最低電力 直接入力
         match v_min_cooling_input.input_V_hs_min:
             case 最低風量直接入力.入力しない:
-                print(最低風量直接入力.入力しない)
-
-                # 従来式
-                E_E_fan_C_d_t = \
-                    dc_a.get_E_E_fan_C_d_t(
-                        # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                        P_rac_fan_rtd_C if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else cool_quantity.P_fan_rtd
-                        , V_hs_vent_d_t  # 上書きナシ
-                        , V_hs_supply_d_t
-                        , V_hs_dsgn_C
-                        , q_hs_C_d_t  # W
-                        , house.region
-                        , cool_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
-                        , cool_ac_setting.subtract_ventilation_power)
-
+                E_E_fan_C_d_t = _get_standard_cooling_fan_power(
+                    cool_ac_setting,
+                    cool_quantity,
+                    P_rac_fan_rtd_C,
+                    V_hs_vent_d_t,
+                    V_hs_supply_d_t,
+                    V_hs_dsgn_C,
+                    q_hs_C_d_t,
+                    house.region,
+                )
             case 最低風量直接入力.入力する:
                 print(最低風量直接入力.入力する)
 
