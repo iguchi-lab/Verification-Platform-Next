@@ -276,6 +276,12 @@ def _set_change_heat_source_outlet_required_temperature(input: dict):
     change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
 
 
+def _set_R_g(input: dict):
+  if 'R_g' in input:
+    global R_g
+    R_g = float(input['R_g'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -294,9 +300,7 @@ def set_constants(input: dict):
   _set_q_rtd_C_limit(input)
   _set_change_supply_volume_before_vav_adjust(input)
   _set_change_heat_source_outlet_required_temperature(input)
-  if 'R_g' in input:
-    global R_g
-    R_g = float(input['R_g'])
+  _set_R_g(input)
 
   #以下、潜熱評価モデル追加対応
   if 'H_A' in input:

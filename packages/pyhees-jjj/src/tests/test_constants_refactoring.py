@@ -19,10 +19,12 @@ import jjjexperiment.constants as constants
     ('defrost_humid_rac', '123.5', 123.5),
     ('C_hm_C', '123.5', 123.5),
     ('q_rtd_C_limit', '123.5', 123.5),
+    ('R_g', '123.5', 123.5),
   ],
 )
 def test_set_constants_float_boundary(key, value, expected):
-  original = getattr(constants, key)
+  missing = object()
+  original = getattr(constants, key, missing)
   try:
     constants.set_constants({key: value})
     assert getattr(constants, key) == expected
@@ -31,7 +33,10 @@ def test_set_constants_float_boundary(key, value, expected):
     constants.set_constants({})
     assert getattr(constants, key) == expected
   finally:
-    setattr(constants, key, original)
+    if original is missing:
+      delattr(constants, key)
+    else:
+      setattr(constants, key, original)
 
 
 @pytest.mark.parametrize(
