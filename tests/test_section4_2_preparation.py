@@ -310,7 +310,7 @@ def test_get_unprocessed_loads_preserves_formula_order_and_arguments(monkeypatch
         lambda *args: calls.append(("H", args)) or outputs[2],
     )
 
-    assert sut._get_unprocessed_loads(*inputs) == tuple(outputs)
+    assert sut._get_unprocessed_loads(sut._UnprocessedLoadsInputs(*inputs)) == tuple(outputs)
     assert calls == [
         ("CL", (inputs[0], inputs[1])),
         ("CS", (inputs[2], inputs[3])),
@@ -3659,7 +3659,7 @@ def test_prepare_unprocessed_load_state_preserves_calculate_record_order(
 
     assert result == (*loads, recorded)
     assert events == [
-        ("calculate", tuple(inputs)),
+        ("calculate", (sut._UnprocessedLoadsInputs(*inputs),)),
         ("record", (original, *loads)),
     ]
 

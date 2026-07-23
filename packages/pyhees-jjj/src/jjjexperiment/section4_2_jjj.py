@@ -628,6 +628,15 @@ class _ActualLoadsInputs(NamedTuple):
     Theta_HBR_d_t_i: object
     region: object
 
+
+class _UnprocessedLoadsInputs(NamedTuple):
+    L_star_CL_d_t_i: object
+    L_dash_CL_d_t_i: object
+    L_star_CS_d_t_i: object
+    L_dash_CS_d_t_i: object
+    L_star_H_d_t_i: object
+    L_dash_H_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1413,15 +1422,14 @@ def _get_actual_loads(inputs: _ActualLoadsInputs):
         L_dash_H_d_t_i,
     )
 
-def _get_unprocessed_loads(
-        L_star_CL_d_t_i: np.ndarray,
-        L_dash_CL_d_t_i: np.ndarray,
-        L_star_CS_d_t_i: np.ndarray,
-        L_dash_CS_d_t_i: np.ndarray,
-        L_star_H_d_t_i: np.ndarray,
-        L_dash_H_d_t_i: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _get_unprocessed_loads(inputs: _UnprocessedLoadsInputs):
     """Calculate formulas (4) through (2) in their original order."""
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    L_dash_CL_d_t_i = inputs.L_dash_CL_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    L_dash_CS_d_t_i = inputs.L_dash_CS_d_t_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_dash_H_d_t_i = inputs.L_dash_H_d_t_i
     # (4)　冷房設備機器の未処理冷房潜熱負荷
     Q_UT_CL_d_t_i = dc.get_Q_UT_CL_d_t_i(L_star_CL_d_t_i, L_dash_CL_d_t_i)
     # (3)　冷房設備機器の未処理冷房顕熱負荷
@@ -2841,10 +2849,10 @@ def _prepare_unprocessed_load_state(
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
         L_star_H_d_t_i, L_dash_H_d_t_i):
     """Calculate and record unprocessed cooling and heating loads."""
-    unprocessed_loads = _get_unprocessed_loads(
+    unprocessed_loads = _get_unprocessed_loads(_UnprocessedLoadsInputs(
         L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
-        L_star_H_d_t_i, L_dash_H_d_t_i)
+        L_star_H_d_t_i, L_dash_H_d_t_i))
     Q_UT_CL_d_t_i = unprocessed_loads.Q_UT_CL_d_t_i
     Q_UT_CS_d_t_i = unprocessed_loads.Q_UT_CS_d_t_i
     Q_UT_H_d_t_i = unprocessed_loads.Q_UT_H_d_t_i
