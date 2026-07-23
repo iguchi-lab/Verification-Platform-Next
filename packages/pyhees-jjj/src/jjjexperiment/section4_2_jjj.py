@@ -571,6 +571,17 @@ class _HeatSourceOutletTemperaturesInputs(NamedTuple):
     L_star_CS_d_t_i: object
     Theta_NR_d_t: object
 
+
+class _SupplyAirTemperaturesInputs(NamedTuple):
+    house: object
+    Theta_sur_d_t_i: object
+    Theta_hs_out_d_t: object
+    Theta_star_HBR_d_t: object
+    l_duct_i: object
+    V_supply_d_t_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1050,17 +1061,16 @@ def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
         V_supply_d_t_i,
     )
 
-def _get_supply_air_temperatures(
-        house: HouseInfo,
-        Theta_sur_d_t_i: np.ndarray,
-        Theta_hs_out_d_t: np.ndarray,
-        Theta_star_HBR_d_t: np.ndarray,
-        l_duct_i: np.ndarray,
-        V_supply_d_t_i: np.ndarray,
-        L_star_H_d_t_i: np.ndarray,
-        L_star_CS_d_t_i: np.ndarray,
-    ) -> np.ndarray:
+def _get_supply_air_temperatures(inputs: _SupplyAirTemperaturesInputs):
     """Calculate formula (41) without moving later underfloor corrections."""
+    house = inputs.house
+    Theta_sur_d_t_i = inputs.Theta_sur_d_t_i
+    Theta_hs_out_d_t = inputs.Theta_hs_out_d_t
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    l_duct_i = inputs.l_duct_i
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     # (41)　暖冷房区画𝑖の吹き出し温度
     return dc.get_Thata_supply_d_t_i(Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t, l_duct_i,
                                    V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
@@ -2721,9 +2731,9 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
         V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True))
     V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
     V_supply_d_t_i = capped_airflows.V_supply_d_t_i
-    Theta_supply_d_t_i = _get_supply_air_temperatures(
+    Theta_supply_d_t_i = _get_supply_air_temperatures(_SupplyAirTemperaturesInputs(
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
-        l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
+        l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i))
     _log_supply_temperatures(Theta_supply_d_t_i)
 
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
@@ -3107,9 +3117,9 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
         Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False))
     V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
     V_supply_d_t_i = capped_airflows.V_supply_d_t_i
-    Theta_supply_d_t_i = _get_supply_air_temperatures(
+    Theta_supply_d_t_i = _get_supply_air_temperatures(_SupplyAirTemperaturesInputs(
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
-        l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i)
+        l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i))
     if skin.underfloor_air_conditioning_air_supply:
         Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
             ac_setting, house, skin, load, Theta_supply_d_t_i,

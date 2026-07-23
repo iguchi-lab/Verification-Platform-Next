@@ -1227,7 +1227,7 @@ def test_supply_air_temperatures_preserve_formula_arguments(monkeypatch):
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_supply_air_temperatures(house, *inputs)
+    result = sut._get_supply_air_temperatures(sut._SupplyAirTemperaturesInputs(house, *inputs))
 
     assert result is expected
     assert calls == [((*inputs, 7))]
