@@ -96,3 +96,18 @@ def test_set_constants_H_A_compressor_coeff_boundary():
   finally:
     for target, original in zip(targets, originals):
       setattr(constants, target, original)
+
+
+def test_set_constants_H_A_airvolume_coeff_boundary():
+  targets = ('airvolume_coeff_a4_H', 'airvolume_coeff_a3_H', 'airvolume_coeff_a2_H', 'airvolume_coeff_a1_H', 'airvolume_coeff_a0_H')
+  values = ['1.0', '2.0', '3.0', '4.0', '5.0']
+  originals = tuple(getattr(constants, target) for target in targets)
+  try:
+    constants.set_constants({'H_A': {'airvolume_coeff': values}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+
+    constants.set_constants({'H_A': {}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+  finally:
+    for target, original in zip(targets, originals):
+      setattr(constants, target, original)
