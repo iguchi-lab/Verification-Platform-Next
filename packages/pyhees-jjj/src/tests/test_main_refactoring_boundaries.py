@@ -398,3 +398,23 @@ def test_get_heating_electricity_type2_preserves_argument_order(monkeypatch):
         'type', 6, 'climate.csv', 'fan', 'q-h', 'e-rtd-h', 'q-rtd-h',
         'q-rtd-c', 'q-max-h', 'q-max-c', 'c-af-h', 'dual-h',
     )]
+def test_get_heating_electricity_type4_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        experiment_main.jjj_dc_a,
+        'calc_E_E_H_d_t_type4',
+        lambda *args: calls.append(args) or 'electricity',
+    )
+    setting = SimpleNamespace(type='type')
+    house = SimpleNamespace(region=6)
+
+    result = experiment_main._get_heating_electricity_type4(
+        'case', setting, house, 'climate.csv', 'fan', 'q-h', 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner'
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'case', 'type', 6, 'climate.csv', 'fan', 'q-h', 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner',
+    )]

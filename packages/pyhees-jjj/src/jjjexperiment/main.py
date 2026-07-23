@@ -420,6 +420,22 @@ def _get_heating_electricity_type2(heat_ac_setting, house, climateFile, E_E_fan_
             heat_CRAC.dualcompressor,
         )
     )
+def _get_heating_electricity_type4(case_name, heat_ac_setting, house, climateFile, E_E_fan_H_d_t, q_hs_H_d_t, V_hs_supply_d_t, P_rac_fan_rtd_H, simu_R_H, heat_denchu_catalog, heat_real_inner):
+    return jjj_dc_a.calc_E_E_H_d_t_type4(
+        *_HeatingType4ElectricityInputs(
+            case_name,
+            heat_ac_setting.type,
+            house.region,
+            climateFile,
+            E_E_fan_H_d_t,
+            q_hs_H_d_t,
+            V_hs_supply_d_t,
+            P_rac_fan_rtd_H,
+            simu_R_H,
+            heat_denchu_catalog,
+            heat_real_inner,
+        )
+    )
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -561,22 +577,19 @@ def calc_main(
             cool_CRAC,
         )
     elif heat_ac_setting.type == 計算モデル.電中研モデル:
-        E_E_H_d_t \
-            = jjj_dc_a.calc_E_E_H_d_t_type4(
-                *_HeatingType4ElectricityInputs(
-                    case_name,
-                    heat_ac_setting.type,
-                    house.region,
-                    climateFile,
-                    E_E_fan_H_d_t,
-                    q_hs_H_d_t,
-                    V_hs_supply_d_t,
-                    P_rac_fan_rtd_H,
-                    simu_R_H,
-                    heat_denchu_catalog,
-                    heat_real_inner,
-                )
-            )
+        E_E_H_d_t = _get_heating_electricity_type4(
+            case_name,
+            heat_ac_setting,
+            house,
+            climateFile,
+            E_E_fan_H_d_t,
+            q_hs_H_d_t,
+            V_hs_supply_d_t,
+            P_rac_fan_rtd_H,
+            simu_R_H,
+            heat_denchu_catalog,
+            heat_real_inner,
+        )
     else:
         raise Exception("暖房方式が不正です。")
 
