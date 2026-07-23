@@ -33,3 +33,22 @@ def test_get_Q_hat_hs_CS_40_2b_preserves_sensible_balance():
     result = formula40._get_Q_hat_hs_CS_40_2b(2.5, 100.0, 1000.0, 1.2, 120.0, 60.0, 30.0, 27.0, 0.5, 2.0, 30.0, 4.0, 5.0)
     expected = (((2.5 - 0.35 * 0.5 * 2.4) * 100.0 + 1000.0 * 1.2 * 180.0 / 3600) * 3.0 + 0.5 * 100.0 * 2.0 + 30.0 + 4.0 * 5.0) * 3600 * 1e-6
     assert result == pytest.approx(expected)
+
+def test_get_Q_hat_hs_CL_40_2c_preserves_latent_balance():
+    result = formula40._get_Q_hat_hs_CL_40_2c(1.2, 120.0, 60.0, 0.012, 0.010, 0.2, 2500.0, 4.0, 10.0)
+    expected = ((1.2 * 180.0 * 0.002 * 1e3 + 0.2) * 2500.0 + 4.0 * 10.0 * 3600) * 1e-6
+    assert result == pytest.approx(expected)
+
+
+def test_get_Q_hat_hs_C_40_2a_clips_each_load_before_sum():
+    assert formula40._get_Q_hat_hs_C_40_2a(-1.0, 2.0) == 2.0
+    assert formula40._get_Q_hat_hs_C_40_2a(3.0, -4.0) == 3.0
+
+
+def test_get_Q_hat_hs_M_40_3_preserves_zero_load():
+    assert formula40._get_Q_hat_hs_M_40_3() == 0
+
+
+def test_raise_invalid_HCM_40_preserves_error():
+    with pytest.raises(ValueError, match="Invalid season flag"):
+        formula40._raise_invalid_HCM_40()

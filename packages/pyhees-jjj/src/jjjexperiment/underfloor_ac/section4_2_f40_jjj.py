@@ -39,6 +39,23 @@ def _get_Q_hat_hs_CS_40_2b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, T
         + q_gen
         + n_p * q_p_CS) * 3600 * 1e-6
 
+
+def _get_Q_hat_hs_CL_40_2c(rho_air, V_vent_l, sum_V_vent_g_i, X_ex, X_set_C, w_gen, L_wtr, n_p, q_p_CL):
+    return (
+        (rho_air * (V_vent_l + sum_V_vent_g_i) * (X_ex - X_set_C) * 1e+3 + w_gen) * L_wtr
+        + n_p * q_p_CL * 3600) * 1e-6
+
+
+def _get_Q_hat_hs_C_40_2a(Q_hat_hs_CS, Q_hat_hs_CL):
+    return max(Q_hat_hs_CS, 0) + max(Q_hat_hs_CL, 0)
+
+
+def _get_Q_hat_hs_M_40_3():
+    return 0
+
+
+def _raise_invalid_HCM_40():
+    raise ValueError("Invalid season flag")
 @jjj_cloning
 def calc_Q_hat_hs(
         Q: float,
@@ -98,15 +115,13 @@ def calc_Q_hat_hs(
             # (40-2b)
             Q_hat_hs_CS = _get_Q_hat_hs_CS_40_2b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, Theta_ex, Theta_set_C, mu_C, J, q_gen, n_p, q_p_CS)
             # (40-2c)
-            Q_hat_hs_CL = (
-                (rho_air * (V_vent_l + sum_V_vent_g_i) * (X_ex - X_set_C) * 1e+3 + w_gen) * L_wtr \
-                + n_p * q_p_CL * 3600) * 1e-6
+            Q_hat_hs_CL = _get_Q_hat_hs_CL_40_2c(rho_air, V_vent_l, sum_V_vent_g_i, X_ex, X_set_C, w_gen, L_wtr, n_p, q_p_CL)
             # (40-2a)
-            return (max(Q_hat_hs_CS, 0) + max(Q_hat_hs_CL, 0))
+            return _get_Q_hat_hs_C_40_2a(Q_hat_hs_CS, Q_hat_hs_CL)
 
         case JJJ_HCM.M:
             # (40-3)
-            return 0
+            return _get_Q_hat_hs_M_40_3()
 
         case _:
-            raise ValueError("Invalid season flag")
+            _raise_invalid_HCM_40()
