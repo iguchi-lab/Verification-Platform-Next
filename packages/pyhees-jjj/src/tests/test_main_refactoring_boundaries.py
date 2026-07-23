@@ -286,3 +286,23 @@ def test_get_latent_heating_fan_power_preserves_model_call(monkeypatch):
 
     assert result == 'fan'
     assert events == [('print', setting.type), ('call', ('vent', 'q-h', 0.4))]
+
+def test_get_standard_heating_fan_power_preserves_rac_fan_and_ventilation_option(monkeypatch):
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_E_E_fan_H_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(
+        type=experiment_main.計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        f_SFP=0.4,
+        subtract_ventilation_power='subtract',
+    )
+
+    result = experiment_main._get_standard_heating_fan_power(
+        setting, SimpleNamespace(P_fan_rtd=100.0), 200.0, 'vent', 'supply', 300.0, 'q-h', 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低風量直接入力.入力しない),
+        ('call', (200.0, 'vent', 'supply', 300.0, 'q-h', 6, 0.4, 'subtract')),
+    ]
