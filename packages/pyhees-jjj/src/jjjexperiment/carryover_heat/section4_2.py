@@ -6,6 +6,15 @@ from jjjexperiment.common import Array5, Array5x1
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 from jjjexperiment.logger import log_res
 
+def _prepare_carryover_zone_areas(
+        A_HCZ_i: Array5,
+        Theta_HBR_i: Array5x1,
+    ) -> Array5x1:
+    assert A_HCZ_i.shape == (5,), "A_HCZ_iの次数が想定外"
+    assert Theta_HBR_i.shape == (5, 1), "Theta_HBR_iの次数が想定外"
+    return A_HCZ_i.reshape(-1, 1)
+
+
 def calc_carryover(
         H: np.bool,
         C: np.bool,
@@ -23,11 +32,9 @@ def calc_carryover(
         Theta_star_HBR: (時点)負荷バランス時の居室の室温 [℃]
     """
     # 事前条件: 次数チェック
-    assert A_HCZ_i.shape == (5,), "A_HCZ_iの次数が想定外"
-    assert Theta_HBR_i.shape == (5, 1), "Theta_HBR_iの次数が想定外"
 
     # 熱容量の取得
-    A_HCZ_i = A_HCZ_i.reshape(-1,1)  # (5,) -> (5, 1)
+    A_HCZ_i = _prepare_carryover_zone_areas(A_HCZ_i, Theta_HBR_i)
     cbri = jjj_carryover_heat.get_C_BR_i(A_HCZ_i)
 
     # NOTE('25/04): キャップはかけない
