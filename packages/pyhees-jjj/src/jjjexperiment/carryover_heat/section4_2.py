@@ -279,6 +279,12 @@ def _get_c_prt_48(U_prt: float, A_prt_i: Array5x1) -> Array5x1:
     return U_prt * A_prt_i
 
 
+def _get_air_properties_48():
+    c_p_air = dc.get_c_p_air()  # [J/(kg・K)]
+    rho_air = dc.get_rho_air()  # [kg/m3]
+    return c_p_air, rho_air
+
+
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
         Theta_star_NR: float,
@@ -317,8 +323,7 @@ def get_Theta_NR_2023(
     # 熱容量(間仕切り) [W/K]
     c_prt = _get_c_prt_48(U_prt, A_prt_i)
 
-    c_p_air = dc.get_c_p_air()  # [J/(kg・K)]
-    rho_air = dc.get_rho_air()  # [kg/m3]
+    c_p_air, rho_air = _get_air_properties_48()
 
     # (48d) [W/K]
     k_prt_dash_i = c_p_air * rho_air * (V_dash_supply_i / 3600) + c_prt

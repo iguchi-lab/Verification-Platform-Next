@@ -128,3 +128,9 @@ def test_assert_Theta_NR_2023_shapes_checks_four_zone_arrays():
 def test_get_c_prt_48_preserves_watts_per_kelvin_units():
     areas = np.arange(1.0, 6.0).reshape(5, 1)
     np.testing.assert_array_equal(section4_2._get_c_prt_48(2.5, areas), 2.5 * areas)
+
+
+def test_get_air_properties_48_preserves_pyhees_values(monkeypatch):
+    monkeypatch.setattr(section4_2.dc, 'get_c_p_air', lambda: 1006.0)
+    monkeypatch.setattr(section4_2.dc, 'get_rho_air', lambda: 1.2)
+    assert section4_2._get_air_properties_48() == (1006.0, 1.2)
