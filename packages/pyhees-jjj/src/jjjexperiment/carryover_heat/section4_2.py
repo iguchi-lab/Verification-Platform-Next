@@ -285,6 +285,10 @@ def _get_air_properties_48():
     return c_p_air, rho_air
 
 
+def _get_k_prt_dash_i_48(c_p_air, rho_air, V_dash_supply_i, c_prt):
+    return c_p_air * rho_air * (V_dash_supply_i / 3600) + c_prt
+
+
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
         Theta_star_NR: float,
@@ -326,7 +330,7 @@ def get_Theta_NR_2023(
     c_p_air, rho_air = _get_air_properties_48()
 
     # (48d) [W/K]
-    k_prt_dash_i = c_p_air * rho_air * (V_dash_supply_i / 3600) + c_prt
+    k_prt_dash_i = _get_k_prt_dash_i_48(c_p_air, rho_air, V_dash_supply_i, c_prt)
     # (48c) [W/K]
     k_prt_i = c_p_air * rho_air * (V_supply_i / 3600) + c_prt
     # (48b) [W/K]

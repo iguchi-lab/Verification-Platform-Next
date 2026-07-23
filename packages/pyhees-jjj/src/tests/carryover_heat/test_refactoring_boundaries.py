@@ -134,3 +134,9 @@ def test_get_air_properties_48_preserves_pyhees_values(monkeypatch):
     monkeypatch.setattr(section4_2.dc, 'get_c_p_air', lambda: 1006.0)
     monkeypatch.setattr(section4_2.dc, 'get_rho_air', lambda: 1.2)
     assert section4_2._get_air_properties_48() == (1006.0, 1.2)
+
+
+def test_get_k_prt_dash_i_48_preserves_formula_48d():
+    volume = np.arange(1.0, 6.0).reshape(5, 1) * 3600
+    c_prt = np.full((5, 1), 7.0)
+    np.testing.assert_array_equal(section4_2._get_k_prt_dash_i_48(2.0, 3.0, volume, c_prt), 6.0 * volume / 3600 + c_prt)
