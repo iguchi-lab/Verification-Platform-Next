@@ -11,6 +11,7 @@ import jjjexperiment.constants as constants
     ('C_df_H_d_t_defrost_ductcentral', '123.5', 123.5),
     ('defrost_temp_ductcentral', '123.5', 123.5),
     ('defrost_humid_ductcentral', '123.5', 123.5),
+    ('phi_i', '123.5', 123.5),
   ],
 )
 def test_set_constants_float_boundary(key, value, expected):
