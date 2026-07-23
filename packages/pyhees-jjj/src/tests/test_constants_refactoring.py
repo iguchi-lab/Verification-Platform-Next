@@ -143,6 +143,7 @@ def test_set_constants_coefficient_boundary(section, nested_key, targets):
     ('A_f_hex_large', 'A_f_hex_large_C', '2.75', 2.75),
     ('A_e_hex_large', 'A_e_hex_large_C', '2.75', 2.75),
     ('airvolume_minimum', 'airvolume_minimum_C', '2.75', 2.75),
+    ('airvolume_maximum', 'airvolume_maximum_C', '2.75', 2.75),
   ],
 )
 def test_set_constants_C_A_float_boundary(nested_key, target, value, expected):

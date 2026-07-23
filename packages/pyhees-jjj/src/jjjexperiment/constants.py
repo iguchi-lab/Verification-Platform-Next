@@ -418,6 +418,12 @@ def _set_C_A_airvolume_minimum(input: dict):
     airvolume_minimum_C = float(input['C_A']['airvolume_minimum'])
 
 
+def _set_C_A_airvolume_maximum(input: dict):
+  if 'airvolume_maximum' in input['C_A']:
+    global airvolume_maximum_C
+    airvolume_maximum_C = float(input['C_A']['airvolume_maximum'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -457,9 +463,7 @@ def set_constants(input: dict):
     _set_C_A_heat_transfer_coeff(input)
     _set_C_A_compressor_coeff(input)
     _set_C_A_airvolume_minimum(input)
-    if 'airvolume_maximum' in input['C_A']:
-      global airvolume_maximum_C
-      airvolume_maximum_C = float(input['C_A']['airvolume_maximum'])
+    _set_C_A_airvolume_maximum(input)
     if 'airvolume_coeff' in input['C_A']:
       global airvolume_coeff_a4_C
       airvolume_coeff_a4_C = float(input['C_A']['airvolume_coeff'][0])
