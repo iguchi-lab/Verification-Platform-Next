@@ -279,6 +279,15 @@ def _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat
     injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
     return V_hs_dsgn_H, V_hs_dsgn_C
 
+def _run_heating_calc_Q_UT_A(injector, heat_ac_setting):
+    injector.binder.bind(jjj_dc.ActiveAcSetting, to=heat_ac_setting)
+    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t = (
+        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
+    )
+    _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
+    _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
+    return E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t
+
 @inject
 def calc_main(
     injector: Injector,
@@ -348,14 +357,7 @@ def calc_main(
 
     V_hs_dsgn_H, V_hs_dsgn_C = _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat_CRAC)
 
-    injector.binder.bind(jjj_dc.ActiveAcSetting, to=heat_ac_setting)  # 暖房負荷アクティブ
-
-    E_UT_H_d_t: np.ndarray
-    """暖房設備の未処理暖房負荷の設計一次エネルギー消費量相当値(MJ/h)"""
-    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t = \
-        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
-    _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
-    _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
+    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = _run_heating_calc_Q_UT_A(injector, heat_ac_setting)
 
     if heat_ac_setting.type == 計算モデル.電中研モデル:
         R2, R1, R0, P_rac_fan_rtd_H = jjjexperiment.denchu.denchu_1.calc_R_and_Pc_H(heat_denchu_catalog)

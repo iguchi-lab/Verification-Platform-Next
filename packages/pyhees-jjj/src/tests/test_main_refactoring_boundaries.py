@@ -206,3 +206,22 @@ def test_bind_heating_design_airflows_rejects_non_float_override():
     setting = SimpleNamespace(V_hs_dsgn=250)
     with pytest.raises(AssertionError, match='V_hs_dsgn_Hの型が不正'):
         experiment_main._bind_heating_design_airflows(injector, setting, SimpleNamespace(), SimpleNamespace())
+
+def test_run_heating_calc_Q_UT_A_preserves_bind_call_and_diagnostics(monkeypatch):
+    events = []
+    result = ('EUT', 'theta-out', 'theta-in', 'x-out', 'x-in', 'supply', 'vent')
+    injector = SimpleNamespace(
+        binder=SimpleNamespace(bind=lambda key, to: events.append(('bind', key, to))),
+        call_with_injection=lambda func: events.append(('call', func)) or result,
+    )
+    monkeypatch.setattr(experiment_main._logger, 'NDdebug', lambda name, value: events.append(('debug', name, value)))
+
+    actual = experiment_main._run_heating_calc_Q_UT_A(injector, 'heat-setting')
+
+    assert actual == ('EUT', 'theta-out', 'theta-in', 'supply', 'vent')
+    assert events == [
+        ('bind', experiment_main.jjj_dc.ActiveAcSetting, 'heat-setting'),
+        ('call', experiment_main.jjj_dc.calc_Q_UT_A),
+        ('debug', 'V_hs_supply_d_t', 'supply'),
+        ('debug', 'V_hs_vent_d_t', 'vent'),
+    ]
