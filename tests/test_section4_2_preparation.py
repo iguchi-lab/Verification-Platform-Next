@@ -1664,106 +1664,7 @@ def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):
         "V_supply_i", "U_prt", "A_prt_i", "Q", "Theta_NR_before")
 
 
-@pytest.mark.parametrize(
-    ("setting_type", "theta_uf", "expected_first", "expected_second"),
-    (
-        (sut.HeatingAcSetting, np.array([5.0, 25.0, 30.0]), np.array([15.0, 20.0, 30.0]), np.array([15.0, 20.0, 40.0])),
-        (sut.CoolingAcSetting, np.array([15.0, 15.0, 30.0]), np.array([5.0, 20.0, 30.0]), np.array([5.0, 20.0, 35.0])),
-    ),
-)
-def test_legacy_underfloor_requested_temperatures_preserve_first_pass_formula(
-    monkeypatch, setting_type, theta_uf, expected_first, expected_second
-):
-    calls = []
-    theta_req = np.array([
-        [10.0, 20.0, 30.0],
-        [10.0, 20.0, 35.0],
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0],
-    ])
-    theta_ex = np.array([0.0, 1.0, 2.0])
-    airflows = np.arange(15.0).reshape(5, 3)
-    r_a_ufvnt = object()
-    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
-    skin = SimpleNamespace(Q=2.7, underfloor_insulation=True)
-    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
 
-    def calc_theta(*args):
-        calls.append(args)
-        return theta_uf, object(), object()
-
-    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
-
-    result = sut._adjust_legacy_underfloor_requested_temperatures(sut._LegacyUnderfloorRequestedTemperatureInputs(
-        _setting(setting_type), house, skin, load, r_a_ufvnt,
-        theta_req, theta_ex, airflows
-    ))
-
-    assert result is theta_req
-    np.testing.assert_array_equal(result[0], expected_first)
-    np.testing.assert_array_equal(result[1], expected_second)
-    np.testing.assert_array_equal(result[2:], np.array([
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0],
-    ]))
-    assert len(calls) == 2
-    assert [call[5] for call in calls] == [r_a_ufvnt, r_a_ufvnt]
-    for index, call in enumerate(calls):
-        np.testing.assert_array_equal(call[9], airflows[index])
-
-@pytest.mark.parametrize(
-    ("setting_type", "expected_first", "expected_second"),
-    (
-        (sut.HeatingAcSetting, np.array([10.0, 15.0, 30.0]), np.array([5.0, 15.0, 30.0])),
-        (sut.CoolingAcSetting, np.array([15.0, 20.0, 30.0]), np.array([15.0, 25.0, 35.0])),
-    ),
-)
-def test_carryover_underfloor_supply_temperatures_preserve_clipping(
-    monkeypatch, setting_type, expected_first, expected_second
-):
-    calls = []
-    theta_supply = np.array([
-        [10.0, 20.0, 30.0],
-        [5.0, 25.0, 35.0],
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0],
-    ])
-    theta_uf = np.array([15.0, 15.0, 30.0])
-    theta_ex = np.array([0.0, 1.0, 2.0])
-    airflows = np.arange(15.0).reshape(5, 3)
-    r_a_ufvnt = object()
-    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
-    skin = SimpleNamespace(
-        Q=2.7,
-        YUCACO_r_A_ufvnt=r_a_ufvnt,
-        underfloor_insulation=True,
-    )
-    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
-
-    def calc_theta(*args):
-        calls.append(args)
-        return theta_uf, object(), object()
-
-    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
-
-    result = sut._adjust_carryover_underfloor_supply_temperatures(sut._CarryoverUnderfloorSupplyTemperatureInputs(
-        _setting(setting_type), house, skin, load,
-        theta_supply, theta_ex, airflows
-    ))
-
-    assert result is theta_supply
-    np.testing.assert_array_equal(result[0], expected_first)
-    np.testing.assert_array_equal(result[1], expected_second)
-    np.testing.assert_array_equal(result[2:], np.array([
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0],
-    ]))
-    assert len(calls) == 2
-    assert [call[5] for call in calls] == [r_a_ufvnt, r_a_ufvnt]
 
 
 @pytest.mark.parametrize(
@@ -1891,70 +1792,6 @@ def test_new_underfloor_supply_temperatures_preserve_forward_solve_and_outputs(
     assert update_values["Theta_uf_d_t"] is theta_uf
     np.testing.assert_array_equal(update_values["Theta_supply_d_t_1"], result[0])
 
-@pytest.mark.parametrize(
-    ("setting_type", "expected_first", "expected_second"),
-    (
-        (sut.HeatingAcSetting, np.array([10.0, 15.0, 30.0]), np.array([5.0, 15.0, 30.0])),
-        (sut.CoolingAcSetting, np.array([15.0, 20.0, 30.0]), np.array([15.0, 25.0, 35.0])),
-    ),
-)
-def test_legacy_underfloor_supply_temperatures_preserve_where_operation(
-    monkeypatch, setting_type, expected_first, expected_second
-):
-    calls = []
-    where_calls = []
-    theta_supply = np.array([
-        [10.0, 20.0, 30.0],
-        [5.0, 25.0, 35.0],
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0],
-    ])
-    theta_uf = np.array([15.0, 15.0, 30.0])
-    theta_ex = np.array([0.0, 1.0, 2.0])
-    airflows = np.arange(15.0).reshape(5, 3)
-    r_a_ufac = object()
-    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
-    skin = SimpleNamespace(
-        Q=2.7,
-        r_A_ufac=r_a_ufac,
-        underfloor_insulation=True,
-    )
-    load = SimpleNamespace(L_H_d_t_i=object(), L_CS_d_t_i=object())
-    original_where = np.where
-
-    def calc_theta(*args):
-        calls.append(args)
-        return theta_uf, object(), object()
-
-    def recording_where(*args):
-        where_calls.append(args)
-        return original_where(*args)
-
-    monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
-    monkeypatch.setattr(sut.np, "where", recording_where)
-    monkeypatch.setattr(
-        sut.np,
-        "clip",
-        lambda *_args, **_kwargs: pytest.fail("legacy phase must retain np.where"),
-    )
-
-    result = sut._adjust_legacy_underfloor_supply_temperatures(sut._LegacyUnderfloorSupplyTemperatureInputs(
-        _setting(setting_type), house, skin, load,
-        theta_supply, theta_ex, airflows
-    ))
-
-    assert result is theta_supply
-    np.testing.assert_array_equal(result[0], expected_first)
-    np.testing.assert_array_equal(result[1], expected_second)
-    np.testing.assert_array_equal(result[2:], np.array([
-        [1.0, 2.0, 3.0],
-        [4.0, 5.0, 6.0],
-        [7.0, 8.0, 9.0],
-    ]))
-    assert len(calls) == 2
-    assert len(where_calls) == 2
-    assert [call[5] for call in calls] == [r_a_ufac, r_a_ufac]
 
 
 def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
@@ -3122,15 +2959,15 @@ def test_prepare_balanced_heat_source_inlet_state_preserves_formula_20_19_order(
 
     assert result == (humidity, temperature)
     assert events == [("humidity", star_humidity), ("temperature", star_temperature)]
-
-@pytest.mark.parametrize("mode", ("none", "new", "legacy"))
-def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypatch, mode):
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(
+        monkeypatch, enabled):
     events = []
     x_min, x_req, theta_req, adjusted = [object() for _ in range(4)]
     new_ufac = SimpleNamespace(
-        new_ufac_flg=(sut.床下空調ロジック.変更する if mode == "new" else object()))
-    skin = SimpleNamespace(
-        underfloor_air_conditioning_air_supply=(mode == "legacy"), r_A_ufac=0.5)
+        new_ufac_flg=(
+            sut.床下空調ロジック.変更する if enabled else object()))
+    skin = SimpleNamespace(r_A_ufac=0.5)
     house = SimpleNamespace(region=6)
     context = [object() for _ in range(15)]
     monkeypatch.setattr(
@@ -3140,19 +2977,19 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(monkeypat
     monkeypatch.setattr(
         sut, "_get_new_underfloor_requested_temperatures",
         lambda *a: events.append(("new", a)) or adjusted)
-    monkeypatch.setattr(
-        sut, "_adjust_legacy_underfloor_requested_temperatures",
-        lambda *a: events.append(("legacy", a)) or np.zeros((5, 8760)))
 
-    result = sut._prepare_no_carryover_outlet_requirements(sut._NoCarryoverOutletRequirementInputs(
-        context[0], house, skin, context[1], new_ufac, *context[2:]))
+    result = sut._prepare_no_carryover_outlet_requirements(
+        sut._NoCarryoverOutletRequirementInputs(
+            context[0], house, skin, context[1], new_ufac, *context[2:]))
 
     assert result[:2] == (x_min, x_req)
-    assert [e[0] for e in events] == ["requirements"] + ([] if mode == "none" else [mode])
-    assert result[2] is (theta_req if mode == "none" else adjusted) if mode != "legacy" else result[2].shape == (5, 8760)
+    assert [event[0] for event in events] == (
+        ["requirements", "new"] if enabled else ["requirements"])
+    assert result[2] is (adjusted if enabled else theta_req)
 
-@pytest.mark.parametrize("mode", ("none", "new", "legacy"))
-def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mode):
+@pytest.mark.parametrize("enabled", (False, True))
+def test_prepare_no_carryover_supply_state_preserves_second_pass(
+        monkeypatch, enabled):
     events = []
     x_out = object()
     temperatures = sut._HeatSourceOutletTemperaturesResult(
@@ -3163,31 +3000,47 @@ def test_prepare_no_carryover_supply_state_preserves_second_pass(monkeypatch, mo
     adjusted_supply = tuple(object() for _ in range(5))
     theta_nr = object()
     house = SimpleNamespace(region=6)
-    skin = SimpleNamespace(underfloor_air_conditioning_air_supply=(mode == "legacy"))
+    skin = SimpleNamespace()
     new_ufac = SimpleNamespace(
-        new_ufac_flg=(sut.床下空調ロジック.変更する if mode == "new" else object()))
+        new_ufac_flg=(
+            sut.床下空調ロジック.変更する if enabled else object()))
     context = [object() for _ in range(22)]
-    monkeypatch.setattr(sut, "_get_heat_source_outlet_humidity", lambda *a: events.append(("humidity", a)) or x_out)
-    monkeypatch.setattr(sut.np, "zeros", lambda shape: events.append(("zeros", shape)) or theta_nr)
-    monkeypatch.setattr(sut, "_get_heat_source_outlet_temperatures", lambda *a: events.append(("temperatures", a)) or temperatures)
-    monkeypatch.setattr(sut, "_get_capped_supply_airflows", lambda *a, **k: events.append(("airflows", a, k)) or airflows)
-    monkeypatch.setattr(sut, "_get_supply_air_temperatures", lambda *a: events.append(("supply", a)) or base_supply)
-    monkeypatch.setattr(sut, "_get_new_underfloor_supply_temperatures", lambda *a: events.append(("new", a)) or adjusted_supply)
-    monkeypatch.setattr(sut, "_adjust_legacy_underfloor_supply_temperatures", lambda *a: events.append(("legacy", a)) or adjusted_supply)
-    monkeypatch.setattr(sut._logger, "NDdebug", lambda *a: events.append(("debug", a)))
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_humidity",
+        lambda *a: events.append(("humidity", a)) or x_out)
+    monkeypatch.setattr(
+        sut.np, "zeros",
+        lambda shape: events.append(("zeros", shape)) or theta_nr)
+    monkeypatch.setattr(
+        sut, "_get_heat_source_outlet_temperatures",
+        lambda *a: events.append(("temperatures", a)) or temperatures)
+    monkeypatch.setattr(
+        sut, "_get_capped_supply_airflows",
+        lambda *a, **k: events.append(("airflows", a, k)) or airflows)
+    monkeypatch.setattr(
+        sut, "_get_supply_air_temperatures",
+        lambda *a: events.append(("supply", a)) or base_supply)
+    monkeypatch.setattr(
+        sut, "_get_new_underfloor_supply_temperatures",
+        lambda *a: events.append(("new", a)) or adjusted_supply)
+    monkeypatch.setattr(
+        sut._logger, "NDdebug",
+        lambda *a: events.append(("debug", a)))
 
-    result = sut._prepare_no_carryover_supply_state(sut._NoCarryoverSupplyInputs(
-        context[0], context[1], house, skin, context[2], new_ufac,
-        context[3], *context[4:22]))
+    result = sut._prepare_no_carryover_supply_state(
+        sut._NoCarryoverSupplyInputs(
+            context[0], context[1], house, skin, context[2], new_ufac,
+            context[3], *context[4:22]))
 
     expected = ["humidity", "zeros", "temperatures", "airflows", "supply"]
     expected += ["debug"] * 5
-    if mode != "none":
-        expected.append(mode)
+    if enabled:
+        expected.append("new")
     expected += ["debug"] * 5
-    assert [e[0] for e in events] == expected
+    assert [event[0] for event in events] == expected
     assert result[:6] == (x_out, *temperatures, *airflows)
-    assert result[6] == (base_supply if mode == "none" else adjusted_supply)
+    assert result[6] == (adjusted_supply if enabled else base_supply)
+
 
 
 @pytest.mark.parametrize("standard", (True, False))
@@ -3265,42 +3118,27 @@ def test_prepare_carryover_heat_source_inlet_state_preserves_formula_20_19(
     assert events == [
         ("humidity", star_humidity), ("temperature", star_temperature)]
 
-
-@pytest.mark.parametrize("enabled", (False, True))
-def test_prepare_carryover_outlet_requirements_preserves_first_pass(
-        monkeypatch, enabled):
+def test_prepare_carryover_outlet_requirements_has_no_underfloor_pass(
+        monkeypatch):
     events = []
     humidity_min, humidity_req, temperature_req = (
         object(), object(), object())
-    adjusted = object()
     house = SimpleNamespace(region=6)
-    skin = SimpleNamespace(
-        underfloor_air_conditioning_air_supply=enabled,
-        YUCACO_r_A_ufvnt=0.25)
-    inputs = [object() for _ in range(13)]
+    inputs = [object() for _ in range(10)]
     monkeypatch.setattr(
         sut, "_get_heat_source_outlet_requirements",
         lambda *a: events.append(("requirements", a))
         or sut._HeatSourceOutletRequirementsResult(
             humidity_min, humidity_req, temperature_req))
-    monkeypatch.setattr(
-        sut, "_adjust_legacy_underfloor_requested_temperatures",
-        lambda *a: events.append(("adjust", a)) or adjusted)
 
-    result = sut._prepare_carryover_outlet_requirements(sut._CarryoverOutletRequirementInputs(
-        inputs[0], house, skin, inputs[1], *inputs[2:]))
+    result = sut._prepare_carryover_outlet_requirements(
+        sut._CarryoverOutletRequirementInputs(house, *inputs))
 
-    assert result == (
-        humidity_min, humidity_req, adjusted if enabled else temperature_req)
-    assert [event[0] for event in events] == (
-        ["requirements", "adjust"] if enabled else ["requirements"])
-    if enabled:
-        assert events[1][1][0].r_A_ufvnt == skin.YUCACO_r_A_ufvnt
+    assert result == (humidity_min, humidity_req, temperature_req)
+    assert [event[0] for event in events] == ["requirements"]
 
 
-@pytest.mark.parametrize("enabled", (False, True))
-def test_prepare_carryover_supply_state_preserves_second_pass(
-        monkeypatch, enabled):
+def test_prepare_carryover_supply_state_has_no_underfloor_pass(monkeypatch):
     events = []
     outlet_humidity = object()
     outlet_temperatures = sut._HeatSourceOutletTemperaturesResult(
@@ -3308,10 +3146,9 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
     airflows = sut._CappedSupplyAirflowsResult(
         *(object() for _ in range(2)))
     supply_temperature = object()
-    adjusted = object()
     house = SimpleNamespace(region=6)
-    skin = SimpleNamespace(underfloor_air_conditioning_air_supply=enabled)
-    inputs = [object() for _ in range(22)]
+    values = [object() for _ in range(21)]
+    values[2] = house
     monkeypatch.setattr(
         sut, "_get_heat_source_outlet_humidity",
         lambda *a: events.append(("humidity", a)) or outlet_humidity)
@@ -3324,22 +3161,18 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
     monkeypatch.setattr(
         sut, "_get_supply_air_temperatures",
         lambda *a: events.append(("supply", a)) or supply_temperature)
-    monkeypatch.setattr(
-        sut, "_adjust_carryover_underfloor_supply_temperatures",
-        lambda *a: events.append(("adjust", a)) or adjusted)
 
-    result = sut._prepare_carryover_supply_state(sut._CarryoverSupplyInputs(
-        inputs[0], inputs[1], house, skin, inputs[2], *inputs[3:]))
+    result = sut._prepare_carryover_supply_state(
+        sut._CarryoverSupplyInputs(*values))
 
     assert result == (
-        outlet_humidity, *outlet_temperatures, *airflows,
-        adjusted if enabled else supply_temperature)
-    assert [event[0] for event in events] == (
-        ["humidity", "temperatures", "airflows", "supply", "adjust"]
-        if enabled else ["humidity", "temperatures", "airflows", "supply"])
+        outlet_humidity, *outlet_temperatures, *airflows, supply_temperature)
+    assert [event[0] for event in events] == [
+        "humidity", "temperatures", "airflows", "supply"]
     assert events[2][2] == {}
     assert isinstance(events[2][1][0], sut._CappedSupplyAirflowInputs)
     assert events[2][1][0].print_exec is False
+
 
 
 def test_update_carryover_actual_temperature_state_preserves_formula_order(
@@ -4185,15 +4018,12 @@ def test_no_carryover_actual_temperature_inputs_preserve_field_order():
 
 
 def test_carryover_outlet_requirement_inputs_preserve_field_order():
-    values = tuple(object() for _ in range(15))
+    values = tuple(object() for _ in range(11))
     inputs = sut._CarryoverOutletRequirementInputs(*values)
 
     assert tuple(inputs) == values
     assert inputs._fields == (
-        "ac_setting",
         "house",
-        "skin",
-        "load",
         "X_star_hs_in_d_t",
         "Q_hs_max_CL_d_t",
         "V_dash_supply_d_t_i",
@@ -4204,12 +4034,11 @@ def test_carryover_outlet_requirement_inputs_preserve_field_order():
         "L_star_H_d_t_i",
         "L_star_CS_d_t_i",
         "l_duct_i",
-        "Theta_ex_d_t",
     )
 
 
 def test_carryover_supply_inputs_preserve_field_order():
-    values = tuple(object() for _ in range(24))
+    values = tuple(object() for _ in range(21))
     inputs = sut._CarryoverSupplyInputs(*values)
 
     assert tuple(inputs) == values
@@ -4217,8 +4046,6 @@ def test_carryover_supply_inputs_preserve_field_order():
         "v_supply_cap_dto",
         "ac_setting",
         "house",
-        "skin",
-        "load",
         "X_NR_d_t",
         "X_req_d_t_i",
         "V_dash_supply_d_t_i",
@@ -4237,7 +4064,6 @@ def test_carryover_supply_inputs_preserve_field_order():
         "V_vent_g_i",
         "V_hs_dsgn_H",
         "V_hs_dsgn_C",
-        "Theta_ex_d_t",
     )
 
 

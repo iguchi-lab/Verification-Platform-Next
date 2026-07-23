@@ -192,12 +192,6 @@ def change_testmode_input_V_hs_min_C(inputs: dict):
     inputs_copied = copy.deepcopy(inputs)  # 複製しないと別テストで矛盾する
     return deep_update(inputs_copied, fixtures)
 
-def change_testmode_underfloor_old(inputs: dict):
-    """ 床下空調の古いロジック
-    """
-    fixtures = {"underfloor_air_conditioning_air_supply": 2}
-    inputs_copied = copy.deepcopy(inputs)  # 複製しないと別テストで矛盾する
-    return deep_update(inputs_copied, fixtures)
 
 def change_testmode_underfloor_new(inputs: dict):
     """ 床下空調の新しいロジック

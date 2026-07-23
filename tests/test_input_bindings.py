@@ -8,12 +8,20 @@ from verification_core import (
 from verification_core.transforms import parse_binding_expression
 
 
-def test_260715_catalog_covers_every_ui_field() -> None:
+def test_active_catalog_covers_every_ui_field() -> None:
     inventory = load_legacy_inventory()
     catalog = load_input_bindings()
 
     assert len(catalog.bindings) == 264
     assert catalog.source_ids == frozenset(field.id for field in inventory.fields)
+
+
+def test_removed_legacy_underfloor_binding_is_fixed_disabled() -> None:
+    catalog = load_input_bindings()
+    (binding,) = catalog.for_target("underfloor_air_conditioning_air_supply")
+
+    assert binding.source_ids == ()
+    assert binding.evaluate(default_ui_values()) == "1"
 
 
 def test_heating_and_cooling_types_keep_all_conditional_mappings() -> None:

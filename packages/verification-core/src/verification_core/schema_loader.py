@@ -9,7 +9,7 @@ _TYPE_CONTROLS = {
 }
 
 
-def load_input_schema(version: str = "260715") -> InputSchema:
+def load_input_schema(version: str = "260724") -> InputSchema:
     inventory = load_legacy_inventory(version)
     return InputSchema.from_fields(
         _field_definition(field, inventory)

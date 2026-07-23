@@ -320,10 +320,7 @@ class _NoCarryoverActualTemperatureInputs(NamedTuple):
 
 
 class _CarryoverOutletRequirementInputs(NamedTuple):
-    ac_setting: object
     house: object
-    skin: object
-    load: object
     X_star_hs_in_d_t: object
     Q_hs_max_CL_d_t: object
     V_dash_supply_d_t_i: object
@@ -334,15 +331,12 @@ class _CarryoverOutletRequirementInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
     l_duct_i: object
-    Theta_ex_d_t: object
 
 
 class _CarryoverSupplyInputs(NamedTuple):
     v_supply_cap_dto: object
     ac_setting: object
     house: object
-    skin: object
-    load: object
     X_NR_d_t: object
     X_req_d_t_i: object
     V_dash_supply_d_t_i: object
@@ -361,7 +355,6 @@ class _CarryoverSupplyInputs(NamedTuple):
     V_vent_g_i: object
     V_hs_dsgn_H: object
     V_hs_dsgn_C: object
-    Theta_ex_d_t: object
 
 
 class _CarryoverActualTemperatureInputs(NamedTuple):
@@ -750,26 +743,6 @@ class _SupplyStateOutputRecordInputs(NamedTuple):
     Theta_NR_d_t: object
 
 
-class _LegacyUnderfloorRequestedTemperatureInputs(NamedTuple):
-    ac_setting: object
-    house: object
-    skin: object
-    load: object
-    r_A_ufvnt: object
-    Theta_req_d_t_i: object
-    Theta_ex_d_t: object
-    V_dash_supply_d_t_i: object
-
-
-class _CarryoverUnderfloorSupplyTemperatureInputs(NamedTuple):
-    ac_setting: object
-    house: object
-    skin: object
-    load: object
-    Theta_supply_d_t_i: object
-    Theta_ex_d_t: object
-    V_dash_supply_d_t_i: object
-
 
 class _ExpectedUnderfloorTemperatureInputs(NamedTuple):
     L_star_H_d_t_i: object
@@ -808,15 +781,6 @@ class _NewUnderfloorSupplyTemperatureInputs(NamedTuple):
     Theta_ex_d_t: object
     V_dash_supply_d_t_i: object
 
-
-class _LegacyUnderfloorSupplyTemperatureInputs(NamedTuple):
-    ac_setting: object
-    house: object
-    skin: object
-    load: object
-    Theta_supply_d_t_i: object
-    Theta_ex_d_t: object
-    V_dash_supply_d_t_i: object
 
 
 class _NewUnderfloorBalancedLoadInputs(NamedTuple):
@@ -2159,65 +2123,6 @@ def _record_unprocessed_energy_output(
     df_output[output_name] = E_UT_d_t
     return df_output
 
-def _adjust_legacy_underfloor_requested_temperatures(inputs: _LegacyUnderfloorRequestedTemperatureInputs):
-    """Apply the existing first-pass correction for legacy underfloor air supply."""
-    ac_setting = inputs.ac_setting
-    house = inputs.house
-    skin = inputs.skin
-    load = inputs.load
-    r_A_ufvnt = inputs.r_A_ufvnt
-    Theta_req_d_t_i = inputs.Theta_req_d_t_i
-    Theta_ex_d_t = inputs.Theta_ex_d_t
-    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
-    for i in range(2):  # i=0,1
-        Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
-            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, r_A_ufvnt,
-            skin.underfloor_insulation, Theta_req_d_t_i[i], Theta_ex_d_t,
-            V_dash_supply_d_t_i[i], '', load.L_H_d_t_i, load.L_CS_d_t_i)
-
-        match ac_setting:
-            case HeatingAcSetting():
-                mask = Theta_req_d_t_i[i] > Theta_uf_d_t
-            case CoolingAcSetting():
-                mask = Theta_req_d_t_i[i] < Theta_uf_d_t
-            case _:
-                raise ValueError
-
-        Theta_req_d_t_i[i] = np.where(
-            mask,
-            Theta_req_d_t_i[i] + (Theta_req_d_t_i[i] - Theta_uf_d_t),
-            Theta_req_d_t_i[i],
-        )
-
-    return Theta_req_d_t_i
-
-def _adjust_carryover_underfloor_supply_temperatures(inputs: _CarryoverUnderfloorSupplyTemperatureInputs):
-    """Apply the carryover second-pass clipping for underfloor air supply."""
-    ac_setting = inputs.ac_setting
-    house = inputs.house
-    skin = inputs.skin
-    load = inputs.load
-    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
-    Theta_ex_d_t = inputs.Theta_ex_d_t
-    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
-    for i in range(2):  # i=0,1
-        Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
-            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q,
-            skin.YUCACO_r_A_ufvnt, skin.underfloor_insulation,
-            Theta_supply_d_t_i[i], Theta_ex_d_t, V_dash_supply_d_t_i[i],
-            '', load.L_H_d_t_i, load.L_CS_d_t_i)
-
-        match ac_setting:
-            case HeatingAcSetting():
-                Theta_supply_d_t_i[i] = np.clip(
-                    Theta_supply_d_t_i[i], None, Theta_uf_d_t)
-            case CoolingAcSetting():
-                Theta_supply_d_t_i[i] = np.clip(
-                    Theta_supply_d_t_i[i], Theta_uf_d_t, None)
-            case _:
-                raise ValueError
-
-    return Theta_supply_d_t_i
 
 def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTemperatureInputs):
     """Apply the new-underfloor first pass without changing its calculation order."""
@@ -2337,35 +2242,6 @@ def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperat
     })
     return Theta_supply_d_t_i
 
-def _adjust_legacy_underfloor_supply_temperatures(inputs: _LegacyUnderfloorSupplyTemperatureInputs):
-    """Apply the legacy underfloor second pass with its original where operation."""
-    ac_setting = inputs.ac_setting
-    house = inputs.house
-    skin = inputs.skin
-    load = inputs.load
-    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
-    Theta_ex_d_t = inputs.Theta_ex_d_t
-    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
-    # 旧床下空調-2nd
-    for i in range(2):  # i=0,1
-        Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
-            house.region, house.A_A, house.A_MR, house.A_OR, skin.Q,
-            skin.r_A_ufac, skin.underfloor_insulation, Theta_supply_d_t_i[i],
-            Theta_ex_d_t, V_dash_supply_d_t_i[i], '', load.L_H_d_t_i,
-            load.L_CS_d_t_i)
-
-        match ac_setting:
-            case HeatingAcSetting():
-                mask = Theta_supply_d_t_i[i] > Theta_uf_d_t
-            case CoolingAcSetting():
-                mask = Theta_supply_d_t_i[i] < Theta_uf_d_t
-            case _:
-                raise ValueError
-
-        Theta_supply_d_t_i[i] = np.where(
-            mask, Theta_uf_d_t, Theta_supply_d_t_i[i])
-
-    return Theta_supply_d_t_i
 
 def _adjust_new_underfloor_balanced_loads(inputs: _NewUnderfloorBalancedLoadInputs):
     """Apply the new-underfloor corrections to formulas (8) and (9)."""
@@ -3236,7 +3112,7 @@ def _prepare_balanced_heat_source_inlet_state(X_star_NR_d_t, Theta_star_NR_d_t):
     return X_star_hs_in_d_t, Theta_star_hs_in_d_t
 
 def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirementInputs):
-    """Prepare outlet requirements and the optional first underfloor pass."""
+    """Prepare outlet requirements and the optional new-underfloor first pass."""
     ac_setting = inputs.ac_setting
     house = inputs.house
     skin = inputs.skin
@@ -3268,15 +3144,11 @@ def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirem
             ac_setting, house, skin, load, new_ufac, new_ufac_df,
             Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i,
             Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i))
-    elif skin.underfloor_air_conditioning_air_supply:
-        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(_LegacyUnderfloorRequestedTemperatureInputs(
-            ac_setting, house, skin, load, skin.r_A_ufac,
-            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i))
-        assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数です"
+
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 
 def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
-    """Prepare no-carryover outlet and supply state with the second floor pass."""
+    """Prepare no-carryover outlet and supply state with the new second pass."""
     v_supply_cap_dto = inputs.v_supply_cap_dto
     ac_setting = inputs.ac_setting
     house = inputs.house
@@ -3330,10 +3202,7 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
             house, skin, load, new_ufac, new_ufac_df,
             Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
             V_dash_supply_d_t_i))
-    elif skin.underfloor_air_conditioning_air_supply == True:
-        Theta_supply_d_t_i = _adjust_legacy_underfloor_supply_temperatures(_LegacyUnderfloorSupplyTemperatureInputs(
-            ac_setting, house, skin, load, Theta_supply_d_t_i,
-            Theta_ex_d_t, V_dash_supply_d_t_i))
+
     _log_supply_temperatures(Theta_supply_d_t_i)
     return _SupplyStateResult(
         X_hs_out_d_t,
@@ -3693,12 +3562,10 @@ def _update_carryover_actual_temperature_state(inputs: _CarryoverActualTemperatu
 
 
 def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
-    """Prepare carryover outlet and supply state with legacy second pass."""
+    """Prepare carryover outlet and supply state."""
     v_supply_cap_dto = inputs.v_supply_cap_dto
     ac_setting = inputs.ac_setting
     house = inputs.house
-    skin = inputs.skin
-    load = inputs.load
     X_NR_d_t = inputs.X_NR_d_t
     X_req_d_t_i = inputs.X_req_d_t_i
     V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
@@ -3717,7 +3584,6 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
     V_vent_g_i = inputs.V_vent_g_i
     V_hs_dsgn_H = inputs.V_hs_dsgn_H
     V_hs_dsgn_C = inputs.V_hs_dsgn_C
-    Theta_ex_d_t = inputs.Theta_ex_d_t
     X_hs_out_d_t = _get_heat_source_outlet_humidity(_HeatSourceOutletHumidityInputs(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region))
@@ -3738,10 +3604,7 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
     Theta_supply_d_t_i = _get_supply_air_temperatures(_SupplyAirTemperaturesInputs(
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
         l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i))
-    if skin.underfloor_air_conditioning_air_supply:
-        Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(_CarryoverUnderfloorSupplyTemperatureInputs(
-            ac_setting, house, skin, load, Theta_supply_d_t_i,
-            Theta_ex_d_t, V_dash_supply_d_t_i))
+
     return _SupplyStateResult(
         X_hs_out_d_t,
         Theta_hs_out_min_C_d_t,
@@ -3754,11 +3617,8 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
 
 
 def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementInputs):
-    """Prepare carryover outlet requirements and legacy first floor pass."""
-    ac_setting = inputs.ac_setting
+    """Prepare carryover outlet requirements."""
     house = inputs.house
-    skin = inputs.skin
-    load = inputs.load
     X_star_hs_in_d_t = inputs.X_star_hs_in_d_t
     Q_hs_max_CL_d_t = inputs.Q_hs_max_CL_d_t
     V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
@@ -3769,7 +3629,6 @@ def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementIn
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     l_duct_i = inputs.l_duct_i
-    Theta_ex_d_t = inputs.Theta_ex_d_t
     outlet_requirements = _get_heat_source_outlet_requirements(_HeatSourceOutletRequirementsInputs(
         X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
         X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
@@ -3778,10 +3637,7 @@ def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementIn
     X_hs_out_min_C_d_t = outlet_requirements.X_hs_out_min_C_d_t
     X_req_d_t_i = outlet_requirements.X_req_d_t_i
     Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
-    if skin.underfloor_air_conditioning_air_supply:
-        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(_LegacyUnderfloorRequestedTemperatureInputs(
-            ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
-            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i))
+
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 
 
@@ -4148,24 +4004,22 @@ def calc_Q_UT_A(
 
             X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
                 _prepare_carryover_outlet_requirements(_CarryoverOutletRequirementInputs(
-                    ac_setting, house, skin, load, X_star_hs_in_d_t,
-                    Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
-                    L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
-                    L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
-                    Theta_ex_d_t))
+                    house, X_star_hs_in_d_t, Q_hs_max_CL_d_t,
+                    V_dash_supply_d_t_i, X_star_HBR_d_t, L_star_CL_d_t_i,
+                    Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
+                    L_star_CS_d_t_i, l_duct_i))
 
             # NOTE: 過剰熱量繰越 未利用の場合では、式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
             # Theta_NR_d_t = np.zeros(24 * 365)
             # 過剰熱量繰越 利用時には、初期化せず再利用する
 
             supply_state = _prepare_carryover_supply_state(_CarryoverSupplyInputs(
-                v_supply_cap_dto, ac_setting, house, skin, load, X_NR_d_t,
-                X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
-                L_star_CL_d_t_i, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
-                Q_hs_max_H_d_t, Theta_req_d_t_i, L_star_H_d_t_i,
-                L_star_CS_d_t_i, Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
-                Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C,
-                Theta_ex_d_t))
+                v_supply_cap_dto, ac_setting, house, X_NR_d_t, X_req_d_t_i,
+                V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i,
+                Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, Q_hs_max_H_d_t,
+                Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+                Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
+                Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C))
             X_hs_out_d_t = supply_state.X_hs_out_d_t
             Theta_hs_out_min_C_d_t = supply_state.Theta_hs_out_min_C_d_t
             Theta_hs_out_max_H_d_t = supply_state.Theta_hs_out_max_H_d_t

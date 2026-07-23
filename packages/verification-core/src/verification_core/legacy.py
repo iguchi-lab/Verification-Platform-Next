@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib import resources
 from typing import Any
 
@@ -64,28 +64,38 @@ def _condition_from_dict(value: dict[str, Any] | None) -> Condition | None:
     )
 
 
-def load_legacy_inventory(version: str = "260715") -> LegacyInputInventory:
+def load_legacy_inventory(version: str = "260724") -> LegacyInputInventory:
     file_name = f"input_fields_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:
         payload = json.load(stream)
 
-    fields = tuple(
-        LegacyFieldDefinition(
-            id=item["id"],
-            source_name=item["source_name"],
-            source_occurrence=int(item["source_occurrence"]),
-            label=item["label"],
-            section=item["section"],
-            group=item["group"],
-            category=item["category"],
-            kind=FieldKind(item["kind"]),
-            default=item["default"],
-            choices=tuple(item["choices"] or ()),
-            enabled_when=_condition_from_dict(item.get("enabled_when")),
+    if "base_version" in payload:
+        base = load_legacy_inventory(payload["base_version"])
+        removed_ids = frozenset(payload.get("remove_field_ids", ()))
+        overrides = payload.get("field_overrides", {})
+        fields = tuple(
+            replace(field, **overrides.get(field.id, {}))
+            for field in base.fields
+            if field.id not in removed_ids
         )
-        for item in payload["fields"]
-    )
+    else:
+        fields = tuple(
+            LegacyFieldDefinition(
+                id=item["id"],
+                source_name=item["source_name"],
+                source_occurrence=int(item["source_occurrence"]),
+                label=item["label"],
+                section=item["section"],
+                group=item["group"],
+                category=item["category"],
+                kind=FieldKind(item["kind"]),
+                default=item["default"],
+                choices=tuple(item["choices"] or ()),
+                enabled_when=_condition_from_dict(item.get("enabled_when")),
+            )
+            for item in payload["fields"]
+        )
     inventory = LegacyInputInventory(version=payload["version"], fields=fields)
     inventory.validate(expected_count=int(payload["field_count"]))
     return inventory

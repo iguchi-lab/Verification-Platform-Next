@@ -1,0 +1,13 @@
+{
+  "version": "260724",
+  "base_version": "260715",
+  "field_count": 221,
+  "remove_field_ids": [
+    "underfloor_air_conditioning_air_supply__0"
+  ],
+  "field_overrides": {
+    "change_underfloor_temperature__0": {
+      "label": "新床下空調を使用する"
+    }
+  }
+}

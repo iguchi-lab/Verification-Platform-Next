@@ -63,19 +63,14 @@ class OuterSkin:
     SHC: Optional[dict] = None
     """太陽熱集熱式"""
 
-    # NOTE: 現時点で入力反映なし 固定値
-    YUCACO_r_A_ufvnt: float = (8.28+16.56+21.53) / (9.52+1.24+3.31+3.31+1.66+8.28+16.56+21.53)
-    """空調空気を床下を通して給気する場合(YUCACO)の「床下空間全体の面積に対する空気を供給する床下空間の面積の比 (-)」"""
 
     r_A_ufvnt: Optional[float] = None
     """当該住戸において、床下空間全体の面積に対する 換気を供給する床下空間の面積の比 [-]"""
     # ▼ 床下空調利用時
     r_A_ufac: Optional[float] = None
     """当該住戸において、床下空間全体の面積に対する 空調を供給する床下空間の面積の比 [-]"""
-    # NOTE: 新・旧 床下空調インプットによって決まる
+    # NOTE: 新床下空調インプットによって決まる
 
-    underfloor_air_conditioning_air_supply: bool = False
-    """空調空気を床下を通して給気する(床下空調)"""
     underfloor_insulation: bool = False
     """床下空間の断熱"""
     hs_CAV: bool = False
@@ -125,14 +120,14 @@ class OuterSkin:
         if 'underfloor_insulation' in data:
             kwargs['underfloor_insulation'] = int(data['underfloor_insulation']) == 2
 
-        # 床下空調
-        if 'underfloor_air_conditioning_air_supply' in data:
-            # 床下空調がオンです 強制的に、床下換気ナシ・床下断熱状態となります
-            if int(data['underfloor_air_conditioning_air_supply']) == 2:
-                kwargs['underfloor_air_conditioning_air_supply'] = True
-                kwargs['underfloor_insulation'] = True
-                kwargs['r_A_ufvnt'] = 0.0  # 床下換気なし
-                kwargs['r_A_ufac'] = float(data['r_A_ufac']) / 100  # 床下空調あり
+        # 新床下空調がオンの場合は、床下換気なし・床下断熱状態となります
+        if (
+            'change_underfloor_temperature' in data
+            and int(data['change_underfloor_temperature']) == 2
+        ):
+            kwargs['underfloor_insulation'] = True
+            kwargs['r_A_ufvnt'] = 0.0
+            kwargs['r_A_ufac'] = float(data['r_A_ufac']) / 100
 
         if 'hs_CAV' in data:
             kwargs['hs_CAV'] = int(data['hs_CAV']) == 2

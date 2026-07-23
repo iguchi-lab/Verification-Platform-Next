@@ -28,6 +28,13 @@ def test_representative_outputs_match_legacy_builder() -> None:
         assert build_input_data(values) == build_legacy_input_data(values)
 
 
+def test_removed_legacy_underfloor_input_is_always_disabled() -> None:
+    data = build_input_data({"change_underfloor_temperature__0": True})
+
+    assert data["underfloor_air_conditioning_air_supply"] == "1"
+    assert data["change_underfloor_temperature"] == "2"
+
+
 def test_partial_values_use_inventory_defaults() -> None:
     data = build_input_data({"case_name__0": "partial"})
 

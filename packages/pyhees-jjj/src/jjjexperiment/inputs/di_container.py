@@ -90,21 +90,35 @@ class JJJExperimentModule(Module):
         """データクラスを跨いだ整合性のロジック"""
         # まだプロバイダーは使用しない書き方にする(できるけど)
         new_ufac_flg = self._input.get('change_underfloor_temperature', None)
-        old_ufac_flg = self._input.get('underfloor_air_conditioning_air_supply', None)
-        if new_ufac_flg is not None and int(new_ufac_flg) == 床下空調ロジック.変更する.value:
+        removed_ufac_flg = self._input.get(
+            'underfloor_air_conditioning_air_supply', None)
+        if removed_ufac_flg is not None and int(removed_ufac_flg) == 2:
+            raise ValueError(
+                'underfloor_air_conditioning_air_supply=2 の旧床下空調計算は'
+                '削除されました。新床下空調を使用する場合は '
+                'change_underfloor_temperature=2 を指定してください。'
+            )
+
+        carry_over_heat = self._input.get('carry_over_heat', None)
+        new_ufac_enabled = (
+            new_ufac_flg is not None
+            and int(new_ufac_flg) == 床下空調ロジック.変更する.value
+        )
+        carry_over_enabled = (
+            carry_over_heat is not None
+            and int(carry_over_heat) == 過剰熱量繰越計算.行う.value
+        )
+        if new_ufac_enabled and carry_over_enabled:
+            raise ValueError(
+                '新床下空調と過剰熱量繰越計算は同時に使用できません。'
+                'どちらか一方を無効にしてください。'
+            )
+
+        if new_ufac_enabled:
             print("新・床下空調ロジックを使用")
             # 新床下空調
             self._input['r_A_ufac'] = 100.0  # [%] WG資料より
             print("r_A_ufac = 100.0 [%]")
-            self._input['underfloor_air_conditioning_air_supply'] = 2  # 従来床下空調を含む
-            print("空調空気を床下を通して給気する")
-            # 後はデータクラス内で > 床下換気ナシ & 床下断熱状態
-        elif old_ufac_flg is not None and int(old_ufac_flg) == 2:
-            print("従来床下空調ロジックを使用")
-            # 従来の床下空調
-            self._input['r_A_ufac'] = common_input.OuterSkin.YUCACO_r_A_ufvnt * 100.0  # [%]
-            print("YUCACO_r_A_ufvnt を使用")
-            self._input['underfloor_air_conditioning_air_supply'] = 2
             print("空調空気を床下を通して給気する")
             # 後はデータクラス内で > 床下換気ナシ & 床下断熱状態
         else:
@@ -125,15 +139,8 @@ class JJJExperimentModule(Module):
                     self._input[ha_key]['subtract_ventilation_power'] = ファン消費電力から換気分を引く.換気分を引かない.value
                     print(f"{ha_key}: subtract_ventilation_power を強制オフ (最低風量直接入力有効)")
 
-        # NOTE: 過剰熱繰越と併用しないオプションはここで強制オフしている
-        carry_over_heat = self._input.get('carry_over_heat', None)
-        if carry_over_heat is not None and int(carry_over_heat) == 過剰熱量繰越計算.行う.value:
+        if carry_over_enabled:
             print("過剰熱量繰越を行う")
-
-            # NOTE: 過剰熱繰越の8760ループと床下空調ロジック変更の8760ループが合わさると
-            # 一時間を超える実行時間になることを確認したため回避しています(2024/02)
-            self._input['change_underfloor_temperature'] = 床下空調ロジック.変更しない.value
-            print("床下空調ロジック変更を強制オフ")
 
     # NOTE: プロバイダーについて
     # 現在はDI解決用データクラスのみを提供しています

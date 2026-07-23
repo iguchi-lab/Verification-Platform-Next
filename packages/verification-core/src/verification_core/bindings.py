@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib import resources
 from typing import Any, Mapping
 
@@ -89,33 +89,55 @@ class InputBindingCatalog:
             raise ValueError(f"Inventory fields have no binding: {sorted(missing)}")
 
 
-def load_input_bindings(version: str = "260715") -> InputBindingCatalog:
+def _binding_from_dict(item: Mapping[str, Any]) -> InputBinding:
+    source_ids = tuple(item["source_ids"])
+    return InputBinding(
+        line=int(item["line"]),
+        target_path=tuple(item["target_path"]),
+        expression=item["expression"],
+        conditions=tuple(
+            BindingCondition(
+                kind=condition["kind"],
+                expression=condition["expression"],
+                line=int(condition["line"]),
+            )
+            for condition in item["conditions"]
+        ),
+        source_ids=source_ids,
+        transform=parse_binding_expression(item["expression"], source_ids),
+    )
+
+
+def load_input_bindings(version: str = "260724") -> InputBindingCatalog:
     file_name = f"input_bindings_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:
         payload = json.load(stream)
 
-    bindings = tuple(
-        InputBinding(
-            line=int(item["line"]),
-            target_path=tuple(item["target_path"]),
-            expression=item["expression"],
-            conditions=tuple(
-                BindingCondition(
-                    kind=condition["kind"],
-                    expression=condition["expression"],
-                    line=int(condition["line"]),
-                )
-                for condition in item["conditions"]
-            ),
-            source_ids=tuple(item["source_ids"]),
-            transform=parse_binding_expression(
-                item["expression"],
-                tuple(item["source_ids"]),
-            ),
-        )
-        for item in payload["bindings"]
-    )
+    if "base_version" in payload:
+        base = load_input_bindings(payload["base_version"])
+        overrides = {
+            (int(item["line"]), tuple(item["target_path"])): item
+            for item in payload.get("binding_overrides", ())
+        }
+        bindings = []
+        for binding in base.bindings:
+            override = overrides.get((binding.line, binding.target_path))
+            if override is None:
+                bindings.append(binding)
+                continue
+            expression = override.get("expression", binding.expression)
+            source_ids = tuple(override.get("source_ids", binding.source_ids))
+            bindings.append(replace(
+                binding,
+                expression=expression,
+                source_ids=source_ids,
+                transform=parse_binding_expression(expression, source_ids),
+            ))
+        bindings = tuple(bindings)
+    else:
+        bindings = tuple(_binding_from_dict(item) for item in payload["bindings"])
+
     catalog = InputBindingCatalog(version=payload["version"], bindings=bindings)
     catalog.validate(
         expected_count=int(payload["binding_count"]),
