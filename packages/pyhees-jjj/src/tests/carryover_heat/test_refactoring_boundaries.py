@@ -115,3 +115,11 @@ def test_return_Theta_HBR_i_46_preserves_output_shape_contract():
     assert section4_2._return_Theta_HBR_i_46(temperatures) is temperatures
     with pytest.raises(AssertionError):
         section4_2._return_Theta_HBR_i_46(np.zeros(5))
+
+
+def test_assert_Theta_NR_2023_shapes_checks_four_zone_arrays():
+    valid = np.zeros((5, 1))
+    section4_2._assert_Theta_NR_2023_shapes(*([valid] * 4))
+
+    with pytest.raises(AssertionError):
+        section4_2._assert_Theta_NR_2023_shapes(valid, np.zeros(5), valid, valid)
