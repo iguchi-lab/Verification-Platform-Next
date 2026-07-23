@@ -1285,9 +1285,9 @@ def test_standard_heat_source_capacity_limits_preserve_formula_order(monkeypatch
         calls.append(("defrost", ()))
         return outputs[3]
 
-    result = sut._get_standard_heat_source_capacity_limits(
+    result = sut._get_standard_heat_source_capacity_limits(sut._StandardHeatSourceCapacityLimitsInputs(
         setting, house, heating, cooling, shf, latent, get_defrost
-    )
+    ))
 
     assert result == tuple(outputs)
     assert calls == [

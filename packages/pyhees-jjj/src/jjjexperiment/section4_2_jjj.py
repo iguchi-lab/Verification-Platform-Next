@@ -582,6 +582,16 @@ class _SupplyAirTemperaturesInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
 
+
+class _StandardHeatSourceCapacityLimitsInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    heat_CRAC: object
+    cool_CRAC: object
+    SHF_dash_d_t: object
+    L_star_dash_CL_d_t: object
+    get_C_df_H_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1102,16 +1112,15 @@ def _get_balanced_cooling_loads(
         SHF_dash_d_t,
     )
 
-def _get_standard_heat_source_capacity_limits(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        heat_CRAC: HeatCRACSpec,
-        cool_CRAC: CoolCRACSpec,
-        SHF_dash_d_t: np.ndarray,
-        L_star_dash_CL_d_t: np.ndarray,
-        get_C_df_H_d_t: Callable[[], np.ndarray],
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _get_standard_heat_source_capacity_limits(inputs: _StandardHeatSourceCapacityLimitsInputs):
     """Calculate formulas (27) through (23) in their original order."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
+    SHF_dash_d_t = inputs.SHF_dash_d_t
+    L_star_dash_CL_d_t = inputs.L_star_dash_CL_d_t
+    get_C_df_H_d_t = inputs.get_C_df_H_d_t
     # (27)
     Q_hs_max_C_d_t = dc.get_Q_hs_max_C_d_t_2024(ac_setting.type, _get_q_hs_rtd_C(ac_setting, house), cool_CRAC.input_C_af)
     # (26)
@@ -2582,9 +2591,9 @@ def _prepare_no_carryover_capacity_state(
         L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
         L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
         SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
-        standard_capacity = _get_standard_heat_source_capacity_limits(
+        standard_capacity = _get_standard_heat_source_capacity_limits(_StandardHeatSourceCapacityLimitsInputs(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
-            L_star_dash_CL_d_t, climate.get_C_df_H_d_t)
+            L_star_dash_CL_d_t, climate.get_C_df_H_d_t))
         Q_hs_max_C_d_t = standard_capacity.Q_hs_max_C_d_t
         Q_hs_max_CL_d_t = standard_capacity.Q_hs_max_CL_d_t
         Q_hs_max_CS_d_t = standard_capacity.Q_hs_max_CS_d_t
@@ -3201,10 +3210,10 @@ def _prepare_carryover_capacity_state(
         L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
         L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
         SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
-        standard_capacity = _get_standard_heat_source_capacity_limits(
+        standard_capacity = _get_standard_heat_source_capacity_limits(_StandardHeatSourceCapacityLimitsInputs(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
             L_star_dash_CL_d_t,
-            lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t))
+            lambda: dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)))
         Q_hs_max_C_d_t = standard_capacity.Q_hs_max_C_d_t
         Q_hs_max_CL_d_t = standard_capacity.Q_hs_max_CL_d_t
         Q_hs_max_CS_d_t = standard_capacity.Q_hs_max_CS_d_t
