@@ -19,6 +19,13 @@ def _get_Q_hat_hs_H_envelope_40_1b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_ven
     ) * (Theta_set_H - Theta_ex)
 
 
+def _subtract_Q_hat_hs_H_gains_40_1b(Q_hat_hs_H, mu_H, A_A, J, q_gen, n_p, q_p_H):
+    Q_hat_hs_H -= mu_H * A_A * J  # 日射
+    Q_hat_hs_H -= q_gen  # 内部発熱
+    Q_hat_hs_H -= n_p * q_p_H  # 人体発熱
+    return Q_hat_hs_H
+
+
 @jjj_cloning
 def calc_Q_hat_hs(
         Q: float,
@@ -70,9 +77,7 @@ def calc_Q_hat_hs(
         case JJJ_HCM.H:
             # (40-1b)
             Q_hat_hs_H = _get_Q_hat_hs_H_envelope_40_1b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, Theta_set_H, Theta_ex)
-            Q_hat_hs_H -= mu_H * A_A * J  # 日射
-            Q_hat_hs_H -= q_gen  # 内部発熱
-            Q_hat_hs_H -= n_p * q_p_H  # 人体発熱
+            Q_hat_hs_H = _subtract_Q_hat_hs_H_gains_40_1b(Q_hat_hs_H, mu_H, A_A, J, q_gen, n_p, q_p_H)
             # (40-1a)
             return max(Q_hat_hs_H * 3600 * 1e-6, 0)
 
