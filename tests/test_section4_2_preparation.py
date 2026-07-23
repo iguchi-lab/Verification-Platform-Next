@@ -1100,7 +1100,7 @@ def test_heat_source_outlet_humidity_preserves_formula_arguments(monkeypatch):
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_heat_source_outlet_humidity(*inputs, 7)
+    result = sut._get_heat_source_outlet_humidity(sut._HeatSourceOutletHumidityInputs(*inputs, 7))
 
     assert result is expected
     assert calls == [((*inputs, 7))]

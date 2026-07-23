@@ -549,6 +549,15 @@ class _HeatSourceOutletRequirementsInputs(NamedTuple):
     l_duct_i: object
     region: object
 
+
+class _HeatSourceOutletHumidityInputs(NamedTuple):
+    X_NR_d_t: object
+    X_req_d_t_i: object
+    V_dash_supply_d_t_i: object
+    X_hs_out_min_C_d_t: object
+    L_star_CL_d_t_i: object
+    region: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -960,15 +969,14 @@ def _get_heat_source_outlet_requirements(inputs: _HeatSourceOutletRequirementsIn
 
     return _HeatSourceOutletRequirementsResult(X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i)
 
-def _get_heat_source_outlet_humidity(
-        X_NR_d_t: np.ndarray,
-        X_req_d_t_i: np.ndarray,
-        V_dash_supply_d_t_i: np.ndarray,
-        X_hs_out_min_C_d_t: np.ndarray,
-        L_star_CL_d_t_i: np.ndarray,
-        region: int,
-    ) -> np.ndarray:
+def _get_heat_source_outlet_humidity(inputs: _HeatSourceOutletHumidityInputs):
     """Calculate formula (15) without moving surrounding state updates."""
+    X_NR_d_t = inputs.X_NR_d_t
+    X_req_d_t_i = inputs.X_req_d_t_i
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    X_hs_out_min_C_d_t = inputs.X_hs_out_min_C_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    region = inputs.region
     # (15)　熱源機の出口における絶対湿度
     return dc.get_X_hs_out_d_t(X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i, region)
 
@@ -2683,9 +2691,9 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     V_hs_dsgn_H = inputs.V_hs_dsgn_H
     V_hs_dsgn_C = inputs.V_hs_dsgn_C
     Theta_ex_d_t = inputs.Theta_ex_d_t
-    X_hs_out_d_t = _get_heat_source_outlet_humidity(
+    X_hs_out_d_t = _get_heat_source_outlet_humidity(_HeatSourceOutletHumidityInputs(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
-        X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
+        X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region))
     Theta_NR_d_t = np.zeros(24 * 365)
     outlet_temperatures = _get_heat_source_outlet_temperatures(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
@@ -3070,9 +3078,9 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
     V_hs_dsgn_H = inputs.V_hs_dsgn_H
     V_hs_dsgn_C = inputs.V_hs_dsgn_C
     Theta_ex_d_t = inputs.Theta_ex_d_t
-    X_hs_out_d_t = _get_heat_source_outlet_humidity(
+    X_hs_out_d_t = _get_heat_source_outlet_humidity(_HeatSourceOutletHumidityInputs(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
-        X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
+        X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region))
     outlet_temperatures = _get_heat_source_outlet_temperatures(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
         V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
