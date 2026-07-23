@@ -306,3 +306,22 @@ def test_get_standard_heating_fan_power_preserves_rac_fan_and_ventilation_option
         ('print', experiment_main.最低風量直接入力.入力しない),
         ('call', (200.0, 'vent', 'supply', 300.0, 'q-h', 6, 0.4, 'subtract')),
     ]
+
+def test_get_minimum_volume_heating_fan_power_preserves_fixed_ventilation_option(monkeypatch):
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_E_E_fan_H_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.ダクト式セントラル空調機, f_SFP=0.4)
+
+    result = experiment_main._get_minimum_volume_heating_fan_power(
+        setting, SimpleNamespace(P_fan_rtd=100.0), 200.0, 'vent', 'supply', 300.0, 'q-h', 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低電力直接入力.入力しない),
+        ('call', (
+            100.0, 'vent', 'supply', 300.0, 'q-h', 6, 0.4,
+            experiment_main.ファン消費電力から換気分を引く.換気分を引かない,
+        )),
+    ]

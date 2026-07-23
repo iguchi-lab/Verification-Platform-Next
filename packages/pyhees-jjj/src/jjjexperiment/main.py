@@ -342,6 +342,24 @@ def _get_standard_heating_fan_power(heat_ac_setting, heat_quantity, P_rac_fan_rt
         heat_ac_setting.subtract_ventilation_power,
     )
 
+def _get_minimum_volume_heating_fan_power(heat_ac_setting, heat_quantity, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t, region):
+    print(最低電力直接入力.入力しない)
+    P_fan_rtd = (
+        P_rac_fan_rtd_H
+        if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
+        else heat_quantity.P_fan_rtd
+    )
+    return dc_a.get_E_E_fan_H_d_t(
+        P_fan_rtd,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        V_hs_dsgn_H,
+        q_hs_H_d_t,
+        region,
+        heat_ac_setting.f_SFP,
+        ファン消費電力から換気分を引く.換気分を引かない,
+    )
+
 @inject
 def calc_main(
     injector: Injector,
@@ -440,20 +458,7 @@ def calc_main(
 
                 match v_min_heating_input.input_E_E_fan_min:
                     case 最低電力直接入力.入力しない:
-                        print(最低電力直接入力.入力しない)
-
-                        # 従来式
-                        E_E_fan_H_d_t = \
-                            dc_a.get_E_E_fan_H_d_t(
-                                # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                P_rac_fan_rtd_H if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else heat_quantity.P_fan_rtd
-                                , V_hs_vent_d_t  # 上書きアリ
-                                , V_hs_supply_d_t
-                                , V_hs_dsgn_H
-                                , q_hs_H_d_t  # W
-                                , house.region
-                                , heat_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
-                                , ファン消費電力から換気分を引く.換気分を引かない)  # 最低風量を入力する場合、換気分は引かない
+                        E_E_fan_H_d_t = _get_minimum_volume_heating_fan_power(heat_ac_setting, heat_quantity, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t, house.region)
 
                     case 最低電力直接入力.入力する:
                         print(最低電力直接入力.入力する)
