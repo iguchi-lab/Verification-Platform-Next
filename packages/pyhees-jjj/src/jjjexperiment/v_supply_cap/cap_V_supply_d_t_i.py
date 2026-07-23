@@ -157,6 +157,78 @@ def _prepare_increment_only_cap_state(
         added_sums_C_d_t_i,
     )
 
+class _IncrementOnlyReductions(NamedTuple):
+    subtract_H_d_t_i: np.ndarray
+    subtract_C_d_t_i: np.ndarray
+
+
+def _get_increment_reduction_ratio(
+        masked_vs_d_t_i: np.ndarray,
+        added_sums_d_t_i: np.ndarray,
+        target_mask_d_t_i: np.ndarray,
+        default_subtract_d_t_i: np.ndarray,
+) -> np.ndarray:
+    return np.divide(
+        masked_vs_d_t_i,
+        np.floor(added_sums_d_t_i * 1000) / 1000,
+        where=target_mask_d_t_i,
+        out=default_subtract_d_t_i,
+    )
+
+
+def _get_increment_only_reductions(
+        state: _SupplyCapState,
+        increment_state: _IncrementOnlyCapState,
+) -> _IncrementOnlyReductions:
+    default_subtract_d_t_i = np.zeros_like(state.V_supply_d_t_i)
+    ratio_H_d_t_i = _get_increment_reduction_ratio(
+        increment_state.masked_vs_H_d_t_i,
+        increment_state.added_sums_H_d_t_i,
+        increment_state.target_mask_H_d_t_i,
+        default_subtract_d_t_i,
+    )
+    subtract_H_d_t_i = ratio_H_d_t_i * np.tile(
+        increment_state.overflow_values_H_d_t, (5, 1),
+    )
+
+    ratio_C_d_t_i = _get_increment_reduction_ratio(
+        increment_state.masked_vs_C_d_t_i,
+        increment_state.added_sums_C_d_t_i,
+        increment_state.target_mask_C_d_t_i,
+        default_subtract_d_t_i,
+    )
+    subtract_C_d_t_i = ratio_C_d_t_i * np.tile(
+        increment_state.overflow_values_C_d_t, (5, 1),
+    )
+    return _IncrementOnlyReductions(subtract_H_d_t_i, subtract_C_d_t_i)
+
+
+def _assert_increment_only_cap_source(increment_state: _IncrementOnlyCapState) -> None:
+    added_mask_d_t = np.sum(increment_state.added_mask_d_t_i, axis=0)
+    should_be_target = np.logical_or(
+        increment_state.overflow_values_H_d_t > 0,
+        increment_state.overflow_values_C_d_t > 0,
+    )
+    errors = np.logical_and(added_mask_d_t == 0, should_be_target)
+    assert not np.any(errors), "元から制限を超えている時刻があるようです."
+
+
+def _apply_increment_only_reductions(
+        state: _SupplyCapState,
+        increment_state: _IncrementOnlyCapState,
+        reductions: _IncrementOnlyReductions,
+) -> np.ndarray:
+    new_V_supply_d_t_i = np.where(
+        increment_state.target_mask_H_d_t_i,
+        state.V_supply_d_t_i - reductions.subtract_H_d_t_i,
+        state.V_supply_d_t_i,
+    )
+    return np.where(
+        increment_state.target_mask_C_d_t_i,
+        new_V_supply_d_t_i - reductions.subtract_C_d_t_i,
+        new_V_supply_d_t_i,
+    )
+
 # NOTE: 過剰熱量ループ内でも使用しているため
 # @log_res(['V_supply_d_t_i'])
 def cap_V_supply_d_t_i(
@@ -213,7 +285,6 @@ def cap_V_supply_d_t_i(
         if print_exec:
             print(Vサプライの上限キャップ.設計風量_風量増室のみ)
         # 委員より提案 案2('24/01)
-
         V_hs_dsgn_H, V_hs_dsgn_C = _normalize_design_airflows(
             V_hs_dsgn_H, V_hs_dsgn_C,
         )
@@ -224,56 +295,14 @@ def cap_V_supply_d_t_i(
         increment_state = _prepare_increment_only_cap_state(
             state, V_dash_supply_d_t_i, V_hs_dsgn_H, V_hs_dsgn_C,
         )
-        V_supply_d_t_i = state.V_supply_d_t_i
-        added_mask_d_t_i = increment_state.added_mask_d_t_i
-        target_mask_H_d_t_i = increment_state.target_mask_H_d_t_i
-        target_mask_C_d_t_i = increment_state.target_mask_C_d_t_i
-        overflow_values_H_d_t = increment_state.overflow_values_H_d_t
-        overflow_values_C_d_t = increment_state.overflow_values_C_d_t
-        masked_vs_H_d_t_i = increment_state.masked_vs_H_d_t_i
-        masked_vs_C_d_t_i = increment_state.masked_vs_C_d_t_i
-        added_sums_H_d_t_i = increment_state.added_sums_H_d_t_i
-        added_sums_C_d_t_i = increment_state.added_sums_C_d_t_i
-        default_subtract_d_t_i = np.zeros_like(V_supply_d_t_i)
-
-        ratio_H_d_t_i = np.divide(masked_vs_H_d_t_i,
-                            np.floor(added_sums_H_d_t_i * 1000) / 1000,  # 超えない工夫(引くのを大き目に)
-                            where=target_mask_H_d_t_i, out=default_subtract_d_t_i)
-        # ratio_H_d_t_i = np.nan_to_num(ratio_H_d_t_i, nan=0.0)
-        # 削減量に値の割合を適用
-        subtract_H_d_t_i = ratio_H_d_t_i * np.tile(overflow_values_H_d_t, (5,1))
-
-        ratio_C_d_t_i = np.divide(masked_vs_C_d_t_i,
-                            np.floor(added_sums_C_d_t_i * 1000) / 1000,
-                            where=target_mask_C_d_t_i, out=default_subtract_d_t_i)
-        # ratio_C_d_t_i = np.nan_to_num(ratio_C_d_t_i, nan=0.0)
-        # 削減量に値の割合を適用
-        subtract_C_d_t_i = ratio_C_d_t_i * np.tile(overflow_values_C_d_t, (5,1))
-
-        """ 元から制限を超えてしまってないか念のためチェックします """
-        added_mask_d_t = np.sum(added_mask_d_t_i, axis=0)
-        # NOTE: 増加していないのに、制限を超えてしまっている時刻がないか
-        should_be_target = np.logical_or(overflow_values_H_d_t > 0, overflow_values_C_d_t > 0)
-        errors = np.logical_and(added_mask_d_t == 0, should_be_target)
-        assert not np.any(errors), "元から制限を超えている時刻があるようです."
-
-        """ 減算の実行 """
-        new_V_supply_d_t_i = np.where(
-            target_mask_H_d_t_i,  # 引き算対象セル
-            V_supply_d_t_i - subtract_H_d_t_i,
-            V_supply_d_t_i)  # 引き算しない箇所の値
-
-        new_V_supply_d_t_i = np.where(
-            target_mask_C_d_t_i,  # 引き算対象セル
-            new_V_supply_d_t_i - subtract_C_d_t_i,
-            new_V_supply_d_t_i)  # 引き算しない箇所の値
-
-        """ 事後条件の確認"""
-        check = np.sum(new_V_supply_d_t_i, axis=0)
-        # TODO: バグ修正して有効にする
-        assert all(check[H] <= V_hs_dsgn_H)
-        assert all(check[C] <= V_hs_dsgn_C)
-
+        reductions = _get_increment_only_reductions(state, increment_state)
+        _assert_increment_only_cap_source(increment_state)
+        new_V_supply_d_t_i = _apply_increment_only_reductions(
+            state, increment_state, reductions,
+        )
+        _assert_design_airflow_caps(
+            new_V_supply_d_t_i, H, C, V_hs_dsgn_H, V_hs_dsgn_C,
+        )
     else:
         raise ValueError("change_V_supply_d_t_i is out of range")
 

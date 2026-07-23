@@ -179,6 +179,58 @@ def test_prepare_increment_only_cap_state_preserves_targets_overflow_and_sums():
     np.testing.assert_array_equal(result.added_sums_H_d_t_i[:, 0], [320] * 5)
     np.testing.assert_array_equal(result.added_sums_C_d_t_i[:, 1], [0] * 5)
 
+def test_increment_reduction_ratio_preserves_floor_rounding_and_mask():
+    masked = np.array([[200.0, 50.0]])
+    sums = np.array([[319.9999, 50.0]])
+    target = np.array([[True, False]])
+
+    result = sut._get_increment_reduction_ratio(
+        masked,
+        sums,
+        target,
+        np.zeros_like(masked),
+    )
+
+    np.testing.assert_array_equal(result, [[200.0 / 319.999, 0.0]])
+
+
+def test_increment_only_source_assertion_preserves_preexisting_overflow_error():
+    increment_state = SimpleNamespace(
+        added_mask_d_t_i=np.zeros((5, 2), dtype=bool),
+        overflow_values_H_d_t=np.array([1.0, -1.0]),
+        overflow_values_C_d_t=np.array([-1.0, -1.0]),
+    )
+
+    with pytest.raises(AssertionError, match="元から制限を超えている時刻"):
+        sut._assert_increment_only_cap_source(increment_state)
+
+
+def test_increment_only_reductions_preserve_heating_then_cooling_application():
+    supply = np.full((5, 2), 10.0)
+    target_H = np.zeros((5, 2), dtype=bool)
+    target_C = np.zeros((5, 2), dtype=bool)
+    target_H[0, 0] = True
+    target_C[1, 1] = True
+    state = SimpleNamespace(V_supply_d_t_i=supply)
+    increment_state = SimpleNamespace(
+        target_mask_H_d_t_i=target_H,
+        target_mask_C_d_t_i=target_C,
+    )
+    reductions = sut._IncrementOnlyReductions(
+        np.full((5, 2), 2.0),
+        np.full((5, 2), 3.0),
+    )
+
+    result = sut._apply_increment_only_reductions(
+        state,
+        increment_state,
+        reductions,
+    )
+
+    assert result[0, 0] == 8.0
+    assert result[1, 1] == 7.0
+    assert result[2, 0] == 10.0
+
 def test_public_orchestration_preserves_invalid_logic_error_after_season_lookup(monkeypatch):
     calls = []
     monkeypatch.setattr(
