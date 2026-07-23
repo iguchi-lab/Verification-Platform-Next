@@ -2969,7 +2969,7 @@ def test_prepare_balanced_load_state_preserves_formula_11_10_generations(monkeyp
         lambda *args: events.append(("latent", args)) or (latent, final_frame),
     )
 
-    result = sut._prepare_balanced_load_state(first_frame, *inputs)
+    result = sut._prepare_balanced_load_state(sut._BalancedLoadStateInputs(first_frame, *inputs))
 
     assert result == (transfer, latent, final_frame)
     assert events == [
