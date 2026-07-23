@@ -923,13 +923,13 @@ def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
         ) or np.full((12, 1), delta),
     )
 
-    result = sut._adjust_heat_source_output_for_room_to_underfloor_transfer(
+    result = sut._adjust_heat_source_output_for_room_to_underfloor_transfer(sut._RoomToUnderfloorTransferInputs(
         SimpleNamespace(U_s_vert=0.7, U_s_floor_ins=0.3),
         SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
         theta_out,
         theta_in,
         output,
-    )
+    ))
 
     assert result[0] is output
     np.testing.assert_array_equal(output, np.full(24 * 365, 76.0))

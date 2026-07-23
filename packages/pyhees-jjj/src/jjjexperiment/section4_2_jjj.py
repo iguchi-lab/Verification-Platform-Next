@@ -516,6 +516,14 @@ class _SupplyAirflowBeforeVavInputs(NamedTuple):
     V_dash_hs_supply_d_t: object
     V_vent_g_i: object
 
+
+class _RoomToUnderfloorTransferInputs(NamedTuple):
+    new_ufac: object
+    house: object
+    Theta_ex_d_t: object
+    Theta_in_d_t: object
+    Q_hat_hs_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -781,14 +789,13 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
 
     return _SupplyAirflowBeforeVavResult(r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i)
 
-def _adjust_heat_source_output_for_room_to_underfloor_transfer(
-        new_ufac: UnderfloorAc,
-        house: HouseInfo,
-        Theta_ex_d_t: np.ndarray,
-        Theta_in_d_t: np.ndarray,
-        Q_hat_hs_d_t: np.ndarray,
-    ) -> tuple[np.ndarray, float, np.ndarray, float]:
+def _adjust_heat_source_output_for_room_to_underfloor_transfer(inputs: _RoomToUnderfloorTransferInputs):
     """Apply the first formula (40)-2nd transfer without changing mutation."""
+    new_ufac = inputs.new_ufac
+    house = inputs.house
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    Theta_in_d_t = inputs.Theta_in_d_t
+    Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
     # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
     # 1. 床下 -> 居室全体 (目標方向の熱移動)
     #260112 IGUCHI 床の熱貫流率は、入力値を使う！
@@ -2316,13 +2323,13 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
         if not should_adjust:
             break
 
-        room_transfer = _adjust_heat_source_output_for_room_to_underfloor_transfer(
+        room_transfer = _adjust_heat_source_output_for_room_to_underfloor_transfer(_RoomToUnderfloorTransferInputs(
             new_ufac,
             house,
             Theta_ex_d_t,
             Theta_in_d_t,
             Q_hat_hs_d_t,
-        )
+        ))
         Q_hat_hs_d_t = room_transfer.Q_hat_hs_d_t
         U_s_input = room_transfer.U_s_input
         A_s_ufac_i = room_transfer.A_s_ufac_i
