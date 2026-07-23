@@ -256,3 +256,20 @@ def test_get_heating_fan_model_preserves_denchu_csv_and_unit_conversion(monkeypa
         ('csv', 'case_v_denchu_consts_H_output.csv', 'cp932'),
         ('log', 'P_rac_fan_rtd_H [W]: 300.0'),
     ]
+
+def test_get_heating_capacity_and_HCM_preserves_call_order(monkeypatch):
+    events = []
+    climate = SimpleNamespace(
+        get_C_df_H_d_t=lambda: events.append('C_df') or 'C-df',
+        get_HCM_d_t=lambda: events.append('HCM') or 'hcm',
+    )
+    monkeypatch.setattr(
+        experiment_main.dc_a,
+        'get_q_hs_H_d_t',
+        lambda *args: events.append(('capacity', args)) or 'q-h',
+    )
+
+    result = experiment_main._get_heating_capacity_and_HCM('out', 'in', 'supply', climate, 6)
+
+    assert result == ('q-h', 'hcm')
+    assert events == ['C_df', ('capacity', ('out', 'in', 'supply', 'C-df', 6)), 'HCM']
