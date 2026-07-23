@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from jjjexperiment.carryover_heat import section4_2
+from jjjexperiment.carryover_heat import section4_2_jjj as section4_2
 
 
 def test_prepare_carryover_zone_areas_preserves_shape_contract():

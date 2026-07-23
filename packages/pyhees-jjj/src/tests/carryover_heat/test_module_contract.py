@@ -1,7 +1,8 @@
+import importlib
 import inspect
 
 import jjjexperiment.carryover_heat as carryover_heat
-from jjjexperiment.carryover_heat import section4_2
+from jjjexperiment.carryover_heat import section4_2_jjj
 
 
 EXPECTED_FUNCTIONS = (
@@ -44,8 +45,8 @@ PUBLIC_FUNCTIONS = (
 def test_section4_2_preserves_25_function_boundaries():
     actual = tuple(
         name
-        for name, value in vars(section4_2).items()
-        if inspect.isfunction(value) and value.__module__ == section4_2.__name__
+        for name, value in vars(section4_2_jjj).items()
+        if inspect.isfunction(value) and value.__module__ == section4_2_jjj.__name__
     )
 
     assert actual == EXPECTED_FUNCTIONS
@@ -53,4 +54,11 @@ def test_section4_2_preserves_25_function_boundaries():
 
 def test_carryover_package_preserves_public_function_objects():
     for name in PUBLIC_FUNCTIONS:
-        assert getattr(carryover_heat, name) is getattr(section4_2, name)
+        assert getattr(carryover_heat, name) is getattr(section4_2_jjj, name)
+
+def test_legacy_section4_2_import_is_the_jjj_implementation_module():
+    legacy = importlib.import_module("jjjexperiment.carryover_heat.section4_2")
+
+    assert legacy is section4_2_jjj
+    for name in EXPECTED_FUNCTIONS:
+        assert getattr(legacy, name) is getattr(section4_2_jjj, name)
