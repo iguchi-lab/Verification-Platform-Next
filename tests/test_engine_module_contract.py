@@ -163,18 +163,51 @@ def test_cooling_type2_call_uses_signature_order_context():
     ) == "_CoolingType2ElectricityInputs"
 
 
+def test_cooling_type4_call_uses_signature_order_context():
+    assert _starred_context_name_for_call(
+        "calc_E_E_C_d_t_type4"
+    ) == "_CoolingType4ElectricityInputs"
+
+
 @pytest.mark.parametrize(("api_name", "context_name"), (
     ("calc_E_E_H_d_t_type1_and_type3", "_HeatingType1And3ElectricityInputs"),
     ("calc_E_E_H_d_t_type2", "_HeatingType2ElectricityInputs"),
     ("calc_E_E_H_d_t_type4", "_HeatingType4ElectricityInputs"),
     ("calc_E_E_C_d_t_type1_and_type3", "_CoolingType1And3ElectricityInputs"),
     ("calc_E_E_C_d_t_type2", "_CoolingType2ElectricityInputs"),
+    ("calc_E_E_C_d_t_type4", "_CoolingType4ElectricityInputs"),
 ))
 def test_electricity_call_context_matches_public_signature(api_name, context_name):
     public_parameters = tuple(
         inspect.signature(getattr(main.jjj_dc_a, api_name)).parameters
     )
     assert getattr(main, context_name)._fields == public_parameters
+
+
+def test_minimum_fan_calls_use_public_signature_context():
+    tree = ast.parse(
+        JJJEXPERIMENT_MAIN.read_text(encoding="utf-8"),
+        filename=str(JJJEXPERIMENT_MAIN),
+    )
+    calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "get_E_E_fan_d_t"
+    ]
+    assert len(calls) == 2
+    for call in calls:
+        assert call.keywords == []
+        assert len(call.args) == 1
+        assert isinstance(call.args[0], ast.Starred)
+        context = call.args[0].value
+        assert isinstance(context, ast.Call)
+        assert isinstance(context.func, ast.Name)
+        assert context.func.id == "_MinimumFanElectricityInputs"
+    assert main._MinimumFanElectricityInputs._fields == (
+        "E_E_fan_logic", "P_fan_rtd", "V_hs_vent_d_t",
+        "V_hs_supply_d_t", "V_hs_dsgn", "E_E_fan_min", "region",
+        "for_cooling")
 
 
 def test_legacy_section4_2_a_import_aliases_jjj_module():

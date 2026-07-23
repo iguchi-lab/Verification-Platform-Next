@@ -57,6 +57,31 @@ import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 import jjjexperiment.v_min_input as jjj_V_min_input
 
 
+class _MinimumFanElectricityInputs(NamedTuple):
+    E_E_fan_logic: object
+    P_fan_rtd: object
+    V_hs_vent_d_t: object
+    V_hs_supply_d_t: object
+    V_hs_dsgn: object
+    E_E_fan_min: object
+    region: object
+    for_cooling: object
+
+
+class _CoolingType4ElectricityInputs(NamedTuple):
+    case_name: object
+    type: object
+    region: object
+    climateFile: object
+    E_E_fan_C_d_t: object
+    q_hs_C_d_t: object
+    V_hs_supply_d_t: object
+    P_rac_fan_rtd_C: object
+    simu_R_C: object
+    spec: object
+    real_inner: object
+
+
 class _CoolingType2ElectricityInputs(NamedTuple):
     type: object
     region: object
@@ -382,16 +407,16 @@ def calc_main(
                         E_E_fan_logic = v_min_heating_input.E_E_fan_logic
 
                         from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
-                        E_E_fan_H_d_t = get_E_E_fan_d_t(
-                                E_E_fan_logic
+                        E_E_fan_H_d_t = get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
+                                E_E_fan_logic,
                                 # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                , P_rac_fan_rtd_H if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else heat_quantity.P_fan_rtd
-                                , V_hs_vent_d_t  # 上書きアリ
-                                , V_hs_supply_d_t
-                                , V_hs_dsgn_H
-                                , E_E_fan_min_H
-                                , house.region
-                                , for_cooling=False)
+                                P_rac_fan_rtd_H if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else heat_quantity.P_fan_rtd,
+                                V_hs_vent_d_t,  # 上書きアリ
+                                V_hs_supply_d_t,
+                                V_hs_dsgn_H,
+                                E_E_fan_min_H,
+                                house.region,
+                                False))
                     case _:
                         raise ValueError
             case _:
@@ -597,16 +622,16 @@ def calc_main(
                         E_E_fan_logic = v_min_cooling_input.E_E_fan_logic
 
                         from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
-                        E_E_fan_C_d_t = get_E_E_fan_d_t(
-                                E_E_fan_logic
+                        E_E_fan_C_d_t = get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
+                                E_E_fan_logic,
                                 # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                , P_rac_fan_rtd_C if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else cool_quantity.P_fan_rtd
-                                , V_hs_vent_d_t  # 上書きアリ
-                                , V_hs_supply_d_t
-                                , V_hs_dsgn_C
-                                , E_E_fan_min_C
-                                , house.region
-                                , for_cooling=True)
+                                P_rac_fan_rtd_C if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else cool_quantity.P_fan_rtd,
+                                V_hs_vent_d_t,  # 上書きアリ
+                                V_hs_supply_d_t,
+                                V_hs_dsgn_C,
+                                E_E_fan_min_C,
+                                house.region,
+                                True))
                     case _:
                         raise ValueError
             case _:
@@ -662,17 +687,19 @@ def calc_main(
         )
     elif cool_ac_setting.type == 計算モデル.電中研モデル:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type4(
-            case_name = case_name,
-            type = cool_ac_setting.type,
-            region = house.region,
-            climateFile = climateFile,
-            E_E_fan_C_d_t = E_E_fan_C_d_t,
-            q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t,
-            V_hs_supply_d_t = V_hs_supply_d_t,
-            P_rac_fan_rtd_C = P_rac_fan_rtd_C,
-            simu_R_C = simu_R_C,
-            spec = cool_denchu_catalog,
-            real_inner = cool_real_inner
+            *_CoolingType4ElectricityInputs(
+                case_name,
+                cool_ac_setting.type,
+                house.region,
+                climateFile,
+                E_E_fan_C_d_t,
+                q_hs_CS_d_t + q_hs_CL_d_t,
+                V_hs_supply_d_t,
+                P_rac_fan_rtd_C,
+                simu_R_C,
+                cool_denchu_catalog,
+                cool_real_inner,
+            )
         )
     else:
         raise Exception("冷房方式が不正です。")

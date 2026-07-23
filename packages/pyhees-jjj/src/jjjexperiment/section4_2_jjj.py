@@ -168,6 +168,26 @@ class _SupplyStateResult(NamedTuple):
     V_supply_d_t_i: object
     Theta_supply_d_t_i: object
 
+class _InitialHeatSourceOutputCallInputs(NamedTuple):
+    Q: object
+    A_A: object
+    V_vent_l_d_t: object
+    V_vent_g_i: object
+    mu_H: object
+    mu_C: object
+    J_d_t: object
+    q_gen_d_t: object
+    n_p_d_t: object
+    q_p_H: object
+    q_p_CS: object
+    q_p_CL: object
+    X_ex_d_t: object
+    w_gen_d_t: object
+    Theta_ex_d_t: object
+    L_wtr: object
+    region: object
+
+
 class _InitialHeatSourceOutputInputs(NamedTuple):
     df_output: object
     house: object
@@ -425,6 +445,17 @@ class _CalculationExportInputs(NamedTuple):
     V_hs_vent_d_t: object
 
 
+class _SupplyAirflowCapCallInputs(NamedTuple):
+    V_supply_cap_dto: object
+    V_supply_d_t_i: object
+    V_dash_supply_d_t_i: object
+    V_vent_g_i: object
+    region: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    print_exec: object
+
+
 class _CappedSupplyAirflowInputs(NamedTuple):
     v_supply_cap_dto: object
     ac_setting: object
@@ -442,6 +473,22 @@ class _CappedSupplyAirflowInputs(NamedTuple):
     print_exec: object
 
 
+class _CarryoverActualRoomTemperatureInputs(NamedTuple):
+    H: object
+    C: object
+    M: object
+    Theta_star_HBR: object
+    V_supply_i: object
+    Theta_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    A_HCZ_i: object
+    L_star_H_i: object
+    L_star_CS_i: object
+    Theta_HBR_before_i: object
+
+
 class _ActualRoomTemperatureHourInputs(NamedTuple):
     t: object
     H: object
@@ -457,6 +504,24 @@ class _ActualRoomTemperatureHourInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
     Theta_HBR_d_t_i: object
+
+
+class _CarryoverActualNonRoomTemperatureInputs(NamedTuple):
+    isFirst: object
+    H: object
+    C: object
+    M: object
+    Theta_star_NR: object
+    Theta_star_HBR: object
+    Theta_HBR_i: object
+    A_NR: object
+    V_vent_l_NR: object
+    V_dash_supply_i: object
+    V_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    Theta_NR_before: object
 
 
 class _ActualNonRoomTemperatureHourInputs(NamedTuple):
@@ -601,6 +666,14 @@ class _RacHeatingCapacityInputs(NamedTuple):
     log_intermediates: object
 
 
+class _CarryoverCalculationInputs(NamedTuple):
+    H: object
+    C: object
+    A_HCZ_i: object
+    Theta_HBR_i: object
+    Theta_star_HBR: object
+
+
 class _CarryoverAtHourInputs(NamedTuple):
     t: object
     H: object
@@ -698,6 +771,17 @@ class _CarryoverUnderfloorSupplyTemperatureInputs(NamedTuple):
     V_dash_supply_d_t_i: object
 
 
+class _ExpectedUnderfloorTemperatureInputs(NamedTuple):
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    A_A: object
+    A_MR: object
+    A_OR: object
+    r_A_ufvnt: object
+    V_dash_supply_d_t_i: object
+    Theta_ex_d_t: object
+
+
 class _NewUnderfloorRequestedTemperatureInputs(NamedTuple):
     ac_setting: object
     house: object
@@ -747,6 +831,21 @@ class _NewUnderfloorBalancedLoadInputs(NamedTuple):
     L_star_CS_d_t_i: object
 
 
+class _UnderfloorActualRoomTemperatureInputs(NamedTuple):
+    Theta_star_HBR: object
+    V_supply_i: object
+    Theta_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    A_HCZ_i: object
+    L_star_H_i: object
+    L_star_CS_i: object
+    HCM: object
+    A_s_ufac_i: object
+    Theta_uf: object
+
+
 class _ActualRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     house: object
     skin: object
@@ -763,6 +862,21 @@ class _ActualRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     Theta_uf_d_t: object
 
 
+class _UnderfloorActualNonRoomTemperatureInputs(NamedTuple):
+    Theta_star_NR: object
+    Theta_star_HBR: object
+    Theta_HBR_i: object
+    A_NR: object
+    V_vent_l_NR: object
+    V_dash_supply_i: object
+    V_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    Theta_uf: object
+    r_A_NR_1F_excl_bath: object
+
+
 class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     skin: object
     new_ufac: object
@@ -777,6 +891,22 @@ class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     A_prt_i: object
     Theta_uf_d_t: object
     r_A_NR_uf_1F_excl_bath: object
+
+
+class _BalancedNonRoomTemperatureCallInputs(NamedTuple):
+    Theta_star_HBR: object
+    Q: object
+    A_NR: object
+    V_vent_l_NR: object
+    V_dash_supply_A: object
+    U_prt: object
+    A_prt_A: object
+    L_H_NR_A: object
+    L_CS_NR_A: object
+    Theta_NR: object
+    Theta_uf: object
+    HCM: object
+    r_A_NR_1F_excl_bath: object
 
 
 class _NewBalancedNonRoomTemperatureInputs(NamedTuple):
@@ -1483,8 +1613,9 @@ def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
     # (43)　暖冷房区画𝑖の吹き出し風量
     V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                 , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
-    V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
-                                                , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=print_exec)
+    V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(*_SupplyAirflowCapCallInputs(
+        v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i,
+        V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec))
 
     return _CappedSupplyAirflowsResult(
         V_supply_d_t_i_before,
@@ -1655,16 +1786,16 @@ def _get_carryover_at_hour(inputs: _CarryoverAtHourInputs):
         return np.zeros((5, 1))
     # 暖房期 前時刻にて 暖かさに余裕があるとき
     elif H[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] > Theta_star_HBR_d_t[t-1]):
-        return jjj_carryover_heat.calc_carryover(
+        return jjj_carryover_heat.calc_carryover(*_CarryoverCalculationInputs(
                             H[t], C[t], A_HCZ_i,
                             Theta_HBR_d_t_i[:, t-1:t],
-                            Theta_star_HBR_d_t[t])
+                            Theta_star_HBR_d_t[t]))
     # 冷房期 前時刻にて 涼しさに余裕があるとき
     elif C[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] < Theta_star_HBR_d_t[t-1]):
-        return jjj_carryover_heat.calc_carryover(
+        return jjj_carryover_heat.calc_carryover(*_CarryoverCalculationInputs(
                             H[t], C[t], A_HCZ_i,
                             Theta_HBR_d_t_i[:, t-1:t],
-                            Theta_star_HBR_d_t[t])
+                            Theta_star_HBR_d_t[t]))
     else:
         # 前時刻の Theta_HBR_d_t_i を使用するため
         # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う
@@ -1711,7 +1842,7 @@ def _get_actual_room_temperatures_at_hour(inputs: _ActualRoomTemperatureHourInpu
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
     # (46)　暖冷房区画𝑖の実際の居室の室温
-    return jjj_carryover_heat.get_Theta_HBR_i_2023(
+    return jjj_carryover_heat.get_Theta_HBR_i_2023(*_CarryoverActualRoomTemperatureInputs(
         H[t], C[t], M[t],
         Theta_star_HBR_d_t[t],
         V_supply_d_t_i[:, t:t+1],  # (5,1)
@@ -1722,7 +1853,7 @@ def _get_actual_room_temperatures_at_hour(inputs: _ActualRoomTemperatureHourInpu
         A_HCZ_i.reshape(-1,1),  # (5,1)
         L_star_H_d_t_i[:5, t:t+1],  # (5,1)
         L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
-        np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
+        np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t]))  # (5,1)
 
 def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHourInputs):
     """Calculate formula (48) for one hour with its original slices."""
@@ -1743,7 +1874,7 @@ def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHo
     Q = inputs.Q
     Theta_NR_d_t = inputs.Theta_NR_d_t
     # (48)　実際の非居室の室温
-    return jjj_carryover_heat.get_Theta_NR_2023(
+    return jjj_carryover_heat.get_Theta_NR_2023(*_CarryoverActualNonRoomTemperatureInputs(
         isFirst, H[t], C[t], M[t],
         Theta_star_NR_d_t[t],
         Theta_star_HBR_d_t[t],
@@ -1755,7 +1886,7 @@ def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHo
         U_prt,
         A_prt_i.reshape(-1,1),  # (5,1)
         Q,
-        0 if t==0 else Theta_NR_d_t[t-1])
+        0 if t==0 else Theta_NR_d_t[t-1]))
 
 def _get_actual_loads(inputs: _ActualLoadsInputs):
     """Calculate formulas (7) through (5) in their original order."""
@@ -2103,9 +2234,9 @@ def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTe
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     # 期待される床下温度を事前に計算(本計算は後で行う)
-    Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(
+    Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(*_ExpectedUnderfloorTemperatureInputs(
         L_star_H_d_t_i, L_star_CS_d_t_i, house.A_A, house.A_MR,
-        house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t)
+        house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t))
     # 新床下空調-1st: θuf_supply を逆算(二分探索)
     _, _, Theta_uf_supply_d_t = algo.calc_Theta(
         region=house.region,
@@ -2317,20 +2448,20 @@ def _get_actual_room_temperatures_without_carryover(inputs: _ActualRoomTemperatu
         A_s_ufac_i, _ = jjj_ufac_dc.get_A_s_ufac_i(
             house.A_A, house.A_MR, house.A_OR)
         return np.hstack([
-            get_Theta_HBR_i(
-                Theta_star_HBR=Theta_star_HBR_d_t[t],
-                V_supply_i=V_supply_d_t_i[:, t:t + 1],
-                Theta_supply_i=Theta_supply_d_t_i[:, t:t + 1],
-                U_prt=U_prt,
-                A_prt_i=A_prt_i.reshape(-1, 1)[:5, :],
-                Q=skin.Q,
-                A_HCZ_i=A_HCZ_i.reshape(-1, 1),
-                L_star_H_i=L_star_H_d_t_i[:, t:t + 1],
-                L_star_CS_i=L_star_CS_d_t_i[:, t:t + 1],
-                HCM=HCM[t],
-                A_s_ufac_i=A_s_ufac_i[:5, :],
-                Theta_uf=Theta_uf_d_t[t],
-            ) for t in range(24 * 365)
+            get_Theta_HBR_i(*_UnderfloorActualRoomTemperatureInputs(
+                Theta_star_HBR_d_t[t],
+                V_supply_d_t_i[:, t:t + 1],
+                Theta_supply_d_t_i[:, t:t + 1],
+                U_prt,
+                A_prt_i.reshape(-1, 1)[:5, :],
+                skin.Q,
+                A_HCZ_i.reshape(-1, 1),
+                L_star_H_d_t_i[:, t:t + 1],
+                L_star_CS_d_t_i[:, t:t + 1],
+                HCM[t],
+                A_s_ufac_i[:5, :],
+                Theta_uf_d_t[t],
+            )) for t in range(24 * 365)
         ])
 
     # 改変なし元式
@@ -2356,20 +2487,20 @@ def _get_actual_non_room_temperatures_without_carryover(inputs: _ActualNonRoomTe
     r_A_NR_uf_1F_excl_bath = inputs.r_A_NR_uf_1F_excl_bath
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         return np.array([
-            get_Theta_NR(
-                Theta_star_NR=Theta_star_NR_d_t[t],
-                Theta_star_HBR=Theta_star_HBR_d_t[t],
-                Theta_HBR_i=Theta_HBR_d_t_i[:, t:t + 1],
-                A_NR=A_NR,
-                V_vent_l_NR=V_vent_l_NR_d_t[t],
-                V_dash_supply_i=V_dash_supply_d_t_i[:, t:t + 1],
-                V_supply_i=V_supply_d_t_i[:, t:t + 1],
-                U_prt=U_prt,
-                A_prt_i=A_prt_i.reshape(-1, 1),
-                Q=skin.Q,
-                Theta_uf=Theta_uf_d_t[t],
-                r_A_NR_1F_excl_bath=r_A_NR_uf_1F_excl_bath,
-            ) for t in range(24 * 365)
+            get_Theta_NR(*_UnderfloorActualNonRoomTemperatureInputs(
+                Theta_star_NR_d_t[t],
+                Theta_star_HBR_d_t[t],
+                Theta_HBR_d_t_i[:, t:t + 1],
+                A_NR,
+                V_vent_l_NR_d_t[t],
+                V_dash_supply_d_t_i[:, t:t + 1],
+                V_supply_d_t_i[:, t:t + 1],
+                U_prt,
+                A_prt_i.reshape(-1, 1),
+                skin.Q,
+                Theta_uf_d_t[t],
+                r_A_NR_uf_1F_excl_bath,
+            )) for t in range(24 * 365)
         ])
 
     # 改変なし元式
@@ -2414,22 +2545,22 @@ def _get_new_balanced_non_room_temperature(inputs: _NewBalancedNonRoomTemperatur
     # print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
     # print("HCM[4848]", HCM[4848])
     Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
-    Theta_star_NR_d_t = Theta_star_NR_d_t(
-        Theta_star_HBR=Theta_star_HBR_d_t,
-        Q=skin.Q,
-        A_NR=A_NR,
-        V_vent_l_NR=V_vent_l_NR_d_t,
-        V_dash_supply_A=V_dash_supply_d_t_A,
-        U_prt=U_prt,
-        A_prt_A=A_prt_A,
-        L_H_NR_A=L_H_NR_d_t_A,
-        L_CS_NR_A=L_CS_NR_d_t_A,
+    Theta_star_NR_d_t = Theta_star_NR_d_t(*_BalancedNonRoomTemperatureCallInputs(
+        Theta_star_HBR_d_t,
+        skin.Q,
+        A_NR,
+        V_vent_l_NR_d_t,
+        V_dash_supply_d_t_A,
+        U_prt,
+        A_prt_A,
+        L_H_NR_d_t_A,
+        L_CS_NR_d_t_A,
         # この時点では仮置きの値を使用⇒夏期は27℃とする必要がある 250501 井口
-        Theta_NR=Theta_in_d_t,
-        Theta_uf=Theta_uf_d_t,
-        HCM=HCM,
-        r_A_NR_1F_excl_bath=r_A_NR_uf_1F_excl_bath,
-    )
+        Theta_in_d_t,
+        Theta_uf_d_t,
+        HCM,
+        r_A_NR_uf_1F_excl_bath,
+    ))
     # print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
     # print("Theta_NR[0]: ", Theta_in_d_t[0])
     # print("Theta_uf[0]: ", Theta_uf_d_t[0])
@@ -2690,7 +2821,7 @@ def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
     w_gen_d_t = inputs.w_gen_d_t
     Theta_ex_d_t = inputs.Theta_ex_d_t
     L_wtr = inputs.L_wtr
-    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(
+    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(*_InitialHeatSourceOutputCallInputs(
         skin.Q,
         house.A_A,
         V_vent_l_d_t,
@@ -2708,7 +2839,7 @@ def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
         Theta_ex_d_t,
         L_wtr,
         house.region,
-    )
+    ))
     df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
     return Q_hat_hs_d_t, Q_hat_hs_CS_d_t
 
