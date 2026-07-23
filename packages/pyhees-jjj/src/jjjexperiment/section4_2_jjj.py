@@ -637,6 +637,14 @@ class _UnprocessedLoadsInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_dash_H_d_t_i: object
 
+
+class _UnprocessedEnergyInputs(NamedTuple):
+    ac_setting: object
+    Q_UT_CL_d_t_i: object
+    Q_UT_CS_d_t_i: object
+    Q_UT_H_d_t_i: object
+    region: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1443,13 +1451,12 @@ def _get_unprocessed_loads(inputs: _UnprocessedLoadsInputs):
         Q_UT_H_d_t_i,
     )
 
-def _get_unprocessed_energy(
-        ac_setting: ActiveAcSetting,
-        Q_UT_CL_d_t_i: np.ndarray,
-        Q_UT_CS_d_t_i: np.ndarray,
-        Q_UT_H_d_t_i: np.ndarray,
-        region: int,
-    ) -> tuple[np.ndarray, str]:
+def _get_unprocessed_energy(inputs: _UnprocessedEnergyInputs):
+    ac_setting = inputs.ac_setting
+    Q_UT_CL_d_t_i = inputs.Q_UT_CL_d_t_i
+    Q_UT_CS_d_t_i = inputs.Q_UT_CS_d_t_i
+    Q_UT_H_d_t_i = inputs.Q_UT_H_d_t_i
+    region = inputs.region
     match ac_setting:
         case HeatingAcSetting():
             # 暖房: 未処理暖房負荷の設計一次エネルギー消費量相当値
@@ -1461,6 +1468,7 @@ def _get_unprocessed_energy(
             return dc.get_E_C_UT_d_t(Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, region), 'E_UT_C_d_t'
         case _:
             raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
+
 
 def _export_underfloor_output(
         case_name: CaseName,
@@ -2837,8 +2845,8 @@ def _prepare_unprocessed_energy_state(
         df_output, ac_setting, Q_UT_CL_d_t_i,
         Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region):
     """Calculate and record unprocessed primary energy."""
-    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(
-        ac_setting, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region)
+    E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(_UnprocessedEnergyInputs(
+        ac_setting, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region))
     df_output = _record_unprocessed_energy_output(
         df_output, E_UT_output_name, E_UT_d_t)
     return E_UT_d_t, df_output

@@ -326,13 +326,13 @@ def test_get_unprocessed_energy_for_heating(monkeypatch):
     )
     heating_load = np.array([[1.0, 2.0], [3.0, 4.0]])
 
-    value, output_name = sut._get_unprocessed_energy(
+    value, output_name = sut._get_unprocessed_energy(sut._UnprocessedEnergyInputs(
         _setting(sut.HeatingAcSetting),
         object(),
         object(),
         heating_load,
         6,
-    )
+    ))
 
     np.testing.assert_array_equal(value, [12.0, 18.0])
     assert output_name == "E_UT_H_d_t"
@@ -349,13 +349,13 @@ def test_get_unprocessed_energy_for_cooling(monkeypatch):
         lambda *args: calls.append(args) or expected,
     )
 
-    assert sut._get_unprocessed_energy(
+    assert sut._get_unprocessed_energy(sut._UnprocessedEnergyInputs(
         _setting(sut.CoolingAcSetting),
         latent,
         sensible,
         object(),
         7,
-    ) == (expected, "E_UT_C_d_t")
+    )) == (expected, "E_UT_C_d_t")
     assert calls == [(latent, sensible, 7)]
 
 
@@ -364,7 +364,7 @@ def test_get_unprocessed_energy_rejects_unknown_setting():
         ValueError,
         match="ac_setting must be HeatingAcSetting or CoolingAcSetting",
     ):
-        sut._get_unprocessed_energy(object(), object(), object(), object(), 6)
+        sut._get_unprocessed_energy(sut._UnprocessedEnergyInputs(object(), object(), object(), object(), 6))
 
 def test_export_underfloor_output_preserves_filename_and_call_order(monkeypatch):
     calls = []
@@ -3684,7 +3684,7 @@ def test_prepare_unprocessed_energy_state_preserves_calculate_record_order(
 
     assert result == (energy, recorded)
     assert events == [
-        ("calculate", tuple(inputs)),
+        ("calculate", (sut._UnprocessedEnergyInputs(*inputs),)),
         ("record", (original, output_name, energy)),
     ]
 
