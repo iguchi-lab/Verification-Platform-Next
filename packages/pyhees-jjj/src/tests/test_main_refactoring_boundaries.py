@@ -490,3 +490,224 @@ def test_bind_cooling_design_airflows_preserves_type_contract_and_bind_order():
         (experiment_main.jjj_dc.VHS_DSGN_H, 0.0),
         (experiment_main.jjj_dc.VHS_DSGN_C, 250.0),
     ]
+def test_get_cooling_fan_model_preserves_denchu_csv_and_unit_conversion(monkeypatch):
+    events = []
+    frame = SimpleNamespace(to_csv=lambda path, encoding: events.append(('csv', path, encoding)))
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_1, 'calc_R_and_Pc_C', lambda catalog: (2.0, 1.0, 0.0, 0.3))
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_2, 'simu_R', lambda *args: events.append(('simu', args)) or 'simu')
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_1, 'get_DataFrame_denchu_modeling_consts', lambda *args: events.append(('frame', args)) or frame)
+    monkeypatch.setattr(experiment_main.jjj_consts, 'version_info', lambda: '_v')
+    monkeypatch.setattr(experiment_main._logger, 'info', lambda message: events.append(('log', message)))
+    setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル, f_SFP=0.5)
+
+    result = experiment_main._get_cooling_fan_model(setting, 200.0, 'catalog', 'inner', 'case')
+
+    assert result == (300.0, 'simu')
+    assert events == [
+        ('simu', (2.0, 1.0, 0.0)),
+        ('frame', ('catalog', 2.0, 1.0, 0.0, 'inner', 300.0)),
+        ('csv', 'case_v_denchu_consts_C_output.csv', 'cp932'),
+        ('log', 'P_rac_fan_rtd_C [W]: 300.0'),
+    ]
+def test_run_cooling_calc_Q_UT_A_preserves_call_capacity_and_diagnostics(monkeypatch):
+    events = []
+    calculated = ('EUT', 'theta-out', 'theta-in', 'x-out', 'x-in', 'supply', 'vent')
+    injector = SimpleNamespace(
+        binder=SimpleNamespace(bind=lambda key, to: events.append(('bind', key, to))),
+        call_with_injection=lambda func: events.append(('call', func)) or calculated,
+    )
+    monkeypatch.setattr(experiment_main._logger, 'NDdebug', lambda name, value: events.append(('debug', name, value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_q_hs_C_d_t', lambda *args: events.append(('capacity', args)) or (np.array([2.0]), np.array([3.0])))
+
+    result = experiment_main._run_cooling_calc_Q_UT_A(injector, 'cool-setting', 6)
+
+    assert result[:7] == calculated
+    np.testing.assert_array_equal(result[7], np.array([2.0]))
+    np.testing.assert_array_equal(result[8], np.array([3.0]))
+    np.testing.assert_array_equal(result[9], np.array([5.0]))
+    assert events == [
+        ('call', experiment_main.jjj_dc.calc_Q_UT_A),
+        ('debug', 'V_hs_supply_d_t', 'supply'),
+        ('debug', 'V_hs_vent_d_t', 'vent'),
+        ('capacity', ('theta-out', 'theta-in', 'x-out', 'x-in', 'supply', 6)),
+    ]
+def test_get_latent_cooling_fan_power_preserves_model_call(monkeypatch):
+    latent = importlib.import_module('jjjexperiment.latent_load.section4_2_a')
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(latent, 'get_E_E_fan_C_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.RAC活用型全館空調_潜熱評価モデル, f_SFP=0.4)
+
+    result = experiment_main._get_latent_cooling_fan_power(setting, 'vent', 'q-c')
+
+    assert result == 'fan'
+    assert events == [('print', setting.type), ('call', ('vent', 'q-c', 0.4))]
+def test_get_standard_cooling_fan_power_preserves_rac_fan_and_ventilation_option(monkeypatch):
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_E_E_fan_C_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(
+        type=experiment_main.計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        f_SFP=0.4,
+        subtract_ventilation_power='subtract',
+    )
+
+    result = experiment_main._get_standard_cooling_fan_power(
+        setting, SimpleNamespace(P_fan_rtd=100.0), 200.0, 'vent', 'supply', 300.0, 'q-c', 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低風量直接入力.入力しない),
+        ('call', (200.0, 'vent', 'supply', 300.0, 'q-c', 6, 0.4, 'subtract')),
+    ]
+def test_get_minimum_volume_cooling_fan_power_preserves_fixed_ventilation_option(monkeypatch):
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_E_E_fan_C_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.ダクト式セントラル空調機, f_SFP=0.4)
+
+    result = experiment_main._get_minimum_volume_cooling_fan_power(
+        setting, SimpleNamespace(P_fan_rtd=100.0), 200.0, 'vent', 'supply', 300.0, 'q-c', 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低電力直接入力.入力しない),
+        ('call', (
+            100.0, 'vent', 'supply', 300.0, 'q-c', 6, 0.4,
+            experiment_main.ファン消費電力から換気分を引く.換気分を引かない,
+        )),
+    ]
+def test_get_minimum_power_cooling_fan_preserves_input_tuple(monkeypatch):
+    module = importlib.import_module('jjjexperiment.v_min_input.section4_2_a')
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(module, 'get_E_E_fan_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル)
+    v_min = SimpleNamespace(E_E_fan_logic='logic', E_E_fan_min=0.2)
+
+    result = experiment_main._get_minimum_power_cooling_fan(
+        setting, SimpleNamespace(P_fan_rtd=100.0), v_min, 200.0, 'vent', 'supply', 300.0, 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低電力直接入力.入力する),
+        ('call', ('logic', 100.0, 'vent', 'supply', 300.0, 0.2, 6, True)),
+    ]
+def test_raise_invalid_cooling_fan_input_preserves_value_error():
+    with pytest.raises(ValueError):
+        experiment_main._raise_invalid_cooling_fan_input()
+def test_get_cooling_electricity_type1_and_type3_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.jjj_dc_a, 'calc_E_E_C_d_t_type1_and_type3', lambda *args: calls.append(args) or 'electricity')
+    setting = SimpleNamespace(type='type', equipment_spec='spec')
+    house = SimpleNamespace(region=6)
+    climate = SimpleNamespace(get_Theta_ex_d_t=lambda: 'theta-ex')
+    cool = SimpleNamespace(
+        q_hs_min='q-min-c', q_hs_mid='q-mid-c', P_hs_mid='p-mid-c',
+        V_fan_mid='v-mid-c', P_fan_mid='p-fan-mid-c', q_hs_rtd='q-rtd-c',
+        P_fan_rtd='p-fan-rtd-c', V_fan_rtd='v-fan-rtd-c', P_hs_rtd='p-rtd-c',
+    )
+
+    result = experiment_main._get_cooling_electricity_type1_and_type3(
+        setting, house, 'fan', 'theta-out', 'theta-in', climate, 'supply', 'x-out', 'x-in', cool
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'type', 6, 'fan', 'theta-out', 'theta-in', 'theta-ex', 'supply', 'x-out', 'x-in',
+        'q-min-c', 'q-mid-c', 'p-mid-c', 'v-mid-c', 'p-fan-mid-c', 'q-rtd-c',
+        'p-fan-rtd-c', 'v-fan-rtd-c', 'p-rtd-c', 'spec',
+    )]
+def test_get_cooling_electricity_type2_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.jjj_dc_a, 'calc_E_E_C_d_t_type2', lambda *args: calls.append(args) or 'electricity')
+    setting = SimpleNamespace(type='type')
+    house = SimpleNamespace(region=6)
+    cool = SimpleNamespace(e_rtd='e-rtd-c', q_rtd='q-rtd-c', q_max='q-max-c', input_C_af='c-af-c', dualcompressor='dual-c')
+
+    result = experiment_main._get_cooling_electricity_type2(
+        setting, house, 'climate.csv', 'fan', 'q-cs', 'q-cl', cool
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'type', 6, 'climate.csv', 'fan', 'q-cs', 'q-cl', 'e-rtd-c',
+        'q-rtd-c', 'q-max-c', 'c-af-c', 'dual-c',
+    )]
+def test_get_cooling_electricity_type4_preserves_argument_order_and_capacity_sum(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.jjj_dc_a, 'calc_E_E_C_d_t_type4', lambda *args: calls.append(args) or 'electricity')
+    setting = SimpleNamespace(type='type')
+    house = SimpleNamespace(region=6)
+
+    result = experiment_main._get_cooling_electricity_type4(
+        'case', setting, house, 'climate.csv', 'fan', 2.0, 3.0, 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner'
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'case', 'type', 6, 'climate.csv', 'fan', 5.0, 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner',
+    )]
+def test_summarize_primary_energy_preserves_formula_sum_and_log_order(monkeypatch):
+    events = []
+    monkeypatch.setattr(experiment_main, 'get_f_prim', lambda: 9000.0)
+    monkeypatch.setattr(experiment_main._logger, 'info', lambda message: events.append(('log', message)))
+    monkeypatch.setattr('builtins.print', lambda *args: events.append(('print', args)))
+
+    result = experiment_main._summarize_primary_energy(
+        np.array([1.0, 2.0]), np.array([10.0, 20.0]),
+        np.array([3.0, 4.0]), np.array([30.0, 40.0]),
+    )
+
+    np.testing.assert_array_equal(result[0], np.array([19.0, 38.0]))
+    np.testing.assert_array_equal(result[1], np.array([57.0, 76.0]))
+    assert result[2:] == (57.0, 133.0)
+    assert events == [
+        ('log', 'E_H [MJ/year]: 57.0'),
+        ('log', 'E_C [MJ/year]: 133.0'),
+        ('print', ('E_H [MJ/year]: ', 57.0, ', E_C [MJ/year]: ', 133.0)),
+    ]
+def test_write_outputs_and_build_test_result_preserves_csv_columns_and_return_contract(monkeypatch):
+    writes = []
+    monkeypatch.setattr(experiment_main.jjj_consts, 'version_info', lambda: '_v')
+    monkeypatch.setattr(pd.DataFrame, 'to_csv', lambda self, path, encoding: writes.append((self.copy(), path, encoding)))
+    monkeypatch.setattr(experiment_main, 'SutValues', lambda *args: ('input', args))
+    monkeypatch.setattr(experiment_main, 'ResultSummary', lambda *args: ('result', args))
+    values = np.array([1.0, 2.0])
+    output2 = pd.DataFrame({'heating-base': values})
+    climate = SimpleNamespace(get_Theta_ex_d_t=lambda: values + 1.0)
+    cool = SimpleNamespace(q_rtd=1.0, q_max=2.0, e_rtd=3.0)
+    heat = SimpleNamespace(q_rtd=4.0, q_max=5.0, e_rtd=6.0)
+
+    result = experiment_main._write_outputs_and_build_test_result(
+        'case', output2, climate, True, cool, heat, 100.0, 200.0,
+        values + 2, values + 3, values + 4, values + 5, values + 6, values + 7,
+        values + 8, values + 9, values + 10, values + 11, values + 12,
+        values + 13, values + 14, values + 15, values + 16, values + 17,
+        values + 18, values + 19,
+    )
+
+    assert result == {
+        'TInput': ('input', (1.0, 4.0, 2.0, 5.0, 3.0, 6.0)),
+        'TValue': ('result', (100.0, 200.0)),
+    }
+    assert [(path, encoding) for _, path, encoding in writes] == [
+        ('case_v_output1.csv', 'cp932'),
+        ('case_v_output2.csv', 'cp932'),
+    ]
+    assert list(writes[0][0].columns) == ['E_H [MJ/year]', 'E_C [MJ/year]']
+    assert list(writes[1][0].columns) == [
+        'heating-base',
+        'Theta_hs_C_out_d_t [℃]', 'Theta_hs_C_in_d_t [℃]', 'Theta_ex_d_t [℃]',
+        'V_hs_supply_C_d_t [m3/h]', 'V_hs_vent_C_d_t [m3/h]',
+        'E_H_d_t [MJ/h]', 'E_C_d_t [MJ/h]', 'E_E_H_d_t [kWh/h]', 'E_E_C_d_t [kWh/h]',
+        'E_UT_H_d_t [MJ/h]', 'E_UT_C_d_t [MJ/h]', 'L_H_d_t [MJ/h]',
+        'L_CS_d_t [MJ/h]', 'L_CL_d_t [MJ/h]', 'E_E_fan_H_d_t [kWh/h]',
+        'E_E_fan_C_d_t [kWh/h]', 'q_hs_H_d_t [Wh/h]', 'q_hs_CS_d_t [Wh/h]',
+        'q_hs_CL_d_t [Wh/h]',
+    ]
