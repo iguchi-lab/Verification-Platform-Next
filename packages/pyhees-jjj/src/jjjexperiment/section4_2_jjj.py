@@ -697,6 +697,21 @@ class _CarryoverUnderfloorSupplyTemperatureInputs(NamedTuple):
     Theta_ex_d_t: object
     V_dash_supply_d_t_i: object
 
+
+class _NewUnderfloorRequestedTemperatureInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    new_ufac: object
+    new_ufac_df: object
+    Theta_req_d_t_i: object
+    Theta_ex_d_t: object
+    V_dash_supply_d_t_i: object
+    Theta_in_d_t: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1777,21 +1792,20 @@ def _adjust_carryover_underfloor_supply_temperatures(inputs: _CarryoverUnderfloo
 
     return Theta_supply_d_t_i
 
-def _get_new_underfloor_requested_temperatures(
-        ac_setting,
-        house,
-        skin,
-        load,
-        new_ufac,
-        new_ufac_df,
-        Theta_req_d_t_i,
-        Theta_ex_d_t,
-        V_dash_supply_d_t_i,
-        Theta_in_d_t,
-        L_star_H_d_t_i,
-        L_star_CS_d_t_i,
-    ):
+def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTemperatureInputs):
     """Apply the new-underfloor first pass without changing its calculation order."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Theta_in_d_t = inputs.Theta_in_d_t
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     # 期待される床下温度を事前に計算(本計算は後で行う)
     Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(
         L_star_H_d_t_i, L_star_CS_d_t_i, house.A_A, house.A_MR,
@@ -2779,10 +2793,10 @@ def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirem
     X_req_d_t_i = outlet_requirements.X_req_d_t_i
     Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(
+        Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(_NewUnderfloorRequestedTemperatureInputs(
             ac_setting, house, skin, load, new_ufac, new_ufac_df,
             Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i,
-            Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i)
+            Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i))
     elif skin.underfloor_air_conditioning_air_supply:
         Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(_LegacyUnderfloorRequestedTemperatureInputs(
             ac_setting, house, skin, load, skin.r_A_ufac,

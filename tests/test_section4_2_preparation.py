@@ -1799,11 +1799,11 @@ def test_new_underfloor_requested_temperatures_preserve_reverse_solve_and_limits
     monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *_: heating_capacity)
     monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *_: cooling_capacity)
 
-    result = sut._get_new_underfloor_requested_temperatures(
+    result = sut._get_new_underfloor_requested_temperatures(sut._NewUnderfloorRequestedTemperatureInputs(
         _setting(setting_type), house, skin, load, new_ufac, frame,
         theta_req, theta_ex, airflows, np.array([limit]),
         l_star_h, l_star_cs
-    )
+    ))
 
     np.testing.assert_array_equal(result[0], np.full(8760, expected_first))
     np.testing.assert_array_equal(result[1], np.full(8760, expected_first))
