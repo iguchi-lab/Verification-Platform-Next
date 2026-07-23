@@ -258,6 +258,94 @@ def _set_C_hm_C(input: dict):
     C_hm_C = float(input['C_hm_C'])
 
 
+def _set_q_rtd_C_limit(input: dict):
+  if 'q_rtd_C_limit' in input:
+    global q_rtd_C_limit
+    q_rtd_C_limit = float(input['q_rtd_C_limit'])
+
+
+def _set_change_supply_volume_before_vav_adjust(input: dict):
+  if 'change_supply_volume_before_vav_adjust' in input:
+    global change_supply_volume_before_vav_adjust
+    change_supply_volume_before_vav_adjust = int(input['change_supply_volume_before_vav_adjust'])
+
+
+def _set_change_heat_source_outlet_required_temperature(input: dict):
+  if 'change_heat_source_outlet_required_temperature' in input:
+    global change_heat_source_outlet_required_temperature
+    change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
+
+
+def _set_R_g(input: dict):
+  if 'R_g' in input:
+    global R_g
+    R_g = float(input['R_g'])
+
+
+def _set_H_A_A_f_hex_small(input: dict):
+  if 'A_f_hex_small' in input['H_A']:
+    global A_f_hex_small_H
+    A_f_hex_small_H = float(input['H_A']['A_f_hex_small'])
+
+
+def _set_H_A_A_e_hex_small(input: dict):
+  if 'A_e_hex_small' in input['H_A']:
+    global A_e_hex_small_H
+    A_e_hex_small_H = float(input['H_A']['A_e_hex_small'])
+
+
+def _set_H_A_A_f_hex_large(input: dict):
+  if 'A_f_hex_large' in input['H_A']:
+    global A_f_hex_large_H
+    A_f_hex_large_H = float(input['H_A']['A_f_hex_large'])
+
+
+def _set_H_A_A_e_hex_large(input: dict):
+  if 'A_e_hex_large' in input['H_A']:
+    global A_e_hex_large_H
+    A_e_hex_large_H = float(input['H_A']['A_e_hex_large'])
+
+
+def _set_H_A_compressor_coeff(input: dict):
+  if 'compressor_coeff' in input['H_A']:
+    global a_r_H_t_t_a4
+    a_r_H_t_t_a4 = float(input['H_A']['compressor_coeff'][0])
+    global a_r_H_t_t_a3
+    a_r_H_t_t_a3 = float(input['H_A']['compressor_coeff'][1])
+    global a_r_H_t_t_a2
+    a_r_H_t_t_a2 = float(input['H_A']['compressor_coeff'][2])
+    global a_r_H_t_t_a1
+    a_r_H_t_t_a1 = float(input['H_A']['compressor_coeff'][3])
+    global a_r_H_t_t_a0
+    a_r_H_t_t_a0 = float(input['H_A']['compressor_coeff'][4])
+
+
+def _set_H_A_airvolume_minimum(input: dict):
+  if 'airvolume_minimum' in input['H_A']:
+    global airvolume_minimum_H
+    airvolume_minimum_H = float(input['H_A']['airvolume_minimum'])
+
+
+def _set_H_A_airvolume_maximum(input: dict):
+  if 'airvolume_maximum' in input['H_A']:
+    global airvolume_maximum_H
+    airvolume_maximum_H = float(input['H_A']['airvolume_maximum'])
+
+
+def _set_H_A_airvolume_coeff(input: dict):
+  if 'airvolume_coeff' in input['H_A']:
+    global airvolume_coeff_a4_H
+    airvolume_coeff_a4_H = float(input['H_A']['airvolume_coeff'][0])
+    global airvolume_coeff_a3_H
+    airvolume_coeff_a3_H = float(input['H_A']['airvolume_coeff'][1])
+    global airvolume_coeff_a2_H
+    airvolume_coeff_a2_H = float(input['H_A']['airvolume_coeff'][2])
+    global airvolume_coeff_a1_H
+    airvolume_coeff_a1_H = float(input['H_A']['airvolume_coeff'][3])
+    global airvolume_coeff_a0_H
+    airvolume_coeff_a0_H = float(input['H_A']['airvolume_coeff'][4])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -273,61 +361,21 @@ def set_constants(input: dict):
   _set_defrost_temp_rac(input)
   _set_defrost_humid_rac(input)
   _set_C_hm_C(input)
-  if 'q_rtd_C_limit' in input:
-    global q_rtd_C_limit
-    q_rtd_C_limit = float(input['q_rtd_C_limit'])
-  if 'change_supply_volume_before_vav_adjust' in input:
-    global change_supply_volume_before_vav_adjust
-    change_supply_volume_before_vav_adjust = int(input['change_supply_volume_before_vav_adjust'])
-  if 'change_heat_source_outlet_required_temperature' in input:
-    global change_heat_source_outlet_required_temperature
-    change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
-  if 'R_g' in input:
-    global R_g
-    R_g = float(input['R_g'])
+  _set_q_rtd_C_limit(input)
+  _set_change_supply_volume_before_vav_adjust(input)
+  _set_change_heat_source_outlet_required_temperature(input)
+  _set_R_g(input)
 
   #以下、潜熱評価モデル追加対応
   if 'H_A' in input:
-    if 'A_f_hex_small' in input['H_A']:
-      global A_f_hex_small_H
-      A_f_hex_small_H = float(input['H_A']['A_f_hex_small'])
-    if 'A_e_hex_small' in input['H_A']:
-      global A_e_hex_small_H
-      A_e_hex_small_H = float(input['H_A']['A_e_hex_small'])
-    if 'A_f_hex_large' in input['H_A']:
-      global A_f_hex_large_H
-      A_f_hex_large_H = float(input['H_A']['A_f_hex_large'])
-    if 'A_e_hex_large' in input['H_A']:
-      global A_e_hex_large_H
-      A_e_hex_large_H = float(input['H_A']['A_e_hex_large'])
-    if 'compressor_coeff' in input['H_A']:
-      global a_r_H_t_t_a4
-      a_r_H_t_t_a4 = float(input['H_A']['compressor_coeff'][0])
-      global a_r_H_t_t_a3
-      a_r_H_t_t_a3 = float(input['H_A']['compressor_coeff'][1])
-      global a_r_H_t_t_a2
-      a_r_H_t_t_a2 = float(input['H_A']['compressor_coeff'][2])
-      global a_r_H_t_t_a1
-      a_r_H_t_t_a1 = float(input['H_A']['compressor_coeff'][3])
-      global a_r_H_t_t_a0
-      a_r_H_t_t_a0 = float(input['H_A']['compressor_coeff'][4])
-    if 'airvolume_minimum' in input['H_A']:
-      global airvolume_minimum_H
-      airvolume_minimum_H = float(input['H_A']['airvolume_minimum'])
-    if 'airvolume_maximum' in input['H_A']:
-      global airvolume_maximum_H
-      airvolume_maximum_H = float(input['H_A']['airvolume_maximum'])
-    if 'airvolume_coeff' in input['H_A']:
-      global airvolume_coeff_a4_H
-      airvolume_coeff_a4_H = float(input['H_A']['airvolume_coeff'][0])
-      global airvolume_coeff_a3_H
-      airvolume_coeff_a3_H = float(input['H_A']['airvolume_coeff'][1])
-      global airvolume_coeff_a2_H
-      airvolume_coeff_a2_H = float(input['H_A']['airvolume_coeff'][2])
-      global airvolume_coeff_a1_H
-      airvolume_coeff_a1_H = float(input['H_A']['airvolume_coeff'][3])
-      global airvolume_coeff_a0_H
-      airvolume_coeff_a0_H = float(input['H_A']['airvolume_coeff'][4])
+    _set_H_A_A_f_hex_small(input)
+    _set_H_A_A_e_hex_small(input)
+    _set_H_A_A_f_hex_large(input)
+    _set_H_A_A_e_hex_large(input)
+    _set_H_A_compressor_coeff(input)
+    _set_H_A_airvolume_minimum(input)
+    _set_H_A_airvolume_maximum(input)
+    _set_H_A_airvolume_coeff(input)
     if 'fan_coeff' in input['H_A']:
       global P_fan_H_d_t_a4
       P_fan_H_d_t_a4 = float(input['H_A']['fan_coeff'][0])
