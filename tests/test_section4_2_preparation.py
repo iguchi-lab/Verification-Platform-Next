@@ -1614,7 +1614,7 @@ def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):
         lambda *args: calls.append(args) or 22.0,
     )
 
-    result = sut._get_actual_non_room_temperature_at_hour(
+    result = sut._get_actual_non_room_temperature_at_hour(sut._ActualNonRoomTemperatureHourInputs(
         t,
         t == 0,
         H,
@@ -1631,7 +1631,7 @@ def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):
         area_partition,
         2.7,
         theta_nr,
-    )
+    ))
 
     assert result == 22.0
     args = calls[0]
@@ -4338,4 +4338,29 @@ def test_actual_room_temperature_hour_inputs_preserve_field_order():
         "L_star_H_d_t_i",
         "L_star_CS_d_t_i",
         "Theta_HBR_d_t_i",
+    )
+
+
+def test_actual_non_room_temperature_hour_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(16))
+    inputs = sut._ActualNonRoomTemperatureHourInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "t",
+        "isFirst",
+        "H",
+        "C",
+        "M",
+        "Theta_star_NR_d_t",
+        "Theta_star_HBR_d_t",
+        "Theta_HBR_d_t_i",
+        "A_NR",
+        "V_vent_l_NR_d_t",
+        "V_dash_supply_d_t_i",
+        "V_supply_d_t_i",
+        "U_prt",
+        "A_prt_i",
+        "Q",
+        "Theta_NR_d_t",
     )

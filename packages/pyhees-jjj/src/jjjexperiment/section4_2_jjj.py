@@ -459,6 +459,25 @@ class _ActualRoomTemperatureHourInputs(NamedTuple):
     Theta_HBR_d_t_i: object
 
 
+class _ActualNonRoomTemperatureHourInputs(NamedTuple):
+    t: object
+    isFirst: object
+    H: object
+    C: object
+    M: object
+    Theta_star_NR_d_t: object
+    Theta_star_HBR_d_t: object
+    Theta_HBR_d_t_i: object
+    A_NR: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+    V_supply_d_t_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    Theta_NR_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1185,25 +1204,24 @@ def _get_actual_room_temperatures_at_hour(inputs: _ActualRoomTemperatureHourInpu
         L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
         np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
 
-def _get_actual_non_room_temperature_at_hour(
-        t: int,
-        isFirst: bool,
-        H: np.ndarray,
-        C: np.ndarray,
-        M: np.ndarray,
-        Theta_star_NR_d_t: np.ndarray,
-        Theta_star_HBR_d_t: np.ndarray,
-        Theta_HBR_d_t_i: np.ndarray,
-        A_NR: float,
-        V_vent_l_NR_d_t: np.ndarray,
-        V_dash_supply_d_t_i: np.ndarray,
-        V_supply_d_t_i: np.ndarray,
-        U_prt: float,
-        A_prt_i: np.ndarray,
-        Q: float,
-        Theta_NR_d_t: np.ndarray,
-    ) -> float:
+def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHourInputs):
     """Calculate formula (48) for one hour with its original slices."""
+    t = inputs.t
+    isFirst = inputs.isFirst
+    H = inputs.H
+    C = inputs.C
+    M = inputs.M
+    Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    A_NR = inputs.A_NR
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    U_prt = inputs.U_prt
+    A_prt_i = inputs.A_prt_i
+    Q = inputs.Q
+    Theta_NR_d_t = inputs.Theta_NR_d_t
     # (48)　実際の非居室の室温
     return jjj_carryover_heat.get_Theta_NR_2023(
         isFirst, H[t], C[t], M[t],
@@ -2954,10 +2972,10 @@ def _update_carryover_actual_temperature_state(inputs: _CarryoverActualTemperatu
         t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
         Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i))
-    Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
+    Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(_ActualNonRoomTemperatureHourInputs(
         t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
         Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
-        V_supply_d_t_i, U_prt, A_prt_i, Q, Theta_NR_d_t)
+        V_supply_d_t_i, U_prt, A_prt_i, Q, Theta_NR_d_t))
     return Theta_HBR_d_t_i, Theta_NR_d_t
 
 
