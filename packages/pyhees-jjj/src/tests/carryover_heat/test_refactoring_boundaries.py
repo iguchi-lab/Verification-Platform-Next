@@ -108,3 +108,10 @@ def test_get_Theta_HBR_i_46_preserves_season_equations():
     np.testing.assert_array_equal(middle, np.full(shape, 20.0))
     with pytest.raises(ValueError):
         section4_2._get_Theta_HBR_i_46(True, True, False, 20.0, heating_load, cooling_load, ac_capacity, c_ac_air, c_prt, heat_loss, cbri)
+
+
+def test_return_Theta_HBR_i_46_preserves_output_shape_contract():
+    temperatures = np.zeros((5, 1))
+    assert section4_2._return_Theta_HBR_i_46(temperatures) is temperatures
+    with pytest.raises(AssertionError):
+        section4_2._return_Theta_HBR_i_46(np.zeros(5))

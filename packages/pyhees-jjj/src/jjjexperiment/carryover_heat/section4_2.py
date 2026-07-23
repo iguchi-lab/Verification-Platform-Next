@@ -203,6 +203,11 @@ def _get_Theta_HBR_i_46(
     return Theta_HBR_i
 
 
+def _return_Theta_HBR_i_46(Theta_HBR_i: Array5x1) -> Array5x1:
+    assert Theta_HBR_i.shape == (5, 1), "Theta_HBR_iの行列数が想定外"
+    return Theta_HBR_i
+
+
 def get_Theta_HBR_i_2023(
         H: bool, C: bool, M: bool,
         Theta_star_HBR: float,
@@ -255,9 +260,7 @@ def get_Theta_HBR_i_2023(
         H, C, M, Theta_star_HBR, L_star_H_i, L_star_CS_i,
         ac_capacity, c_ac_air, c_prt, heat_loss, cbri,
     )
-    # 事後条件:
-    assert Theta_HBR_i.shape == (5, 1), "Theta_HBR_iの行列数が想定外"
-    return Theta_HBR_i
+    return _return_Theta_HBR_i_46(Theta_HBR_i)
 
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
