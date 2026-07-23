@@ -2,7 +2,7 @@ import importlib
 import inspect
 
 import jjjexperiment.carryover_heat as carryover_heat
-from jjjexperiment.carryover_heat import section4_2_jjj
+from jjjexperiment.carryover_heat import get_C, section4_2_jjj
 
 
 EXPECTED_FUNCTIONS = (
@@ -41,6 +41,27 @@ PUBLIC_FUNCTIONS = (
     "get_Theta_NR_2023",
 )
 
+EXPECTED_PACKAGE_PUBLIC_NAMES = {
+    "Array5",
+    "Array5x1",
+    "calc_carryover",
+    "dc",
+    "get_C",
+    "get_C_BR_i",
+    "get_C_NR",
+    "get_L_star_CS_i_2024",
+    "get_L_star_H_i_2024",
+    "get_Theta_HBR_i_2023",
+    "get_Theta_NR_2023",
+    "inputs",
+    "jjj_carryover_heat",
+    "jjj_consts",
+    "ld",
+    "log_res",
+    "np",
+    "section4_2_jjj",
+}
+
 
 def test_section4_2_preserves_25_function_boundaries():
     actual = tuple(
@@ -55,6 +76,18 @@ def test_section4_2_preserves_25_function_boundaries():
 def test_carryover_package_preserves_public_function_objects():
     for name in PUBLIC_FUNCTIONS:
         assert getattr(carryover_heat, name) is getattr(section4_2_jjj, name)
+
+
+def test_carryover_package_preserves_public_name_set():
+    assert {
+        name for name in vars(carryover_heat) if not name.startswith("_")
+    } == EXPECTED_PACKAGE_PUBLIC_NAMES
+
+
+def test_carryover_package_preserves_get_c_exports():
+    for name in ("get_C_BR_i", "get_C_NR"):
+        assert getattr(carryover_heat, name) is getattr(get_C, name)
+
 
 def test_legacy_section4_2_import_is_the_jjj_implementation_module():
     legacy = importlib.import_module("jjjexperiment.carryover_heat.section4_2")
