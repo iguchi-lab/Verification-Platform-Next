@@ -3060,8 +3060,8 @@ def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch,
     monkeypatch.setattr(sut, "_get_rac_cooling_capacity", lambda *a, **k: events.append(("rac_cool", a, k)) or cool_caps)
     monkeypatch.setattr(sut._logger, "debug", lambda message: events.append(("log", message)))
 
-    result = sut._prepare_no_carryover_capacity_state(
-        setting, *inputs[:4], Climate(), *inputs[4:])
+    result = sut._prepare_no_carryover_capacity_state(sut._NoCarryoverCapacityStateInputs(
+        setting, *inputs[:4], Climate(), *inputs[4:]))
 
     assert result[:4] == ((standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
                       if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))

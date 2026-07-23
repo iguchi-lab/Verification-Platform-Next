@@ -868,6 +868,19 @@ class _NoCarryoverBalancedLoadInputs(NamedTuple):
     Theta_ex_d_t: object
     Q_star_trs_prt_d_t_i: object
 
+
+class _NoCarryoverCapacityStateInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    heat_CRAC: object
+    cool_CRAC: object
+    load: object
+    climate: object
+    Theta_ex_d_t: object
+    h_ex_d_t: object
+    L_star_CL_d_t_i: object
+    L_star_CS_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2865,10 +2878,18 @@ def _prepare_no_carryover_balanced_loads(inputs: _NoCarryoverBalancedLoadInputs)
                 L_star_H_d_t_i, L_star_CS_d_t_i))
     return L_star_H_d_t_i, L_star_CS_d_t_i
 
-def _prepare_no_carryover_capacity_state(
-        ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
-        Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i):
+def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs):
     """Prepare heat-source capacity limits for the selected calculation model."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
+    load = inputs.load
+    climate = inputs.climate
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    h_ex_d_t = inputs.h_ex_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     L_star_CL_d_t = L_star_CS_d_t = None
     L_star_dash_CL_d_t = L_star_dash_C_d_t = None
     Q_r_max_H_d_t = Q_r_max_C_d_t = None
@@ -3863,9 +3884,9 @@ def calc_Q_UT_A(
         L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(_NoCarryoverBalancedLoadInputs(
             house, new_ufac, new_ufac_df, load, A_s_ufac_i,
             Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i))
-        capacity_state = _prepare_no_carryover_capacity_state(
+        capacity_state = _prepare_no_carryover_capacity_state(_NoCarryoverCapacityStateInputs(
             ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
-            Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
+            Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i))
         Q_hs_max_C_d_t = capacity_state.Q_hs_max_C_d_t
         Q_hs_max_CL_d_t = capacity_state.Q_hs_max_CL_d_t
         Q_hs_max_CS_d_t = capacity_state.Q_hs_max_CS_d_t
