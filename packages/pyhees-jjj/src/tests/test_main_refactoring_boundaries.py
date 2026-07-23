@@ -1,3 +1,4 @@
+import importlib
 import numpy as np
 import pandas as pd
 import pytest
@@ -273,3 +274,15 @@ def test_get_heating_capacity_and_HCM_preserves_call_order(monkeypatch):
 
     assert result == ('q-h', 'hcm')
     assert events == ['C_df', ('capacity', ('out', 'in', 'supply', 'C-df', 6)), 'HCM']
+
+def test_get_latent_heating_fan_power_preserves_model_call(monkeypatch):
+    latent = importlib.import_module('jjjexperiment.latent_load.section4_2_a')
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(latent, 'get_E_E_fan_H_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.RAC活用型全館空調_潜熱評価モデル, f_SFP=0.4)
+
+    result = experiment_main._get_latent_heating_fan_power(setting, 'vent', 'q-h')
+
+    assert result == 'fan'
+    assert events == [('print', setting.type), ('call', ('vent', 'q-h', 0.4))]

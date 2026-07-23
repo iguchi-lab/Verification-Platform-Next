@@ -317,6 +317,13 @@ def _get_heating_capacity_and_HCM(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply
     HCM = climate.get_HCM_d_t()
     return q_hs_H_d_t, HCM
 
+def _get_latent_heating_fan_power(heat_ac_setting, V_hs_vent_d_t, q_hs_H_d_t):
+    print(heat_ac_setting.type)
+    import jjjexperiment.latent_load.section4_2_a as jjj_latent_dc_a
+    return jjj_latent_dc_a.get_E_E_fan_H_d_t(
+        V_hs_vent_d_t, q_hs_H_d_t, heat_ac_setting.f_SFP
+    )
+
 @inject
 def calc_main(
     injector: Injector,
@@ -396,10 +403,7 @@ def calc_main(
     E_E_fan_H_d_t: Array8760
     # NOTE: 潜熱評価モデルはベース式が異なるため 最低風量・最低電力 直接入力ロジック反映から除外する
     if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
-        print(heat_ac_setting.type)
-
-        import jjjexperiment.latent_load.section4_2_a as jjj_latent_dc_a
-        E_E_fan_H_d_t = jjj_latent_dc_a.get_E_E_fan_H_d_t(V_hs_vent_d_t, q_hs_H_d_t, heat_ac_setting.f_SFP)
+        E_E_fan_H_d_t = _get_latent_heating_fan_power(heat_ac_setting, V_hs_vent_d_t, q_hs_H_d_t)
 
     elif heat_ac_setting.type in [
         計算モデル.ダクト式セントラル空調機,
