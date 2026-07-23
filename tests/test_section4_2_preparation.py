@@ -3242,8 +3242,8 @@ def test_prepare_carryover_outlet_requirements_preserves_first_pass(
         sut, "_adjust_legacy_underfloor_requested_temperatures",
         lambda *a: events.append(("adjust", a)) or adjusted)
 
-    result = sut._prepare_carryover_outlet_requirements(
-        inputs[0], house, skin, inputs[1], *inputs[2:])
+    result = sut._prepare_carryover_outlet_requirements(sut._CarryoverOutletRequirementInputs(
+        inputs[0], house, skin, inputs[1], *inputs[2:]))
 
     assert result == (
         humidity_min, humidity_req, adjusted if enabled else temperature_req)
@@ -4130,4 +4130,28 @@ def test_no_carryover_actual_temperature_inputs_preserve_field_order():
         "V_vent_l_NR_d_t",
         "V_dash_supply_d_t_i",
         "r_A_NR_uf_1F_excl_bath",
+    )
+
+
+def test_carryover_outlet_requirement_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(15))
+    inputs = sut._CarryoverOutletRequirementInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "ac_setting",
+        "house",
+        "skin",
+        "load",
+        "X_star_hs_in_d_t",
+        "Q_hs_max_CL_d_t",
+        "V_dash_supply_d_t_i",
+        "X_star_HBR_d_t",
+        "L_star_CL_d_t_i",
+        "Theta_sur_d_t_i",
+        "Theta_star_HBR_d_t",
+        "L_star_H_d_t_i",
+        "L_star_CS_d_t_i",
+        "l_duct_i",
+        "Theta_ex_d_t",
     )

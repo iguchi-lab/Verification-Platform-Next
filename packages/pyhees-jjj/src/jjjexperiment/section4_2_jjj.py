@@ -299,6 +299,24 @@ class _NoCarryoverActualTemperatureInputs(NamedTuple):
     r_A_NR_uf_1F_excl_bath: object
 
 
+class _CarryoverOutletRequirementInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    X_star_hs_in_d_t: object
+    Q_hs_max_CL_d_t: object
+    V_dash_supply_d_t_i: object
+    X_star_HBR_d_t: object
+    L_star_CL_d_t_i: object
+    Theta_sur_d_t_i: object
+    Theta_star_HBR_d_t: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    l_duct_i: object
+    Theta_ex_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2799,12 +2817,23 @@ def _prepare_carryover_supply_state(
     )
 
 
-def _prepare_carryover_outlet_requirements(
-        ac_setting, house, skin, load, X_star_hs_in_d_t,
-        Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
-        L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
-        L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i, Theta_ex_d_t):
+def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementInputs):
     """Prepare carryover outlet requirements and legacy first floor pass."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    X_star_hs_in_d_t = inputs.X_star_hs_in_d_t
+    Q_hs_max_CL_d_t = inputs.Q_hs_max_CL_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    X_star_HBR_d_t = inputs.X_star_HBR_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    Theta_sur_d_t_i = inputs.Theta_sur_d_t_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    l_duct_i = inputs.l_duct_i
+    Theta_ex_d_t = inputs.Theta_ex_d_t
     outlet_requirements = _get_heat_source_outlet_requirements(
         X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i,
         X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
@@ -3168,12 +3197,12 @@ def calc_Q_UT_A(
                     Theta_NR_d_t, Theta_star_hs_in_d_t)
 
             X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
-                _prepare_carryover_outlet_requirements(
+                _prepare_carryover_outlet_requirements(_CarryoverOutletRequirementInputs(
                     ac_setting, house, skin, load, X_star_hs_in_d_t,
                     Q_hs_max_CL_d_t, V_dash_supply_d_t_i, X_star_HBR_d_t,
                     L_star_CL_d_t_i, Theta_sur_d_t_i, Theta_star_HBR_d_t,
                     L_star_H_d_t_i, L_star_CS_d_t_i, l_duct_i,
-                    Theta_ex_d_t)
+                    Theta_ex_d_t))
 
             # NOTE: 過剰熱量繰越 未利用の場合では、式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
             # Theta_NR_d_t = np.zeros(24 * 365)
