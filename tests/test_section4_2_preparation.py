@@ -2215,13 +2215,13 @@ def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
         lambda: calls.append(("area_ratio",)) or r_area,
     )
 
-    actual, actual_r_area = sut._get_new_balanced_non_room_temperature(
+    actual, actual_r_area = sut._get_new_balanced_non_room_temperature(sut._NewBalancedNonRoomTemperatureInputs(
         SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
         SimpleNamespace(Q=2.7), Climate(),
         SimpleNamespace(L_H_d_t_i=load_h, L_CS_d_t_i=load_cs),
         45.0, area_partition, 0.5, vent_nr, dash_supply,
         theta_star_hbr, theta_in, theta_uf
-    )
+    ))
 
     assert actual is result
     assert actual_r_area is r_area

@@ -778,6 +778,21 @@ class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     Theta_uf_d_t: object
     r_A_NR_uf_1F_excl_bath: object
 
+
+class _NewBalancedNonRoomTemperatureInputs(NamedTuple):
+    house: object
+    skin: object
+    climate: object
+    load: object
+    A_NR: object
+    A_prt_i: object
+    U_prt: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+    Theta_star_HBR_d_t: object
+    Theta_in_d_t: object
+    Theta_uf_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2148,21 +2163,20 @@ def _get_actual_non_room_temperatures_without_carryover(inputs: _ActualNonRoomTe
         A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i, V_supply_d_t_i,
         U_prt, A_prt_i, skin.Q)
 
-def _get_new_balanced_non_room_temperature(
-        house,
-        skin,
-        climate,
-        load,
-        A_NR,
-        A_prt_i,
-        U_prt,
-        V_vent_l_NR_d_t,
-        V_dash_supply_d_t_i,
-        Theta_star_HBR_d_t,
-        Theta_in_d_t,
-        Theta_uf_d_t,
-    ):
+def _get_new_balanced_non_room_temperature(inputs: _NewBalancedNonRoomTemperatureInputs):
     """Calculate formula (52) for the new underfloor-air-conditioning path."""
+    house = inputs.house
+    skin = inputs.skin
+    climate = inputs.climate
+    load = inputs.load
+    A_NR = inputs.A_NR
+    A_prt_i = inputs.A_prt_i
+    U_prt = inputs.U_prt
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_in_d_t = inputs.Theta_in_d_t
+    Theta_uf_d_t = inputs.Theta_uf_d_t
     V_dash_supply_d_t_A = np.sum(V_dash_supply_d_t_i[0:5, :], axis=0)
     L_H_NR_d_t_A = np.sum(load.L_H_d_t_i[5:, :], axis=0)
     L_CS_NR_d_t_A = np.sum(load.L_CS_d_t_i[5:, :], axis=0)
@@ -2656,7 +2670,7 @@ def _prepare_balanced_non_room_temperature(inputs: _BalancedNonRoomTemperatureIn
     r_A_NR_uf_1F_excl_bath = None
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
-            _get_new_balanced_non_room_temperature(
+            _get_new_balanced_non_room_temperature(_NewBalancedNonRoomTemperatureInputs(
                 house,
                 skin,
                 climate,
@@ -2669,7 +2683,7 @@ def _prepare_balanced_non_room_temperature(inputs: _BalancedNonRoomTemperatureIn
                 Theta_star_HBR_d_t,
                 Theta_in_d_t,
                 Theta_uf_d_t,
-            )
+            ))
     else:
         Theta_star_NR_d_t = dc.get_Theta_star_NR_d_t(
             Theta_star_HBR_d_t,
