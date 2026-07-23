@@ -608,6 +608,22 @@ def _get_cooling_electricity_type1_and_type3(cool_ac_setting, house, E_E_fan_C_d
             cool_ac_setting.equipment_spec,
         )
     )
+def _get_cooling_electricity_type2(cool_ac_setting, house, climateFile, E_E_fan_C_d_t, q_hs_CS_d_t, q_hs_CL_d_t, cool_CRAC):
+    return jjj_dc_a.calc_E_E_C_d_t_type2(
+        *_CoolingType2ElectricityInputs(
+            cool_ac_setting.type,
+            house.region,
+            climateFile,
+            E_E_fan_C_d_t,
+            q_hs_CS_d_t,
+            q_hs_CL_d_t,
+            cool_CRAC.e_rtd,
+            cool_CRAC.q_rtd,
+            cool_CRAC.q_max,
+            cool_CRAC.input_C_af,
+            cool_CRAC.dualcompressor,
+        )
+    )
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -879,20 +895,14 @@ def calc_main(
             cool_quantity,
         )
     elif cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
-        E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type2(
-            *_CoolingType2ElectricityInputs(
-                cool_ac_setting.type,
-                house.region,
-                climateFile,
-                E_E_fan_C_d_t,
-                q_hs_CS_d_t,
-                q_hs_CL_d_t,
-                cool_CRAC.e_rtd,
-                cool_CRAC.q_rtd,
-                cool_CRAC.q_max,
-                cool_CRAC.input_C_af,
-                cool_CRAC.dualcompressor,
-            )
+        E_E_C_d_t = _get_cooling_electricity_type2(
+            cool_ac_setting,
+            house,
+            climateFile,
+            E_E_fan_C_d_t,
+            q_hs_CS_d_t,
+            q_hs_CL_d_t,
+            cool_CRAC,
         )
     elif cool_ac_setting.type == 計算モデル.電中研モデル:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type4(

@@ -621,3 +621,19 @@ def test_get_cooling_electricity_type1_and_type3_preserves_argument_order(monkey
         'q-min-c', 'q-mid-c', 'p-mid-c', 'v-mid-c', 'p-fan-mid-c', 'q-rtd-c',
         'p-fan-rtd-c', 'v-fan-rtd-c', 'p-rtd-c', 'spec',
     )]
+def test_get_cooling_electricity_type2_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.jjj_dc_a, 'calc_E_E_C_d_t_type2', lambda *args: calls.append(args) or 'electricity')
+    setting = SimpleNamespace(type='type')
+    house = SimpleNamespace(region=6)
+    cool = SimpleNamespace(e_rtd='e-rtd-c', q_rtd='q-rtd-c', q_max='q-max-c', input_C_af='c-af-c', dualcompressor='dual-c')
+
+    result = experiment_main._get_cooling_electricity_type2(
+        setting, house, 'climate.csv', 'fan', 'q-cs', 'q-cl', cool
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'type', 6, 'climate.csv', 'fan', 'q-cs', 'q-cl', 'e-rtd-c',
+        'q-rtd-c', 'q-max-c', 'c-af-c', 'dual-c',
+    )]
