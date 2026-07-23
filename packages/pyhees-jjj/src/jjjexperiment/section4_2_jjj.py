@@ -902,6 +902,13 @@ class _UnderfloorOutputExportInputs(NamedTuple):
     new_ufac: object
     new_ufac_df: object
 
+
+class _ActualLoadOutputRecordInputs(NamedTuple):
+    df_output: object
+    L_dash_CL_d_t_i: object
+    L_dash_CS_d_t_i: object
+    L_dash_H_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1854,12 +1861,11 @@ def _record_supply_state_outputs(inputs: _SupplyStateOutputRecordInputs):
         Theta_NR_d_t=Theta_NR_d_t,
     )
 
-def _record_actual_load_outputs(
-        df_output: pd.DataFrame,
-        L_dash_CL_d_t_i: np.ndarray,
-        L_dash_CS_d_t_i: np.ndarray,
-        L_dash_H_d_t_i: np.ndarray,
-    ) -> pd.DataFrame:
+def _record_actual_load_outputs(inputs: _ActualLoadOutputRecordInputs):
+    df_output = inputs.df_output
+    L_dash_CL_d_t_i = inputs.L_dash_CL_d_t_i
+    L_dash_CS_d_t_i = inputs.L_dash_CS_d_t_i
+    L_dash_H_d_t_i = inputs.L_dash_H_d_t_i
     df_output = df_output.assign(
         L_dash_CL_d_t_1=L_dash_CL_d_t_i[0],
         L_dash_CL_d_t_2=L_dash_CL_d_t_i[1],
@@ -3164,8 +3170,8 @@ def _prepare_actual_load_state(
     L_dash_CL_d_t_i = actual_loads.L_dash_CL_d_t_i
     L_dash_CS_d_t_i = actual_loads.L_dash_CS_d_t_i
     L_dash_H_d_t_i = actual_loads.L_dash_H_d_t_i
-    df_output = _record_actual_load_outputs(
-        df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i)
+    df_output = _record_actual_load_outputs(_ActualLoadOutputRecordInputs(
+        df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i))
     return (
         L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i, df_output,
     )
