@@ -192,6 +192,12 @@ def _log_equipment_specs(cool_CRAC, heat_CRAC):
     _logger.info(f"q_max_H [w]: {heat_CRAC.q_max}")
     _logger.info(f"e_rtd_H [-]: {heat_CRAC.e_rtd}")
 
+def _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_setting):
+    climate = ClimateService(house.region, ufac, climateFile)
+    heat_quantity = HeatQuantityService(heat_ac_setting, house.region, house.A_A)
+    cool_quantity = CoolQuantityService(cool_ac_setting, house.region, house.A_A)
+    return climate, heat_quantity, cool_quantity
+
 @inject
 def calc_main(
     injector: Injector,
@@ -218,9 +224,7 @@ def calc_main(
     _log_equipment_specs(cool_CRAC, heat_CRAC)
 
     # ドメインサービス
-    climate = ClimateService(house.region, ufac, climateFile)
-    heat_quantity = HeatQuantityService(heat_ac_setting, house.region, house.A_A)
-    cool_quantity = CoolQuantityService(cool_ac_setting, house.region, house.A_A)
+    climate, heat_quantity, cool_quantity = _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_setting)
 
     H_MR = None
     """主たる居室暖房機器"""

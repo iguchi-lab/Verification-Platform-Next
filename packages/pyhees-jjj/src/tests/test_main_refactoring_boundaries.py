@@ -25,3 +25,19 @@ def test_log_equipment_specs_preserves_print_and_log_order(monkeypatch):
         "q_max_H [w]: 5.0",
         "e_rtd_H [-]: 6.0",
     ]
+
+def test_create_domain_services_preserves_constructor_arguments(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main, 'ClimateService', lambda *args: calls.append(('climate', args)) or 'climate')
+    monkeypatch.setattr(experiment_main, 'HeatQuantityService', lambda *args: calls.append(('heat', args)) or 'heat')
+    monkeypatch.setattr(experiment_main, 'CoolQuantityService', lambda *args: calls.append(('cool', args)) or 'cool')
+    house = SimpleNamespace(region=6, A_A=120.0)
+
+    result = experiment_main._create_domain_services(house, 'ufac', 'climate.csv', 'heat-setting', 'cool-setting')
+
+    assert result == ('climate', 'heat', 'cool')
+    assert calls == [
+        ('climate', (6, 'ufac', 'climate.csv')),
+        ('heat', ('heat-setting', 6, 120.0)),
+        ('cool', ('cool-setting', 6, 120.0)),
+    ]
