@@ -343,3 +343,7 @@ def test_get_minimum_power_heating_fan_preserves_input_tuple(monkeypatch):
         ('print', experiment_main.最低電力直接入力.入力する),
         ('call', ('logic', 100.0, 'vent', 'supply', 300.0, 0.2, 6, False)),
     ]
+
+def test_raise_invalid_heating_fan_input_preserves_value_error():
+    with pytest.raises(ValueError):
+        experiment_main._raise_invalid_heating_fan_input()

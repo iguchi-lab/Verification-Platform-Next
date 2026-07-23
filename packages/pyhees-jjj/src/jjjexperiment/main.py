@@ -379,6 +379,9 @@ def _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating
         False,
     ))
 
+def _raise_invalid_heating_fan_input():
+    raise ValueError
+
 @inject
 def calc_main(
     injector: Injector,
@@ -482,11 +485,11 @@ def calc_main(
                     case 最低電力直接入力.入力する:
                         E_E_fan_H_d_t = _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating_input, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, house.region)
                     case _:
-                        raise ValueError
+                        _raise_invalid_heating_fan_input()
             case _:
-                raise ValueError
+                _raise_invalid_heating_fan_input()
     else:
-        raise ValueError
+        _raise_invalid_heating_fan_input()
 
     E_E_H_d_t: np.ndarray
     """日付dの時刻tにおける1時間当たり 暖房時の消費電力量 [kWh/h]"""
