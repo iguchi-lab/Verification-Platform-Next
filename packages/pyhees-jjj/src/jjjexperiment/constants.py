@@ -438,6 +438,20 @@ def _set_C_A_airvolume_coeff(input: dict):
     airvolume_coeff_a0_C = float(input['C_A']['airvolume_coeff'][4])
 
 
+def _set_C_A_fan_coeff(input: dict):
+  if 'fan_coeff' in input['C_A']:
+    global P_fan_C_d_t_a4
+    P_fan_C_d_t_a4 = float(input['C_A']['fan_coeff'][0])
+    global P_fan_C_d_t_a3
+    P_fan_C_d_t_a3 = float(input['C_A']['fan_coeff'][1])
+    global P_fan_C_d_t_a2
+    P_fan_C_d_t_a2 = float(input['C_A']['fan_coeff'][2])
+    global P_fan_C_d_t_a1
+    P_fan_C_d_t_a1 = float(input['C_A']['fan_coeff'][3])
+    global P_fan_C_d_t_a0
+    P_fan_C_d_t_a0 = float(input['C_A']['fan_coeff'][4])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -479,15 +493,5 @@ def set_constants(input: dict):
     _set_C_A_airvolume_minimum(input)
     _set_C_A_airvolume_maximum(input)
     _set_C_A_airvolume_coeff(input)
-    if 'fan_coeff' in input['C_A']:
-      global P_fan_C_d_t_a4
-      P_fan_C_d_t_a4 = float(input['C_A']['fan_coeff'][0])
-      global P_fan_C_d_t_a3
-      P_fan_C_d_t_a3 = float(input['C_A']['fan_coeff'][1])
-      global P_fan_C_d_t_a2
-      P_fan_C_d_t_a2 = float(input['C_A']['fan_coeff'][2])
-      global P_fan_C_d_t_a1
-      P_fan_C_d_t_a1 = float(input['C_A']['fan_coeff'][3])
-      global P_fan_C_d_t_a0
-      P_fan_C_d_t_a0 = float(input['C_A']['fan_coeff'][4])
+    _set_C_A_fan_coeff(input)
   override_CR(input)
