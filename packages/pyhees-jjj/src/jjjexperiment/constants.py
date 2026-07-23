@@ -366,6 +366,12 @@ def _set_C_A_A_f_hex_small(input: dict):
     A_f_hex_small_C = float(input['C_A']['A_f_hex_small'])
 
 
+def _set_C_A_A_e_hex_small(input: dict):
+  if 'A_e_hex_small' in input['C_A']:
+    global A_e_hex_small_C
+    A_e_hex_small_C = float(input['C_A']['A_e_hex_small'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -399,9 +405,7 @@ def set_constants(input: dict):
     _set_H_A_fan_coeff(input)
   if 'C_A' in input:
     _set_C_A_A_f_hex_small(input)
-    if 'A_e_hex_small' in input['C_A']:
-      global A_e_hex_small_C
-      A_e_hex_small_C = float(input['C_A']['A_e_hex_small'])
+    _set_C_A_A_e_hex_small(input)
     if 'A_f_hex_large' in input['C_A']:
       global A_f_hex_large_C
       A_f_hex_large_C = float(input['C_A']['A_f_hex_large'])

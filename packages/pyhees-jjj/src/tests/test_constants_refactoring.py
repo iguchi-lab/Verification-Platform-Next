@@ -137,6 +137,7 @@ def test_set_constants_coefficient_boundary(section, nested_key, targets):
   ('nested_key', 'target', 'value', 'expected'),
   [
     ('A_f_hex_small', 'A_f_hex_small_C', '2.75', 2.75),
+    ('A_e_hex_small', 'A_e_hex_small_C', '2.75', 2.75),
   ],
 )
 def test_set_constants_C_A_float_boundary(nested_key, target, value, expected):
