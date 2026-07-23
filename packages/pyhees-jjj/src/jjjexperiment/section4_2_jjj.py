@@ -801,6 +801,15 @@ class _PartitionHeatTransferInputs(NamedTuple):
     Theta_star_HBR_d_t: object
     Theta_star_NR_d_t: object
 
+
+class _PartitionStateInputs(NamedTuple):
+    df_output2: object
+    df_output3: object
+    house: object
+    skin: object
+    A_HCZ_i: object
+    A_NR: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2376,8 +2385,14 @@ def _prepare_general_ventilation_state(
     df_output2['V_vent_g_i'] = V_vent_g_i
     return V_vent_g_i
 
-def _prepare_partition_state(df_output2, df_output3, house, skin, A_HCZ_i, A_NR):
+def _prepare_partition_state(inputs: _PartitionStateInputs):
     """Calculate formulas (61) and (60) and preserve direct output writes."""
+    df_output2 = inputs.df_output2
+    df_output3 = inputs.df_output3
+    house = inputs.house
+    skin = inputs.skin
+    A_HCZ_i = inputs.A_HCZ_i
+    A_NR = inputs.A_NR
     U_prt = dc.get_U_prt()
     df_output3['U_prt'] = [U_prt]
     A_prt_i = dc.get_A_prt_i(
@@ -3545,8 +3560,8 @@ def calc_Q_UT_A(
         df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i)
 
     # (61)　間仕切の熱貫流率
-    U_prt, A_prt_i = _prepare_partition_state(
-        df_output2, df_output3, house, skin, A_HCZ_i, A_NR)
+    U_prt, A_prt_i = _prepare_partition_state(_PartitionStateInputs(
+        df_output2, df_output3, house, skin, A_HCZ_i, A_NR))
 
     # (59), (58), (57), (56)　等価外気温度とダクト長さ
     Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i = \

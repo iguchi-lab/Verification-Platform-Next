@@ -2590,7 +2590,7 @@ def test_prepare_partition_state_preserves_formula_61_60_order(monkeypatch):
     house = SimpleNamespace(A_MR=30.0, A_OR=50.0)
     skin = SimpleNamespace(r_env=0.4)
     hcz, a_nr = object(), 40.0
-    result = sut._prepare_partition_state(Frame("df2"), Frame("df3"), house, skin, hcz, a_nr)
+    result = sut._prepare_partition_state(sut._PartitionStateInputs(Frame("df2"), Frame("df3"), house, skin, hcz, a_nr))
     assert result == (u_value, areas)
     assert [e[0] for e in events] == ["U", "write", "A", "write", "write"]
     assert events[2] == ("A", (hcz, 0.4, 30.0, 40.0, 50.0))
