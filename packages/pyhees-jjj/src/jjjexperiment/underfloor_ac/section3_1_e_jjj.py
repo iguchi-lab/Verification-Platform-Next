@@ -49,6 +49,14 @@ def _validate_r_A_ufvnt(r_A_ufvnt):
     if r_A_ufvnt is None or r_A_ufvnt == 0:
         raise ValueError("床下空調に使用する面積の割合が有効な値になっていない.")
 
+def _get_floor_area_and_supply(A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, endi):
+    A_s_ufvnt = sum([algo.calc_A_s_ufvnt_i(i, r_A_ufvnt, A_A, A_MR, A_OR) for i in range(1, endi + 1)])
+    r_A_uf_i = np.array([algo.get_r_A_uf_i(i) for i in range(1, endi + 1)])
+    V_dash_supply_flr1st_d_t = np.sum(
+        r_A_uf_i[:endi, np.newaxis] * V_dash_supply_d_t_i[:endi, :], axis=0
+    )
+    return A_s_ufvnt, r_A_uf_i, V_dash_supply_flr1st_d_t
+
 @log_res(['Theta_uf_d_t'])
 def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t):
     """定常状態での床下温度を求める
@@ -82,13 +90,7 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
     # (暖冷房負荷 - 床下への損失 = 床下からの吹出 + 床下からの貫流) で θuf について解く
 
     # 当該住戸の暖冷房区画iの空気を供給する床下空間に接する床の面積 (m2) (7)
-    A_s_ufvnt = sum([algo.calc_A_s_ufvnt_i(i, r_A_ufvnt, A_A, A_MR, A_OR) for i in range(1, endi+1)])
-
-    # 暖冷房区画iの床面積のうち床下空間に接する床面積の割合 (-)
-    r_A_uf_i = np.array([algo.get_r_A_uf_i(i) for i in range(1, endi+1)])
-    # 床下への供給風量の合計
-    V_dash_supply_flr1st_d_t  \
-      = np.sum(r_A_uf_i[:endi, np.newaxis] * V_dash_supply_d_t_i[:endi, :], axis=0)
+    A_s_ufvnt, r_A_uf_i, V_dash_supply_flr1st_d_t = _get_floor_area_and_supply(A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, endi)
 
     H = Theta_ex_d_t < Theta_in_H
     C = Theta_ex_d_t > Theta_in_C
