@@ -949,6 +949,17 @@ class _UnprocessedLoadStateInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_dash_H_d_t_i: object
 
+
+class _ActualLoadStateInputs(NamedTuple):
+    df_output: object
+    carryover_heat_dto: object
+    V_supply_d_t_i: object
+    X_HBR_d_t_i: object
+    X_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    Theta_HBR_d_t_i: object
+    region: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3214,10 +3225,16 @@ def _prepare_unprocessed_load_state(inputs: _UnprocessedLoadStateInputs):
     return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, df_output
 
 
-def _prepare_actual_load_state(
-        df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
-        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
+def _prepare_actual_load_state(inputs: _ActualLoadStateInputs):
     """Calculate and record actual cooling and heating loads."""
+    df_output = inputs.df_output
+    carryover_heat_dto = inputs.carryover_heat_dto
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    X_HBR_d_t_i = inputs.X_HBR_d_t_i
+    X_supply_d_t_i = inputs.X_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    region = inputs.region
     actual_loads = _get_actual_loads(_ActualLoadsInputs(
         carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region))
@@ -4092,10 +4109,10 @@ def calc_Q_UT_A(
         L_dash_CS_d_t_i,
         L_dash_H_d_t_i,
         df_output,
-    ) = _prepare_actual_load_state(
+    ) = _prepare_actual_load_state(_ActualLoadStateInputs(
         df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i,
-        house.region)
+        house.region))
     """ まとめ - 未処理負荷 """
     (
         Q_UT_CL_d_t_i,

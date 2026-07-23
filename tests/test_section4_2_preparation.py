@@ -3632,7 +3632,7 @@ def test_prepare_actual_load_state_preserves_calculate_record_order(
         sut, "_record_actual_load_outputs",
         lambda *args: events.append(("record", args)) or recorded)
 
-    result = sut._prepare_actual_load_state(original, *inputs)
+    result = sut._prepare_actual_load_state(sut._ActualLoadStateInputs(original, *inputs))
 
     assert result == (*loads, recorded)
     assert events == [
