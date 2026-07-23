@@ -2882,8 +2882,8 @@ def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monke
         lambda *args: events.append(("formula", args)) or value,
     )
 
-    result = sut._prepare_balanced_non_room_humidity(
-        frame, house, load, *inputs)
+    result = sut._prepare_balanced_non_room_humidity(sut._BalancedNonRoomHumidityInputs(
+        frame, house, load, *inputs))
 
     assert result is value
     assert events[0] == (

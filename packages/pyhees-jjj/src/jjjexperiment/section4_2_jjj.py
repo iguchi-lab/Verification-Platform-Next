@@ -837,6 +837,16 @@ class _RatedHeatSourceCapacityStateInputs(NamedTuple):
     heat_CRAC: object
     cool_CRAC: object
 
+
+class _BalancedNonRoomHumidityInputs(NamedTuple):
+    df_output: object
+    house: object
+    load: object
+    X_star_HBR_d_t: object
+    L_wtr: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2699,10 +2709,15 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
 
 
 
-def _prepare_balanced_non_room_humidity(
-        df_output, house, load, X_star_HBR_d_t, L_wtr,
-        V_vent_l_NR_d_t, V_dash_supply_d_t_i):
+def _prepare_balanced_non_room_humidity(inputs: _BalancedNonRoomHumidityInputs):
     """Calculate formula (53) and preserve its direct output write."""
+    df_output = inputs.df_output
+    house = inputs.house
+    load = inputs.load
+    X_star_HBR_d_t = inputs.X_star_HBR_d_t
+    L_wtr = inputs.L_wtr
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     X_star_NR_d_t = dc.get_X_star_NR_d_t(
         X_star_HBR_d_t,
         load.L_CL_d_t_i,
@@ -3694,9 +3709,9 @@ def calc_Q_UT_A(
     df_output = pre_vav_state.df_output
 
     # (53)　負荷バランス時の非居室の絶対湿度
-    X_star_NR_d_t = _prepare_balanced_non_room_humidity(
+    X_star_NR_d_t = _prepare_balanced_non_room_humidity(_BalancedNonRoomHumidityInputs(
         df_output, house, load, X_star_HBR_d_t, L_wtr,
-        V_vent_l_NR_d_t, V_dash_supply_d_t_i)
+        V_vent_l_NR_d_t, V_dash_supply_d_t_i))
     # (52)　負荷バランス時の非居室の室温
     Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
         _prepare_balanced_non_room_temperature(_BalancedNonRoomTemperatureInputs(
