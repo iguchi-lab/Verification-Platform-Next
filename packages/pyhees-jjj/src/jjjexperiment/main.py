@@ -581,6 +581,9 @@ def _get_minimum_power_cooling_fan(cool_ac_setting, cool_quantity, v_min_cooling
         region,
         True,
     ))
+def _raise_invalid_cooling_fan_input():
+    raise ValueError
+
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -826,11 +829,11 @@ def calc_main(
                             house.region,
                         )
                     case _:
-                        raise ValueError
+                        _raise_invalid_cooling_fan_input()
             case _:
-                raise ValueError
+                _raise_invalid_cooling_fan_input()
     else:
-        raise ValueError
+        _raise_invalid_cooling_fan_input()
 
     E_E_C_d_t: np.ndarray
     """日付dの時刻tにおける1時間当たりの冷房時の消費電力量(kWh/h)"""
