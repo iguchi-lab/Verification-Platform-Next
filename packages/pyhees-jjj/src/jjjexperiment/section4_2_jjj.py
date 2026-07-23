@@ -881,6 +881,13 @@ class _NoCarryoverCapacityStateInputs(NamedTuple):
     L_star_CL_d_t_i: object
     L_star_CS_d_t_i: object
 
+
+class _RatedHeatSourceCapacitiesInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    heat_CRAC: object
+    cool_CRAC: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1012,12 +1019,11 @@ def _select_minimum_airflow_input(
             raise ValueError
 
 
-def _get_rated_heat_source_capacities(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        heat_CRAC: HeatCRACSpec,
-        cool_CRAC: CoolCRACSpec,
-    ) -> tuple[float | None, float | None]:
+def _get_rated_heat_source_capacities(inputs: _RatedHeatSourceCapacitiesInputs):
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル
@@ -2591,12 +2597,12 @@ def _prepare_rated_heat_source_capacity_state(inputs: _RatedHeatSourceCapacitySt
     house = inputs.house
     heat_CRAC = inputs.heat_CRAC
     cool_CRAC = inputs.cool_CRAC
-    rated_capacities = _get_rated_heat_source_capacities(
+    rated_capacities = _get_rated_heat_source_capacities(_RatedHeatSourceCapacitiesInputs(
         ac_setting,
         house,
         heat_CRAC,
         cool_CRAC,
-    )
+    ))
     Q_hs_rtd_H = rated_capacities.Q_hs_rtd_H
     Q_hs_rtd_C = rated_capacities.Q_hs_rtd_C
     df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]

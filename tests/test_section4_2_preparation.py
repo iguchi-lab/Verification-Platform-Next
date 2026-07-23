@@ -135,12 +135,12 @@ def test_rated_heat_source_capacities_use_quantity_services(monkeypatch, model):
         lambda value: calls.append(("H", value)) or value + 1.0,
     )
 
-    result = sut._get_rated_heat_source_capacities(
+    result = sut._get_rated_heat_source_capacities(sut._RatedHeatSourceCapacitiesInputs(
         setting,
         house,
         SimpleNamespace(q_rtd=300.0),
         SimpleNamespace(q_rtd=400.0),
-    )
+    ))
 
     assert result == (101.0, 202.0)
     assert calls == [("C", 200.0), ("H", 100.0)]
@@ -166,12 +166,12 @@ def test_rated_heat_source_capacities_use_equipment_ratings(monkeypatch, model):
         lambda value: calls.append(("H", value)) or value + 1.0,
     )
 
-    result = sut._get_rated_heat_source_capacities(
+    result = sut._get_rated_heat_source_capacities(sut._RatedHeatSourceCapacitiesInputs(
         SimpleNamespace(type=model),
         object(),
         SimpleNamespace(q_rtd=300.0),
         SimpleNamespace(q_rtd=400.0),
-    )
+    ))
 
     assert result == (301.0, 402.0)
     assert calls == [("C", 400.0), ("H", 300.0)]
@@ -179,12 +179,12 @@ def test_rated_heat_source_capacities_use_equipment_ratings(monkeypatch, model):
 
 def test_rated_heat_source_capacities_reject_unknown_model():
     with pytest.raises(Exception, match="設備機器の種類の入力が不正です。"):
-        sut._get_rated_heat_source_capacities(
+        sut._get_rated_heat_source_capacities(sut._RatedHeatSourceCapacitiesInputs(
             SimpleNamespace(type=object()),
             object(),
             SimpleNamespace(q_rtd=300.0),
             SimpleNamespace(q_rtd=400.0),
-        )
+        ))
 
 
 @pytest.mark.parametrize(
@@ -2765,7 +2765,7 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
 
     assert result == (heating, cooling)
     assert events == [
-        ("prepare", tuple(inputs)),
+        ("prepare", (sut._RatedHeatSourceCapacitiesInputs(*inputs),)),
         ("write", "Q_hs_rtd_C", [cooling]),
         ("write", "Q_hs_rtd_H", [heating]),
     ]
