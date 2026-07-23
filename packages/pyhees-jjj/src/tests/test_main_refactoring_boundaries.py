@@ -531,3 +531,14 @@ def test_run_cooling_calc_Q_UT_A_preserves_call_capacity_and_diagnostics(monkeyp
         ('debug', 'V_hs_vent_d_t', 'vent'),
         ('capacity', ('theta-out', 'theta-in', 'x-out', 'x-in', 'supply', 6)),
     ]
+def test_get_latent_cooling_fan_power_preserves_model_call(monkeypatch):
+    latent = importlib.import_module('jjjexperiment.latent_load.section4_2_a')
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(latent, 'get_E_E_fan_C_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.RAC活用型全館空調_潜熱評価モデル, f_SFP=0.4)
+
+    result = experiment_main._get_latent_cooling_fan_power(setting, 'vent', 'q-c')
+
+    assert result == 'fan'
+    assert events == [('print', setting.type), ('call', ('vent', 'q-c', 0.4))]

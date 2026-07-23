@@ -523,6 +523,12 @@ def _run_cooling_calc_Q_UT_A(injector, cool_ac_setting, region):
         q_hs_CL_d_t,
         q_hs_C_d_t,
     )
+def _get_latent_cooling_fan_power(cool_ac_setting, V_hs_vent_d_t, q_hs_C_d_t):
+    print(cool_ac_setting.type)
+    import jjjexperiment.latent_load.section4_2_a as jjj_latent_dc_a
+    return jjj_latent_dc_a.get_E_E_fan_C_d_t(
+        V_hs_vent_d_t, q_hs_C_d_t, cool_ac_setting.f_SFP
+    )
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -718,11 +724,9 @@ def calc_main(
         q_hs_C_d_t,
     ) = _run_cooling_calc_Q_UT_A(injector, cool_ac_setting, house.region)
     if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
-        print(cool_ac_setting.type)
-
-        import jjjexperiment.latent_load.section4_2_a as jjj_latent_dc_a
-        E_E_fan_C_d_t = jjj_latent_dc_a.get_E_E_fan_C_d_t(V_hs_vent_d_t, q_hs_C_d_t, cool_ac_setting.f_SFP)
-
+        E_E_fan_C_d_t = _get_latent_cooling_fan_power(
+            cool_ac_setting, V_hs_vent_d_t, q_hs_C_d_t
+        )
     elif cool_ac_setting.type in [
         計算モデル.ダクト式セントラル空調機,
         計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
