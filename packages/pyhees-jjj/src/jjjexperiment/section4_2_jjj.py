@@ -895,6 +895,13 @@ class _RacCoolingCapacityInputs(NamedTuple):
     Theta_ex_d_t: object
     log_intermediates: object
 
+
+class _UnderfloorOutputExportInputs(NamedTuple):
+    case_name: object
+    ac_setting: object
+    new_ufac: object
+    new_ufac_df: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1718,12 +1725,11 @@ def _get_unprocessed_energy(inputs: _UnprocessedEnergyInputs):
             raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
 
 
-def _export_underfloor_output(
-        case_name: CaseName,
-        ac_setting: ActiveAcSetting,
-        new_ufac: UnderfloorAc,
-        new_ufac_df: UfVarsDataFrame,
-    ) -> None:
+def _export_underfloor_output(inputs: _UnderfloorOutputExportInputs):
+    case_name = inputs.case_name
+    ac_setting = inputs.ac_setting
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
     # 床下空調新ロジック調査用変数の出力
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
@@ -3110,8 +3116,8 @@ def _export_and_build_calculation_result(inputs: _CalculationExportInputs):
     X_hs_in_d_t = inputs.X_hs_in_d_t
     V_hs_supply_d_t = inputs.V_hs_supply_d_t
     V_hs_vent_d_t = inputs.V_hs_vent_d_t
-    _export_underfloor_output(
-        case_name, ac_setting, new_ufac, new_ufac_df)
+    _export_underfloor_output(_UnderfloorOutputExportInputs(
+        case_name, ac_setting, new_ufac, new_ufac_df))
     _export_standard_outputs(_StandardOutputExportInputs(
         case_name, ac_setting, house, df_output3, df_output2, df_output))
     return (

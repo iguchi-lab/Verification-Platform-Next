@@ -383,12 +383,12 @@ def test_export_underfloor_output_preserves_filename_and_call_order(monkeypatch)
         lambda value: calls.append(("suffix", value)) or "_H",
     )
 
-    sut._export_underfloor_output(
+    sut._export_underfloor_output(sut._UnderfloorOutputExportInputs(
         "case",
         setting,
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
         frame,
-    )
+    ))
 
     assert calls == [
         ("version",),
@@ -407,12 +407,12 @@ def test_export_underfloor_output_does_nothing_when_disabled(monkeypatch):
         export_to_csv=lambda filename: pytest.fail("CSV must not be exported")
     )
 
-    sut._export_underfloor_output(
+    sut._export_underfloor_output(sut._UnderfloorOutputExportInputs(
         "case",
         object(),
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
         frame,
-    )
+    ))
 
 @pytest.mark.parametrize(
     ("capacities", "season"),
@@ -3702,7 +3702,7 @@ def test_export_and_build_calculation_result_preserves_order(monkeypatch):
     result = sut._export_and_build_calculation_result(sut._CalculationExportInputs(*inputs))
 
     assert events == [
-        ("underfloor", (inputs[0], inputs[1], inputs[3], inputs[4])),
+        ("underfloor", (sut._UnderfloorOutputExportInputs(inputs[0], inputs[1], inputs[3], inputs[4]),)),
         ("standard", (sut._StandardOutputExportInputs(
             inputs[0], inputs[1], inputs[2],
             inputs[5], inputs[6], inputs[7]),)),
