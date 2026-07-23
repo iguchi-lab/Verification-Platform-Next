@@ -653,3 +653,22 @@ def test_get_cooling_electricity_type4_preserves_argument_order_and_capacity_sum
         'case', 'type', 6, 'climate.csv', 'fan', 5.0, 'supply',
         'p-rac-fan', 'simu-r', 'catalog', 'inner',
     )]
+def test_summarize_primary_energy_preserves_formula_sum_and_log_order(monkeypatch):
+    events = []
+    monkeypatch.setattr(experiment_main, 'get_f_prim', lambda: 9000.0)
+    monkeypatch.setattr(experiment_main._logger, 'info', lambda message: events.append(('log', message)))
+    monkeypatch.setattr('builtins.print', lambda *args: events.append(('print', args)))
+
+    result = experiment_main._summarize_primary_energy(
+        np.array([1.0, 2.0]), np.array([10.0, 20.0]),
+        np.array([3.0, 4.0]), np.array([30.0, 40.0]),
+    )
+
+    np.testing.assert_array_equal(result[0], np.array([19.0, 38.0]))
+    np.testing.assert_array_equal(result[1], np.array([57.0, 76.0]))
+    assert result[2:] == (57.0, 133.0)
+    assert events == [
+        ('log', 'E_H [MJ/year]: 57.0'),
+        ('log', 'E_C [MJ/year]: 133.0'),
+        ('print', ('E_H [MJ/year]: ', 57.0, ', E_C [MJ/year]: ', 133.0)),
+    ]

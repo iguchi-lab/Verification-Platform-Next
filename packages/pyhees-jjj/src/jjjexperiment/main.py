@@ -640,6 +640,17 @@ def _get_cooling_electricity_type4(case_name, cool_ac_setting, house, climateFil
             cool_real_inner,
         )
     )
+def _summarize_primary_energy(E_E_H_d_t, E_UT_H_d_t, E_E_C_d_t, E_UT_C_d_t):
+    f_prim = get_f_prim()
+    E_H_d_t = E_E_H_d_t * f_prim / 1000 + E_UT_H_d_t
+    E_C_d_t = E_E_C_d_t * f_prim / 1000 + E_UT_C_d_t
+    E_H = np.sum(E_H_d_t)
+    E_C = np.sum(E_C_d_t)
+
+    _logger.info(f"E_H [MJ/year]: {E_H}")
+    _logger.info(f"E_C [MJ/year]: {E_C}")
+    print('E_H [MJ/year]: ', E_H, ', E_C [MJ/year]: ', E_C)
+    return E_H_d_t, E_C_d_t, E_H, E_C
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -940,17 +951,12 @@ def calc_main(
 
     ##### 計算結果のまとめ
 
-    f_prim: float       = get_f_prim()                              # 電気の量 1kWh を熱量に換算する係数(kJ/kWh)
-    E_H_d_t: np.ndarray = E_E_H_d_t * f_prim / 1000 + E_UT_H_d_t    #1 時間当たりの暖房設備の設計一次エネルギー消費量(MJ/h)
-    E_C_d_t: np.ndarray = E_E_C_d_t * f_prim / 1000 + E_UT_C_d_t    #1 時間当たりの冷房設備の設計一次エネルギー消費量(MJ/h)
-    E_H                 = np.sum(E_H_d_t)                           #1 年当たりの暖房設備の設計一次エネルギー消費量(MJ/年)
-    E_C                 = np.sum(E_C_d_t)                           #1 年当たりの冷房設備の設計一次エネルギー消費量(MJ/年)
-
-    _logger.info(f"E_H [MJ/year]: {E_H}")
-    _logger.info(f"E_C [MJ/year]: {E_C}")
-
-    print('E_H [MJ/year]: ', E_H, ', E_C [MJ/year]: ', E_C)
-
+    E_H_d_t, E_C_d_t, E_H, E_C = _summarize_primary_energy(
+        E_E_H_d_t,
+        E_UT_H_d_t,
+        E_E_C_d_t,
+        E_UT_C_d_t,
+    )
     df_output1 = pd.DataFrame(index = ['合計値'])
     df_output1['E_H [MJ/year]'] = E_H
     df_output1['E_C [MJ/year]'] = E_C
