@@ -360,6 +360,25 @@ def _get_minimum_volume_heating_fan_power(heat_ac_setting, heat_quantity, P_rac_
         ファン消費電力から換気分を引く.換気分を引かない,
     )
 
+def _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating_input, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, region):
+    print(最低電力直接入力.入力する)
+    P_fan_rtd = (
+        P_rac_fan_rtd_H
+        if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
+        else heat_quantity.P_fan_rtd
+    )
+    from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
+    return get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
+        v_min_heating_input.E_E_fan_logic,
+        P_fan_rtd,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        V_hs_dsgn_H,
+        v_min_heating_input.E_E_fan_min,
+        region,
+        False,
+    ))
+
 @inject
 def calc_main(
     injector: Injector,
@@ -461,22 +480,7 @@ def calc_main(
                         E_E_fan_H_d_t = _get_minimum_volume_heating_fan_power(heat_ac_setting, heat_quantity, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t, house.region)
 
                     case 最低電力直接入力.入力する:
-                        print(最低電力直接入力.入力する)
-
-                        E_E_fan_min_H = v_min_heating_input.E_E_fan_min
-                        E_E_fan_logic = v_min_heating_input.E_E_fan_logic
-
-                        from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
-                        E_E_fan_H_d_t = get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
-                                E_E_fan_logic,
-                                # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                P_rac_fan_rtd_H if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else heat_quantity.P_fan_rtd,
-                                V_hs_vent_d_t,  # 上書きアリ
-                                V_hs_supply_d_t,
-                                V_hs_dsgn_H,
-                                E_E_fan_min_H,
-                                house.region,
-                                False))
+                        E_E_fan_H_d_t = _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating_input, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, house.region)
                     case _:
                         raise ValueError
             case _:

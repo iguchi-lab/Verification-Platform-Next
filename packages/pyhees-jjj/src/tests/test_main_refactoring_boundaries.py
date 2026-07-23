@@ -325,3 +325,21 @@ def test_get_minimum_volume_heating_fan_power_preserves_fixed_ventilation_option
             experiment_main.ファン消費電力から換気分を引く.換気分を引かない,
         )),
     ]
+
+def test_get_minimum_power_heating_fan_preserves_input_tuple(monkeypatch):
+    module = importlib.import_module('jjjexperiment.v_min_input.section4_2_a')
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(module, 'get_E_E_fan_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル)
+    v_min = SimpleNamespace(E_E_fan_logic='logic', E_E_fan_min=0.2)
+
+    result = experiment_main._get_minimum_power_heating_fan(
+        setting, SimpleNamespace(P_fan_rtd=100.0), v_min, 200.0, 'vent', 'supply', 300.0, 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低電力直接入力.入力する),
+        ('call', ('logic', 100.0, 'vent', 'supply', 300.0, 0.2, 6, False)),
+    ]
