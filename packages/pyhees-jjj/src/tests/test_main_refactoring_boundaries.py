@@ -186,3 +186,23 @@ def test_get_V_hs_dsgn_H_preserves_model_specific_rated_airflow(monkeypatch):
     assert calls == [('design', 200.0), ('rated', 5000.0), ('design', 300.0)]
     with pytest.raises(Exception, match='暖房方式が不正です'):
         experiment_main._get_V_hs_dsgn_H(object(), 200.0, 5000.0)
+
+def test_bind_heating_design_airflows_preserves_type_contract_and_bind_order():
+    bound = []
+    injector = SimpleNamespace(binder=SimpleNamespace(bind=lambda key, to: bound.append((key, to))))
+    setting = SimpleNamespace(V_hs_dsgn=250.0)
+
+    result = experiment_main._bind_heating_design_airflows(injector, setting, SimpleNamespace(), SimpleNamespace())
+
+    assert result == (250.0, 0.0)
+    assert bound == [
+        (experiment_main.jjj_dc.VHS_DSGN_H, 250.0),
+        (experiment_main.jjj_dc.VHS_DSGN_C, 0.0),
+    ]
+
+
+def test_bind_heating_design_airflows_rejects_non_float_override():
+    injector = SimpleNamespace(binder=SimpleNamespace(bind=lambda key, to: None))
+    setting = SimpleNamespace(V_hs_dsgn=250)
+    with pytest.raises(AssertionError, match='V_hs_dsgn_Hの型が不正'):
+        experiment_main._bind_heating_design_airflows(injector, setting, SimpleNamespace(), SimpleNamespace())

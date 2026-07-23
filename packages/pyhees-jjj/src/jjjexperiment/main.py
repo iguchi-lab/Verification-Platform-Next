@@ -265,6 +265,20 @@ def _get_V_hs_dsgn_H(type: 計算モデル, v_fan_rtd, q_rtd_H):
 
     return dc_spec.get_V_fan_dsgn_H(V_fan_rtd_H)
 
+def _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat_CRAC):
+    V_hs_dsgn_H = (
+        heat_ac_setting.V_hs_dsgn
+        if heat_ac_setting.V_hs_dsgn > 0
+        else _get_V_hs_dsgn_H(heat_ac_setting.type, heat_quantity.V_fan_rtd, heat_CRAC.q_rtd)
+    )
+    V_hs_dsgn_C = 0.0
+
+    assert isinstance(V_hs_dsgn_H, float), "V_hs_dsgn_Hの型が不正"
+    injector.binder.bind(jjj_dc.VHS_DSGN_H, to=V_hs_dsgn_H)
+    assert isinstance(V_hs_dsgn_C, float), "V_hs_dsgn_Cの型が不正"
+    injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
+    return V_hs_dsgn_H, V_hs_dsgn_C
+
 @inject
 def calc_main(
     injector: Injector,
@@ -332,19 +346,7 @@ def calc_main(
             "AVG  ": np.average(arr[np.nonzero(arr)])
         }
 
-    V_hs_dsgn_H: float =  \
-        heat_ac_setting.V_hs_dsgn if heat_ac_setting.V_hs_dsgn > 0  \
-        else _get_V_hs_dsgn_H(heat_ac_setting.type, heat_quantity.V_fan_rtd, heat_CRAC.q_rtd)
-    """ 暖房時の送風機の設計風量 [m3/h] """
-
-    V_hs_dsgn_C: float = 0.0  # NOTE: 暖房負荷計算時は空
-    """ 冷房時の送風機の設計風量 [m3/h] """
-
-    # 型バインド
-    assert isinstance(V_hs_dsgn_H, float), "V_hs_dsgn_Hの型が不正"
-    injector.binder.bind(jjj_dc.VHS_DSGN_H, to=V_hs_dsgn_H)
-    assert isinstance(V_hs_dsgn_C, float), "V_hs_dsgn_Cの型が不正"
-    injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
+    V_hs_dsgn_H, V_hs_dsgn_C = _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat_CRAC)
 
     injector.binder.bind(jjj_dc.ActiveAcSetting, to=heat_ac_setting)  # 暖房負荷アクティブ
 
