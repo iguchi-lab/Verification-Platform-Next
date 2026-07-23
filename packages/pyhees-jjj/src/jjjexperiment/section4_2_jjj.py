@@ -881,6 +881,85 @@ class _NoCarryoverCapacityStateInputs(NamedTuple):
     L_star_CL_d_t_i: object
     L_star_CS_d_t_i: object
 
+
+class _RatedHeatSourceCapacitiesInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    heat_CRAC: object
+    cool_CRAC: object
+
+
+class _RacCoolingCapacityInputs(NamedTuple):
+    cool_CRAC: object
+    load: object
+    Theta_ex_d_t: object
+    log_intermediates: object
+
+
+class _UnderfloorOutputExportInputs(NamedTuple):
+    case_name: object
+    ac_setting: object
+    new_ufac: object
+    new_ufac_df: object
+
+
+class _ActualLoadOutputRecordInputs(NamedTuple):
+    df_output: object
+    L_dash_CL_d_t_i: object
+    L_dash_CS_d_t_i: object
+    L_dash_H_d_t_i: object
+
+
+class _UnprocessedLoadOutputRecordInputs(NamedTuple):
+    df_output: object
+    Q_UT_CL_d_t_i: object
+    Q_UT_CS_d_t_i: object
+    Q_UT_H_d_t_i: object
+
+
+class _ClimateConditionInputs(NamedTuple):
+    df_output: object
+    house: object
+    new_ufac: object
+    climateFile: object
+
+
+class _GeneralVentilationStateInputs(NamedTuple):
+    df_output2: object
+    v_min_input: object
+    A_HCZ_i: object
+    A_HCZ_R_i: object
+
+
+class _UnprocessedEnergyStateInputs(NamedTuple):
+    df_output: object
+    ac_setting: object
+    Q_UT_CL_d_t_i: object
+    Q_UT_CS_d_t_i: object
+    Q_UT_H_d_t_i: object
+    region: object
+
+
+class _UnprocessedLoadStateInputs(NamedTuple):
+    df_output: object
+    L_star_CL_d_t_i: object
+    L_dash_CL_d_t_i: object
+    L_star_CS_d_t_i: object
+    L_dash_CS_d_t_i: object
+    L_star_H_d_t_i: object
+    L_dash_H_d_t_i: object
+
+
+class _ActualLoadStateInputs(NamedTuple):
+    df_output: object
+    carryover_heat_dto: object
+    V_supply_d_t_i: object
+    X_HBR_d_t_i: object
+    X_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    Theta_HBR_d_t_i: object
+    region: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1012,12 +1091,11 @@ def _select_minimum_airflow_input(
             raise ValueError
 
 
-def _get_rated_heat_source_capacities(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        heat_CRAC: HeatCRACSpec,
-        cool_CRAC: CoolCRACSpec,
-    ) -> tuple[float | None, float | None]:
+def _get_rated_heat_source_capacities(inputs: _RatedHeatSourceCapacitiesInputs):
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル
@@ -1457,13 +1535,12 @@ def _get_rac_heating_capacity(inputs: _RacHeatingCapacityInputs):
         Q_max_H_d_t,
     )
 
-def _get_rac_cooling_capacity(
-        cool_CRAC: CoolCRACSpec,
-        load: Load_DTI,
-        Theta_ex_d_t: np.ndarray,
-        log_intermediates: bool,
-    ) -> tuple[float, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _get_rac_cooling_capacity(inputs: _RacCoolingCapacityInputs):
     """Calculate the RAC maximum cooling capacity in its original order."""
+    cool_CRAC = inputs.cool_CRAC
+    load = inputs.load
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    log_intermediates = inputs.log_intermediates
     # 最大冷房能力比
     q_r_max_C = rac.get_q_r_max_C(cool_CRAC.q_max, cool_CRAC.q_rtd)
     if log_intermediates:
@@ -1706,12 +1783,11 @@ def _get_unprocessed_energy(inputs: _UnprocessedEnergyInputs):
             raise ValueError("ac_setting must be HeatingAcSetting or CoolingAcSetting")
 
 
-def _export_underfloor_output(
-        case_name: CaseName,
-        ac_setting: ActiveAcSetting,
-        new_ufac: UnderfloorAc,
-        new_ufac_df: UfVarsDataFrame,
-    ) -> None:
+def _export_underfloor_output(inputs: _UnderfloorOutputExportInputs):
+    case_name = inputs.case_name
+    ac_setting = inputs.ac_setting
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
     # 床下空調新ロジック調査用変数の出力
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
@@ -1836,12 +1912,11 @@ def _record_supply_state_outputs(inputs: _SupplyStateOutputRecordInputs):
         Theta_NR_d_t=Theta_NR_d_t,
     )
 
-def _record_actual_load_outputs(
-        df_output: pd.DataFrame,
-        L_dash_CL_d_t_i: np.ndarray,
-        L_dash_CS_d_t_i: np.ndarray,
-        L_dash_H_d_t_i: np.ndarray,
-    ) -> pd.DataFrame:
+def _record_actual_load_outputs(inputs: _ActualLoadOutputRecordInputs):
+    df_output = inputs.df_output
+    L_dash_CL_d_t_i = inputs.L_dash_CL_d_t_i
+    L_dash_CS_d_t_i = inputs.L_dash_CS_d_t_i
+    L_dash_H_d_t_i = inputs.L_dash_H_d_t_i
     df_output = df_output.assign(
         L_dash_CL_d_t_1=L_dash_CL_d_t_i[0],
         L_dash_CL_d_t_2=L_dash_CL_d_t_i[1],
@@ -1864,12 +1939,11 @@ def _record_actual_load_outputs(
         L_dash_H_d_t_5=L_dash_H_d_t_i[4],
     )
 
-def _record_unprocessed_load_outputs(
-        df_output: pd.DataFrame,
-        Q_UT_CL_d_t_i: np.ndarray,
-        Q_UT_CS_d_t_i: np.ndarray,
-        Q_UT_H_d_t_i: np.ndarray,
-    ) -> pd.DataFrame:
+def _record_unprocessed_load_outputs(inputs: _UnprocessedLoadOutputRecordInputs):
+    df_output = inputs.df_output
+    Q_UT_CL_d_t_i = inputs.Q_UT_CL_d_t_i
+    Q_UT_CS_d_t_i = inputs.Q_UT_CS_d_t_i
+    Q_UT_H_d_t_i = inputs.Q_UT_H_d_t_i
     df_output = df_output.assign(
         Q_UT_CL_d_t_1=Q_UT_CL_d_t_i[0],
         Q_UT_CL_d_t_2=Q_UT_CL_d_t_i[1],
@@ -2357,8 +2431,12 @@ def _get_balanced_latent_cooling_loads(df_output, load, region):
     )
     return L_star_CL_d_t_i, df_output
 
-def _prepare_climate_conditions(df_output, house, new_ufac, climateFile):
+def _prepare_climate_conditions(inputs: _ClimateConditionInputs):
     """Load climate arrays and preserve their direct output-column writes."""
+    df_output = inputs.df_output
+    house = inputs.house
+    new_ufac = inputs.new_ufac
+    climateFile = inputs.climateFile
     climate = ClimateService(house.region, new_ufac, climateFile)
     Theta_ex_d_t = climate.get_Theta_ex_d_t()
     X_ex_d_t = climate.get_X_ex_d_t()
@@ -2447,9 +2525,12 @@ def _prepare_local_ventilation_state(df_output):
     )
     return V_vent_l_NR_d_t, V_vent_l_d_t, df_output
 
-def _prepare_general_ventilation_state(
-        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i):
+def _prepare_general_ventilation_state(inputs: _GeneralVentilationStateInputs):
     """Calculate formula (62) while preserving the minimum-airflow branch."""
+    df_output2 = inputs.df_output2
+    v_min_input = inputs.v_min_input
+    A_HCZ_i = inputs.A_HCZ_i
+    A_HCZ_R_i = inputs.A_HCZ_R_i
     V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
     if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
         V_vent_g_i = rescale_V_vent_g_i(V_vent_g_i, v_min_input.V_hs_min)
@@ -2591,12 +2672,12 @@ def _prepare_rated_heat_source_capacity_state(inputs: _RatedHeatSourceCapacitySt
     house = inputs.house
     heat_CRAC = inputs.heat_CRAC
     cool_CRAC = inputs.cool_CRAC
-    rated_capacities = _get_rated_heat_source_capacities(
+    rated_capacities = _get_rated_heat_source_capacities(_RatedHeatSourceCapacitiesInputs(
         ac_setting,
         house,
         heat_CRAC,
         cool_CRAC,
-    )
+    ))
     Q_hs_rtd_H = rated_capacities.Q_hs_rtd_H
     Q_hs_rtd_C = rated_capacities.Q_hs_rtd_C
     df_output3['Q_hs_rtd_C'] = [Q_hs_rtd_C]
@@ -2926,8 +3007,8 @@ def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        rac_cooling = _get_rac_cooling_capacity(
-            cool_CRAC, load, Theta_ex_d_t, log_intermediates=True)
+        rac_cooling = _get_rac_cooling_capacity(_RacCoolingCapacityInputs(
+            cool_CRAC, load, Theta_ex_d_t, log_intermediates=True))
         q_r_max_C = rac_cooling.q_r_max_C
         Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
         Q_max_C_d_t = rac_cooling.Q_max_C_d_t
@@ -3098,8 +3179,8 @@ def _export_and_build_calculation_result(inputs: _CalculationExportInputs):
     X_hs_in_d_t = inputs.X_hs_in_d_t
     V_hs_supply_d_t = inputs.V_hs_supply_d_t
     V_hs_vent_d_t = inputs.V_hs_vent_d_t
-    _export_underfloor_output(
-        case_name, ac_setting, new_ufac, new_ufac_df)
+    _export_underfloor_output(_UnderfloorOutputExportInputs(
+        case_name, ac_setting, new_ufac, new_ufac_df))
     _export_standard_outputs(_StandardOutputExportInputs(
         case_name, ac_setting, house, df_output3, df_output2, df_output))
     return (
@@ -3108,10 +3189,14 @@ def _export_and_build_calculation_result(inputs: _CalculationExportInputs):
     )
 
 
-def _prepare_unprocessed_energy_state(
-        df_output, ac_setting, Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region):
+def _prepare_unprocessed_energy_state(inputs: _UnprocessedEnergyStateInputs):
     """Calculate and record unprocessed primary energy."""
+    df_output = inputs.df_output
+    ac_setting = inputs.ac_setting
+    Q_UT_CL_d_t_i = inputs.Q_UT_CL_d_t_i
+    Q_UT_CS_d_t_i = inputs.Q_UT_CS_d_t_i
+    Q_UT_H_d_t_i = inputs.Q_UT_H_d_t_i
+    region = inputs.region
     E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(_UnprocessedEnergyInputs(
         ac_setting, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region))
     df_output = _record_unprocessed_energy_output(
@@ -3119,11 +3204,15 @@ def _prepare_unprocessed_energy_state(
     return E_UT_d_t, df_output
 
 
-def _prepare_unprocessed_load_state(
-        df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
-        L_star_CS_d_t_i, L_dash_CS_d_t_i,
-        L_star_H_d_t_i, L_dash_H_d_t_i):
+def _prepare_unprocessed_load_state(inputs: _UnprocessedLoadStateInputs):
     """Calculate and record unprocessed cooling and heating loads."""
+    df_output = inputs.df_output
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    L_dash_CL_d_t_i = inputs.L_dash_CL_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    L_dash_CS_d_t_i = inputs.L_dash_CS_d_t_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_dash_H_d_t_i = inputs.L_dash_H_d_t_i
     unprocessed_loads = _get_unprocessed_loads(_UnprocessedLoadsInputs(
         L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
@@ -3131,23 +3220,29 @@ def _prepare_unprocessed_load_state(
     Q_UT_CL_d_t_i = unprocessed_loads.Q_UT_CL_d_t_i
     Q_UT_CS_d_t_i = unprocessed_loads.Q_UT_CS_d_t_i
     Q_UT_H_d_t_i = unprocessed_loads.Q_UT_H_d_t_i
-    df_output = _record_unprocessed_load_outputs(
-        df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i)
+    df_output = _record_unprocessed_load_outputs(_UnprocessedLoadOutputRecordInputs(
+        df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i))
     return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, df_output
 
 
-def _prepare_actual_load_state(
-        df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
-        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
+def _prepare_actual_load_state(inputs: _ActualLoadStateInputs):
     """Calculate and record actual cooling and heating loads."""
+    df_output = inputs.df_output
+    carryover_heat_dto = inputs.carryover_heat_dto
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    X_HBR_d_t_i = inputs.X_HBR_d_t_i
+    X_supply_d_t_i = inputs.X_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    region = inputs.region
     actual_loads = _get_actual_loads(_ActualLoadsInputs(
         carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region))
     L_dash_CL_d_t_i = actual_loads.L_dash_CL_d_t_i
     L_dash_CS_d_t_i = actual_loads.L_dash_CS_d_t_i
     L_dash_H_d_t_i = actual_loads.L_dash_H_d_t_i
-    df_output = _record_actual_load_outputs(
-        df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i)
+    df_output = _record_actual_load_outputs(_ActualLoadOutputRecordInputs(
+        df_output, L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i))
     return (
         L_dash_CL_d_t_i, L_dash_CS_d_t_i, L_dash_H_d_t_i, df_output,
     )
@@ -3545,8 +3640,8 @@ def _prepare_carryover_capacity_state(
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
-        rac_cooling = _get_rac_cooling_capacity(
-            cool_CRAC, load, Theta_ex_d_t, log_intermediates=False)
+        rac_cooling = _get_rac_cooling_capacity(_RacCoolingCapacityInputs(
+            cool_CRAC, load, Theta_ex_d_t, log_intermediates=False))
         q_r_max_C = rac_cooling.q_r_max_C
         Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
         Q_max_C_d_t = rac_cooling.Q_max_C_d_t
@@ -3622,7 +3717,7 @@ def calc_Q_UT_A(
     df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
 
     # 気象条件
-    climate_conditions = _prepare_climate_conditions(df_output, house, new_ufac, climateFile)
+    climate_conditions = _prepare_climate_conditions(_ClimateConditionInputs(df_output, house, new_ufac, climateFile))
     climate = climate_conditions.climate
     Theta_ex_d_t = climate_conditions.Theta_ex_d_t
     X_ex_d_t = climate_conditions.X_ex_d_t
@@ -3665,8 +3760,8 @@ def calc_Q_UT_A(
     )
 
     # (62)　全般換気量
-    V_vent_g_i = _prepare_general_ventilation_state(
-        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i)
+    V_vent_g_i = _prepare_general_ventilation_state(_GeneralVentilationStateInputs(
+        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i))
 
     # (61)　間仕切の熱貫流率
     U_prt, A_prt_i = _prepare_partition_state(_PartitionStateInputs(
@@ -4014,24 +4109,24 @@ def calc_Q_UT_A(
         L_dash_CS_d_t_i,
         L_dash_H_d_t_i,
         df_output,
-    ) = _prepare_actual_load_state(
+    ) = _prepare_actual_load_state(_ActualLoadStateInputs(
         df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i,
-        house.region)
+        house.region))
     """ まとめ - 未処理負荷 """
     (
         Q_UT_CL_d_t_i,
         Q_UT_CS_d_t_i,
         Q_UT_H_d_t_i,
         df_output,
-    ) = _prepare_unprocessed_load_state(
+    ) = _prepare_unprocessed_load_state(_UnprocessedLoadStateInputs(
         df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
-        L_star_H_d_t_i, L_dash_H_d_t_i)
+        L_star_H_d_t_i, L_dash_H_d_t_i))
     """ まとめ - 一次エネルギー """
-    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(
+    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(_UnprocessedEnergyStateInputs(
         df_output, ac_setting, Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region)
+        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region))
     return _export_and_build_calculation_result(_CalculationExportInputs(
         case_name, ac_setting, house, new_ufac, new_ufac_df,
         df_output3, df_output2, df_output, E_UT_d_t,

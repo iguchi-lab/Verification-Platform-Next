@@ -135,12 +135,12 @@ def test_rated_heat_source_capacities_use_quantity_services(monkeypatch, model):
         lambda value: calls.append(("H", value)) or value + 1.0,
     )
 
-    result = sut._get_rated_heat_source_capacities(
+    result = sut._get_rated_heat_source_capacities(sut._RatedHeatSourceCapacitiesInputs(
         setting,
         house,
         SimpleNamespace(q_rtd=300.0),
         SimpleNamespace(q_rtd=400.0),
-    )
+    ))
 
     assert result == (101.0, 202.0)
     assert calls == [("C", 200.0), ("H", 100.0)]
@@ -166,12 +166,12 @@ def test_rated_heat_source_capacities_use_equipment_ratings(monkeypatch, model):
         lambda value: calls.append(("H", value)) or value + 1.0,
     )
 
-    result = sut._get_rated_heat_source_capacities(
+    result = sut._get_rated_heat_source_capacities(sut._RatedHeatSourceCapacitiesInputs(
         SimpleNamespace(type=model),
         object(),
         SimpleNamespace(q_rtd=300.0),
         SimpleNamespace(q_rtd=400.0),
-    )
+    ))
 
     assert result == (301.0, 402.0)
     assert calls == [("C", 400.0), ("H", 300.0)]
@@ -179,12 +179,12 @@ def test_rated_heat_source_capacities_use_equipment_ratings(monkeypatch, model):
 
 def test_rated_heat_source_capacities_reject_unknown_model():
     with pytest.raises(Exception, match="設備機器の種類の入力が不正です。"):
-        sut._get_rated_heat_source_capacities(
+        sut._get_rated_heat_source_capacities(sut._RatedHeatSourceCapacitiesInputs(
             SimpleNamespace(type=object()),
             object(),
             SimpleNamespace(q_rtd=300.0),
             SimpleNamespace(q_rtd=400.0),
-        )
+        ))
 
 
 @pytest.mark.parametrize(
@@ -383,12 +383,12 @@ def test_export_underfloor_output_preserves_filename_and_call_order(monkeypatch)
         lambda value: calls.append(("suffix", value)) or "_H",
     )
 
-    sut._export_underfloor_output(
+    sut._export_underfloor_output(sut._UnderfloorOutputExportInputs(
         "case",
         setting,
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
         frame,
-    )
+    ))
 
     assert calls == [
         ("version",),
@@ -407,12 +407,12 @@ def test_export_underfloor_output_does_nothing_when_disabled(monkeypatch):
         export_to_csv=lambda filename: pytest.fail("CSV must not be exported")
     )
 
-    sut._export_underfloor_output(
+    sut._export_underfloor_output(sut._UnderfloorOutputExportInputs(
         "case",
         object(),
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
         frame,
-    )
+    ))
 
 @pytest.mark.parametrize(
     ("capacities", "season"),
@@ -648,12 +648,12 @@ def test_record_actual_load_outputs_preserves_assign_order():
     sensible = [object() for _ in range(5)]
     heating = [object() for _ in range(5)]
 
-    result = sut._record_actual_load_outputs(
+    result = sut._record_actual_load_outputs(sut._ActualLoadOutputRecordInputs(
         frame,
         latent,
         sensible,
         heating,
-    )
+    ))
 
     assert result.generation == 3
     assert frame.events == [
@@ -683,12 +683,12 @@ def test_record_unprocessed_load_outputs_preserves_assign_order():
     sensible = [object() for _ in range(5)]
     heating = [object() for _ in range(5)]
 
-    result = sut._record_unprocessed_load_outputs(
+    result = sut._record_unprocessed_load_outputs(sut._UnprocessedLoadOutputRecordInputs(
         frame,
         latent,
         sensible,
         heating,
-    )
+    ))
 
     assert result.generation == 3
     assert frame.events == [
@@ -1400,9 +1400,9 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
     monkeypatch.setattr(sut._logger, "debug", lambda message: calls.append(("debug", message)))
     monkeypatch.setattr(sut._logger, "NDdebug", lambda name, value: calls.append(("NDdebug", name, value)))
 
-    result = sut._get_rac_cooling_capacity(
+    result = sut._get_rac_cooling_capacity(sut._RacCoolingCapacityInputs(
         cooling, load, theta, log_intermediates
-    )
+    ))
 
     assert result == outputs
     expected = [("ratio", (10.0, 8.0))]
@@ -2395,9 +2395,9 @@ def test_prepare_climate_conditions_preserves_fetch_and_write_order(monkeypatch)
     climate_file = object()
     monkeypatch.setattr(sut, "ClimateService", Climate)
 
-    result = sut._prepare_climate_conditions(
+    result = sut._prepare_climate_conditions(sut._ClimateConditionInputs(
         Frame(), SimpleNamespace(region=6), new_ufac, climate_file
-    )
+    ))
 
     assert isinstance(result[0], Climate)
     assert result[1:] == tuple(values)
@@ -2568,7 +2568,7 @@ def test_prepare_general_ventilation_state_preserves_formula_62_branch(monkeypat
         V_hs_min=500.0,
     )
     a_hcz, ratios = object(), object()
-    result = sut._prepare_general_ventilation_state(Frame(), setting, a_hcz, ratios)
+    result = sut._prepare_general_ventilation_state(sut._GeneralVentilationStateInputs(Frame(), setting, a_hcz, ratios))
     assert result is (adjusted if direct else base)
     assert events[0] == ("base", (a_hcz, ratios))
     assert [e[0] for e in events] == (["base", "scale", "write"] if direct else ["base", "write"])
@@ -2765,7 +2765,7 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
 
     assert result == (heating, cooling)
     assert events == [
-        ("prepare", tuple(inputs)),
+        ("prepare", (sut._RatedHeatSourceCapacitiesInputs(*inputs),)),
         ("write", "Q_hs_rtd_C", [cooling]),
         ("write", "Q_hs_rtd_H", [heating]),
     ]
@@ -3632,12 +3632,12 @@ def test_prepare_actual_load_state_preserves_calculate_record_order(
         sut, "_record_actual_load_outputs",
         lambda *args: events.append(("record", args)) or recorded)
 
-    result = sut._prepare_actual_load_state(original, *inputs)
+    result = sut._prepare_actual_load_state(sut._ActualLoadStateInputs(original, *inputs))
 
     assert result == (*loads, recorded)
     assert events == [
         ("calculate", (sut._ActualLoadsInputs(*inputs),)),
-        ("record", (original, *loads)),
+        ("record", (sut._ActualLoadOutputRecordInputs(original, *loads),)),
     ]
 
 
@@ -3655,12 +3655,12 @@ def test_prepare_unprocessed_load_state_preserves_calculate_record_order(
         sut, "_record_unprocessed_load_outputs",
         lambda *args: events.append(("record", args)) or recorded)
 
-    result = sut._prepare_unprocessed_load_state(original, *inputs)
+    result = sut._prepare_unprocessed_load_state(sut._UnprocessedLoadStateInputs(original, *inputs))
 
     assert result == (*loads, recorded)
     assert events == [
         ("calculate", (sut._UnprocessedLoadsInputs(*inputs),)),
-        ("record", (original, *loads)),
+        ("record", (sut._UnprocessedLoadOutputRecordInputs(original, *loads),)),
     ]
 
 
@@ -3680,7 +3680,7 @@ def test_prepare_unprocessed_energy_state_preserves_calculate_record_order(
         sut, "_record_unprocessed_energy_output",
         lambda *args: events.append(("record", args)) or recorded)
 
-    result = sut._prepare_unprocessed_energy_state(original, *inputs)
+    result = sut._prepare_unprocessed_energy_state(sut._UnprocessedEnergyStateInputs(original, *inputs))
 
     assert result == (energy, recorded)
     assert events == [
@@ -3702,7 +3702,7 @@ def test_export_and_build_calculation_result_preserves_order(monkeypatch):
     result = sut._export_and_build_calculation_result(sut._CalculationExportInputs(*inputs))
 
     assert events == [
-        ("underfloor", (inputs[0], inputs[1], inputs[3], inputs[4])),
+        ("underfloor", (sut._UnderfloorOutputExportInputs(inputs[0], inputs[1], inputs[3], inputs[4]),)),
         ("standard", (sut._StandardOutputExportInputs(
             inputs[0], inputs[1], inputs[2],
             inputs[5], inputs[6], inputs[7]),)),
