@@ -37,12 +37,12 @@ body:
     id: work_package
     attributes:
       label: 作業パッケージとPR分割
-      description: 20〜30件の境界一覧、8〜12境界ずつのPR分割、PR間の依存順を記載してください。
+      description: 1つの設計上の成果、20〜30境界または500〜1,000行程度を目安にしたPR構成、必要なPR間の依存順を記載してください。
       placeholder: |
-        作業パッケージ：20境界
-        PR 1：境界1〜10
-        PR 2：境界11〜20
-        依存順：PR 1をmergeしてmainへ同期後、PR 2を開始
+        設計上の成果：
+        想定規模：25境界、約800行
+        PR 1：境界1〜25
+        依存順：なし
     validations:
       required: true
 
@@ -87,8 +87,8 @@ body:
       label: 検証計画
       description: 追加する回帰テストと実行する既存テストを記載してください。
       value: |
-        - [ ] 5境界ごとの対象テスト
-        - [ ] 5境界ごとの `ruff check .`
+        - [ ] 各commitの対象テスト
+        - [ ] 各commitの変更対象Ruff
         - [ ] 変更対象の回帰テスト
         - [ ] `python -m pytest -q`
         - [ ] `ruff check .`
