@@ -170,3 +170,14 @@ def test_get_carryover_state_48_preserves_activation_and_capacity(monkeypatch):
     assert section4_2._get_carryover_state_48(True, True, False, 19.0, 18.0, 40.0) == (True, False, 1.0, 0)
     with pytest.raises(ValueError):
         section4_2._get_carryover_state_48(False, True, True, 18.0, 18.0, 40.0)
+
+
+def test_get_Theta_NR_48_preserves_formula_clip_and_float_contract():
+    neutral = section4_2._get_Theta_NR_48(18.0, 1.0, 2.0, 0.0, 0.0, 6.0, False, False, 20.0)
+    heating = section4_2._get_Theta_NR_48(18.0, 12.0, 0.0, 0.0, 0.0, 1.0, True, False, 20.0)
+    cooling = section4_2._get_Theta_NR_48(18.0, -12.0, 0.0, 0.0, 0.0, 1.0, False, True, 20.0)
+
+    assert neutral == 18.5
+    assert heating == 20.0
+    assert cooling == 20.0
+    assert isinstance(neutral, float)

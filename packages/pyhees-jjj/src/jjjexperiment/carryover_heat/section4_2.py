@@ -330,6 +330,29 @@ def _get_carryover_state_48(isFirst, H, C, Theta_NR_before, Theta_star_NR, A_NR)
     return H, C, ac_theta_diff, C_NR
 
 
+def _get_Theta_NR_48(Theta_star_NR, val1, val2, ac_theta_diff, C_NR, val3, H, C, Theta_star_HBR):
+    Theta_NR = Theta_star_NR + (val1 + val2 + ac_theta_diff * C_NR) / (val3 + C_NR)
+
+    # TODO: Theta_NR が単増加してしまう問題がある
+    # -> 過剰熱量持越しの追い空調の停止条件を追加することが考えられる
+    # 今は、下のキャップロジックで仮対応しています
+
+    # 空調されている部屋以上に過剰熱量繰越が効くことはないため
+    if H:
+        Theta_NR = np.clip(Theta_NR, None, Theta_star_HBR)
+    elif C:
+        Theta_NR = np.clip(Theta_NR, Theta_star_HBR, None)
+
+    # NOTE: axis オプションによる次数の変化
+    # 次数を意識せずにfloatに総計するなら axisなしがよい
+    # np.sum(k_prt_i, axis=0) -> shape(5,1) -> shape(1,)
+    # np.sum(k_prt_i) -> shape(5,1) -> float
+
+    # 事後条件: 次数チェック
+    assert isinstance(Theta_NR, float), "Theta_NRの次数が想定外"
+    return Theta_NR
+
+
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
         Theta_star_NR: float,
@@ -383,23 +406,7 @@ def get_Theta_NR_2023(
     H, C, ac_theta_diff, C_NR = _get_carryover_state_48(
         isFirst, H, C, Theta_NR_before, Theta_star_NR, A_NR,
     )
-    Theta_NR = Theta_star_NR + (val1 + val2 + ac_theta_diff * C_NR) / (val3 + C_NR)
-
-    # TODO: Theta_NR が単増加してしまう問題がある
-    # -> 過剰熱量持越しの追い空調の停止条件を追加することが考えられる
-    # 今は、下のキャップロジックで仮対応しています
-
-    # 空調されている部屋以上に過剰熱量繰越が効くことはないため
-    if H:
-        Theta_NR = np.clip(Theta_NR, None, Theta_star_HBR)
-    elif C:
-        Theta_NR = np.clip(Theta_NR, Theta_star_HBR, None)
-
-    # NOTE: axis オプションによる次数の変化
-    # 次数を意識せずにfloatに総計するなら axisなしがよい
-    # np.sum(k_prt_i, axis=0) -> shape(5,1) -> shape(1,)
-    # np.sum(k_prt_i) -> shape(5,1) -> float
-
-    # 事後条件: 次数チェック
-    assert isinstance(Theta_NR, float), "Theta_NRの次数が想定外"
-    return Theta_NR
+    return _get_Theta_NR_48(
+        Theta_star_NR, val1, val2, ac_theta_diff, C_NR, val3,
+        H, C, Theta_star_HBR,
+    )
