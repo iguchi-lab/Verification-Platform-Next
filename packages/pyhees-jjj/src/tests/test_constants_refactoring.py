@@ -7,6 +7,7 @@ import jjjexperiment.constants as constants
   ('key', 'value', 'expected'),
   [
     ('Theta_hs_out_max_H_d_t_limit', '47.5', 47.5),
+    ('Theta_hs_out_min_C_d_t_limit', '123.5', 123.5),
   ],
 )
 def test_set_constants_float_boundary(key, value, expected):
