@@ -2127,12 +2127,12 @@ def test_actual_non_room_temperatures_without_carryover_preserve_new_hour_order(
         lambda *_: pytest.fail("new branch must not call the legacy formula"),
     )
 
-    result = sut._get_actual_non_room_temperatures_without_carryover(
+    result = sut._get_actual_non_room_temperatures_without_carryover(sut._ActualNonRoomTemperaturesWithoutCarryoverInputs(
         SimpleNamespace(Q=2.7),
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
         theta_star_nr, theta_star_hbr, theta_hbr, 45.0, vent_nr,
         dash_supply, supply, 0.5, area_partition, theta_uf, r_area
-    )
+    ))
 
     np.testing.assert_array_equal(result, theta_uf)
     assert call_count == hours
@@ -2166,11 +2166,11 @@ def test_actual_non_room_temperatures_without_carryover_preserve_legacy_formula(
         lambda *args: calls.append(args) or result,
     )
 
-    actual = sut._get_actual_non_room_temperatures_without_carryover(
+    actual = sut._get_actual_non_room_temperatures_without_carryover(sut._ActualNonRoomTemperaturesWithoutCarryoverInputs(
         SimpleNamespace(Q=2.7),
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
         *values
-    )
+    ))
 
     assert actual is result
     assert calls == [(
@@ -3350,8 +3350,8 @@ def test_prepare_no_carryover_actual_temperature_state_preserves_formula_order(
     assert result == (room, non_room)
     assert [event[0] for event in events] == ["room", "non_room"]
     assert events[0][1][0].Theta_uf_d_t is (theta_uf if enabled else None)
-    assert events[1][1][-2] is (theta_uf if enabled else None)
-    assert events[1][1][-1] is (non_room_ratio if enabled else None)
+    assert events[1][1][0].Theta_uf_d_t is (theta_uf if enabled else None)
+    assert events[1][1][0].r_A_NR_uf_1F_excl_bath is (non_room_ratio if enabled else None)
 
 
 def test_log_actual_temperature_state_preserves_diagnostic_order(monkeypatch):

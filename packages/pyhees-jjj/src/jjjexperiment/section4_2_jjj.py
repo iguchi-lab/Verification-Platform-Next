@@ -762,6 +762,22 @@ class _ActualRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     L_star_CS_d_t_i: object
     Theta_uf_d_t: object
 
+
+class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
+    skin: object
+    new_ufac: object
+    Theta_star_NR_d_t: object
+    Theta_star_HBR_d_t: object
+    Theta_HBR_d_t_i: object
+    A_NR: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+    V_supply_d_t_i: object
+    U_prt: object
+    A_prt_i: object
+    Theta_uf_d_t: object
+    r_A_NR_uf_1F_excl_bath: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2093,22 +2109,21 @@ def _get_actual_room_temperatures_without_carryover(inputs: _ActualRoomTemperatu
         U_prt, A_prt_i, skin.Q, A_HCZ_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, house.region)
 
-def _get_actual_non_room_temperatures_without_carryover(
-        skin,
-        new_ufac,
-        Theta_star_NR_d_t,
-        Theta_star_HBR_d_t,
-        Theta_HBR_d_t_i,
-        A_NR,
-        V_vent_l_NR_d_t,
-        V_dash_supply_d_t_i,
-        V_supply_d_t_i,
-        U_prt,
-        A_prt_i,
-        Theta_uf_d_t,
-        r_A_NR_uf_1F_excl_bath,
-    ):
+def _get_actual_non_room_temperatures_without_carryover(inputs: _ActualNonRoomTemperaturesWithoutCarryoverInputs):
     """Calculate formula (48) while preserving the new/legacy branch."""
+    skin = inputs.skin
+    new_ufac = inputs.new_ufac
+    Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    A_NR = inputs.A_NR
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    U_prt = inputs.U_prt
+    A_prt_i = inputs.A_prt_i
+    Theta_uf_d_t = inputs.Theta_uf_d_t
+    r_A_NR_uf_1F_excl_bath = inputs.r_A_NR_uf_1F_excl_bath
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         return np.array([
             get_Theta_NR(
@@ -3194,14 +3209,14 @@ def _prepare_no_carryover_actual_temperature_state(inputs: _NoCarryoverActualTem
         L_star_H_d_t_i, L_star_CS_d_t_i,
         Theta_uf_d_t
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None))
-    Theta_NR_d_t = _get_actual_non_room_temperatures_without_carryover(
+    Theta_NR_d_t = _get_actual_non_room_temperatures_without_carryover(_ActualNonRoomTemperaturesWithoutCarryoverInputs(
         skin, new_ufac, Theta_star_NR_d_t, Theta_star_HBR_d_t,
         Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t,
         V_dash_supply_d_t_i, V_supply_d_t_i, U_prt, A_prt_i,
         Theta_uf_d_t
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None,
         r_A_NR_uf_1F_excl_bath
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
+        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None))
     return Theta_HBR_d_t_i, Theta_NR_d_t
 
 
