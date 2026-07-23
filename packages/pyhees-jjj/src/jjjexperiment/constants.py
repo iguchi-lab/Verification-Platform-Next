@@ -210,6 +210,12 @@ def _set_defrost_temp_ductcentral(input: dict):
     defrost_temp_ductcentral = float(input['defrost_temp_ductcentral'])
 
 
+def _set_defrost_humid_ductcentral(input: dict):
+  if 'defrost_humid_ductcentral' in input:
+    global defrost_humid_ductcentral
+    defrost_humid_ductcentral = float(input['defrost_humid_ductcentral'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -217,9 +223,7 @@ def set_constants(input: dict):
   _set_Theta_hs_out_min_C_d_t_limit(input)
   _set_C_df_H_d_t_defrost_ductcentral(input)
   _set_defrost_temp_ductcentral(input)
-  if 'defrost_humid_ductcentral' in input:
-    global defrost_humid_ductcentral
-    defrost_humid_ductcentral = float(input['defrost_humid_ductcentral'])
+  _set_defrost_humid_ductcentral(input)
   if 'phi_i' in input:
     global phi_i
     phi_i = float(input['phi_i'])
