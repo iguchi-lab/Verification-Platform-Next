@@ -111,3 +111,80 @@ def test_set_constants_H_A_airvolume_coeff_boundary():
   finally:
     for target, original in zip(targets, originals):
       setattr(constants, target, original)
+
+
+@pytest.mark.parametrize(
+  ('section', 'nested_key', 'targets'),
+  [
+    ('H_A', 'fan_coeff', ('P_fan_H_d_t_a4', 'P_fan_H_d_t_a3', 'P_fan_H_d_t_a2', 'P_fan_H_d_t_a1', 'P_fan_H_d_t_a0')),
+    ('C_A', 'heat_transfer_coeff', ('a_c_hex_c_a4_C', 'a_c_hex_c_a3_C', 'a_c_hex_c_a2_C', 'a_c_hex_c_a1_C', 'a_c_hex_c_a0_C')),
+    ('C_A', 'compressor_coeff', ('a_r_C_t_t_a4', 'a_r_C_t_t_a3', 'a_r_C_t_t_a2', 'a_r_C_t_t_a1', 'a_r_C_t_t_a0')),
+    ('C_A', 'airvolume_coeff', ('airvolume_coeff_a4_C', 'airvolume_coeff_a3_C', 'airvolume_coeff_a2_C', 'airvolume_coeff_a1_C', 'airvolume_coeff_a0_C')),
+    ('C_A', 'fan_coeff', ('P_fan_C_d_t_a4', 'P_fan_C_d_t_a3', 'P_fan_C_d_t_a2', 'P_fan_C_d_t_a1', 'P_fan_C_d_t_a0')),
+  ],
+)
+def test_set_constants_coefficient_boundary(section, nested_key, targets):
+  values = ['1.0', '2.0', '3.0', '4.0', '5.0']
+  originals = tuple(getattr(constants, target) for target in targets)
+  try:
+    constants.set_constants({section: {nested_key: values}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+
+    constants.set_constants({section: {}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+  finally:
+    for target, original in zip(targets, originals):
+      setattr(constants, target, original)
+
+
+@pytest.mark.parametrize(
+  ('nested_key', 'target', 'value', 'expected'),
+  [
+    ('A_f_hex_small', 'A_f_hex_small_C', '2.75', 2.75),
+    ('A_e_hex_small', 'A_e_hex_small_C', '2.75', 2.75),
+    ('A_f_hex_large', 'A_f_hex_large_C', '2.75', 2.75),
+    ('A_e_hex_large', 'A_e_hex_large_C', '2.75', 2.75),
+    ('airvolume_minimum', 'airvolume_minimum_C', '2.75', 2.75),
+    ('airvolume_maximum', 'airvolume_maximum_C', '2.75', 2.75),
+  ],
+)
+def test_set_constants_C_A_float_boundary(nested_key, target, value, expected):
+  original = getattr(constants, target)
+  try:
+    constants.set_constants({'C_A': {nested_key: value}})
+    assert getattr(constants, target) == expected
+    assert isinstance(getattr(constants, target), float)
+
+    constants.set_constants({'C_A': {}})
+    assert getattr(constants, target) == expected
+  finally:
+    setattr(constants, target, original)
+
+
+def test_override_CR_room_capacities_boundary():
+  original = constants.C1_BR_R_i.copy()
+  try:
+    constants.override_CR({'C1_BR_R_2': '250.5', 'C1_BR_R_4': None})
+    assert constants.C1_BR_R_i == [original[0], 250.5, original[2], original[3], original[4]]
+    assert isinstance(constants.C1_BR_R_i[1], float)
+
+    constants.override_CR({})
+    assert constants.C1_BR_R_i == [original[0], 250.5, original[2], original[3], original[4]]
+  finally:
+    constants.C1_BR_R_i[:] = original
+
+
+def test_override_CR_non_room_capacity_boundary():
+  original = constants.C1_NR_R
+  try:
+    constants.override_CR({'C1_NR_R': '750.5'})
+    assert constants.C1_NR_R == 750.5
+    assert isinstance(constants.C1_NR_R, float)
+
+    constants.override_CR({'C1_NR_R': None})
+    assert constants.C1_NR_R == 750.5
+
+    constants.override_CR({})
+    assert constants.C1_NR_R == 750.5
+  finally:
+    constants.C1_NR_R = original
