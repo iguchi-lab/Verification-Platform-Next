@@ -1596,6 +1596,11 @@ def test_actual_room_temperatures_at_hour_preserve_slices(monkeypatch, t):
     np.testing.assert_array_equal(args[11], cooling[:5, t : t + 1])
     expected_previous = np.zeros((5, 1)) if t == 0 else actual[:5, t - 1 : t]
     np.testing.assert_array_equal(args[12], expected_previous)
+    assert sut._CarryoverActualRoomTemperatureInputs._fields == (
+        "H", "C", "M", "Theta_star_HBR", "V_supply_i",
+        "Theta_supply_i", "U_prt", "A_prt_i", "Q", "A_HCZ_i",
+        "L_star_H_i", "L_star_CS_i", "Theta_HBR_before_i")
+
 
 @pytest.mark.parametrize("t", (0, 1))
 def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):

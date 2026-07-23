@@ -442,6 +442,22 @@ class _CappedSupplyAirflowInputs(NamedTuple):
     print_exec: object
 
 
+class _CarryoverActualRoomTemperatureInputs(NamedTuple):
+    H: object
+    C: object
+    M: object
+    Theta_star_HBR: object
+    V_supply_i: object
+    Theta_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    A_HCZ_i: object
+    L_star_H_i: object
+    L_star_CS_i: object
+    Theta_HBR_before_i: object
+
+
 class _ActualRoomTemperatureHourInputs(NamedTuple):
     t: object
     H: object
@@ -1719,7 +1735,7 @@ def _get_actual_room_temperatures_at_hour(inputs: _ActualRoomTemperatureHourInpu
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
     # (46)　暖冷房区画𝑖の実際の居室の室温
-    return jjj_carryover_heat.get_Theta_HBR_i_2023(
+    return jjj_carryover_heat.get_Theta_HBR_i_2023(*_CarryoverActualRoomTemperatureInputs(
         H[t], C[t], M[t],
         Theta_star_HBR_d_t[t],
         V_supply_d_t_i[:, t:t+1],  # (5,1)
@@ -1730,7 +1746,7 @@ def _get_actual_room_temperatures_at_hour(inputs: _ActualRoomTemperatureHourInpu
         A_HCZ_i.reshape(-1,1),  # (5,1)
         L_star_H_d_t_i[:5, t:t+1],  # (5,1)
         L_star_CS_d_t_i[:5, t:t+1],  # (5,1)
-        np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t])  # (5,1)
+        np.zeros((5,1)) if t==0 else Theta_HBR_d_t_i[:5, t-1:t]))  # (5,1)
 
 def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHourInputs):
     """Calculate formula (48) for one hour with its original slices."""
