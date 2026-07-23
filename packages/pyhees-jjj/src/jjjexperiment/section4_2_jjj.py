@@ -810,6 +810,14 @@ class _PartitionStateInputs(NamedTuple):
     A_HCZ_i: object
     A_NR: object
 
+
+class _DuctGeometryStateInputs(NamedTuple):
+    df_output: object
+    df_output2: object
+    house: object
+    Theta_ex_d_t: object
+    J_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2402,9 +2410,13 @@ def _prepare_partition_state(inputs: _PartitionStateInputs):
     return U_prt, A_prt_i
 
 
-def _prepare_duct_geometry_state(
-        df_output, df_output2, house, Theta_ex_d_t, J_d_t):
+def _prepare_duct_geometry_state(inputs: _DuctGeometryStateInputs):
     """Calculate formulas (59), (58), (57), and (56) in source order."""
+    df_output = inputs.df_output
+    df_output2 = inputs.df_output2
+    house = inputs.house
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    J_d_t = inputs.J_d_t
     Theta_SAT_d_t = dc.get_Theta_SAT_d_t(Theta_ex_d_t, J_d_t)
     df_output['Theta_SAT_d_t'] = Theta_SAT_d_t
 
@@ -3565,8 +3577,8 @@ def calc_Q_UT_A(
 
     # (59), (58), (57), (56)　等価外気温度とダクト長さ
     Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i = \
-        _prepare_duct_geometry_state(
-            df_output, df_output2, house, Theta_ex_d_t, J_d_t)
+        _prepare_duct_geometry_state(_DuctGeometryStateInputs(
+            df_output, df_output2, house, Theta_ex_d_t, J_d_t))
     # (51), (50), (55), (54)　負荷バランス時の室内・ダクト周囲状態
     balanced_room_state = _prepare_balanced_room_and_duct_state(
         df_output,

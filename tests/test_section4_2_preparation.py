@@ -2623,8 +2623,8 @@ def test_prepare_duct_geometry_state_preserves_formula_59_to_56_order(monkeypatc
         lambda *args: events.append(("total", args)) or values[3])
 
     theta_ex, solar = object(), object()
-    result = sut._prepare_duct_geometry_state(
-        Frame("df"), Frame("df2"), SimpleNamespace(A_A=120.0), theta_ex, solar)
+    result = sut._prepare_duct_geometry_state(sut._DuctGeometryStateInputs(
+        Frame("df"), Frame("df2"), SimpleNamespace(A_A=120.0), theta_ex, solar))
 
     assert result == tuple(values)
     assert [event[0] for event in events] == [
