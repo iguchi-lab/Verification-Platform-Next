@@ -712,6 +712,18 @@ class _NewUnderfloorRequestedTemperatureInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
 
+
+class _NewUnderfloorSupplyTemperatureInputs(NamedTuple):
+    house: object
+    skin: object
+    load: object
+    new_ufac: object
+    new_ufac_df: object
+    Theta_supply_d_t_i: object
+    Theta_hs_out_d_t: object
+    Theta_ex_d_t: object
+    V_dash_supply_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1859,18 +1871,17 @@ def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTe
     })
     return Theta_req_d_t_i
 
-def _get_new_underfloor_supply_temperatures(
-        house,
-        skin,
-        load,
-        new_ufac,
-        new_ufac_df,
-        Theta_supply_d_t_i,
-        Theta_hs_out_d_t,
-        Theta_ex_d_t,
-        V_dash_supply_d_t_i,
-    ):
+def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperatureInputs):
     """Apply the new-underfloor second pass and retain its diagnostic outputs."""
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_hs_out_d_t = inputs.Theta_hs_out_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     # 新床下空調-2nd: θuf の本計算
     Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
         region=house.region,
@@ -2855,10 +2866,10 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     _log_supply_temperatures(Theta_supply_d_t_i)
 
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        Theta_supply_d_t_i = _get_new_underfloor_supply_temperatures(
+        Theta_supply_d_t_i = _get_new_underfloor_supply_temperatures(_NewUnderfloorSupplyTemperatureInputs(
             house, skin, load, new_ufac, new_ufac_df,
             Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
-            V_dash_supply_d_t_i)
+            V_dash_supply_d_t_i))
     elif skin.underfloor_air_conditioning_air_supply == True:
         Theta_supply_d_t_i = _adjust_legacy_underfloor_supply_temperatures(
             ac_setting, house, skin, load, Theta_supply_d_t_i,

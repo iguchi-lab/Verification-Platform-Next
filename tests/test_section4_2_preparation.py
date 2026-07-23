@@ -1852,10 +1852,10 @@ def test_new_underfloor_supply_temperatures_preserve_forward_solve_and_outputs(
 
     monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
 
-    result = sut._get_new_underfloor_supply_temperatures(
+    result = sut._get_new_underfloor_supply_temperatures(sut._NewUnderfloorSupplyTemperatureInputs(
         house, skin, load, new_ufac, frame,
         theta_supply, theta_hs_out, theta_ex, airflows
-    )
+    ))
 
     np.testing.assert_array_equal(result[0], theta_uf)
     np.testing.assert_array_equal(result[1], theta_uf)
