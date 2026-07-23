@@ -960,6 +960,14 @@ class _ActualLoadStateInputs(NamedTuple):
     Theta_HBR_d_t_i: object
     region: object
 
+class _SupplyHumidityOutputInputs(NamedTuple):
+    df_output: object
+    X_star_HBR_d_t: object
+    X_hs_out_d_t: object
+    L_star_CL_d_t_i: object
+    region: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3280,10 +3288,13 @@ def _prepare_heat_source_ventilation_airflow_output(
     return V_hs_vent_d_t, df_output
 
 
-def _prepare_supply_humidity_output(
-        df_output, X_star_HBR_d_t, X_hs_out_d_t,
-        L_star_CL_d_t_i, region):
+def _prepare_supply_humidity_output(inputs: _SupplyHumidityOutputInputs):
     """Calculate formula (42) and preserve five-column assign order."""
+    df_output = inputs.df_output
+    X_star_HBR_d_t = inputs.X_star_HBR_d_t
+    X_hs_out_d_t = inputs.X_hs_out_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    region = inputs.region
     X_supply_d_t_i = dc.get_X_supply_d_t_i(
         X_star_HBR_d_t, X_hs_out_d_t, L_star_CL_d_t_i, region)
     df_output = df_output.assign(
@@ -4078,9 +4089,9 @@ def calc_Q_UT_A(
 
     """ 吹出口 - 吹出口 """
     # (42)　暖冷房区画𝑖の吹き出し絶対湿度
-    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(
+    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(_SupplyHumidityOutputInputs(
         df_output, X_star_HBR_d_t, X_hs_out_d_t,
-        L_star_CL_d_t_i, house.region)
+        L_star_CL_d_t_i, house.region))
 
     """ 熱源機の入口 - 熱源機の風量の計算 """
     # (35)　熱源機の風量のうちの全般換気分

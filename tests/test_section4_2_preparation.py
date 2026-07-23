@@ -3518,7 +3518,8 @@ def test_prepare_supply_humidity_output_preserves_formula_42_column_order(
         sut.dc, "get_X_supply_d_t_i",
         lambda *a: events.append(("formula", a)) or humidity)
 
-    result = sut._prepare_supply_humidity_output(frame, *inputs)
+    result = sut._prepare_supply_humidity_output(
+        sut._SupplyHumidityOutputInputs(frame, *inputs))
 
     assert result == (humidity, frame)
     assert events[0] == ("formula", tuple(inputs))
