@@ -145,6 +145,12 @@ def test_heating_type2_call_uses_signature_order_context():
     ) == "_HeatingType2ElectricityInputs"
 
 
+def test_heating_type4_call_uses_signature_order_context():
+    assert _starred_context_name_for_call(
+        "calc_E_E_H_d_t_type4"
+    ) == "_HeatingType4ElectricityInputs"
+
+
 def test_legacy_section4_2_a_import_aliases_jjj_module():
     legacy = importlib.import_module("jjjexperiment.section4_2_a")
     implementation = importlib.import_module("jjjexperiment.section4_2_a_jjj")
