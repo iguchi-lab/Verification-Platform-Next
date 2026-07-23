@@ -228,6 +228,12 @@ def _set_C_V_fan_dsgn_H(input: dict):
     C_V_fan_dsgn_H = float(input['C_V_fan_dsgn_H'])
 
 
+def _set_C_V_fan_dsgn_C(input: dict):
+  if 'C_V_fan_dsgn_C' in input:
+    global C_V_fan_dsgn_C
+    C_V_fan_dsgn_C = float(input['C_V_fan_dsgn_C'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -238,9 +244,7 @@ def set_constants(input: dict):
   _set_defrost_humid_ductcentral(input)
   _set_phi_i(input)
   _set_C_V_fan_dsgn_H(input)
-  if 'C_V_fan_dsgn_C' in input:
-    global C_V_fan_dsgn_C
-    C_V_fan_dsgn_C = float(input['C_V_fan_dsgn_C'])
+  _set_C_V_fan_dsgn_C(input)
   if 'C_df_H_d_t_defrost_rac' in input:
     global C_df_H_d_t_defrost_rac
     C_df_H_d_t_defrost_rac = float(input['C_df_H_d_t_defrost_rac'])
