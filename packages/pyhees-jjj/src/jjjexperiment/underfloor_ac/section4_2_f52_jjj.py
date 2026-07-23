@@ -19,6 +19,10 @@ def _get_k1_52(Q, A_NR_1F, c_p_air, rho_air, V_vent_l_NR, V_dash_supply_A, U_prt
         + c_p_air * rho_air * V_dash_supply_A / 3600 \
         + U_prt * A_prt_A
 
+
+def _get_k2_52(U_s, A_NR_1F):
+    return U_s * A_NR_1F
+
 # NOTE: θ*NR,d,t は、室温の計算時に、床下からの貫流分を考慮(2025/03)
 @jjj_cloning  # section4_2/get_Theta_star_NR_d_t
 def get_Theta_star_NR(
@@ -68,7 +72,7 @@ def get_Theta_star_NR(
 
     #260112 式のミスを修正、非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
     #[OLD] k2 = U_s * A_NR * np.abs(Theta_uf - Theta_NR)
-    k2 = U_s * A_NR_1F
+    k2 = _get_k2_52(U_s, A_NR_1F)
 
     match HCM:
         case JJJ_HCM.H:

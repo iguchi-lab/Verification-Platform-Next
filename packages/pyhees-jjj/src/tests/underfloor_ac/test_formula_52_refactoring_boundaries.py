@@ -15,3 +15,6 @@ def test_get_k1_52_preserves_conductance_terms():
     result = formula52._get_k1_52(2.5, 40.0, 1000.0, 1.2, 120.0, 180.0, 1.5, 10.0)
     expected = (2.5 - 0.35 * 0.5 * 2.4) * 40.0 + 1000.0 * 1.2 * 120.0 / 3600 + 1000.0 * 1.2 * 180.0 / 3600 + 1.5 * 10.0
     assert result == expected
+
+def test_get_k2_52_preserves_floor_conductance():
+    assert formula52._get_k2_52(2.5, 40.0) == 100.0
