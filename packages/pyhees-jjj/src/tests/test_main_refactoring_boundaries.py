@@ -509,3 +509,25 @@ def test_get_cooling_fan_model_preserves_denchu_csv_and_unit_conversion(monkeypa
         ('csv', 'case_v_denchu_consts_C_output.csv', 'cp932'),
         ('log', 'P_rac_fan_rtd_C [W]: 300.0'),
     ]
+def test_run_cooling_calc_Q_UT_A_preserves_call_capacity_and_diagnostics(monkeypatch):
+    events = []
+    calculated = ('EUT', 'theta-out', 'theta-in', 'x-out', 'x-in', 'supply', 'vent')
+    injector = SimpleNamespace(
+        binder=SimpleNamespace(bind=lambda key, to: events.append(('bind', key, to))),
+        call_with_injection=lambda func: events.append(('call', func)) or calculated,
+    )
+    monkeypatch.setattr(experiment_main._logger, 'NDdebug', lambda name, value: events.append(('debug', name, value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_q_hs_C_d_t', lambda *args: events.append(('capacity', args)) or (np.array([2.0]), np.array([3.0])))
+
+    result = experiment_main._run_cooling_calc_Q_UT_A(injector, 'cool-setting', 6)
+
+    assert result[:7] == calculated
+    np.testing.assert_array_equal(result[7], np.array([2.0]))
+    np.testing.assert_array_equal(result[8], np.array([3.0]))
+    np.testing.assert_array_equal(result[9], np.array([5.0]))
+    assert events == [
+        ('call', experiment_main.jjj_dc.calc_Q_UT_A),
+        ('debug', 'V_hs_supply_d_t', 'supply'),
+        ('debug', 'V_hs_vent_d_t', 'vent'),
+        ('capacity', ('theta-out', 'theta-in', 'x-out', 'x-in', 'supply', 6)),
+    ]

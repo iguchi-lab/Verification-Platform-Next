@@ -496,6 +496,33 @@ def _get_cooling_fan_model(cool_ac_setting, V_hs_dsgn_C, cool_denchu_catalog, co
         P_rac_fan_rtd_C = V_hs_dsgn_C * cool_ac_setting.f_SFP
     _logger.info(f"P_rac_fan_rtd_C [W]: {P_rac_fan_rtd_C}")
     return P_rac_fan_rtd_C, simu_R_C
+def _run_cooling_calc_Q_UT_A(injector, cool_ac_setting, region):
+    E_UT_C_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = (
+        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
+    )
+    _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
+    _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
+    q_hs_CS_d_t, q_hs_CL_d_t = dc_a.get_q_hs_C_d_t(
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        X_hs_out_d_t,
+        X_hs_in_d_t,
+        V_hs_supply_d_t,
+        region,
+    )
+    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
+    return (
+        E_UT_C_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        X_hs_out_d_t,
+        X_hs_in_d_t,
+        V_hs_supply_d_t,
+        V_hs_vent_d_t,
+        q_hs_CS_d_t,
+        q_hs_CL_d_t,
+        q_hs_C_d_t,
+    )
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -670,8 +697,7 @@ def calc_main(
         cool_quantity,
         cool_CRAC,
     )
-    injector.binder.bind(jjj_dc.ActiveAcSetting, to=cool_ac_setting)  # 冷房負荷アクティブ
-
+    injector.binder.bind(jjj_dc.ActiveAcSetting, to=cool_ac_setting)
     P_rac_fan_rtd_C, simu_R_C = _get_cooling_fan_model(
         cool_ac_setting,
         V_hs_dsgn_C,
@@ -679,17 +705,18 @@ def calc_main(
         cool_real_inner,
         case_name,
     )
-    E_UT_C_d_t: np.ndarray  # NOTE: ベースプログラムでは E_UT_C, E_C_UT が統一されていない
-    """冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値(MJ/h)"""
-    E_UT_C_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = \
-        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
-    _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
-    _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
-
-    # (4) 日付dの時刻tにおける1時間当たりの熱源機の平均冷房能力(-)
-    q_hs_CS_d_t, q_hs_CL_d_t = dc_a.get_q_hs_C_d_t(Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, house.region)
-    q_hs_C_d_t = q_hs_CS_d_t + q_hs_CL_d_t
-
+    (
+        E_UT_C_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        X_hs_out_d_t,
+        X_hs_in_d_t,
+        V_hs_supply_d_t,
+        V_hs_vent_d_t,
+        q_hs_CS_d_t,
+        q_hs_CL_d_t,
+        q_hs_C_d_t,
+    ) = _run_cooling_calc_Q_UT_A(injector, cool_ac_setting, house.region)
     if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
         print(cool_ac_setting.type)
 
