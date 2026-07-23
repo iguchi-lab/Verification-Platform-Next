@@ -3680,7 +3680,7 @@ def test_prepare_unprocessed_energy_state_preserves_calculate_record_order(
         sut, "_record_unprocessed_energy_output",
         lambda *args: events.append(("record", args)) or recorded)
 
-    result = sut._prepare_unprocessed_energy_state(original, *inputs)
+    result = sut._prepare_unprocessed_energy_state(sut._UnprocessedEnergyStateInputs(original, *inputs))
 
     assert result == (energy, recorded)
     assert events == [

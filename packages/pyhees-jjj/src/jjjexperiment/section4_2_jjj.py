@@ -930,6 +930,15 @@ class _GeneralVentilationStateInputs(NamedTuple):
     A_HCZ_i: object
     A_HCZ_R_i: object
 
+
+class _UnprocessedEnergyStateInputs(NamedTuple):
+    df_output: object
+    ac_setting: object
+    Q_UT_CL_d_t_i: object
+    Q_UT_CS_d_t_i: object
+    Q_UT_H_d_t_i: object
+    region: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3159,10 +3168,14 @@ def _export_and_build_calculation_result(inputs: _CalculationExportInputs):
     )
 
 
-def _prepare_unprocessed_energy_state(
-        df_output, ac_setting, Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region):
+def _prepare_unprocessed_energy_state(inputs: _UnprocessedEnergyStateInputs):
     """Calculate and record unprocessed primary energy."""
+    df_output = inputs.df_output
+    ac_setting = inputs.ac_setting
+    Q_UT_CL_d_t_i = inputs.Q_UT_CL_d_t_i
+    Q_UT_CS_d_t_i = inputs.Q_UT_CS_d_t_i
+    Q_UT_H_d_t_i = inputs.Q_UT_H_d_t_i
+    region = inputs.region
     E_UT_d_t, E_UT_output_name = _get_unprocessed_energy(_UnprocessedEnergyInputs(
         ac_setting, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, region))
     df_output = _record_unprocessed_energy_output(
@@ -4080,9 +4093,9 @@ def calc_Q_UT_A(
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
         L_star_H_d_t_i, L_dash_H_d_t_i)
     """ まとめ - 一次エネルギー """
-    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(
+    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(_UnprocessedEnergyStateInputs(
         df_output, ac_setting, Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region)
+        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region))
     return _export_and_build_calculation_result(_CalculationExportInputs(
         case_name, ac_setting, house, new_ufac, new_ufac_df,
         df_output3, df_output2, df_output, E_UT_d_t,
