@@ -558,6 +558,19 @@ class _HeatSourceOutletHumidityInputs(NamedTuple):
     L_star_CL_d_t_i: object
     region: object
 
+
+class _HeatSourceOutletTemperaturesInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    Theta_star_hs_in_d_t: object
+    Q_hs_max_CS_d_t: object
+    V_dash_supply_d_t_i: object
+    Q_hs_max_H_d_t: object
+    Theta_req_d_t_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_NR_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -980,19 +993,18 @@ def _get_heat_source_outlet_humidity(inputs: _HeatSourceOutletHumidityInputs):
     # (15)　熱源機の出口における絶対湿度
     return dc.get_X_hs_out_d_t(X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i, region)
 
-def _get_heat_source_outlet_temperatures(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        Theta_star_hs_in_d_t: np.ndarray,
-        Q_hs_max_CS_d_t: np.ndarray,
-        V_dash_supply_d_t_i: np.ndarray,
-        Q_hs_max_H_d_t: np.ndarray,
-        Theta_req_d_t_i: np.ndarray,
-        L_star_H_d_t_i: np.ndarray,
-        L_star_CS_d_t_i: np.ndarray,
-        Theta_NR_d_t: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _get_heat_source_outlet_temperatures(inputs: _HeatSourceOutletTemperaturesInputs):
     """Calculate formulas (17), (16), and (14) in their original order."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    Theta_star_hs_in_d_t = inputs.Theta_star_hs_in_d_t
+    Q_hs_max_CS_d_t = inputs.Q_hs_max_CS_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Q_hs_max_H_d_t = inputs.Q_hs_max_H_d_t
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_NR_d_t = inputs.Theta_NR_d_t
     # (17)　冷房時の熱源機の出口における空気温度の最低値
     Theta_hs_out_min_C_d_t = dc.get_Theta_hs_out_min_C_d_t(Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i)
 
@@ -2695,10 +2707,10 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region))
     Theta_NR_d_t = np.zeros(24 * 365)
-    outlet_temperatures = _get_heat_source_outlet_temperatures(
+    outlet_temperatures = _get_heat_source_outlet_temperatures(_HeatSourceOutletTemperaturesInputs(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
         V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
-        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t))
     Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
     Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
     Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
@@ -3081,10 +3093,10 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
     X_hs_out_d_t = _get_heat_source_outlet_humidity(_HeatSourceOutletHumidityInputs(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region))
-    outlet_temperatures = _get_heat_source_outlet_temperatures(
+    outlet_temperatures = _get_heat_source_outlet_temperatures(_HeatSourceOutletTemperaturesInputs(
         ac_setting, house, Theta_star_hs_in_d_t, Q_hs_max_CS_d_t,
         V_dash_supply_d_t_i, Q_hs_max_H_d_t, Theta_req_d_t_i,
-        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t)
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_NR_d_t))
     Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
     Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
     Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t

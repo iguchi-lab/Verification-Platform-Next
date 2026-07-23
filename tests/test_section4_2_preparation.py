@@ -1127,11 +1127,11 @@ def test_heat_source_outlet_temperatures_preserve_formula_order(monkeypatch):
         lambda *args: calls.append(("outlet", args)) or outputs[2],
     )
 
-    result = sut._get_heat_source_outlet_temperatures(
+    result = sut._get_heat_source_outlet_temperatures(sut._HeatSourceOutletTemperaturesInputs(
         setting,
         house,
         *inputs,
-    )
+    ))
 
     assert result == tuple(outputs)
     assert calls == [
