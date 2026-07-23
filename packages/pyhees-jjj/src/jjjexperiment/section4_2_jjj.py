@@ -939,6 +939,16 @@ class _UnprocessedEnergyStateInputs(NamedTuple):
     Q_UT_H_d_t_i: object
     region: object
 
+
+class _UnprocessedLoadStateInputs(NamedTuple):
+    df_output: object
+    L_star_CL_d_t_i: object
+    L_dash_CL_d_t_i: object
+    L_star_CS_d_t_i: object
+    L_dash_CS_d_t_i: object
+    L_star_H_d_t_i: object
+    L_dash_H_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3183,11 +3193,15 @@ def _prepare_unprocessed_energy_state(inputs: _UnprocessedEnergyStateInputs):
     return E_UT_d_t, df_output
 
 
-def _prepare_unprocessed_load_state(
-        df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
-        L_star_CS_d_t_i, L_dash_CS_d_t_i,
-        L_star_H_d_t_i, L_dash_H_d_t_i):
+def _prepare_unprocessed_load_state(inputs: _UnprocessedLoadStateInputs):
     """Calculate and record unprocessed cooling and heating loads."""
+    df_output = inputs.df_output
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    L_dash_CL_d_t_i = inputs.L_dash_CL_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    L_dash_CS_d_t_i = inputs.L_dash_CS_d_t_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_dash_H_d_t_i = inputs.L_dash_H_d_t_i
     unprocessed_loads = _get_unprocessed_loads(_UnprocessedLoadsInputs(
         L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
@@ -4088,10 +4102,10 @@ def calc_Q_UT_A(
         Q_UT_CS_d_t_i,
         Q_UT_H_d_t_i,
         df_output,
-    ) = _prepare_unprocessed_load_state(
+    ) = _prepare_unprocessed_load_state(_UnprocessedLoadStateInputs(
         df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
         L_star_CS_d_t_i, L_dash_CS_d_t_i,
-        L_star_H_d_t_i, L_dash_H_d_t_i)
+        L_star_H_d_t_i, L_dash_H_d_t_i))
     """ まとめ - 一次エネルギー """
     E_UT_d_t, df_output = _prepare_unprocessed_energy_state(_UnprocessedEnergyStateInputs(
         df_output, ac_setting, Q_UT_CL_d_t_i,
