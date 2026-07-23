@@ -2759,6 +2759,11 @@ def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monke
     )
     assert events[1][2] == "Q_hat_hs_d_t"
     assert events[1][3] is values[0]
+    assert sut._InitialHeatSourceOutputCallInputs._fields == (
+        "Q", "A_A", "V_vent_l_d_t", "V_vent_g_i", "mu_H", "mu_C",
+        "J_d_t", "q_gen_d_t", "n_p_d_t", "q_p_H", "q_p_CS", "q_p_CL",
+        "X_ex_d_t", "w_gen_d_t", "Theta_ex_d_t", "L_wtr", "region")
+
 
 def test_prepare_minimum_heat_source_airflow_preserves_formula_39_write(monkeypatch):
     events = []

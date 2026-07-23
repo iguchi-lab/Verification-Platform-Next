@@ -168,6 +168,26 @@ class _SupplyStateResult(NamedTuple):
     V_supply_d_t_i: object
     Theta_supply_d_t_i: object
 
+class _InitialHeatSourceOutputCallInputs(NamedTuple):
+    Q: object
+    A_A: object
+    V_vent_l_d_t: object
+    V_vent_g_i: object
+    mu_H: object
+    mu_C: object
+    J_d_t: object
+    q_gen_d_t: object
+    n_p_d_t: object
+    q_p_H: object
+    q_p_CS: object
+    q_p_CL: object
+    X_ex_d_t: object
+    w_gen_d_t: object
+    Theta_ex_d_t: object
+    L_wtr: object
+    region: object
+
+
 class _InitialHeatSourceOutputInputs(NamedTuple):
     df_output: object
     house: object
@@ -2801,7 +2821,7 @@ def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
     w_gen_d_t = inputs.w_gen_d_t
     Theta_ex_d_t = inputs.Theta_ex_d_t
     L_wtr = inputs.L_wtr
-    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(
+    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = dc.calc_Q_hat_hs_d_t(*_InitialHeatSourceOutputCallInputs(
         skin.Q,
         house.A_A,
         V_vent_l_d_t,
@@ -2819,7 +2839,7 @@ def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
         Theta_ex_d_t,
         L_wtr,
         house.region,
-    )
+    ))
     df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
     return Q_hat_hs_d_t, Q_hat_hs_CS_d_t
 
