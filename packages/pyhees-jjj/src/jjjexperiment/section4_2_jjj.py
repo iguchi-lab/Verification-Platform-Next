@@ -601,6 +601,14 @@ class _RacHeatingCapacityInputs(NamedTuple):
     log_intermediates: object
 
 
+class _CarryoverCalculationInputs(NamedTuple):
+    H: object
+    C: object
+    A_HCZ_i: object
+    Theta_HBR_i: object
+    Theta_star_HBR: object
+
+
 class _CarryoverAtHourInputs(NamedTuple):
     t: object
     H: object
@@ -1655,16 +1663,16 @@ def _get_carryover_at_hour(inputs: _CarryoverAtHourInputs):
         return np.zeros((5, 1))
     # 暖房期 前時刻にて 暖かさに余裕があるとき
     elif H[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] > Theta_star_HBR_d_t[t-1]):
-        return jjj_carryover_heat.calc_carryover(
+        return jjj_carryover_heat.calc_carryover(*_CarryoverCalculationInputs(
                             H[t], C[t], A_HCZ_i,
                             Theta_HBR_d_t_i[:, t-1:t],
-                            Theta_star_HBR_d_t[t])
+                            Theta_star_HBR_d_t[t]))
     # 冷房期 前時刻にて 涼しさに余裕があるとき
     elif C[t] and np.any(Theta_HBR_d_t_i[:, t-1:t] < Theta_star_HBR_d_t[t-1]):
-        return jjj_carryover_heat.calc_carryover(
+        return jjj_carryover_heat.calc_carryover(*_CarryoverCalculationInputs(
                             H[t], C[t], A_HCZ_i,
                             Theta_HBR_d_t_i[:, t-1:t],
-                            Theta_star_HBR_d_t[t])
+                            Theta_star_HBR_d_t[t]))
     else:
         # 前時刻の Theta_HBR_d_t_i を使用するため
         # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う

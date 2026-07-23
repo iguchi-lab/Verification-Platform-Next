@@ -1502,6 +1502,9 @@ def test_carryover_at_hour_preserves_previous_comparison_and_current_target(
     assert calls[0][:3] == (heating, cooling, area)
     np.testing.assert_array_equal(calls[0][3], rooms[:, 0:1])
     assert calls[0][4] == targets[1]
+    assert sut._CarryoverCalculationInputs._fields == (
+        "H", "C", "A_HCZ_i", "Theta_HBR_i", "Theta_star_HBR")
+
 
 def test_balanced_loads_at_hour_preserve_formula_order_and_slices(monkeypatch):
     calls = []
