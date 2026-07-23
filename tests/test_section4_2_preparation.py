@@ -2041,13 +2041,13 @@ def test_actual_room_temperatures_without_carryover_preserve_new_hour_order(
         lambda *_: pytest.fail("new branch must not call the legacy formula"),
     )
 
-    result = sut._get_actual_room_temperatures_without_carryover(
+    result = sut._get_actual_room_temperatures_without_carryover(sut._ActualRoomTemperaturesWithoutCarryoverInputs(
         SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0, region=6),
         SimpleNamespace(Q=2.7),
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
         Climate(), theta_star, supply_airflow, supply_temperature,
         0.5, area_partition, area_hcz, l_star_h, l_star_cs, theta_uf
-    )
+    ))
 
     assert result.shape == (5, hours)
     np.testing.assert_array_equal(result[0], theta_uf)
@@ -2085,11 +2085,11 @@ def test_actual_room_temperatures_without_carryover_preserve_legacy_formula(
         lambda *args: calls.append(args) or result,
     )
 
-    actual = sut._get_actual_room_temperatures_without_carryover(
+    actual = sut._get_actual_room_temperatures_without_carryover(sut._ActualRoomTemperaturesWithoutCarryoverInputs(
         house, skin,
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
         object(), *values
-    )
+    ))
 
     assert actual is result
     assert calls == [(
@@ -2127,12 +2127,12 @@ def test_actual_non_room_temperatures_without_carryover_preserve_new_hour_order(
         lambda *_: pytest.fail("new branch must not call the legacy formula"),
     )
 
-    result = sut._get_actual_non_room_temperatures_without_carryover(
+    result = sut._get_actual_non_room_temperatures_without_carryover(sut._ActualNonRoomTemperaturesWithoutCarryoverInputs(
         SimpleNamespace(Q=2.7),
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更する),
         theta_star_nr, theta_star_hbr, theta_hbr, 45.0, vent_nr,
         dash_supply, supply, 0.5, area_partition, theta_uf, r_area
-    )
+    ))
 
     np.testing.assert_array_equal(result, theta_uf)
     assert call_count == hours
@@ -2166,11 +2166,11 @@ def test_actual_non_room_temperatures_without_carryover_preserve_legacy_formula(
         lambda *args: calls.append(args) or result,
     )
 
-    actual = sut._get_actual_non_room_temperatures_without_carryover(
+    actual = sut._get_actual_non_room_temperatures_without_carryover(sut._ActualNonRoomTemperaturesWithoutCarryoverInputs(
         SimpleNamespace(Q=2.7),
         SimpleNamespace(new_ufac_flg=sut.床下空調ロジック.変更しない),
         *values
-    )
+    ))
 
     assert actual is result
     assert calls == [(
@@ -2215,13 +2215,13 @@ def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
         lambda: calls.append(("area_ratio",)) or r_area,
     )
 
-    actual, actual_r_area = sut._get_new_balanced_non_room_temperature(
+    actual, actual_r_area = sut._get_new_balanced_non_room_temperature(sut._NewBalancedNonRoomTemperatureInputs(
         SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
         SimpleNamespace(Q=2.7), Climate(),
         SimpleNamespace(L_H_d_t_i=load_h, L_CS_d_t_i=load_cs),
         45.0, area_partition, 0.5, vent_nr, dash_supply,
         theta_star_hbr, theta_in, theta_uf
-    )
+    ))
 
     assert actual is result
     assert actual_r_area is r_area
@@ -2315,7 +2315,7 @@ def test_partition_heat_transfers_preserve_formula_11_assign_generation(
         lambda *args: events.append(("formula", args)) or transfers,
     )
 
-    result, next_frame = sut._get_partition_heat_transfers(frame, *inputs)
+    result, next_frame = sut._get_partition_heat_transfers(sut._PartitionHeatTransferInputs(frame, *inputs))
 
     assert result is transfers
     assert next_frame.generation == 1
@@ -2590,7 +2590,7 @@ def test_prepare_partition_state_preserves_formula_61_60_order(monkeypatch):
     house = SimpleNamespace(A_MR=30.0, A_OR=50.0)
     skin = SimpleNamespace(r_env=0.4)
     hcz, a_nr = object(), 40.0
-    result = sut._prepare_partition_state(Frame("df2"), Frame("df3"), house, skin, hcz, a_nr)
+    result = sut._prepare_partition_state(sut._PartitionStateInputs(Frame("df2"), Frame("df3"), house, skin, hcz, a_nr))
     assert result == (u_value, areas)
     assert [e[0] for e in events] == ["U", "write", "A", "write", "write"]
     assert events[2] == ("A", (hcz, 0.4, 30.0, 40.0, 50.0))
@@ -2623,8 +2623,8 @@ def test_prepare_duct_geometry_state_preserves_formula_59_to_56_order(monkeypatc
         lambda *args: events.append(("total", args)) or values[3])
 
     theta_ex, solar = object(), object()
-    result = sut._prepare_duct_geometry_state(
-        Frame("df"), Frame("df2"), SimpleNamespace(A_A=120.0), theta_ex, solar)
+    result = sut._prepare_duct_geometry_state(sut._DuctGeometryStateInputs(
+        Frame("df"), Frame("df2"), SimpleNamespace(A_A=120.0), theta_ex, solar))
 
     assert result == tuple(values)
     assert [event[0] for event in events] == [
@@ -2663,8 +2663,8 @@ def test_prepare_balanced_room_and_duct_state_preserves_formula_order(monkeypatc
     setting = SimpleNamespace(duct_insulation="outside")
     house = SimpleNamespace(region=6)
     x_ex, theta_ex, theta_sat, duct_in, duct_ex = [object() for _ in range(5)]
-    result = sut._prepare_balanced_room_and_duct_state(
-        frame, setting, house, x_ex, theta_ex, theta_sat, duct_in, duct_ex)
+    result = sut._prepare_balanced_room_and_duct_state(sut._BalancedRoomAndDuctStateInputs(
+        frame, setting, house, x_ex, theta_ex, theta_sat, duct_in, duct_ex))
 
     assert result[:4] == tuple(values)
     assert result[4].generation == 1
@@ -2761,7 +2761,7 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
         or sut._RatedHeatSourceCapacitiesResult(heating, cooling),
     )
 
-    result = sut._prepare_rated_heat_source_capacity_state(Frame(), *inputs)
+    result = sut._prepare_rated_heat_source_capacity_state(sut._RatedHeatSourceCapacityStateInputs(Frame(), *inputs))
 
     assert result == (heating, cooling)
     assert events == [
@@ -2882,8 +2882,8 @@ def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monke
         lambda *args: events.append(("formula", args)) or value,
     )
 
-    result = sut._prepare_balanced_non_room_humidity(
-        frame, house, load, *inputs)
+    result = sut._prepare_balanced_non_room_humidity(sut._BalancedNonRoomHumidityInputs(
+        frame, house, load, *inputs))
 
     assert result is value
     assert events[0] == (
@@ -2969,11 +2969,11 @@ def test_prepare_balanced_load_state_preserves_formula_11_10_generations(monkeyp
         lambda *args: events.append(("latent", args)) or (latent, final_frame),
     )
 
-    result = sut._prepare_balanced_load_state(first_frame, *inputs)
+    result = sut._prepare_balanced_load_state(sut._BalancedLoadStateInputs(first_frame, *inputs))
 
     assert result == (transfer, latent, final_frame)
     assert events == [
-        ("transfer", (first_frame, *inputs[:4])),
+        ("transfer", (sut._PartitionHeatTransferInputs(first_frame, *inputs[:4]),)),
         ("latent", (second_frame, inputs[4], inputs[5])),
     ]
 
@@ -3025,8 +3025,8 @@ def test_prepare_no_carryover_balanced_loads_preserves_formula_and_adjustment_or
         sut, "_adjust_new_underfloor_balanced_loads",
         lambda *a: events.append(("adjust", a)) or (adjusted_h, adjusted_c))
 
-    result = sut._prepare_no_carryover_balanced_loads(
-        house, new_ufac, inputs[0], load, *inputs[1:])
+    result = sut._prepare_no_carryover_balanced_loads(sut._NoCarryoverBalancedLoadInputs(
+        house, new_ufac, inputs[0], load, *inputs[1:]))
 
     assert result == ((adjusted_h, adjusted_c) if enabled else (heating, sensible_c))
     assert [e[0] for e in events] == (["cool", "heat", "adjust"] if enabled else ["cool", "heat"])
@@ -3060,8 +3060,8 @@ def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch,
     monkeypatch.setattr(sut, "_get_rac_cooling_capacity", lambda *a, **k: events.append(("rac_cool", a, k)) or cool_caps)
     monkeypatch.setattr(sut._logger, "debug", lambda message: events.append(("log", message)))
 
-    result = sut._prepare_no_carryover_capacity_state(
-        setting, *inputs[:4], Climate(), *inputs[4:])
+    result = sut._prepare_no_carryover_capacity_state(sut._NoCarryoverCapacityStateInputs(
+        setting, *inputs[:4], Climate(), *inputs[4:]))
 
     assert result[:4] == ((standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
                       if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
@@ -3349,9 +3349,9 @@ def test_prepare_no_carryover_actual_temperature_state_preserves_formula_order(
 
     assert result == (room, non_room)
     assert [event[0] for event in events] == ["room", "non_room"]
-    assert events[0][1][-1] is (theta_uf if enabled else None)
-    assert events[1][1][-2] is (theta_uf if enabled else None)
-    assert events[1][1][-1] is (non_room_ratio if enabled else None)
+    assert events[0][1][0].Theta_uf_d_t is (theta_uf if enabled else None)
+    assert events[1][1][0].Theta_uf_d_t is (theta_uf if enabled else None)
+    assert events[1][1][0].r_A_NR_uf_1F_excl_bath is (non_room_ratio if enabled else None)
 
 
 def test_log_actual_temperature_state_preserves_diagnostic_order(monkeypatch):
