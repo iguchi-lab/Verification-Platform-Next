@@ -347,3 +347,30 @@ def test_get_minimum_power_heating_fan_preserves_input_tuple(monkeypatch):
 def test_raise_invalid_heating_fan_input_preserves_value_error():
     with pytest.raises(ValueError):
         experiment_main._raise_invalid_heating_fan_input()
+
+def test_get_heating_electricity_type1_and_type3_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        experiment_main.jjj_dc_a,
+        'calc_E_E_H_d_t_type1_and_type3',
+        lambda *args: calls.append(args) or 'electricity',
+    )
+    setting = SimpleNamespace(type='type', equipment_spec='spec')
+    climate = SimpleNamespace(get_Theta_ex_d_t=lambda: 'theta-ex')
+    cool = SimpleNamespace(q_hs_rtd='q-rtd-c')
+    heat = SimpleNamespace(
+        q_hs_min='q-min-h', q_hs_mid='q-mid-h', P_hs_mid='p-mid-h',
+        V_fan_mid='v-mid-h', P_fan_mid='p-fan-mid-h', q_hs_rtd='q-rtd-h',
+        P_fan_rtd='p-fan-rtd-h', V_fan_rtd='v-fan-rtd-h', P_hs_rtd='p-rtd-h',
+    )
+
+    result = experiment_main._get_heating_electricity_type1_and_type3(
+        setting, 'fan', 'q-h', 'theta-out', 'theta-in', climate, 'supply', cool, heat
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'type', 'fan', 'q-h', 'theta-out', 'theta-in', 'theta-ex', 'supply',
+        'q-rtd-c', 'q-min-h', 'q-mid-h', 'p-mid-h', 'v-mid-h', 'p-fan-mid-h',
+        'q-rtd-h', 'p-fan-rtd-h', 'v-fan-rtd-h', 'p-rtd-h', 'spec',
+    )]

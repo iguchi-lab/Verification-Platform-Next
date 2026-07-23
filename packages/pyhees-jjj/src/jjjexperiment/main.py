@@ -379,6 +379,30 @@ def _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating
         False,
     ))
 
+def _get_heating_electricity_type1_and_type3(heat_ac_setting, E_E_fan_H_d_t, q_hs_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, climate, V_hs_supply_d_t, cool_quantity, heat_quantity):
+    return jjj_dc_a.calc_E_E_H_d_t_type1_and_type3(
+        *_HeatingType1And3ElectricityInputs(
+            heat_ac_setting.type,
+            E_E_fan_H_d_t,
+            q_hs_H_d_t,
+            Theta_hs_out_d_t,
+            Theta_hs_in_d_t,
+            climate.get_Theta_ex_d_t(),
+            V_hs_supply_d_t,
+            cool_quantity.q_hs_rtd,
+            heat_quantity.q_hs_min,
+            heat_quantity.q_hs_mid,
+            heat_quantity.P_hs_mid,
+            heat_quantity.V_fan_mid,
+            heat_quantity.P_fan_mid,
+            heat_quantity.q_hs_rtd,
+            heat_quantity.P_fan_rtd,
+            heat_quantity.V_fan_rtd,
+            heat_quantity.P_hs_rtd,
+            heat_ac_setting.equipment_spec,
+        )
+    )
+
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -498,29 +522,17 @@ def calc_main(
         計算モデル.ダクト式セントラル空調機,
         計算モデル.RAC活用型全館空調_潜熱評価モデル
     ]:
-        E_E_H_d_t \
-            = jjj_dc_a.calc_E_E_H_d_t_type1_and_type3(
-                *_HeatingType1And3ElectricityInputs(
-                    heat_ac_setting.type,
-                    E_E_fan_H_d_t,
-                    q_hs_H_d_t,
-                    Theta_hs_out_d_t,
-                    Theta_hs_in_d_t,
-                    climate.get_Theta_ex_d_t(),  # 空気温度
-                    V_hs_supply_d_t,  # 風量
-                    cool_quantity.q_hs_rtd,  # 定格冷房能力※
-                    heat_quantity.q_hs_min,  # 最小暖房能力
-                    heat_quantity.q_hs_mid,
-                    heat_quantity.P_hs_mid,
-                    heat_quantity.V_fan_mid,
-                    heat_quantity.P_fan_mid,
-                    heat_quantity.q_hs_rtd,
-                    heat_quantity.P_fan_rtd,
-                    heat_quantity.V_fan_rtd,
-                    heat_quantity.P_hs_rtd,
-                    heat_ac_setting.equipment_spec,
-                )
-            )
+        E_E_H_d_t = _get_heating_electricity_type1_and_type3(
+            heat_ac_setting,
+            E_E_fan_H_d_t,
+            q_hs_H_d_t,
+            Theta_hs_out_d_t,
+            Theta_hs_in_d_t,
+            climate,
+            V_hs_supply_d_t,
+            cool_quantity,
+            heat_quantity,
+        )
     elif heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
         E_E_H_d_t \
             = jjj_dc_a.calc_E_E_H_d_t_type2(
