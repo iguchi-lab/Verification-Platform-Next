@@ -1563,7 +1563,7 @@ def test_actual_room_temperatures_at_hour_preserve_slices(monkeypatch, t):
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_actual_room_temperatures_at_hour(
+    result = sut._get_actual_room_temperatures_at_hour(sut._ActualRoomTemperatureHourInputs(
         t,
         H,
         C,
@@ -1578,7 +1578,7 @@ def test_actual_room_temperatures_at_hour_preserve_slices(monkeypatch, t):
         heating,
         cooling,
         actual,
-    )
+    ))
 
     assert result is expected
     args = calls[0]
@@ -4315,4 +4315,27 @@ def test_capped_supply_airflow_inputs_preserve_field_order():
         "V_hs_dsgn_H",
         "V_hs_dsgn_C",
         "print_exec",
+    )
+
+
+def test_actual_room_temperature_hour_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(14))
+    inputs = sut._ActualRoomTemperatureHourInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "t",
+        "H",
+        "C",
+        "M",
+        "Theta_star_HBR_d_t",
+        "V_supply_d_t_i",
+        "Theta_supply_d_t_i",
+        "U_prt",
+        "A_prt_i",
+        "Q",
+        "A_HCZ_i",
+        "L_star_H_d_t_i",
+        "L_star_CS_d_t_i",
+        "Theta_HBR_d_t_i",
     )

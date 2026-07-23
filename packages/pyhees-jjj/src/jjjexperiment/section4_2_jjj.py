@@ -442,6 +442,23 @@ class _CappedSupplyAirflowInputs(NamedTuple):
     print_exec: object
 
 
+class _ActualRoomTemperatureHourInputs(NamedTuple):
+    t: object
+    H: object
+    C: object
+    M: object
+    Theta_star_HBR_d_t: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    A_HCZ_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_HBR_d_t_i: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1138,23 +1155,22 @@ def _get_balanced_loads_at_hour(
 
     return L_star_H_i, L_star_CS_i
 
-def _get_actual_room_temperatures_at_hour(
-        t: int,
-        H: np.ndarray,
-        C: np.ndarray,
-        M: np.ndarray,
-        Theta_star_HBR_d_t: np.ndarray,
-        V_supply_d_t_i: np.ndarray,
-        Theta_supply_d_t_i: np.ndarray,
-        U_prt: float,
-        A_prt_i: np.ndarray,
-        Q: float,
-        A_HCZ_i: np.ndarray,
-        L_star_H_d_t_i: np.ndarray,
-        L_star_CS_d_t_i: np.ndarray,
-        Theta_HBR_d_t_i: np.ndarray,
-    ) -> np.ndarray:
+def _get_actual_room_temperatures_at_hour(inputs: _ActualRoomTemperatureHourInputs):
     """Calculate formula (46) for one hour with its original slices."""
+    t = inputs.t
+    H = inputs.H
+    C = inputs.C
+    M = inputs.M
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    U_prt = inputs.U_prt
+    A_prt_i = inputs.A_prt_i
+    Q = inputs.Q
+    A_HCZ_i = inputs.A_HCZ_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
     # (46)　暖冷房区画𝑖の実際の居室の室温
     return jjj_carryover_heat.get_Theta_HBR_i_2023(
         H[t], C[t], M[t],
@@ -2934,10 +2950,10 @@ def _update_carryover_actual_temperature_state(inputs: _CarryoverActualTemperatu
     V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
     V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     Theta_NR_d_t = inputs.Theta_NR_d_t
-    Theta_HBR_d_t_i[:, t:t + 1] = _get_actual_room_temperatures_at_hour(
+    Theta_HBR_d_t_i[:, t:t + 1] = _get_actual_room_temperatures_at_hour(_ActualRoomTemperatureHourInputs(
         t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
         Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
-        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i)
+        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i))
     Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(
         t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
         Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
