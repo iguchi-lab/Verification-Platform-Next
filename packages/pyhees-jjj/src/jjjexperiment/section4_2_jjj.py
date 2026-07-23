@@ -344,6 +344,29 @@ class _CarryoverSupplyInputs(NamedTuple):
     Theta_ex_d_t: object
 
 
+class _CarryoverActualTemperatureInputs(NamedTuple):
+    t: object
+    isFirst: object
+    H: object
+    C: object
+    M: object
+    Theta_star_HBR_d_t: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    A_HCZ_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_HBR_d_t_i: object
+    Theta_star_NR_d_t: object
+    A_NR: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+    Theta_NR_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2782,13 +2805,28 @@ def _prepare_no_carryover_actual_temperature_state(inputs: _NoCarryoverActualTem
     return Theta_HBR_d_t_i, Theta_NR_d_t
 
 
-def _update_carryover_actual_temperature_state(
-        t, isFirst, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
-        Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
-        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i,
-        Theta_star_NR_d_t, A_NR, V_vent_l_NR_d_t,
-        V_dash_supply_d_t_i, Theta_NR_d_t):
+def _update_carryover_actual_temperature_state(inputs: _CarryoverActualTemperatureInputs):
     """Update formulas (46) and (48) for one carryover hour."""
+    t = inputs.t
+    isFirst = inputs.isFirst
+    H = inputs.H
+    C = inputs.C
+    M = inputs.M
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    U_prt = inputs.U_prt
+    A_prt_i = inputs.A_prt_i
+    Q = inputs.Q
+    A_HCZ_i = inputs.A_HCZ_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
+    A_NR = inputs.A_NR
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Theta_NR_d_t = inputs.Theta_NR_d_t
     Theta_HBR_d_t_i[:, t:t + 1] = _get_actual_room_temperatures_at_hour(
         t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
         Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
@@ -3272,12 +3310,12 @@ def calc_Q_UT_A(
             # 0 の扱いは全てのメソッドで考慮されていること
 
             Theta_HBR_d_t_i, Theta_NR_d_t = \
-                _update_carryover_actual_temperature_state(
+                _update_carryover_actual_temperature_state(_CarryoverActualTemperatureInputs(
                     t, isFirst, H, C, M, Theta_star_HBR_d_t,
                     V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i,
                     skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
                     Theta_HBR_d_t_i, Theta_star_NR_d_t, A_NR,
-                    V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_NR_d_t)
+                    V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_NR_d_t))
     else:  # 過剰熱繰越ナシ(一般的なパターン)
 
         # NOTE: 床下空調のための r_A_ufvnt の上書きはココより前に行わない
