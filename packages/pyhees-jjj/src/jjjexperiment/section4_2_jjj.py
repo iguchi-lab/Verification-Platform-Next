@@ -407,6 +407,24 @@ class _CapacityStateOutputInputs(NamedTuple):
     Q_hs_max_H_d_t: object
 
 
+class _CalculationExportInputs(NamedTuple):
+    case_name: object
+    ac_setting: object
+    house: object
+    new_ufac: object
+    new_ufac_df: object
+    df_output3: object
+    df_output2: object
+    df_output: object
+    E_UT_d_t: object
+    Theta_hs_out_d_t: object
+    Theta_hs_in_d_t: object
+    X_hs_out_d_t: object
+    X_hs_in_d_t: object
+    V_hs_supply_d_t: object
+    V_hs_vent_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2594,12 +2612,23 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     )
 
 
-def _export_and_build_calculation_result(
-        case_name, ac_setting, house, new_ufac, new_ufac_df,
-        df_output3, df_output2, df_output, E_UT_d_t,
-        Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t,
-        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t):
+def _export_and_build_calculation_result(inputs: _CalculationExportInputs):
     """Export underfloor and standard outputs, then preserve return order."""
+    case_name = inputs.case_name
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
+    df_output3 = inputs.df_output3
+    df_output2 = inputs.df_output2
+    df_output = inputs.df_output
+    E_UT_d_t = inputs.E_UT_d_t
+    Theta_hs_out_d_t = inputs.Theta_hs_out_d_t
+    Theta_hs_in_d_t = inputs.Theta_hs_in_d_t
+    X_hs_out_d_t = inputs.X_hs_out_d_t
+    X_hs_in_d_t = inputs.X_hs_in_d_t
+    V_hs_supply_d_t = inputs.V_hs_supply_d_t
+    V_hs_vent_d_t = inputs.V_hs_vent_d_t
     _export_underfloor_output(
         case_name, ac_setting, new_ufac, new_ufac_df)
     _export_standard_outputs(
@@ -3534,8 +3563,8 @@ def calc_Q_UT_A(
     E_UT_d_t, df_output = _prepare_unprocessed_energy_state(
         df_output, ac_setting, Q_UT_CL_d_t_i,
         Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region)
-    return _export_and_build_calculation_result(
+    return _export_and_build_calculation_result(_CalculationExportInputs(
         case_name, ac_setting, house, new_ufac, new_ufac_df,
         df_output3, df_output2, df_output, E_UT_d_t,
         Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t,
-        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t)
+        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t))

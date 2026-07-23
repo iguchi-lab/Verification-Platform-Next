@@ -3695,7 +3695,7 @@ def test_export_and_build_calculation_result_preserves_order(monkeypatch):
         sut, "_export_standard_outputs",
         lambda *args: events.append(("standard", args)))
 
-    result = sut._export_and_build_calculation_result(*inputs)
+    result = sut._export_and_build_calculation_result(sut._CalculationExportInputs(*inputs))
 
     assert events == [
         ("underfloor", (inputs[0], inputs[1], inputs[3], inputs[4])),
@@ -4268,4 +4268,28 @@ def test_capacity_state_output_inputs_preserve_field_order():
         "Q_hs_max_CL_d_t",
         "Q_hs_max_CS_d_t",
         "Q_hs_max_H_d_t",
+    )
+
+
+def test_calculation_export_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(15))
+    inputs = sut._CalculationExportInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "case_name",
+        "ac_setting",
+        "house",
+        "new_ufac",
+        "new_ufac_df",
+        "df_output3",
+        "df_output2",
+        "df_output",
+        "E_UT_d_t",
+        "Theta_hs_out_d_t",
+        "Theta_hs_in_d_t",
+        "X_hs_out_d_t",
+        "X_hs_in_d_t",
+        "V_hs_supply_d_t",
+        "V_hs_vent_d_t",
     )
