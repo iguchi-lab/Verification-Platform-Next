@@ -215,6 +215,12 @@ def _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setti
         spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC,
     )
 
+def _override_heating_load_from_csv(L_H_d_t_i, loadFile):
+    if loadFile != '-':
+        load = pd.read_csv(loadFile, nrows=24 * 365)
+        return load.iloc[:, :12].T.values
+    return L_H_d_t_i
+
 @inject
 def calc_main(
     injector: Injector,
@@ -253,9 +259,7 @@ def calc_main(
         # L_dash_H_R_d_t_i, L_dash_CS_R_d_t_iは負荷ファイルから読み取れないため自動計算する。
         # 読み込んだ負荷と整合性が取れないため、正しい実装ではない。
         L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setting, spec_MR, spec_OR, mode_MR, mode_OR)
-        if loadFile != '-':
-            load = pd.read_csv(loadFile, nrows=24 * 365)
-            L_H_d_t_i = load.iloc[::,:12].T.values
+        L_H_d_t_i = _override_heating_load_from_csv(L_H_d_t_i, loadFile)
 
         ##### 冷房負荷の取得（MJ/h）
         L_CS_d_t_i: np.ndarray

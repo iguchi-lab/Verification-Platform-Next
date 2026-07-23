@@ -1,3 +1,7 @@
+import numpy as np
+import pandas as pd
+import pytest
+
 from types import SimpleNamespace
 
 from jjjexperiment import main as experiment_main
@@ -85,3 +89,20 @@ def test_calc_standard_heating_load_preserves_argument_order(monkeypatch):
         'ratio', {'hex': True}, 'insulation', 'heat-mode', 'cool-mode',
         'spec-mr', 'spec-or', 'mode-mr', 'mode-or', 'SHC',
     )]
+
+def test_override_heating_load_from_csv_preserves_first_twelve_columns(monkeypatch):
+    load = pd.DataFrame(np.arange(60).reshape(2, 30))
+    calls = []
+    monkeypatch.setattr(experiment_main.pd, 'read_csv', lambda path, nrows: calls.append((path, nrows)) or load)
+
+    result = experiment_main._override_heating_load_from_csv('calculated', 'loads.csv')
+
+    np.testing.assert_array_equal(result, load.iloc[:, :12].T.values)
+    assert calls == [('loads.csv', 8760)]
+
+
+def test_override_heating_load_from_csv_preserves_calculated_load_without_file(monkeypatch):
+    calculated = object()
+    monkeypatch.setattr(experiment_main.pd, 'read_csv', lambda *args, **kwargs: pytest.fail('must not read CSV'))
+
+    assert experiment_main._override_heating_load_from_csv(calculated, '-') is calculated
