@@ -654,6 +654,19 @@ class _StandardOutputExportInputs(NamedTuple):
     df_output2: object
     df_output: object
 
+
+class _HeatSourceOutletOutputRecordInputs(NamedTuple):
+    df_output: object
+    X_star_hs_in_d_t: object
+    Theta_star_hs_in_d_t: object
+    X_hs_out_min_C_d_t: object
+    X_req_d_t_i: object
+    Theta_req_d_t_i: object
+    X_hs_out_d_t: object
+    Theta_hs_out_min_C_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1532,19 +1545,18 @@ def _record_balanced_load_outputs(
         L_star_H_d_t_i_5=L_star_H_d_t_i[4],
     )
 
-def _record_heat_source_outlet_outputs(
-        df_output: pd.DataFrame,
-        X_star_hs_in_d_t: np.ndarray,
-        Theta_star_hs_in_d_t: np.ndarray,
-        X_hs_out_min_C_d_t: np.ndarray,
-        X_req_d_t_i: np.ndarray,
-        Theta_req_d_t_i: np.ndarray,
-        X_hs_out_d_t: np.ndarray,
-        Theta_hs_out_min_C_d_t: np.ndarray,
-        Theta_hs_out_max_H_d_t: np.ndarray,
-        Theta_hs_out_d_t: np.ndarray,
-    ) -> pd.DataFrame:
+def _record_heat_source_outlet_outputs(inputs: _HeatSourceOutletOutputRecordInputs):
     """Record heat-source outlet values in the original column order."""
+    df_output = inputs.df_output
+    X_star_hs_in_d_t = inputs.X_star_hs_in_d_t
+    Theta_star_hs_in_d_t = inputs.Theta_star_hs_in_d_t
+    X_hs_out_min_C_d_t = inputs.X_hs_out_min_C_d_t
+    X_req_d_t_i = inputs.X_req_d_t_i
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    X_hs_out_d_t = inputs.X_hs_out_d_t
+    Theta_hs_out_min_C_d_t = inputs.Theta_hs_out_min_C_d_t
+    Theta_hs_out_max_H_d_t = inputs.Theta_hs_out_max_H_d_t
+    Theta_hs_out_d_t = inputs.Theta_hs_out_d_t
     df_output['X_star_hs_in_d_t'] = X_star_hs_in_d_t
     df_output['Theta_star_hs_in_d_t'] = Theta_star_hs_in_d_t
     # These two assignments intentionally preserve the existing duplicate writes.
@@ -2972,11 +2984,11 @@ def _record_common_outlet_and_supply_outputs(inputs: _CommonOutletSupplyOutputIn
     Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
     Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
     Theta_NR_d_t = inputs.Theta_NR_d_t
-    df_output = _record_heat_source_outlet_outputs(
+    df_output = _record_heat_source_outlet_outputs(_HeatSourceOutletOutputRecordInputs(
         df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
         X_hs_out_d_t, Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t)
+        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t))
     return _record_supply_state_outputs(
         df_output, V_supply_d_t_i_before, V_supply_d_t_i,
         Theta_supply_d_t_i, Theta_HBR_d_t_i, Theta_NR_d_t)

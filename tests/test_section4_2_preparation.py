@@ -544,7 +544,7 @@ def test_record_heat_source_outlet_outputs_preserves_write_order():
     theta_max = object()
     theta_out = object()
 
-    result = sut._record_heat_source_outlet_outputs(
+    result = sut._record_heat_source_outlet_outputs(sut._HeatSourceOutletOutputRecordInputs(
         frame,
         x_star,
         theta_star,
@@ -555,7 +555,7 @@ def test_record_heat_source_outlet_outputs_preserves_write_order():
         theta_min,
         theta_max,
         theta_out,
-    )
+    ))
 
     assert result.generation == 3
     assert frame.events == [
@@ -3469,9 +3469,9 @@ def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
 
     assert result is supply_frame
     assert [event[0] for event in events] == ["outlet", "supply"]
-    assert events[0][1][0] is original
+    assert events[0][1][0].df_output is original
     assert events[1][1][0] is outlet_frame
-    assert events[0][1][1:] == tuple(inputs[:9])
+    assert tuple(events[0][1][0])[1:] == tuple(inputs[:9])
     assert events[1][1][1:] == tuple(inputs[9:])
 
 
