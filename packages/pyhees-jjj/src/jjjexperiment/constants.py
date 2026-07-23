@@ -320,6 +320,12 @@ def _set_H_A_compressor_coeff(input: dict):
     a_r_H_t_t_a0 = float(input['H_A']['compressor_coeff'][4])
 
 
+def _set_H_A_airvolume_minimum(input: dict):
+  if 'airvolume_minimum' in input['H_A']:
+    global airvolume_minimum_H
+    airvolume_minimum_H = float(input['H_A']['airvolume_minimum'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -347,9 +353,7 @@ def set_constants(input: dict):
     _set_H_A_A_f_hex_large(input)
     _set_H_A_A_e_hex_large(input)
     _set_H_A_compressor_coeff(input)
-    if 'airvolume_minimum' in input['H_A']:
-      global airvolume_minimum_H
-      airvolume_minimum_H = float(input['H_A']['airvolume_minimum'])
+    _set_H_A_airvolume_minimum(input)
     if 'airvolume_maximum' in input['H_A']:
       global airvolume_maximum_H
       airvolume_maximum_H = float(input['H_A']['airvolume_maximum'])
