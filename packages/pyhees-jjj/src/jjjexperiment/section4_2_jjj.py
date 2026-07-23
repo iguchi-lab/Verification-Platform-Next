@@ -250,6 +250,34 @@ class _NoCarryoverOutletRequirementInputs(NamedTuple):
     Theta_in_d_t: object
 
 
+class _NoCarryoverSupplyInputs(NamedTuple):
+    v_supply_cap_dto: object
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    new_ufac: object
+    new_ufac_df: object
+    X_NR_d_t: object
+    X_req_d_t_i: object
+    Theta_req_d_t_i: object
+    V_dash_supply_d_t_i: object
+    X_hs_out_min_C_d_t: object
+    L_star_CL_d_t_i: object
+    Theta_star_hs_in_d_t: object
+    Q_hs_max_CS_d_t: object
+    Q_hs_max_H_d_t: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_sur_d_t_i: object
+    l_duct_i: object
+    Theta_star_HBR_d_t: object
+    V_vent_g_i: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    Theta_ex_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2366,15 +2394,33 @@ def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirem
         assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数です"
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 
-def _prepare_no_carryover_supply_state(
-        v_supply_cap_dto, ac_setting, house, skin, load, new_ufac,
-        new_ufac_df, X_NR_d_t, X_req_d_t_i, Theta_req_d_t_i,
-        V_dash_supply_d_t_i,
-        X_hs_out_min_C_d_t, L_star_CL_d_t_i, Theta_star_hs_in_d_t,
-        Q_hs_max_CS_d_t, Q_hs_max_H_d_t, L_star_H_d_t_i,
-        L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
-        V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C, Theta_ex_d_t):
+def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     """Prepare no-carryover outlet and supply state with the second floor pass."""
+    v_supply_cap_dto = inputs.v_supply_cap_dto
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
+    X_NR_d_t = inputs.X_NR_d_t
+    X_req_d_t_i = inputs.X_req_d_t_i
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    X_hs_out_min_C_d_t = inputs.X_hs_out_min_C_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    Theta_star_hs_in_d_t = inputs.Theta_star_hs_in_d_t
+    Q_hs_max_CS_d_t = inputs.Q_hs_max_CS_d_t
+    Q_hs_max_H_d_t = inputs.Q_hs_max_H_d_t
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_sur_d_t_i = inputs.Theta_sur_d_t_i
+    l_duct_i = inputs.l_duct_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    V_vent_g_i = inputs.V_vent_g_i
+    V_hs_dsgn_H = inputs.V_hs_dsgn_H
+    V_hs_dsgn_C = inputs.V_hs_dsgn_C
+    Theta_ex_d_t = inputs.Theta_ex_d_t
     X_hs_out_d_t = _get_heat_source_outlet_humidity(
         X_NR_d_t, X_req_d_t_i, V_dash_supply_d_t_i,
         X_hs_out_min_C_d_t, L_star_CL_d_t_i, house.region)
@@ -3166,14 +3212,14 @@ def calc_Q_UT_A(
                 X_star_HBR_d_t, L_star_CL_d_t_i, Theta_sur_d_t_i,
                 Theta_star_HBR_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
                 l_duct_i, Theta_ex_d_t, Theta_in_d_t))
-        supply_state = _prepare_no_carryover_supply_state(
+        supply_state = _prepare_no_carryover_supply_state(_NoCarryoverSupplyInputs(
             v_supply_cap_dto, ac_setting, house, skin, load, new_ufac,
             new_ufac_df, X_NR_d_t, X_req_d_t_i, Theta_req_d_t_i,
         V_dash_supply_d_t_i,
             X_hs_out_min_C_d_t, L_star_CL_d_t_i, Theta_star_hs_in_d_t,
             Q_hs_max_CS_d_t, Q_hs_max_H_d_t, L_star_H_d_t_i,
             L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
-            V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C, Theta_ex_d_t)
+            V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C, Theta_ex_d_t))
         X_hs_out_d_t = supply_state.X_hs_out_d_t
         Theta_hs_out_min_C_d_t = supply_state.Theta_hs_out_min_C_d_t
         Theta_hs_out_max_H_d_t = supply_state.Theta_hs_out_max_H_d_t
