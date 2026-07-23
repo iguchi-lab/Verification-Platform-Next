@@ -159,3 +159,16 @@ def test_set_constants_C_A_float_boundary(nested_key, target, value, expected):
     assert getattr(constants, target) == expected
   finally:
     setattr(constants, target, original)
+
+
+def test_override_CR_room_capacities_boundary():
+  original = constants.C1_BR_R_i.copy()
+  try:
+    constants.override_CR({'C1_BR_R_2': '250.5', 'C1_BR_R_4': None})
+    assert constants.C1_BR_R_i == [original[0], 250.5, original[2], original[3], original[4]]
+    assert isinstance(constants.C1_BR_R_i[1], float)
+
+    constants.override_CR({})
+    assert constants.C1_BR_R_i == [original[0], 250.5, original[2], original[3], original[4]]
+  finally:
+    constants.C1_BR_R_i[:] = original

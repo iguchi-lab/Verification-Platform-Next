@@ -173,15 +173,21 @@ C1_NR_R = 1195534
 # SimHeatモデルの熱容量 - 熱容量2(壁・床・天井を含む)
 # 現時点では使用しないため削除
 
-def override_CR(input: dict):
-  """ SimHeatモデルの熱容量を上書きする 入力のある箇所のみ更新
-  """
-  global C1_BR_R_i, C1_NR_R
+def _set_C1_BR_R_i(input: dict):
+  global C1_BR_R_i
 
   for i in range(1, 6):
     key = f'C1_BR_R_{i}'  # C1_BR_R_1, ..., C1_BR_R_5
     if key in input and input[key] is not None:
       C1_BR_R_i[i-1] = float(input[key])  # UIでNumberチェック済み
+
+
+def override_CR(input: dict):
+  """ SimHeatモデルの熱容量を上書きする 入力のある箇所のみ更新
+  """
+  global C1_NR_R
+
+  _set_C1_BR_R_i(input)
 
   if 'C1_NR_R' in input and input['C1_NR_R'] is not None:
     C1_NR_R = float(input['C1_NR_R'])  # UIでNumberチェック済み
