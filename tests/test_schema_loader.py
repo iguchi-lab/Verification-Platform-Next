@@ -9,7 +9,7 @@ def test_input_schema_contains_all_inventory_fields() -> None:
     inventory = load_legacy_inventory()
     schema = load_input_schema()
 
-    assert len(schema.fields) == 222
+    assert len(schema.fields) == 221
     assert schema.defaults() == default_ui_values(inventory)
     assert {field.key for field in schema.fields} == {
         field.id for field in inventory.fields

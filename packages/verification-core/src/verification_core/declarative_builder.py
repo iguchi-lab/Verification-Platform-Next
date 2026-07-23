@@ -14,7 +14,7 @@ _ConditionKey = tuple[_ConditionPart, ...]
 
 def build_input_data(
     values: Mapping[str, Any],
-    version: str = "260715",
+    version: str = "260724",
 ) -> dict[str, Any]:
     """Build input_data by applying the declarative binding catalog in source order."""
 

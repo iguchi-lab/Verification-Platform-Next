@@ -3,18 +3,38 @@ from collections import Counter
 from verification_core import FieldKind, load_legacy_inventory
 
 
-def test_260715_inventory_has_all_fields() -> None:
+def test_260724_active_inventory_excludes_removed_legacy_underfloor_field() -> None:
     inventory = load_legacy_inventory()
 
-    assert len(inventory.fields) == 222
+    assert inventory.version == "260724"
+    assert len(inventory.fields) == 221
     assert inventory.category_counts == {
-        "基本設定": 45,
+        "基本設定": 44,
         "暖房": 84,
         "冷房": 91,
         "換気": 2,
     }
     assert len(inventory.section_names) == 18
-    assert len({item.id for item in inventory.fields}) == 222
+    assert len({item.id for item in inventory.fields}) == 221
+    assert "underfloor_air_conditioning_air_supply__0" not in {
+        item.id for item in inventory.fields
+    }
+    new_underfloor = next(
+        item
+        for item in inventory.fields
+        if item.id == "change_underfloor_temperature__0"
+    )
+    assert new_underfloor.label == "新床下空調を使用する"
+
+
+def test_260715_historical_inventory_remains_frozen() -> None:
+    inventory = load_legacy_inventory("260715")
+
+    assert len(inventory.fields) == 222
+    assert inventory.category_counts["基本設定"] == 45
+    assert "underfloor_air_conditioning_air_supply__0" in {
+        item.id for item in inventory.fields
+    }
 
 
 def test_model_sections_have_activation_conditions() -> None:
