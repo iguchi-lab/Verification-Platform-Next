@@ -618,6 +618,16 @@ class _BalancedLoadsAtHourInputs(NamedTuple):
     Q_star_trs_prt_d_t_i: object
     carryover: object
 
+
+class _ActualLoadsInputs(NamedTuple):
+    carryover_heat_dto: object
+    V_supply_d_t_i: object
+    X_HBR_d_t_i: object
+    X_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    Theta_HBR_d_t_i: object
+    region: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1364,16 +1374,15 @@ def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHo
         Q,
         0 if t==0 else Theta_NR_d_t[t-1])
 
-def _get_actual_loads(
-        carryover_heat_dto: CarryoverHeatDto,
-        V_supply_d_t_i: np.ndarray,
-        X_HBR_d_t_i: np.ndarray,
-        X_supply_d_t_i: np.ndarray,
-        Theta_supply_d_t_i: np.ndarray,
-        Theta_HBR_d_t_i: np.ndarray,
-        region: int,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _get_actual_loads(inputs: _ActualLoadsInputs):
     """Calculate formulas (7) through (5) in their original order."""
+    carryover_heat_dto = inputs.carryover_heat_dto
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    X_HBR_d_t_i = inputs.X_HBR_d_t_i
+    X_supply_d_t_i = inputs.X_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    region = inputs.region
     # (7)　間仕切りの熱取得を含む実際の冷房潜熱負荷
     if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
         L_dash_CL_d_t_i = np.clip(
@@ -2848,9 +2857,9 @@ def _prepare_actual_load_state(
         df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
         X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region):
     """Calculate and record actual cooling and heating loads."""
-    actual_loads = _get_actual_loads(
+    actual_loads = _get_actual_loads(_ActualLoadsInputs(
         carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
-        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region)
+        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i, region))
     L_dash_CL_d_t_i = actual_loads.L_dash_CL_d_t_i
     L_dash_CS_d_t_i = actual_loads.L_dash_CS_d_t_i
     L_dash_H_d_t_i = actual_loads.L_dash_H_d_t_i

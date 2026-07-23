@@ -275,11 +275,11 @@ def test_get_actual_loads_preserves_formula_order_and_clipping(
         lambda *args: result("H", *args),
     )
 
-    actual = sut._get_actual_loads(
+    actual = sut._get_actual_loads(sut._ActualLoadsInputs(
         SimpleNamespace(carry_over_heat=carryover),
         *inputs,
         6,
-    )
+    ))
 
     for value in actual:
         np.testing.assert_array_equal(value, expected)
@@ -3636,7 +3636,7 @@ def test_prepare_actual_load_state_preserves_calculate_record_order(
 
     assert result == (*loads, recorded)
     assert events == [
-        ("calculate", tuple(inputs)),
+        ("calculate", (sut._ActualLoadsInputs(*inputs),)),
         ("record", (original, *loads)),
     ]
 
