@@ -204,15 +204,19 @@ def _set_C_df_H_d_t_defrost_ductcentral(input: dict):
     C_df_H_d_t_defrost_ductcentral = float(input['C_df_H_d_t_defrost_ductcentral'])
 
 
+def _set_defrost_temp_ductcentral(input: dict):
+  if 'defrost_temp_ductcentral' in input:
+    global defrost_temp_ductcentral
+    defrost_temp_ductcentral = float(input['defrost_temp_ductcentral'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
   _set_Theta_hs_out_max_H_d_t_limit(input)
   _set_Theta_hs_out_min_C_d_t_limit(input)
   _set_C_df_H_d_t_defrost_ductcentral(input)
-  if 'defrost_temp_ductcentral' in input:
-    global defrost_temp_ductcentral
-    defrost_temp_ductcentral = float(input['defrost_temp_ductcentral'])
+  _set_defrost_temp_ductcentral(input)
   if 'defrost_humid_ductcentral' in input:
     global defrost_humid_ductcentral
     defrost_humid_ductcentral = float(input['defrost_humid_ductcentral'])
