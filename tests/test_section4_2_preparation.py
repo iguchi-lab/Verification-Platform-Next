@@ -848,14 +848,14 @@ def test_supply_airflow_before_vav_preserves_vav_formula_order(monkeypatch):
         lambda *args: calls.append(("supply", args)) or supply,
     )
 
-    result = sut._get_supply_airflow_before_vav(
+    result = sut._get_supply_airflow_before_vav(sut._SupplyAirflowBeforeVavInputs(
         SimpleNamespace(VAV=True),
         SimpleNamespace(region=6),
         SimpleNamespace(L_CS_d_t_i=sensible, L_H_d_t_i=heating),
         object(),
         heat_source_airflow,
         ventilation,
-    )
+    ))
 
     np.testing.assert_array_equal(result[0], ratios[:, 0:1])
     assert result[1] is ratios
@@ -884,14 +884,14 @@ def test_supply_airflow_before_vav_preserves_standard_formula_order(monkeypatch)
         lambda *args: calls.append(("supply", args)) or supply,
     )
 
-    result = sut._get_supply_airflow_before_vav(
+    result = sut._get_supply_airflow_before_vav(sut._SupplyAirflowBeforeVavInputs(
         SimpleNamespace(VAV=False),
         object(),
         object(),
         areas,
         heat_source_airflow,
         ventilation,
-    )
+    ))
 
     assert result[0] is ratios
     np.testing.assert_array_equal(

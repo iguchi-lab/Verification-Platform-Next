@@ -507,6 +507,15 @@ class _HeatSourceSupplyAirflowBeforeVavInputs(NamedTuple):
     Q_hat_hs_d_t: object
     Q_hat_hs_CS_d_t: object
 
+
+class _SupplyAirflowBeforeVavInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    load: object
+    A_HCZ_i: object
+    V_dash_hs_supply_d_t: object
+    V_vent_g_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -745,15 +754,14 @@ def _get_heat_source_supply_airflow_before_vav(inputs: _HeatSourceSupplyAirflowB
     )
 
 
-def _get_supply_airflow_before_vav(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        load: Load_DTI,
-        A_HCZ_i: np.ndarray,
-        V_dash_hs_supply_d_t: np.ndarray,
-        V_vent_g_i: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
     """Calculate formulas (45) and (44) without changing their branch order."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    load = inputs.load
+    A_HCZ_i = inputs.A_HCZ_i
+    V_dash_hs_supply_d_t = inputs.V_dash_hs_supply_d_t
+    V_vent_g_i = inputs.V_vent_g_i
     if ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
         # (45)　風量バランス
         r_supply_des_d_t_i = dc.get_r_supply_des_d_t_i_2023(house.region, load.L_CS_d_t_i, load.L_H_d_t_i)
@@ -2294,14 +2302,14 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
             Q_hat_hs_CS_d_t,
         ))
         df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
-        supply_airflow = _get_supply_airflow_before_vav(
+        supply_airflow = _get_supply_airflow_before_vav(_SupplyAirflowBeforeVavInputs(
             ac_setting,
             house,
             load,
             A_HCZ_i,
             V_dash_hs_supply_d_t,
             V_vent_g_i,
-        )
+        ))
         r_supply_des_i = supply_airflow.r_supply_des_i
         r_supply_des_d_t_i = supply_airflow.r_supply_des_d_t_i
         V_dash_supply_d_t_i = supply_airflow.V_dash_supply_d_t_i
