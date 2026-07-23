@@ -425,6 +425,17 @@ class _CalculationExportInputs(NamedTuple):
     V_hs_vent_d_t: object
 
 
+class _SupplyAirflowCapCallInputs(NamedTuple):
+    V_supply_cap_dto: object
+    V_supply_d_t_i: object
+    V_dash_supply_d_t_i: object
+    V_vent_g_i: object
+    region: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    print_exec: object
+
+
 class _CappedSupplyAirflowInputs(NamedTuple):
     v_supply_cap_dto: object
     ac_setting: object
@@ -1582,8 +1593,9 @@ def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
     # (43)　暖冷房区画𝑖の吹き出し風量
     V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                 , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
-    V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i
-                                                , V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=print_exec)
+    V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(*_SupplyAirflowCapCallInputs(
+        v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i,
+        V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec))
 
     return _CappedSupplyAirflowsResult(
         V_supply_d_t_i_before,

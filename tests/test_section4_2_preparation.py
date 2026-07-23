@@ -1211,10 +1211,16 @@ def test_capped_supply_airflows_preserve_call_order_and_diagnostics(
                 6,
                 inputs[8],
                 inputs[9],
+                print_exec,
             ),
-            {"print_exec": print_exec},
+            {},
         ),
     ]
+    assert sut._SupplyAirflowCapCallInputs._fields == (
+        "V_supply_cap_dto", "V_supply_d_t_i", "V_dash_supply_d_t_i",
+        "V_vent_g_i", "region", "V_hs_dsgn_H", "V_hs_dsgn_C",
+        "print_exec")
+
 
 def test_supply_air_temperatures_preserve_formula_arguments(monkeypatch):
     calls = []
