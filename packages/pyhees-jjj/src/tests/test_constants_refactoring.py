@@ -119,6 +119,7 @@ def test_set_constants_H_A_airvolume_coeff_boundary():
     ('H_A', 'fan_coeff', ('P_fan_H_d_t_a4', 'P_fan_H_d_t_a3', 'P_fan_H_d_t_a2', 'P_fan_H_d_t_a1', 'P_fan_H_d_t_a0')),
     ('C_A', 'heat_transfer_coeff', ('a_c_hex_c_a4_C', 'a_c_hex_c_a3_C', 'a_c_hex_c_a2_C', 'a_c_hex_c_a1_C', 'a_c_hex_c_a0_C')),
     ('C_A', 'compressor_coeff', ('a_r_C_t_t_a4', 'a_r_C_t_t_a3', 'a_r_C_t_t_a2', 'a_r_C_t_t_a1', 'a_r_C_t_t_a0')),
+    ('C_A', 'airvolume_coeff', ('airvolume_coeff_a4_C', 'airvolume_coeff_a3_C', 'airvolume_coeff_a2_C', 'airvolume_coeff_a1_C', 'airvolume_coeff_a0_C')),
   ],
 )
 def test_set_constants_coefficient_boundary(section, nested_key, targets):

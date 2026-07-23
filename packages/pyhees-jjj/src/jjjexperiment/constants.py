@@ -424,6 +424,20 @@ def _set_C_A_airvolume_maximum(input: dict):
     airvolume_maximum_C = float(input['C_A']['airvolume_maximum'])
 
 
+def _set_C_A_airvolume_coeff(input: dict):
+  if 'airvolume_coeff' in input['C_A']:
+    global airvolume_coeff_a4_C
+    airvolume_coeff_a4_C = float(input['C_A']['airvolume_coeff'][0])
+    global airvolume_coeff_a3_C
+    airvolume_coeff_a3_C = float(input['C_A']['airvolume_coeff'][1])
+    global airvolume_coeff_a2_C
+    airvolume_coeff_a2_C = float(input['C_A']['airvolume_coeff'][2])
+    global airvolume_coeff_a1_C
+    airvolume_coeff_a1_C = float(input['C_A']['airvolume_coeff'][3])
+    global airvolume_coeff_a0_C
+    airvolume_coeff_a0_C = float(input['C_A']['airvolume_coeff'][4])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -464,17 +478,7 @@ def set_constants(input: dict):
     _set_C_A_compressor_coeff(input)
     _set_C_A_airvolume_minimum(input)
     _set_C_A_airvolume_maximum(input)
-    if 'airvolume_coeff' in input['C_A']:
-      global airvolume_coeff_a4_C
-      airvolume_coeff_a4_C = float(input['C_A']['airvolume_coeff'][0])
-      global airvolume_coeff_a3_C
-      airvolume_coeff_a3_C = float(input['C_A']['airvolume_coeff'][1])
-      global airvolume_coeff_a2_C
-      airvolume_coeff_a2_C = float(input['C_A']['airvolume_coeff'][2])
-      global airvolume_coeff_a1_C
-      airvolume_coeff_a1_C = float(input['C_A']['airvolume_coeff'][3])
-      global airvolume_coeff_a0_C
-      airvolume_coeff_a0_C = float(input['C_A']['airvolume_coeff'][4])
+    _set_C_A_airvolume_coeff(input)
     if 'fan_coeff' in input['C_A']:
       global P_fan_C_d_t_a4
       P_fan_C_d_t_a4 = float(input['C_A']['fan_coeff'][0])
