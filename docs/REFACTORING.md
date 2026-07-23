@@ -110,6 +110,9 @@
 - [PR #86](https://github.com/iguchi-lab/Verification-Platform-Next/pull/86): `section4_2_jjj.py`に残る内部状態10境界の長い引数列を入力コンテキストへ整理しました。
 - [PR #87](https://github.com/iguchi-lab/Verification-Platform-Next/pull/87): 内部ヘルパー5境界と電力計算公開API利用5境界を、公開シグネチャと建研由来の引数順を保つコンテキストへ整理しました。
 - [PR #88](https://github.com/iguchi-lab/Verification-Platform-Next/pull/88): 建研対応・関連公開API利用11境界を、計算先と公開シグネチャを変えずにコンテキスト化しました。現行経路に利用がない`calc_Q_hat_hs`への置換は行わず、実際の建研側境界`calc_Q_hat_hs_d_t`を整理しました。PR #86〜#88の作業パッケージ全体で31境界を完了しました。
+- [PR #91](https://github.com/iguchi-lab/Verification-Platform-Next/pull/91): `constants.set_constants`先頭のfloat定数更新12境界を、更新順とグローバル副作用を保つ内部ヘルパーへ分離しました。
+- [PR #92](https://github.com/iguchi-lab/Verification-Platform-Next/pull/92): top-level 4境界と`H_A` 8境界を分離し、`R_g`の入力時生成、float/int変換、係数の`a4`から`a0`への対応を契約テストで固定しました。
+- [PR #93](https://github.com/iguchi-lab/Verification-Platform-Next/pull/93): `H_A.fan_coeff`、`C_A` 10境界、熱容量2境界を分離しました。PR #91〜#93の作業パッケージ全体で37境界を完了し、公開API、部分辞書入力、入れ子キー、`None`の扱い、数値結果を維持しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
@@ -122,7 +125,7 @@
 3. `jjjexperiment`に残るワイルドカードimportを棚卸しし、同じ依存元を持つ8〜12境界ずつ明示的なimportへ置き換える。
 4. `calc_Q_UT_A` の次段階として、残る8760時刻ループのオーケストレーションと抽出済みヘルパーの長い引数列を、建研の式番号、時刻スライス、評価順を追跡できる内部コンテキストへ段階的に整理する。
 5. 既存の`pyhees -> jjjexperiment`逆依存を独立して検証できる境界へ分け、同種の8〜12境界ずつ削減する。
-6. カレントディレクトリ、グローバル状態、暗黙のファイル名などの副作用を境界へ集約する。
+6. カレントディレクトリ、グローバル状態、暗黙のファイル名などの副作用を境界へ集約する。`constants.set_constants`と`override_CR`の37更新境界はPR #91〜#93で分離済みです。グローバル状態自体の廃止は公開契約への影響を調査する別パッケージとして扱う。
 7. 辞書と長い引数列を、既存契約と建研コードとの対応を保ったまま内部DTOや型付き結果へ段階的に整理する。`section4_2_jjj.py`では、複数戻り値20境界をPR #72/#73、利用側20境界と入力側16境界をPR #76〜#78、内部ヘルパー入力36境界をPR #81〜#83、残存内部・関連公開API利用31境界をPR #86〜#88で整理済みです。次は他モジュールの長いオーケストレーション境界を対象とする。
 
 ## 1作業パッケージの進め方
