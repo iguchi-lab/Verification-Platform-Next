@@ -3283,8 +3283,8 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
         sut, "_adjust_carryover_underfloor_supply_temperatures",
         lambda *a: events.append(("adjust", a)) or adjusted)
 
-    result = sut._prepare_carryover_supply_state(
-        inputs[0], inputs[1], house, skin, inputs[2], *inputs[3:])
+    result = sut._prepare_carryover_supply_state(sut._CarryoverSupplyInputs(
+        inputs[0], inputs[1], house, skin, inputs[2], *inputs[3:]))
 
     assert result == (
         outlet_humidity, *outlet_temperatures, *airflows,
@@ -4153,5 +4153,38 @@ def test_carryover_outlet_requirement_inputs_preserve_field_order():
         "L_star_H_d_t_i",
         "L_star_CS_d_t_i",
         "l_duct_i",
+        "Theta_ex_d_t",
+    )
+
+
+def test_carryover_supply_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(24))
+    inputs = sut._CarryoverSupplyInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "v_supply_cap_dto",
+        "ac_setting",
+        "house",
+        "skin",
+        "load",
+        "X_NR_d_t",
+        "X_req_d_t_i",
+        "V_dash_supply_d_t_i",
+        "X_hs_out_min_C_d_t",
+        "L_star_CL_d_t_i",
+        "Theta_star_hs_in_d_t",
+        "Q_hs_max_CS_d_t",
+        "Q_hs_max_H_d_t",
+        "Theta_req_d_t_i",
+        "L_star_H_d_t_i",
+        "L_star_CS_d_t_i",
+        "Theta_NR_d_t",
+        "Theta_sur_d_t_i",
+        "l_duct_i",
+        "Theta_star_HBR_d_t",
+        "V_vent_g_i",
+        "V_hs_dsgn_H",
+        "V_hs_dsgn_C",
         "Theta_ex_d_t",
     )
