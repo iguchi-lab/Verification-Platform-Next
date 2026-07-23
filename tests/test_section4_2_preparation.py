@@ -1978,10 +1978,10 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
         lambda region: (heating, cooling, middle),
     )
 
-    result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(
+    result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(sut._NewUnderfloorBalancedLoadInputs(
         SimpleNamespace(region=6), new_ufac, FrameRecorder(), load, area,
         theta_room, theta_ex, l_star_h, l_star_cs
-    )
+    ))
 
     assert result_h is l_star_h
     assert result_cs is l_star_cs

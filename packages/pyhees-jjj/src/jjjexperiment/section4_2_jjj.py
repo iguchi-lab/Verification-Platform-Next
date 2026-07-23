@@ -734,6 +734,18 @@ class _LegacyUnderfloorSupplyTemperatureInputs(NamedTuple):
     Theta_ex_d_t: object
     V_dash_supply_d_t_i: object
 
+
+class _NewUnderfloorBalancedLoadInputs(NamedTuple):
+    house: object
+    new_ufac: object
+    new_ufac_df: object
+    load: object
+    A_s_ufac_i: object
+    Theta_star_HBR_d_t: object
+    Theta_ex_d_t: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1962,18 +1974,17 @@ def _adjust_legacy_underfloor_supply_temperatures(inputs: _LegacyUnderfloorSuppl
 
     return Theta_supply_d_t_i
 
-def _adjust_new_underfloor_balanced_loads(
-        house,
-        new_ufac,
-        new_ufac_df,
-        load,
-        A_s_ufac_i,
-        Theta_star_HBR_d_t,
-        Theta_ex_d_t,
-        L_star_H_d_t_i,
-        L_star_CS_d_t_i,
-    ):
+def _adjust_new_underfloor_balanced_loads(inputs: _NewUnderfloorBalancedLoadInputs):
     """Apply the new-underfloor corrections to formulas (8) and (9)."""
+    house = inputs.house
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
+    load = inputs.load
+    A_s_ufac_i = inputs.A_s_ufac_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     # 部屋→床下への熱移動分が戻ってくるため負荷控除する
     delta_L_uf2room_d_t_i = np.hstack([
         jjj_ufac_dc.calc_delta_L_room2uf_i(
@@ -2694,10 +2705,10 @@ def _prepare_no_carryover_balanced_loads(
         load.L_H_d_t_i, Q_star_trs_prt_d_t_i, house.region)
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         L_star_H_d_t_i, L_star_CS_d_t_i = \
-            _adjust_new_underfloor_balanced_loads(
+            _adjust_new_underfloor_balanced_loads(_NewUnderfloorBalancedLoadInputs(
                 house, new_ufac, new_ufac_df, load, A_s_ufac_i,
                 Theta_star_HBR_d_t, Theta_ex_d_t,
-                L_star_H_d_t_i, L_star_CS_d_t_i)
+                L_star_H_d_t_i, L_star_CS_d_t_i))
     return L_star_H_d_t_i, L_star_CS_d_t_i
 
 def _prepare_no_carryover_capacity_state(
