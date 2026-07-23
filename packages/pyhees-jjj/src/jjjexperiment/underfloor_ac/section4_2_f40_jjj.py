@@ -3,6 +3,15 @@ import pyhees.section4_2 as dc
 from jjjexperiment.common import JJJ_HCM, jjj_cloning
 
 # NOTE: Q^,hs,d,t は 床下負荷増加分も見込む(2025/03)
+def _get_formula_40_properties():
+    c_p_air = dc.get_c_p_air()
+    rho_air = dc.get_rho_air()
+    Theta_set_H = dc.get_Theta_set_H()
+    Theta_set_C = dc.get_Theta_set_C()
+    X_set_C = dc.get_X_set_C()
+    return c_p_air, rho_air, Theta_set_H, Theta_set_C, X_set_C
+
+
 @jjj_cloning
 def calc_Q_hat_hs(
         Q: float,
@@ -48,11 +57,7 @@ def calc_Q_hat_hs(
         (時点)１時間当たりの熱源機の風量を計算するための熱源機の暖房出力 [MJ/h]
     """
     # vectorize可能
-    c_p_air = dc.get_c_p_air()
-    rho_air = dc.get_rho_air()
-    Theta_set_H = dc.get_Theta_set_H()
-    Theta_set_C = dc.get_Theta_set_C()
-    X_set_C = dc.get_X_set_C()
+    c_p_air, rho_air, Theta_set_H, Theta_set_C, X_set_C = _get_formula_40_properties()
 
     match HCM:
         case JJJ_HCM.H:
