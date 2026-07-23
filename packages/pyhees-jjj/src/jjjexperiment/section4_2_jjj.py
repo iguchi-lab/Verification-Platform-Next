@@ -789,6 +789,21 @@ class _NewUnderfloorBalancedLoadInputs(NamedTuple):
     L_star_CS_d_t_i: object
 
 
+class _UnderfloorActualRoomTemperatureInputs(NamedTuple):
+    Theta_star_HBR: object
+    V_supply_i: object
+    Theta_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    A_HCZ_i: object
+    L_star_H_i: object
+    L_star_CS_i: object
+    HCM: object
+    A_s_ufac_i: object
+    Theta_uf: object
+
+
 class _ActualRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     house: object
     skin: object
@@ -2359,20 +2374,20 @@ def _get_actual_room_temperatures_without_carryover(inputs: _ActualRoomTemperatu
         A_s_ufac_i, _ = jjj_ufac_dc.get_A_s_ufac_i(
             house.A_A, house.A_MR, house.A_OR)
         return np.hstack([
-            get_Theta_HBR_i(
-                Theta_star_HBR=Theta_star_HBR_d_t[t],
-                V_supply_i=V_supply_d_t_i[:, t:t + 1],
-                Theta_supply_i=Theta_supply_d_t_i[:, t:t + 1],
-                U_prt=U_prt,
-                A_prt_i=A_prt_i.reshape(-1, 1)[:5, :],
-                Q=skin.Q,
-                A_HCZ_i=A_HCZ_i.reshape(-1, 1),
-                L_star_H_i=L_star_H_d_t_i[:, t:t + 1],
-                L_star_CS_i=L_star_CS_d_t_i[:, t:t + 1],
-                HCM=HCM[t],
-                A_s_ufac_i=A_s_ufac_i[:5, :],
-                Theta_uf=Theta_uf_d_t[t],
-            ) for t in range(24 * 365)
+            get_Theta_HBR_i(*_UnderfloorActualRoomTemperatureInputs(
+                Theta_star_HBR_d_t[t],
+                V_supply_d_t_i[:, t:t + 1],
+                Theta_supply_d_t_i[:, t:t + 1],
+                U_prt,
+                A_prt_i.reshape(-1, 1)[:5, :],
+                skin.Q,
+                A_HCZ_i.reshape(-1, 1),
+                L_star_H_d_t_i[:, t:t + 1],
+                L_star_CS_d_t_i[:, t:t + 1],
+                HCM[t],
+                A_s_ufac_i[:5, :],
+                Theta_uf_d_t[t],
+            )) for t in range(24 * 365)
         ])
 
     # 改変なし元式

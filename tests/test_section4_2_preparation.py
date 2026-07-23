@@ -2038,12 +2038,13 @@ def test_actual_room_temperatures_without_carryover_preserve_new_hour_order(
         boundary_calls.append(("area", args))
         return area_underfloor, object()
 
-    def get_theta_hbr(**kwargs):
+    def get_theta_hbr(*args):
         nonlocal call_count
+        context = sut._UnderfloorActualRoomTemperatureInputs(*args)
         if call_count in (0, hours - 1):
-            boundary_calls.append(("hour", call_count, kwargs))
+            boundary_calls.append(("hour", call_count, context._asdict()))
         call_count += 1
-        return np.full((5, 1), kwargs["Theta_uf"])
+        return np.full((5, 1), context.Theta_uf)
 
     monkeypatch.setattr(sut.jjj_ufac_dc, "get_A_s_ufac_i", get_area)
     monkeypatch.setattr(sut, "get_Theta_HBR_i", get_theta_hbr)
@@ -2075,6 +2076,10 @@ def test_actual_room_temperatures_without_carryover_preserve_new_hour_order(
     np.testing.assert_array_equal(last["V_supply_i"], supply_airflow[:, -1:])
     np.testing.assert_array_equal(first["A_prt_i"], area_partition.reshape(-1, 1)[:5, :])
     np.testing.assert_array_equal(first["A_s_ufac_i"], area_underfloor[:5, :])
+    assert sut._UnderfloorActualRoomTemperatureInputs._fields == (
+        "Theta_star_HBR", "V_supply_i", "Theta_supply_i", "U_prt",
+        "A_prt_i", "Q", "A_HCZ_i", "L_star_H_i", "L_star_CS_i",
+        "HCM", "A_s_ufac_i", "Theta_uf")
 
 
 def test_actual_room_temperatures_without_carryover_preserve_legacy_formula(
