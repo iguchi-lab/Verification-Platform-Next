@@ -3212,8 +3212,9 @@ def test_prepare_carryover_heat_source_inlet_state_preserves_formula_20_19(
         or np.array([10.0, 20.0]))
 
     result = sut._prepare_carryover_heat_source_inlet_state(
-        t, is_first, h, c, star_humidity, star_temperature,
-        actual_non_room, inlet_temperature)
+        sut._CarryoverHeatSourceInletStateInputs(
+            t, is_first, h, c, star_humidity, star_temperature,
+            actual_non_room, inlet_temperature))
 
     assert result == (inlet_humidity, inlet_temperature)
     assert inlet_temperature[t] == expected

@@ -990,6 +990,17 @@ class _CarryoverDiagnosticExportInputs(NamedTuple):
     carryovers: object
 
 
+class _CarryoverHeatSourceInletStateInputs(NamedTuple):
+    t: object
+    isFirst: object
+    H: object
+    C: object
+    X_star_NR_d_t: object
+    Theta_star_NR_d_t: object
+    Theta_NR_d_t: object
+    Theta_star_hs_in_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3632,9 +3643,16 @@ def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementIn
 
 
 def _prepare_carryover_heat_source_inlet_state(
-        t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
-        Theta_NR_d_t, Theta_star_hs_in_d_t):
+        inputs: _CarryoverHeatSourceInletStateInputs):
     """Calculate formulas (20) and (19) for one carryover hour."""
+    t = inputs.t
+    isFirst = inputs.isFirst
+    H = inputs.H
+    C = inputs.C
+    X_star_NR_d_t = inputs.X_star_NR_d_t
+    Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
+    Theta_NR_d_t = inputs.Theta_NR_d_t
+    Theta_star_hs_in_d_t = inputs.Theta_star_hs_in_d_t
     X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
     balanced_inlet = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
     Theta_star_hs_in_d_t[t] = (
@@ -3974,9 +3992,9 @@ def calc_Q_UT_A(
 
             # (20), (19)　負荷バランス時の熱源機入口状態
             X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
-                _prepare_carryover_heat_source_inlet_state(
+                _prepare_carryover_heat_source_inlet_state(_CarryoverHeatSourceInletStateInputs(
                     t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
-                    Theta_NR_d_t, Theta_star_hs_in_d_t)
+                    Theta_NR_d_t, Theta_star_hs_in_d_t))
 
             X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
                 _prepare_carryover_outlet_requirements(_CarryoverOutletRequirementInputs(
