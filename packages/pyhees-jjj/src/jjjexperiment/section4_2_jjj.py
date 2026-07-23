@@ -818,6 +818,17 @@ class _DuctGeometryStateInputs(NamedTuple):
     Theta_ex_d_t: object
     J_d_t: object
 
+
+class _BalancedRoomAndDuctStateInputs(NamedTuple):
+    df_output: object
+    ac_setting: object
+    house: object
+    X_ex_d_t: object
+    Theta_ex_d_t: object
+    Theta_SAT_d_t: object
+    l_duct_in_i: object
+    l_duct_ex_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2431,10 +2442,16 @@ def _prepare_duct_geometry_state(inputs: _DuctGeometryStateInputs):
     return Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i
 
 
-def _prepare_balanced_room_and_duct_state(
-        df_output, ac_setting, house, X_ex_d_t, Theta_ex_d_t,
-        Theta_SAT_d_t, l_duct_in_i, l_duct_ex_i):
+def _prepare_balanced_room_and_duct_state(inputs: _BalancedRoomAndDuctStateInputs):
     """Calculate formulas (51), (50), (55), and (54) in source order."""
+    df_output = inputs.df_output
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    X_ex_d_t = inputs.X_ex_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    Theta_SAT_d_t = inputs.Theta_SAT_d_t
+    l_duct_in_i = inputs.l_duct_in_i
+    l_duct_ex_i = inputs.l_duct_ex_i
     X_star_HBR_d_t = dc.get_X_star_HBR_d_t(X_ex_d_t, house.region)
     df_output['X_star_HBR_d_t'] = X_star_HBR_d_t
 
@@ -3580,7 +3597,7 @@ def calc_Q_UT_A(
         _prepare_duct_geometry_state(_DuctGeometryStateInputs(
             df_output, df_output2, house, Theta_ex_d_t, J_d_t))
     # (51), (50), (55), (54)　負荷バランス時の室内・ダクト周囲状態
-    balanced_room_state = _prepare_balanced_room_and_duct_state(
+    balanced_room_state = _prepare_balanced_room_and_duct_state(_BalancedRoomAndDuctStateInputs(
         df_output,
         ac_setting,
         house,
@@ -3589,7 +3606,7 @@ def calc_Q_UT_A(
         Theta_SAT_d_t,
         l_duct_in_i,
         l_duct_ex_i,
-    )
+    ))
     X_star_HBR_d_t = balanced_room_state.X_star_HBR_d_t
     Theta_star_HBR_d_t = balanced_room_state.Theta_star_HBR_d_t
     Theta_attic_d_t = balanced_room_state.Theta_attic_d_t

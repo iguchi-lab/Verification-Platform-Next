@@ -2663,8 +2663,8 @@ def test_prepare_balanced_room_and_duct_state_preserves_formula_order(monkeypatc
     setting = SimpleNamespace(duct_insulation="outside")
     house = SimpleNamespace(region=6)
     x_ex, theta_ex, theta_sat, duct_in, duct_ex = [object() for _ in range(5)]
-    result = sut._prepare_balanced_room_and_duct_state(
-        frame, setting, house, x_ex, theta_ex, theta_sat, duct_in, duct_ex)
+    result = sut._prepare_balanced_room_and_duct_state(sut._BalancedRoomAndDuctStateInputs(
+        frame, setting, house, x_ex, theta_ex, theta_sat, duct_in, duct_ex))
 
     assert result[:4] == tuple(values)
     assert result[4].generation == 1
