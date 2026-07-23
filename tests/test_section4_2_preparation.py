@@ -1918,10 +1918,10 @@ def test_legacy_underfloor_supply_temperatures_preserve_where_operation(
         lambda *_args, **_kwargs: pytest.fail("legacy phase must retain np.where"),
     )
 
-    result = sut._adjust_legacy_underfloor_supply_temperatures(
+    result = sut._adjust_legacy_underfloor_supply_temperatures(sut._LegacyUnderfloorSupplyTemperatureInputs(
         _setting(setting_type), house, skin, load,
         theta_supply, theta_ex, airflows
-    )
+    ))
 
     assert result is theta_supply
     np.testing.assert_array_equal(result[0], expected_first)

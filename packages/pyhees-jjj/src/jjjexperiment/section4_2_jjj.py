@@ -724,6 +724,16 @@ class _NewUnderfloorSupplyTemperatureInputs(NamedTuple):
     Theta_ex_d_t: object
     V_dash_supply_d_t_i: object
 
+
+class _LegacyUnderfloorSupplyTemperatureInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    Theta_supply_d_t_i: object
+    Theta_ex_d_t: object
+    V_dash_supply_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1922,16 +1932,15 @@ def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperat
     })
     return Theta_supply_d_t_i
 
-def _adjust_legacy_underfloor_supply_temperatures(
-        ac_setting,
-        house,
-        skin,
-        load,
-        Theta_supply_d_t_i,
-        Theta_ex_d_t,
-        V_dash_supply_d_t_i,
-    ):
+def _adjust_legacy_underfloor_supply_temperatures(inputs: _LegacyUnderfloorSupplyTemperatureInputs):
     """Apply the legacy underfloor second pass with its original where operation."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     # 旧床下空調-2nd
     for i in range(2):  # i=0,1
         Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
@@ -2871,9 +2880,9 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
             Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
             V_dash_supply_d_t_i))
     elif skin.underfloor_air_conditioning_air_supply == True:
-        Theta_supply_d_t_i = _adjust_legacy_underfloor_supply_temperatures(
+        Theta_supply_d_t_i = _adjust_legacy_underfloor_supply_temperatures(_LegacyUnderfloorSupplyTemperatureInputs(
             ac_setting, house, skin, load, Theta_supply_d_t_i,
-            Theta_ex_d_t, V_dash_supply_d_t_i)
+            Theta_ex_d_t, V_dash_supply_d_t_i))
     _log_supply_temperatures(Theta_supply_d_t_i)
     return _SupplyStateResult(
         X_hs_out_d_t,
