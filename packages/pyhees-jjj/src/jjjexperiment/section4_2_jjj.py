@@ -524,6 +524,17 @@ class _RoomToUnderfloorTransferInputs(NamedTuple):
     Theta_in_d_t: object
     Q_hat_hs_d_t: object
 
+
+class _UnderfloorGroundTransferInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    A_s_ufac_i: object
+    Phi_A_0: object
+    Theta_uf_d_t: object
+    sum_Theta_dash_g_surf_A_m: object
+    Theta_g_avg: object
+    Q_hat_hs_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -885,17 +896,16 @@ def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(inputs: _Under
 
     return Q_hat_hs_d_t, Theta_uf_d_t
 
-def _adjust_heat_source_output_for_underfloor_to_ground_transfer(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        A_s_ufac_i: np.ndarray,
-        Phi_A_0: float,
-        Theta_uf_d_t: np.ndarray,
-        sum_Theta_dash_g_surf_A_m: float,
-        Theta_g_avg: float,
-        Q_hat_hs_d_t: np.ndarray,
-    ) -> np.ndarray:
+def _adjust_heat_source_output_for_underfloor_to_ground_transfer(inputs: _UnderfloorGroundTransferInputs):
     """Apply the ground part of formula (40)-2nd without changing evaluation."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    A_s_ufac_i = inputs.A_s_ufac_i
+    Phi_A_0 = inputs.Phi_A_0
+    Theta_uf_d_t = inputs.Theta_uf_d_t
+    sum_Theta_dash_g_surf_A_m = inputs.sum_Theta_dash_g_surf_A_m
+    Theta_g_avg = inputs.Theta_g_avg
+    Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
     # 3. 床下 -> 地盤 (逃げ方向)
     A_s_ufac_A = np.sum(A_s_ufac_i)
 
@@ -2351,7 +2361,7 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
                 Q_hat_hs_d_t,
             ))
         Q_hat_hs_d_t = \
-            _adjust_heat_source_output_for_underfloor_to_ground_transfer(
+            _adjust_heat_source_output_for_underfloor_to_ground_transfer(_UnderfloorGroundTransferInputs(
                 ac_setting,
                 house,
                 A_s_ufac_i,
@@ -2360,7 +2370,7 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
                 sum_Theta_dash_g_surf_A_m,
                 Theta_g_avg,
                 Q_hat_hs_d_t,
-            )
+            ))
         # 補正完了した Q^hs を使って V'supply を再計算する
         should_adjust = False
 

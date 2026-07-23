@@ -1032,7 +1032,7 @@ def test_underfloor_to_ground_transfer_preserves_argument_order(monkeypatch):
         ),
     )
 
-    result = sut._adjust_heat_source_output_for_underfloor_to_ground_transfer(
+    result = sut._adjust_heat_source_output_for_underfloor_to_ground_transfer(sut._UnderfloorGroundTransferInputs(
         setting,
         house,
         area,
@@ -1041,7 +1041,7 @@ def test_underfloor_to_ground_transfer_preserves_argument_order(monkeypatch):
         11.2,
         15.5,
         output,
-    )
+    ))
 
     assert result is output
     np.testing.assert_array_equal(output, 101.0 + theta)
