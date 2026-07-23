@@ -2227,8 +2227,9 @@ def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
     def vectorize(function):
         calls.append(("vectorize", function))
 
-        def invoke(**kwargs):
-            calls.append(("invoke", kwargs))
+        def invoke(*args):
+            context = sut._BalancedNonRoomTemperatureCallInputs(*args)
+            calls.append(("invoke", context._asdict()))
             return result
 
         return invoke
@@ -2272,6 +2273,12 @@ def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
     assert kwargs["Theta_uf"] is theta_uf
     np.testing.assert_array_equal(kwargs["HCM"], hcm)
     assert kwargs["r_A_NR_1F_excl_bath"] is r_area
+    assert sut._BalancedNonRoomTemperatureCallInputs._fields == (
+        "Theta_star_HBR", "Q", "A_NR", "V_vent_l_NR",
+        "V_dash_supply_A", "U_prt", "A_prt_A", "L_H_NR_A",
+        "L_CS_NR_A", "Theta_NR", "Theta_uf", "HCM",
+        "r_A_NR_1F_excl_bath")
+
 
 def test_actual_non_room_humidity_preserves_formula_49_and_output_order(
     monkeypatch,

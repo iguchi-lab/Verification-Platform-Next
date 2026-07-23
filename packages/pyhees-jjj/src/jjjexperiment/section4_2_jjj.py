@@ -862,6 +862,22 @@ class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     r_A_NR_uf_1F_excl_bath: object
 
 
+class _BalancedNonRoomTemperatureCallInputs(NamedTuple):
+    Theta_star_HBR: object
+    Q: object
+    A_NR: object
+    V_vent_l_NR: object
+    V_dash_supply_A: object
+    U_prt: object
+    A_prt_A: object
+    L_H_NR_A: object
+    L_CS_NR_A: object
+    Theta_NR: object
+    Theta_uf: object
+    HCM: object
+    r_A_NR_1F_excl_bath: object
+
+
 class _NewBalancedNonRoomTemperatureInputs(NamedTuple):
     house: object
     skin: object
@@ -2497,22 +2513,22 @@ def _get_new_balanced_non_room_temperature(inputs: _NewBalancedNonRoomTemperatur
     # print("Theta_uf_d_t[4848]", Theta_uf_d_t[4848])
     # print("HCM[4848]", HCM[4848])
     Theta_star_NR_d_t = np.vectorize(get_Theta_star_NR)
-    Theta_star_NR_d_t = Theta_star_NR_d_t(
-        Theta_star_HBR=Theta_star_HBR_d_t,
-        Q=skin.Q,
-        A_NR=A_NR,
-        V_vent_l_NR=V_vent_l_NR_d_t,
-        V_dash_supply_A=V_dash_supply_d_t_A,
-        U_prt=U_prt,
-        A_prt_A=A_prt_A,
-        L_H_NR_A=L_H_NR_d_t_A,
-        L_CS_NR_A=L_CS_NR_d_t_A,
+    Theta_star_NR_d_t = Theta_star_NR_d_t(*_BalancedNonRoomTemperatureCallInputs(
+        Theta_star_HBR_d_t,
+        skin.Q,
+        A_NR,
+        V_vent_l_NR_d_t,
+        V_dash_supply_d_t_A,
+        U_prt,
+        A_prt_A,
+        L_H_NR_d_t_A,
+        L_CS_NR_d_t_A,
         # この時点では仮置きの値を使用⇒夏期は27℃とする必要がある 250501 井口
-        Theta_NR=Theta_in_d_t,
-        Theta_uf=Theta_uf_d_t,
-        HCM=HCM,
-        r_A_NR_1F_excl_bath=r_A_NR_uf_1F_excl_bath,
-    )
+        Theta_in_d_t,
+        Theta_uf_d_t,
+        HCM,
+        r_A_NR_uf_1F_excl_bath,
+    ))
     # print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
     # print("Theta_NR[0]: ", Theta_in_d_t[0])
     # print("Theta_uf[0]: ", Theta_uf_d_t[0])
