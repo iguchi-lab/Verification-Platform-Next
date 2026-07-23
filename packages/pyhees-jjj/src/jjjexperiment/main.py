@@ -57,6 +57,28 @@ import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 import jjjexperiment.v_min_input as jjj_V_min_input
 
 
+class _CoolingType1And3ElectricityInputs(NamedTuple):
+    type: object
+    region: object
+    E_E_fan_C_d_t: object
+    Theta_hs_out_d_t: object
+    Theta_hs_in_d_t: object
+    Theta_ex_d_t: object
+    V_hs_supply_d_t: object
+    X_hs_out_d_t: object
+    X_hs_in_d_t: object
+    q_hs_min_C: object
+    q_hs_mid_C: object
+    P_hs_mid_C: object
+    V_fan_mid_C: object
+    P_fan_mid_C: object
+    q_hs_rtd_C: object
+    P_fan_rtd_C: object
+    V_fan_rtd_C: object
+    P_hs_rtd_C: object
+    equipment_spec: object
+
+
 class _HeatingType4ElectricityInputs(NamedTuple):
     case_name: object
     type: object
@@ -586,26 +608,27 @@ def calc_main(
         計算モデル.RAC活用型全館空調_潜熱評価モデル
     ]:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type1_and_type3(
-            type = cool_ac_setting.type,
-            region = house.region,
-            E_E_fan_C_d_t = E_E_fan_C_d_t,
-            Theta_hs_out_d_t = Theta_hs_out_d_t,
-            Theta_hs_in_d_t = Theta_hs_in_d_t,
-            Theta_ex_d_t = climate.get_Theta_ex_d_t(),
-            V_hs_supply_d_t = V_hs_supply_d_t,
-            X_hs_out_d_t = X_hs_out_d_t,
-            X_hs_in_d_t = X_hs_in_d_t,
-
-            equipment_spec = cool_ac_setting.equipment_spec,
-            q_hs_min_C =  cool_quantity.q_hs_min,
-            q_hs_rtd_C =  cool_quantity.q_hs_rtd,
-            q_hs_mid_C =  cool_quantity.q_hs_mid,
-            P_hs_rtd_C =  cool_quantity.P_hs_rtd,
-            P_hs_mid_C =  cool_quantity.P_hs_mid,
-            V_fan_rtd_C = cool_quantity.V_fan_rtd,
-            V_fan_mid_C = cool_quantity.V_fan_mid,
-            P_fan_rtd_C = cool_quantity.P_fan_rtd,
-            P_fan_mid_C = cool_quantity.P_fan_mid
+            *_CoolingType1And3ElectricityInputs(
+                cool_ac_setting.type,
+                house.region,
+                E_E_fan_C_d_t,
+                Theta_hs_out_d_t,
+                Theta_hs_in_d_t,
+                climate.get_Theta_ex_d_t(),
+                V_hs_supply_d_t,
+                X_hs_out_d_t,
+                X_hs_in_d_t,
+                cool_quantity.q_hs_min,
+                cool_quantity.q_hs_mid,
+                cool_quantity.P_hs_mid,
+                cool_quantity.V_fan_mid,
+                cool_quantity.P_fan_mid,
+                cool_quantity.q_hs_rtd,
+                cool_quantity.P_fan_rtd,
+                cool_quantity.V_fan_rtd,
+                cool_quantity.P_hs_rtd,
+                cool_ac_setting.equipment_spec,
+            )
         )
     elif cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type2(
