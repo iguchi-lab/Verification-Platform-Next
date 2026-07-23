@@ -1,4 +1,5 @@
 import json
+from typing import NamedTuple
 import numpy as np
 from injector import Injector, inject
 import pandas as pd
@@ -54,6 +55,93 @@ import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 
 # [F25-01] 最低風量の直接入力
 import jjjexperiment.v_min_input as jjj_V_min_input
+
+
+class _CoolingType2ElectricityInputs(NamedTuple):
+    type: object
+    region: object
+    climateFile: object
+    E_E_fan_C_d_t: object
+    q_hs_CS_d_t: object
+    q_hs_CL_d_t: object
+    e_rtd_C: object
+    q_rtd_C: object
+    q_max_C: object
+    input_C_af_C: object
+    dualcompressor_C: object
+
+
+class _CoolingType1And3ElectricityInputs(NamedTuple):
+    type: object
+    region: object
+    E_E_fan_C_d_t: object
+    Theta_hs_out_d_t: object
+    Theta_hs_in_d_t: object
+    Theta_ex_d_t: object
+    V_hs_supply_d_t: object
+    X_hs_out_d_t: object
+    X_hs_in_d_t: object
+    q_hs_min_C: object
+    q_hs_mid_C: object
+    P_hs_mid_C: object
+    V_fan_mid_C: object
+    P_fan_mid_C: object
+    q_hs_rtd_C: object
+    P_fan_rtd_C: object
+    V_fan_rtd_C: object
+    P_hs_rtd_C: object
+    equipment_spec: object
+
+
+class _HeatingType4ElectricityInputs(NamedTuple):
+    case_name: object
+    type: object
+    region: object
+    climateFile: object
+    E_E_fan_H_d_t: object
+    q_hs_H_d_t: object
+    V_hs_supply_d_t: object
+    P_rac_fan_rtd_H: object
+    simu_R_H: object
+    spec: object
+    real_inner: object
+
+
+class _HeatingType2ElectricityInputs(NamedTuple):
+    type: object
+    region: object
+    climateFile: object
+    E_E_fan_H_d_t: object
+    q_hs_H_d_t: object
+    e_rtd_H: object
+    q_rtd_H: object
+    q_rtd_C: object
+    q_max_H: object
+    q_max_C: object
+    input_C_af_H: object
+    dualcompressor_H: object
+
+
+class _HeatingType1And3ElectricityInputs(NamedTuple):
+    type: object
+    E_E_fan_H_d_t: object
+    q_hs_H_d_t: object
+    Theta_hs_out_d_t: object
+    Theta_hs_in_d_t: object
+    Theta_ex_d_t: object
+    V_hs_supply_d_t: object
+    q_hs_rtd_C: object
+    q_hs_min_H: object
+    q_hs_mid_H: object
+    P_hs_mid_H: object
+    V_fan_mid_H: object
+    P_fan_mid_H: object
+    q_hs_rtd_H: object
+    P_fan_rtd_H: object
+    V_fan_rtd_H: object
+    P_hs_rtd_H: object
+    equipment_spec: object
+
 
 def calc(input_data: dict, test_mode=False):
     case_name = input_data.get('case_name', 'default')
@@ -320,56 +408,61 @@ def calc_main(
     ]:
         E_E_H_d_t \
             = jjj_dc_a.calc_E_E_H_d_t_type1_and_type3(
-                type = heat_ac_setting.type,
-                E_E_fan_H_d_t = E_E_fan_H_d_t,
-                q_hs_H_d_t = q_hs_H_d_t,
-                Theta_hs_out_d_t = Theta_hs_out_d_t,
-                Theta_hs_in_d_t = Theta_hs_in_d_t,
-                Theta_ex_d_t = climate.get_Theta_ex_d_t(),  # 空気温度
-                V_hs_supply_d_t = V_hs_supply_d_t,  # 風量
-                q_hs_rtd_C = cool_quantity.q_hs_rtd,  # 定格冷房能力※
-
-                equipment_spec = heat_ac_setting.equipment_spec,
-                q_hs_min_H = heat_quantity.q_hs_min,  # 最小暖房能力
-                q_hs_rtd_H = heat_quantity.q_hs_rtd,
-                q_hs_mid_H = heat_quantity.q_hs_mid,
-                P_hs_rtd_H = heat_quantity.P_hs_rtd,
-                P_hs_mid_H = heat_quantity.P_hs_mid,
-                V_fan_rtd_H = heat_quantity.V_fan_rtd,
-                V_fan_mid_H = heat_quantity.V_fan_mid,
-                P_fan_rtd_H = heat_quantity.P_fan_rtd,
-                P_fan_mid_H = heat_quantity.P_fan_mid
+                *_HeatingType1And3ElectricityInputs(
+                    heat_ac_setting.type,
+                    E_E_fan_H_d_t,
+                    q_hs_H_d_t,
+                    Theta_hs_out_d_t,
+                    Theta_hs_in_d_t,
+                    climate.get_Theta_ex_d_t(),  # 空気温度
+                    V_hs_supply_d_t,  # 風量
+                    cool_quantity.q_hs_rtd,  # 定格冷房能力※
+                    heat_quantity.q_hs_min,  # 最小暖房能力
+                    heat_quantity.q_hs_mid,
+                    heat_quantity.P_hs_mid,
+                    heat_quantity.V_fan_mid,
+                    heat_quantity.P_fan_mid,
+                    heat_quantity.q_hs_rtd,
+                    heat_quantity.P_fan_rtd,
+                    heat_quantity.V_fan_rtd,
+                    heat_quantity.P_hs_rtd,
+                    heat_ac_setting.equipment_spec,
+                )
             )
     elif heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
         E_E_H_d_t \
             = jjj_dc_a.calc_E_E_H_d_t_type2(
-                type = heat_ac_setting.type,
-                region = house.region,
-                climateFile = climateFile,
-                E_E_fan_H_d_t = E_E_fan_H_d_t,
-                q_hs_H_d_t = q_hs_H_d_t,
-                e_rtd_H = heat_CRAC.e_rtd,
-                q_rtd_H = heat_CRAC.q_rtd,
-                q_rtd_C = cool_CRAC.q_rtd,
-                q_max_H = heat_CRAC.q_max,
-                q_max_C = cool_CRAC.q_max,
-                input_C_af_H = heat_CRAC.input_C_af,
-                dualcompressor_H = heat_CRAC.dualcompressor
+                *_HeatingType2ElectricityInputs(
+                    heat_ac_setting.type,
+                    house.region,
+                    climateFile,
+                    E_E_fan_H_d_t,
+                    q_hs_H_d_t,
+                    heat_CRAC.e_rtd,
+                    heat_CRAC.q_rtd,
+                    cool_CRAC.q_rtd,
+                    heat_CRAC.q_max,
+                    cool_CRAC.q_max,
+                    heat_CRAC.input_C_af,
+                    heat_CRAC.dualcompressor,
+                )
             )
     elif heat_ac_setting.type == 計算モデル.電中研モデル:
         E_E_H_d_t \
             = jjj_dc_a.calc_E_E_H_d_t_type4(
-                case_name = case_name,
-                type = heat_ac_setting.type,
-                region = house.region,
-                climateFile = climateFile,
-                E_E_fan_H_d_t = E_E_fan_H_d_t,
-                q_hs_H_d_t = q_hs_H_d_t,
-                V_hs_supply_d_t = V_hs_supply_d_t,
-                P_rac_fan_rtd_H = P_rac_fan_rtd_H,
-                simu_R_H = simu_R_H,
-                spec = heat_denchu_catalog,
-                real_inner = heat_real_inner
+                *_HeatingType4ElectricityInputs(
+                    case_name,
+                    heat_ac_setting.type,
+                    house.region,
+                    climateFile,
+                    E_E_fan_H_d_t,
+                    q_hs_H_d_t,
+                    V_hs_supply_d_t,
+                    P_rac_fan_rtd_H,
+                    simu_R_H,
+                    heat_denchu_catalog,
+                    heat_real_inner,
+                )
             )
     else:
         raise Exception("暖房方式が不正です。")
@@ -529,40 +622,43 @@ def calc_main(
         計算モデル.RAC活用型全館空調_潜熱評価モデル
     ]:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type1_and_type3(
-            type = cool_ac_setting.type,
-            region = house.region,
-            E_E_fan_C_d_t = E_E_fan_C_d_t,
-            Theta_hs_out_d_t = Theta_hs_out_d_t,
-            Theta_hs_in_d_t = Theta_hs_in_d_t,
-            Theta_ex_d_t = climate.get_Theta_ex_d_t(),
-            V_hs_supply_d_t = V_hs_supply_d_t,
-            X_hs_out_d_t = X_hs_out_d_t,
-            X_hs_in_d_t = X_hs_in_d_t,
-
-            equipment_spec = cool_ac_setting.equipment_spec,
-            q_hs_min_C =  cool_quantity.q_hs_min,
-            q_hs_rtd_C =  cool_quantity.q_hs_rtd,
-            q_hs_mid_C =  cool_quantity.q_hs_mid,
-            P_hs_rtd_C =  cool_quantity.P_hs_rtd,
-            P_hs_mid_C =  cool_quantity.P_hs_mid,
-            V_fan_rtd_C = cool_quantity.V_fan_rtd,
-            V_fan_mid_C = cool_quantity.V_fan_mid,
-            P_fan_rtd_C = cool_quantity.P_fan_rtd,
-            P_fan_mid_C = cool_quantity.P_fan_mid
+            *_CoolingType1And3ElectricityInputs(
+                cool_ac_setting.type,
+                house.region,
+                E_E_fan_C_d_t,
+                Theta_hs_out_d_t,
+                Theta_hs_in_d_t,
+                climate.get_Theta_ex_d_t(),
+                V_hs_supply_d_t,
+                X_hs_out_d_t,
+                X_hs_in_d_t,
+                cool_quantity.q_hs_min,
+                cool_quantity.q_hs_mid,
+                cool_quantity.P_hs_mid,
+                cool_quantity.V_fan_mid,
+                cool_quantity.P_fan_mid,
+                cool_quantity.q_hs_rtd,
+                cool_quantity.P_fan_rtd,
+                cool_quantity.V_fan_rtd,
+                cool_quantity.P_hs_rtd,
+                cool_ac_setting.equipment_spec,
+            )
         )
     elif cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type2(
-            type = cool_ac_setting.type,
-            region = house.region,
-            climateFile = climateFile,
-            E_E_fan_C_d_t = E_E_fan_C_d_t,
-            q_hs_CS_d_t = q_hs_CS_d_t,
-            q_hs_CL_d_t = q_hs_CL_d_t,
-            e_rtd_C = cool_CRAC.e_rtd,
-            q_rtd_C = cool_CRAC.q_rtd,
-            q_max_C = cool_CRAC.q_max,
-            input_C_af_C = cool_CRAC.input_C_af,
-            dualcompressor_C = cool_CRAC.dualcompressor
+            *_CoolingType2ElectricityInputs(
+                cool_ac_setting.type,
+                house.region,
+                climateFile,
+                E_E_fan_C_d_t,
+                q_hs_CS_d_t,
+                q_hs_CL_d_t,
+                cool_CRAC.e_rtd,
+                cool_CRAC.q_rtd,
+                cool_CRAC.q_max,
+                cool_CRAC.input_C_af,
+                cool_CRAC.dualcompressor,
+            )
         )
     elif cool_ac_setting.type == 計算モデル.電中研モデル:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type4(

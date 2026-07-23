@@ -110,6 +110,73 @@ def test_main_section4_2_a_api_contract():
     assert all(hasattr(main.jjj_dc_a, name) for name in EXPECTED_SECTION4_2_A_MAIN_API)
 
 
+def _starred_context_name_for_call(function_name: str) -> str:
+    tree = ast.parse(
+        JJJEXPERIMENT_MAIN.read_text(encoding="utf-8"),
+        filename=str(JJJEXPERIMENT_MAIN),
+    )
+    calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == function_name
+    ]
+    assert len(calls) == 1
+    call = calls[0]
+    assert call.keywords == []
+    assert len(call.args) == 1
+    assert isinstance(call.args[0], ast.Starred)
+    context = call.args[0].value
+    assert isinstance(context, ast.Call)
+    assert isinstance(context.func, ast.Name)
+    return context.func.id
+
+
+def test_heating_type1_and3_call_uses_signature_order_context():
+    assert _starred_context_name_for_call(
+        "calc_E_E_H_d_t_type1_and_type3"
+    ) == "_HeatingType1And3ElectricityInputs"
+
+
+def test_heating_type2_call_uses_signature_order_context():
+    assert _starred_context_name_for_call(
+        "calc_E_E_H_d_t_type2"
+    ) == "_HeatingType2ElectricityInputs"
+
+
+def test_heating_type4_call_uses_signature_order_context():
+    assert _starred_context_name_for_call(
+        "calc_E_E_H_d_t_type4"
+    ) == "_HeatingType4ElectricityInputs"
+
+
+def test_cooling_type1_and3_call_uses_signature_order_context():
+    assert _starred_context_name_for_call(
+        "calc_E_E_C_d_t_type1_and_type3"
+    ) == "_CoolingType1And3ElectricityInputs"
+
+
+def test_cooling_type2_call_uses_signature_order_context():
+    assert _starred_context_name_for_call(
+        "calc_E_E_C_d_t_type2"
+    ) == "_CoolingType2ElectricityInputs"
+
+
+@pytest.mark.parametrize(("api_name", "context_name"), (
+    ("calc_E_E_H_d_t_type1_and_type3", "_HeatingType1And3ElectricityInputs"),
+    ("calc_E_E_H_d_t_type2", "_HeatingType2ElectricityInputs"),
+    ("calc_E_E_H_d_t_type4", "_HeatingType4ElectricityInputs"),
+    ("calc_E_E_C_d_t_type1_and_type3", "_CoolingType1And3ElectricityInputs"),
+    ("calc_E_E_C_d_t_type2", "_CoolingType2ElectricityInputs"),
+))
+def test_electricity_call_context_matches_public_signature(api_name, context_name):
+    public_parameters = tuple(
+        inspect.signature(getattr(main.jjj_dc_a, api_name)).parameters
+    )
+    assert getattr(main, context_name)._fields == public_parameters
+
+
 def test_legacy_section4_2_a_import_aliases_jjj_module():
     legacy = importlib.import_module("jjjexperiment.section4_2_a")
     implementation = importlib.import_module("jjjexperiment.section4_2_a_jjj")

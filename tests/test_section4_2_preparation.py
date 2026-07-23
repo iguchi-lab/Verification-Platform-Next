@@ -3178,7 +3178,8 @@ def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, st
         sut, "_get_rac_cooling_capacity",
         lambda *a, **k: events.append(("rac_cool", a, k)) or cool_caps)
 
-    result = sut._prepare_carryover_capacity_state(setting, *inputs)
+    result = sut._prepare_carryover_capacity_state(
+        sut._CarryoverCapacityStateInputs(setting, *inputs))
 
     expected = (["loads", "standard"] if standard
                 else ["defrost", "rac_heat", "rac_cool"])
@@ -3212,8 +3213,9 @@ def test_prepare_carryover_heat_source_inlet_state_preserves_formula_20_19(
         or np.array([10.0, 20.0]))
 
     result = sut._prepare_carryover_heat_source_inlet_state(
-        t, is_first, h, c, star_humidity, star_temperature,
-        actual_non_room, inlet_temperature)
+        sut._CarryoverHeatSourceInletStateInputs(
+            t, is_first, h, c, star_humidity, star_temperature,
+            actual_non_room, inlet_temperature))
 
     assert result == (inlet_humidity, inlet_temperature)
     assert inlet_temperature[t] == expected
@@ -3399,8 +3401,8 @@ def test_export_carryover_diagnostics_preserves_columns_and_filename(
     monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_version")
     values = [object() for _ in range(5)]
 
-    sut._export_carryover_diagnostics(
-        "case", object(), object(), carryover, Frame(), values)
+    sut._export_carryover_diagnostics(sut._CarryoverDiagnosticExportInputs(
+        "case", object(), object(), carryover, Frame(), values))
 
     if mode == "disabled":
         assert events == []
@@ -3493,7 +3495,8 @@ def test_prepare_heat_source_outlet_temperature_output_preserves_formula_14(
         lambda *a: events.append(("formula", a)) or temperature)
 
     result = sut._prepare_heat_source_outlet_temperature_output(
-        frame, setting, house, *inputs)
+        sut._HeatSourceOutletTemperatureOutputInputs(
+            frame, setting, house, *inputs))
 
     assert result == (temperature, frame)
     assert [event[0] for event in events] == ["formula", "setitem"]
@@ -3518,7 +3521,8 @@ def test_prepare_supply_humidity_output_preserves_formula_42_column_order(
         sut.dc, "get_X_supply_d_t_i",
         lambda *a: events.append(("formula", a)) or humidity)
 
-    result = sut._prepare_supply_humidity_output(frame, *inputs)
+    result = sut._prepare_supply_humidity_output(
+        sut._SupplyHumidityOutputInputs(frame, *inputs))
 
     assert result == (humidity, frame)
     assert events[0] == ("formula", tuple(inputs))

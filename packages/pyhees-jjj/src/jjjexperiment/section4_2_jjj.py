@@ -960,6 +960,59 @@ class _ActualLoadStateInputs(NamedTuple):
     Theta_HBR_d_t_i: object
     region: object
 
+class _SupplyHumidityOutputInputs(NamedTuple):
+    df_output: object
+    X_star_HBR_d_t: object
+    X_hs_out_d_t: object
+    L_star_CL_d_t_i: object
+    region: object
+
+
+class _HeatSourceOutletTemperatureOutputInputs(NamedTuple):
+    df_output: object
+    ac_setting: object
+    house: object
+    Theta_req_d_t_i: object
+    V_dash_supply_d_t_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_NR_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_min_C_d_t: object
+
+
+class _CarryoverDiagnosticExportInputs(NamedTuple):
+    case_name: object
+    ac_setting: object
+    house: object
+    carryover_heat_dto: object
+    df_carryover_output: object
+    carryovers: object
+
+
+class _CarryoverHeatSourceInletStateInputs(NamedTuple):
+    t: object
+    isFirst: object
+    H: object
+    C: object
+    X_star_NR_d_t: object
+    Theta_star_NR_d_t: object
+    Theta_NR_d_t: object
+    Theta_star_hs_in_d_t: object
+
+
+class _CarryoverCapacityStateInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    heat_CRAC: object
+    cool_CRAC: object
+    load: object
+    Theta_ex_d_t: object
+    h_ex_d_t: object
+    L_star_CL_d_t_i: object
+    L_star_CS_d_t_i: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3280,10 +3333,13 @@ def _prepare_heat_source_ventilation_airflow_output(
     return V_hs_vent_d_t, df_output
 
 
-def _prepare_supply_humidity_output(
-        df_output, X_star_HBR_d_t, X_hs_out_d_t,
-        L_star_CL_d_t_i, region):
+def _prepare_supply_humidity_output(inputs: _SupplyHumidityOutputInputs):
     """Calculate formula (42) and preserve five-column assign order."""
+    df_output = inputs.df_output
+    X_star_HBR_d_t = inputs.X_star_HBR_d_t
+    X_hs_out_d_t = inputs.X_hs_out_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    region = inputs.region
     X_supply_d_t_i = dc.get_X_supply_d_t_i(
         X_star_HBR_d_t, X_hs_out_d_t, L_star_CL_d_t_i, region)
     df_output = df_output.assign(
@@ -3297,10 +3353,18 @@ def _prepare_supply_humidity_output(
 
 
 def _prepare_heat_source_outlet_temperature_output(
-        df_output, ac_setting, house, Theta_req_d_t_i,
-        V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
-        Theta_NR_d_t, Theta_hs_out_max_H_d_t, Theta_hs_out_min_C_d_t):
+        inputs: _HeatSourceOutletTemperatureOutputInputs):
     """Calculate and record formula (14) by direct column assignment."""
+    df_output = inputs.df_output
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_NR_d_t = inputs.Theta_NR_d_t
+    Theta_hs_out_max_H_d_t = inputs.Theta_hs_out_max_H_d_t
+    Theta_hs_out_min_C_d_t = inputs.Theta_hs_out_min_C_d_t
     Theta_hs_out_d_t = dc.get_Theta_hs_out_d_t(
         ac_setting.VAV, Theta_req_d_t_i, V_dash_supply_d_t_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, house.region, Theta_NR_d_t,
@@ -3385,10 +3449,14 @@ def _record_capacity_state_outputs(inputs: _CapacityStateOutputInputs):
     return df_output, df_output3
 
 
-def _export_carryover_diagnostics(
-        case_name, ac_setting, house, carryover_heat_dto,
-        df_carryover_output, carryovers):
+def _export_carryover_diagnostics(inputs: _CarryoverDiagnosticExportInputs):
     """Export carryover diagnostics with the legacy mode-specific filename."""
+    case_name = inputs.case_name
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    carryover_heat_dto = inputs.carryover_heat_dto
+    df_carryover_output = inputs.df_carryover_output
+    carryovers = inputs.carryovers
     if carryover_heat_dto.carry_over_heat != 過剰熱量繰越計算.行う:
         return
     df_carryover_output = df_carryover_output.assign(
@@ -3587,9 +3655,16 @@ def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementIn
 
 
 def _prepare_carryover_heat_source_inlet_state(
-        t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
-        Theta_NR_d_t, Theta_star_hs_in_d_t):
+        inputs: _CarryoverHeatSourceInletStateInputs):
     """Calculate formulas (20) and (19) for one carryover hour."""
+    t = inputs.t
+    isFirst = inputs.isFirst
+    H = inputs.H
+    C = inputs.C
+    X_star_NR_d_t = inputs.X_star_NR_d_t
+    Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
+    Theta_NR_d_t = inputs.Theta_NR_d_t
+    Theta_star_hs_in_d_t = inputs.Theta_star_hs_in_d_t
     X_star_hs_in_d_t = dc.get_X_star_hs_in_d_t(X_star_NR_d_t)
     balanced_inlet = dc.get_Theta_star_hs_in_d_t(Theta_star_NR_d_t)
     Theta_star_hs_in_d_t[t] = (
@@ -3600,10 +3675,17 @@ def _prepare_carryover_heat_source_inlet_state(
     return X_star_hs_in_d_t, Theta_star_hs_in_d_t
 
 
-def _prepare_carryover_capacity_state(
-        ac_setting, house, heat_CRAC, cool_CRAC, load,
-        Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i):
+def _prepare_carryover_capacity_state(inputs: _CarryoverCapacityStateInputs):
     """Prepare per-hour capacity limits without changing model evaluation."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
+    load = inputs.load
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    h_ex_d_t = inputs.h_ex_d_t
+    L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     L_star_CL_d_t = L_star_CS_d_t = None
     L_star_dash_CL_d_t = L_star_dash_C_d_t = None
     Q_r_max_H_d_t = Q_r_max_C_d_t = None
@@ -3905,9 +3987,9 @@ def calc_Q_UT_A(
                 L_star_CS_d_t_i[:, t:t+1],
             ) = _get_balanced_loads_at_hour(_BalancedLoadsAtHourInputs(
                 t, H, C, load, Q_star_trs_prt_d_t_i, carryover))
-            capacity_state = _prepare_carryover_capacity_state(
+            capacity_state = _prepare_carryover_capacity_state(_CarryoverCapacityStateInputs(
                 ac_setting, house, heat_CRAC, cool_CRAC, load,
-                Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
+                Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i))
             Q_hs_max_C_d_t = capacity_state.Q_hs_max_C_d_t
             Q_hs_max_CL_d_t = capacity_state.Q_hs_max_CL_d_t
             Q_hs_max_CS_d_t = capacity_state.Q_hs_max_CS_d_t
@@ -3929,9 +4011,9 @@ def calc_Q_UT_A(
 
             # (20), (19)　負荷バランス時の熱源機入口状態
             X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
-                _prepare_carryover_heat_source_inlet_state(
+                _prepare_carryover_heat_source_inlet_state(_CarryoverHeatSourceInletStateInputs(
                     t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
-                    Theta_NR_d_t, Theta_star_hs_in_d_t)
+                    Theta_NR_d_t, Theta_star_hs_in_d_t))
 
             X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
                 _prepare_carryover_outlet_requirements(_CarryoverOutletRequirementInputs(
@@ -4040,9 +4122,9 @@ def calc_Q_UT_A(
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
     _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t)
 
-    _export_carryover_diagnostics(
+    _export_carryover_diagnostics(_CarryoverDiagnosticExportInputs(
         case_name, ac_setting, house, carryover_heat_dto,
-        df_carryover_output, carryovers if "carryovers" in locals() else None)
+        df_carryover_output, carryovers if "carryovers" in locals() else None))
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
     df_output = _record_balanced_load_outputs(
@@ -4070,17 +4152,17 @@ def calc_Q_UT_A(
     """ 吹出口 - 熱源機の出口 """
     # (14)　熱源機の出口における空気温度
     Theta_hs_out_d_t, df_output = \
-        _prepare_heat_source_outlet_temperature_output(
+        _prepare_heat_source_outlet_temperature_output(_HeatSourceOutletTemperatureOutputInputs(
             df_output, ac_setting, house, Theta_req_d_t_i,
             V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
             Theta_NR_d_t, Theta_hs_out_max_H_d_t,
-            Theta_hs_out_min_C_d_t)
+            Theta_hs_out_min_C_d_t))
 
     """ 吹出口 - 吹出口 """
     # (42)　暖冷房区画𝑖の吹き出し絶対湿度
-    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(
+    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(_SupplyHumidityOutputInputs(
         df_output, X_star_HBR_d_t, X_hs_out_d_t,
-        L_star_CL_d_t_i, house.region)
+        L_star_CL_d_t_i, house.region))
 
     """ 熱源機の入口 - 熱源機の風量の計算 """
     # (35)　熱源機の風量のうちの全般換気分
