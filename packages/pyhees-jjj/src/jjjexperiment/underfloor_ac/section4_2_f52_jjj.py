@@ -2,6 +2,39 @@ import pyhees.section4_2 as dc
 # JJJ
 from jjjexperiment.common import JJJ_HCM, jjj_cloning
 
+def _get_formula_52_properties():
+    c_p_air = dc.get_c_p_air()
+    rho_air = dc.get_rho_air()
+    U_s = dc.get_U_s()
+    return c_p_air, rho_air, U_s
+
+
+def _get_A_NR_1F_52(A_NR, r_A_NR_1F_excl_bath):
+    return A_NR * r_A_NR_1F_excl_bath
+
+
+def _get_k1_52(Q, A_NR_1F, c_p_air, rho_air, V_vent_l_NR, V_dash_supply_A, U_prt, A_prt_A):
+    return (Q - 0.35 * 0.5 * 2.4) * A_NR_1F \
+        + c_p_air * rho_air * V_vent_l_NR / 3600 \
+        + c_p_air * rho_air * V_dash_supply_A / 3600 \
+        + U_prt * A_prt_A
+
+
+def _get_k2_52(U_s, A_NR_1F):
+    return U_s * A_NR_1F
+
+
+def _get_Theta_star_NR_52(k1, k2, Theta_star_HBR, Theta_uf, L_H_NR_A, L_CS_NR_A, HCM):
+    match HCM:
+        case JJJ_HCM.H:
+            return (k1 * Theta_star_HBR + k2 * Theta_uf - L_H_NR_A * 1e+6 / 3600) / (k1 + k2)
+        case JJJ_HCM.C:
+            return (k1 * Theta_star_HBR + k2 * Theta_uf + L_CS_NR_A * 1e+6 / 3600) / (k1 + k2)
+        case JJJ_HCM.M:
+            return Theta_star_HBR
+        case _:
+            raise ValueError('HCMの値が不正です')
+
 # NOTE: θ*NR,d,t は、室温の計算時に、床下からの貫流分を考慮(2025/03)
 @jjj_cloning  # section4_2/get_Theta_star_NR_d_t
 def get_Theta_star_NR(
@@ -39,48 +72,18 @@ def get_Theta_star_NR(
     # NOTE: 新床下空調ロジックのみで使用可能
 
     # vectorize可能
-    c_p_air = dc.get_c_p_air()
-    rho_air = dc.get_rho_air()
-    U_s = dc.get_U_s()  # U_s_vert でないチェック済み
+    c_p_air, rho_air, U_s = _get_formula_52_properties()
 
     #260112 非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    A_NR_1F = A_NR * r_A_NR_1F_excl_bath
+    A_NR_1F = _get_A_NR_1F_52(A_NR, r_A_NR_1F_excl_bath)
 
     # CHECK: k1 の Q 項に A_NR_1F を使っている。
     # k1 は非居室全体の熱コンダクタンス（外皮・換気・間仕切り）を表すため、
     # 本来 Q * A_NR（全非居室面積）が正しい可能性がある。
-    k1 = (Q - 0.35 * 0.5 * 2.4) * A_NR_1F \
-        + c_p_air * rho_air * V_vent_l_NR / 3600  \
-        + c_p_air * rho_air * V_dash_supply_A / 3600  \
-        + U_prt * A_prt_A
+    k1 = _get_k1_52(Q, A_NR_1F, c_p_air, rho_air, V_vent_l_NR, V_dash_supply_A, U_prt, A_prt_A)
 
     #260112 式のミスを修正、非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
     #[OLD] k2 = U_s * A_NR * np.abs(Theta_uf - Theta_NR)
-    k2 = U_s * A_NR_1F
+    k2 = _get_k2_52(U_s, A_NR_1F)
 
-    match HCM:
-        case JJJ_HCM.H:
-            # (52-1)
-            Theta_star_NR  \
-                = (k1 * Theta_star_HBR  \
-                   + k2 * Theta_uf  \
-                   - L_H_NR_A * 1e+6 / 3600)  \
-                / (k1 + k2)
-            return Theta_star_NR
-
-        case JJJ_HCM.C:
-            # (52-2)
-            Theta_star_NR  \
-                = (k1 * Theta_star_HBR  \
-                    + k2 * Theta_uf  \
-                    #冷房計算の符号を修正　250501 IGUCHI
-                    + L_CS_NR_A * 1e+6 / 3600)  \
-                / (k1 + k2)
-            return Theta_star_NR
-
-        case JJJ_HCM.M:
-            # (52-3)
-            Theta_star_NR = Theta_star_HBR
-            return Theta_star_NR
-
-        case _: raise ValueError('HCMの値が不正です')
+    return _get_Theta_star_NR_52(k1, k2, Theta_star_HBR, Theta_uf, L_H_NR_A, L_CS_NR_A, HCM)

@@ -1,0 +1,89 @@
+import numpy as np
+import pytest
+
+from jjjexperiment.underfloor_ac import section3_1_e_jjj as floor_temperature
+
+
+def test_get_floor_temperature_properties_and_defaults_preserves_values(monkeypatch):
+    monkeypatch.setattr(floor_temperature.algo, 'get_ro_air', lambda: 1.0)
+    monkeypatch.setattr(floor_temperature.algo, 'get_c_p_air', lambda: 2.0)
+    monkeypatch.setattr(floor_temperature.algo, 'get_U_s', lambda: 3.0)
+
+    assert floor_temperature._get_floor_temperature_properties_and_defaults() == (1.0, 2.0, 3.0, 0.7, 27.0, 20.0)
+
+
+def test_validate_r_A_ufvnt_preserves_precondition():
+    floor_temperature._validate_r_A_ufvnt([0.4, 0.4])
+    with pytest.raises(ValueError, match='床下空調に使用する面積の割合が有効な値になっていない'):
+        floor_temperature._validate_r_A_ufvnt(None)
+    with pytest.raises(ValueError):
+        floor_temperature._validate_r_A_ufvnt(0)
+
+def test_get_floor_area_and_supply_preserves_first_floor_weighting(monkeypatch):
+    monkeypatch.setattr(floor_temperature.algo, 'calc_A_s_ufvnt_i', lambda i, *_: i * 10.0)
+    monkeypatch.setattr(floor_temperature.algo, 'get_r_A_uf_i', lambda i: (0.5, 0.25)[i - 1])
+    supply = np.array([[2.0, 4.0, 6.0], [10.0, 20.0, 30.0]])
+
+    area, ratios, weighted_supply = floor_temperature._get_floor_area_and_supply(100.0, 40.0, 30.0, [0.4, 0.4], supply, 2)
+
+    assert area == 30.0
+    np.testing.assert_array_equal(ratios, np.array([0.5, 0.25]))
+    np.testing.assert_array_equal(weighted_supply, np.array([3.5, 7.0, 10.5]))
+
+def test_get_floor_season_masks_and_loads_preserves_weighting_and_units():
+    theta = np.full(8760, 23.0)
+    theta[0] = 10.0
+    theta[1] = 30.0
+    ratios = np.array([0.5, 0.25])
+    heating_loads = np.zeros((2, 8760))
+    cooling_loads = np.zeros((2, 8760))
+    heating_loads[:, 0] = (2.0, 4.0)
+    cooling_loads[:, 1] = (6.0, 8.0)
+
+    H, C, M, heating, cooling = floor_temperature._get_floor_season_masks_and_loads(
+        theta, 20.0, 27.0, ratios, 2, heating_loads, cooling_loads
+    )
+
+    assert H[0] and C[1] and M[2]
+    assert heating[0] == 2000.0
+    assert cooling[1] == 5000.0
+    assert heating.shape == cooling.shape == (8760,)
+
+def test_get_floor_Q1_Q2_preserves_seasonal_airflow_and_floor_conductance():
+    H = np.zeros(8760, dtype=bool)
+    C = np.zeros(8760, dtype=bool)
+    H[0] = True
+    C[1] = True
+    supply = np.arange(8760, dtype=float) + 1.0
+
+    Q1_H, Q1_C, Q2 = floor_temperature._get_floor_Q1_Q2(H, C, 1.2, 1.0, supply, 2.0, 10.0)
+
+    assert Q1_H[0] == 1.2
+    assert Q1_C[1] == 2.4
+    assert np.count_nonzero(Q1_H) == np.count_nonzero(Q1_C) == 1
+    assert Q2 == 72.0
+
+def test_get_Theta_uf_d_t_preserves_seasonal_results_and_shape():
+    H = np.zeros(8760, dtype=bool)
+    C = np.zeros(8760, dtype=bool)
+    M = np.ones(8760, dtype=bool)
+    H[0], M[0] = True, False
+    C[1], M[1] = True, False
+    heating_load = np.zeros(8760)
+    cooling_load = np.zeros(8760)
+    heating_load[0] = 1000.0
+    cooling_load[1] = 500.0
+    Q1_H = np.zeros(8760)
+    Q1_C = np.zeros(8760)
+    Q1_H[0] = 2.0
+    Q1_C[1] = 3.0
+    theta_ex = np.full(8760, 23.0)
+
+    result = floor_temperature._get_Theta_uf_d_t(
+        H, C, M, heating_load, cooling_load, 20.0, 27.0, Q1_H, Q1_C, 10.0, theta_ex
+    )
+
+    assert result[0] == pytest.approx((1000.0 + 20.0 * 12.0) / 12.0)
+    assert result[1] == pytest.approx((-500.0 + 27.0 * 13.0) / 13.0)
+    assert result[2] == 23.0
+    assert result.shape == (8760,)
