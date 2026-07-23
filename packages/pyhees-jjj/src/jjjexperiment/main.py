@@ -546,6 +546,23 @@ def _get_standard_cooling_fan_power(cool_ac_setting, cool_quantity, P_rac_fan_rt
         cool_ac_setting.f_SFP,
         cool_ac_setting.subtract_ventilation_power,
     )
+def _get_minimum_volume_cooling_fan_power(cool_ac_setting, cool_quantity, P_rac_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t, region):
+    print(最低電力直接入力.入力しない)
+    P_fan_rtd = (
+        P_rac_fan_rtd_C
+        if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
+        else cool_quantity.P_fan_rtd
+    )
+    return dc_a.get_E_E_fan_C_d_t(
+        P_fan_rtd,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        V_hs_dsgn_C,
+        q_hs_C_d_t,
+        region,
+        cool_ac_setting.f_SFP,
+        ファン消費電力から換気分を引く.換気分を引かない,
+    )
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -769,21 +786,16 @@ def calc_main(
 
                 match v_min_cooling_input.input_E_E_fan_min:
                     case 最低電力直接入力.入力しない:
-                        print(最低電力直接入力.入力しない)
-
-                        # 従来式
-                        E_E_fan_C_d_t = \
-                            dc_a.get_E_E_fan_C_d_t(
-                                # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                P_rac_fan_rtd_C if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else cool_quantity.P_fan_rtd
-                                , V_hs_vent_d_t  # 上書きアリ
-                                , V_hs_supply_d_t
-                                , V_hs_dsgn_C
-                                , q_hs_C_d_t  # W
-                                , house.region
-                                , cool_ac_setting.f_SFP  # NOTE: 従来式は標準値固定だがカスタム値を反映
-                                , ファン消費電力から換気分を引く.換気分を引かない)  # 最低風量を入力する場合、換気分は引かない
-
+                        E_E_fan_C_d_t = _get_minimum_volume_cooling_fan_power(
+                            cool_ac_setting,
+                            cool_quantity,
+                            P_rac_fan_rtd_C,
+                            V_hs_vent_d_t,
+                            V_hs_supply_d_t,
+                            V_hs_dsgn_C,
+                            q_hs_C_d_t,
+                            house.region,
+                        )
                     case 最低電力直接入力.入力する:
                         print(最低電力直接入力.入力する)
 
