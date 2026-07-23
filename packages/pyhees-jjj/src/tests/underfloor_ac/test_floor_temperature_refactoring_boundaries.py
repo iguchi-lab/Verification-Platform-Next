@@ -48,3 +48,17 @@ def test_get_floor_season_masks_and_loads_preserves_weighting_and_units():
     assert heating[0] == 2000.0
     assert cooling[1] == 5000.0
     assert heating.shape == cooling.shape == (8760,)
+
+def test_get_floor_Q1_Q2_preserves_seasonal_airflow_and_floor_conductance():
+    H = np.zeros(8760, dtype=bool)
+    C = np.zeros(8760, dtype=bool)
+    H[0] = True
+    C[1] = True
+    supply = np.arange(8760, dtype=float) + 1.0
+
+    Q1_H, Q1_C, Q2 = floor_temperature._get_floor_Q1_Q2(H, C, 1.2, 1.0, supply, 2.0, 10.0)
+
+    assert Q1_H[0] == 1.2
+    assert Q1_C[1] == 2.4
+    assert np.count_nonzero(Q1_H) == np.count_nonzero(Q1_C) == 1
+    assert Q2 == 72.0

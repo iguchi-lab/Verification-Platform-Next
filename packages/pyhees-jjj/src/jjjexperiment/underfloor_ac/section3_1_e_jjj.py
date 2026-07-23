@@ -75,6 +75,17 @@ def _get_floor_season_masks_and_loads(Theta_ex_d_t, Theta_in_H, Theta_in_C, r_A_
     assert L_star_CS_flr1st_d_t.shape == (24 * 365,)
     return H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t
 
+def _get_floor_Q1_Q2(H, C, ro_air, c_p_air, V_dash_supply_flr1st_d_t, U_s, A_s_ufvnt):
+    Q1_H_d_t = np.zeros(24 * 365)
+    Q1_H_d_t[H] = ro_air * c_p_air * V_dash_supply_flr1st_d_t[H]
+    Q1_C_d_t = np.zeros(24 * 365)
+    Q1_C_d_t[C] = ro_air * c_p_air * V_dash_supply_flr1st_d_t[C]
+    Q2 = U_s * A_s_ufvnt * 3.6
+
+    assert Q1_H_d_t.shape == (24 * 365,)
+    assert Q1_C_d_t.shape == (24 * 365,)
+    return Q1_H_d_t, Q1_C_d_t, Q2
+
 @log_res(['Theta_uf_d_t'])
 def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t):
     """定常状態での床下温度を求める
@@ -115,14 +126,7 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
     # upper2_H = U_s * A_s_ufvnt * ((Theta_in_H - Theta_ex_d_t[H]) * H_floor - Theta_in_H) * 3.6
     # upper2_C = U_s * A_s_ufvnt * ((Theta_in_C - Theta_ex_d_t[C]) * H_floor - Theta_in_C) * 3.6
 
-    Q1_H_d_t = np.zeros(24 * 365)
-    Q1_H_d_t[H] = ro_air * c_p_air * V_dash_supply_flr1st_d_t[H]
-    Q1_C_d_t = np.zeros(24 * 365)
-    Q1_C_d_t[C] = ro_air * c_p_air * V_dash_supply_flr1st_d_t[C]
-    Q2 = U_s * A_s_ufvnt * 3.6
-
-    assert Q1_H_d_t.shape == (24 * 365,)
-    assert Q1_C_d_t.shape == (24 * 365,)
+    Q1_H_d_t, Q1_C_d_t, Q2 = _get_floor_Q1_Q2(H, C, ro_air, c_p_air, V_dash_supply_flr1st_d_t, U_s, A_s_ufvnt)
 
     Theta_uf_d_t = np.zeros(24 * 365)  # NOTE: 床下はつながっているので d_t_i にならない
     Theta_uf_d_t[H] = ((L_star_H_flr1st_d_t + Theta_in_H * (Q1_H_d_t + Q2)) / (Q1_H_d_t + Q2))[H]
