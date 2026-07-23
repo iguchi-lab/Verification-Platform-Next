@@ -243,6 +243,12 @@ def _bind_load_dti(injector, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i
     )
     injector.binder.bind(jjj_dc.Load_DTI, to=load_dti)
 
+def _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i):
+    L_H_d_t = np.sum(L_H_d_t_i, axis=0)
+    L_CS_d_t = np.sum(L_CS_d_t_i, axis=0)
+    L_CL_d_t = np.sum(L_CL_d_t_i, axis=0)
+    return L_H_d_t, L_CS_d_t, L_CL_d_t
+
 @inject
 def calc_main(
     injector: Injector,
@@ -298,12 +304,7 @@ def calc_main(
     _bind_load_dti(injector, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i)
 
     # NOTE: 出力用の下記が計算できるのは、負荷が上書きされない前提
-    L_H_d_t: np.ndarray = np.sum(L_H_d_t_i, axis=0)
-    """暖房負荷の全区画合計 [MJ/h]"""
-    L_CS_d_t: np.ndarray = np.sum(L_CS_d_t_i, axis=0)
-    """冷房顕熱負荷の全区画合計 [MJ/h]"""
-    L_CL_d_t: np.ndarray = np.sum(L_CL_d_t_i, axis=0)
-    """冷房潜熱負荷の全区画合計 [MJ/h]"""
+    L_H_d_t, L_CS_d_t, L_CL_d_t = _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
     ##### 暖房消費電力の計算（kWh/h）
     print("暖房消費電力の計算")

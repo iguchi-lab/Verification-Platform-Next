@@ -157,3 +157,14 @@ def test_bind_load_dti_preserves_constructor_and_bind_order(monkeypatch):
 
     assert created[0].args == ('H', 'CS', 'CL', 'dash-H', 'dash-CS')
     assert bound == [(FakeLoadDTI, created[0])]
+
+def test_sum_zone_loads_preserves_axis_zero_aggregation():
+    heating = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    sensible = heating + 10.0
+    latent = heating + 20.0
+
+    result = experiment_main._sum_zone_loads(heating, sensible, latent)
+
+    np.testing.assert_array_equal(result[0], np.array([5.0, 7.0, 9.0]))
+    np.testing.assert_array_equal(result[1], np.array([25.0, 27.0, 29.0]))
+    np.testing.assert_array_equal(result[2], np.array([45.0, 47.0, 49.0]))
