@@ -12,7 +12,7 @@ verification-platform-app = { path = "apps/gradio", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
-ruff = "*"
+ruff = "0.15.22"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

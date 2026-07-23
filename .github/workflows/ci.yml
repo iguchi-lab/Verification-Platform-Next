@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install --no-cache-dir pytest ruff -e apps/gradio
+      - run: python -m pip install --no-cache-dir pytest "ruff==0.15.22" -e apps/gradio
       - name: Run schema and service tests
         run: pytest -q -m "not phase5"
       - name: Run Phase 5 legacy CSV regression
