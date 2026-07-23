@@ -457,3 +457,36 @@ def test_build_heating_output_dataframe_preserves_columns_values_and_diagnostics
     np.testing.assert_array_equal(result['C_df_H_d_t [-]'], values + 5.0)
     assert events[0][0] == 'E_UT_H_d_t'
     assert events[0][1] is values
+def test_get_V_hs_dsgn_C_preserves_model_specific_rated_airflow(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.dc_spec, 'get_V_fan_rtd_C', lambda q: calls.append(('rated', q)) or 300.0)
+    monkeypatch.setattr(experiment_main.dc_spec, 'get_V_fan_dsgn_C', lambda v: calls.append(('design', v)) or v * 1.1)
+
+    direct = experiment_main._get_V_hs_dsgn_C(
+        experiment_main.計算モデル.ダクト式セントラル空調機, 200.0, 5000.0
+    )
+    calculated = experiment_main._get_V_hs_dsgn_C(
+        experiment_main.計算モデル.電中研モデル, 200.0, 5000.0
+    )
+
+    assert direct == pytest.approx(220.0)
+    assert calculated == pytest.approx(330.0)
+    assert calls == [('design', 200.0), ('rated', 5000.0), ('design', 300.0)]
+    with pytest.raises(Exception, match='冷房方式が不正です。'):
+        experiment_main._get_V_hs_dsgn_C(object(), 200.0, 5000.0)
+
+
+def test_bind_cooling_design_airflows_preserves_type_contract_and_bind_order():
+    bound = []
+    injector = SimpleNamespace(binder=SimpleNamespace(bind=lambda key, to: bound.append((key, to))))
+    setting = SimpleNamespace(V_hs_dsgn=250.0)
+
+    result = experiment_main._bind_cooling_design_airflows(
+        injector, setting, SimpleNamespace(), SimpleNamespace()
+    )
+
+    assert result == (0.0, 250.0)
+    assert bound == [
+        (experiment_main.jjj_dc.VHS_DSGN_H, 0.0),
+        (experiment_main.jjj_dc.VHS_DSGN_C, 250.0),
+    ]

@@ -449,6 +449,36 @@ def _build_heating_output_dataframe(E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_
     df_output2['V_hs_vent_H_d_t [m3/h]'] = V_hs_vent_d_t
     df_output2['C_df_H_d_t [-]'] = climate.get_C_df_H_d_t()
     return df_output2
+def _get_V_hs_dsgn_C(type: 計算モデル, v_fan_rtd: float, q_rtd_C: float):
+    if type in [
+        計算モデル.ダクト式セントラル空調機,
+        計算モデル.RAC活用型全館空調_潜熱評価モデル,
+    ]:
+        V_fan_rtd_C = v_fan_rtd
+    elif type in [
+        計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        計算モデル.電中研モデル,
+    ]:
+        V_fan_rtd_C = dc_spec.get_V_fan_rtd_C(q_rtd_C)
+    else:
+        raise Exception("冷房方式が不正です。")
+
+    return dc_spec.get_V_fan_dsgn_C(V_fan_rtd_C)
+
+
+def _bind_cooling_design_airflows(injector, cool_ac_setting, cool_quantity, cool_CRAC):
+    V_hs_dsgn_C = (
+        cool_ac_setting.V_hs_dsgn
+        if cool_ac_setting.V_hs_dsgn > 0
+        else _get_V_hs_dsgn_C(cool_ac_setting.type, cool_quantity.V_fan_rtd, cool_CRAC.q_rtd)
+    )
+    V_hs_dsgn_H = 0.0
+
+    assert isinstance(V_hs_dsgn_H, float), "V_hs_dsgn_Hの型が不正"
+    injector.binder.bind(jjj_dc.VHS_DSGN_H, to=V_hs_dsgn_H)
+    assert isinstance(V_hs_dsgn_C, float), "V_hs_dsgn_Cの型が不正"
+    injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
+    return V_hs_dsgn_H, V_hs_dsgn_C
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -617,36 +647,12 @@ def calc_main(
     ##### 冷房消費電力の計算（kWh/h）
     print("冷房消費電力の計算")
 
-    def get_V_hs_dsgn_C(type: 計算モデル, v_fan_rtd: float, q_rtd_C: float):
-        if type in [
-                計算モデル.ダクト式セントラル空調機,
-                計算モデル.RAC活用型全館空調_潜熱評価モデル
-            ]:
-            pass
-        elif type in [
-                計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
-                計算モデル.電中研モデル
-            ]:
-            v_fan_rtd = dc_spec.get_V_fan_rtd_C(q_rtd_C)
-        else:
-            raise Exception("冷房方式が不正です。")
-
-        return dc_spec.get_V_fan_dsgn_C(v_fan_rtd)
-
-    V_hs_dsgn_C: float =  \
-        cool_ac_setting.V_hs_dsgn if cool_ac_setting.V_hs_dsgn > 0  \
-        else get_V_hs_dsgn_C(cool_ac_setting.type, cool_quantity.V_fan_rtd, cool_CRAC.q_rtd)
-    """ 冷房時の送風機の設計風量 [m3/h] """
-
-    V_hs_dsgn_H: float = 0.0  # NOTE: 冷房負荷計算時は空
-    """ 暖房時の送風機の設計風量 [m3/h] """
-
-    # 型バインド
-    assert isinstance(V_hs_dsgn_H, float), "V_hs_dsgn_Hの型が不正"
-    injector.binder.bind(jjj_dc.VHS_DSGN_H, to=V_hs_dsgn_H)
-    assert isinstance(V_hs_dsgn_C, float), "V_hs_dsgn_Cの型が不正"
-    injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
-
+    V_hs_dsgn_H, V_hs_dsgn_C = _bind_cooling_design_airflows(
+        injector,
+        cool_ac_setting,
+        cool_quantity,
+        cool_CRAC,
+    )
     injector.binder.bind(jjj_dc.ActiveAcSetting, to=cool_ac_setting)  # 冷房負荷アクティブ
 
     if cool_ac_setting.type == 計算モデル.電中研モデル:
