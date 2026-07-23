@@ -1434,14 +1434,14 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
 
 def test_carryover_at_hour_rejects_overlapping_seasons_before_first_hour():
     with pytest.raises(ValueError, match="想定外の季節"):
-        sut._get_carryover_at_hour(
+        sut._get_carryover_at_hour(sut._CarryoverAtHourInputs(
             0,
             np.array([True]),
             np.array([True]),
             object(),
             np.zeros((5, 1)),
             np.zeros(1),
-        )
+        ))
 
 
 def test_carryover_at_hour_returns_first_hour_zero_without_calculation(monkeypatch):
@@ -1451,14 +1451,14 @@ def test_carryover_at_hour_returns_first_hour_zero_without_calculation(monkeypat
         lambda *args: pytest.fail("first hour must not calculate carryover"),
     )
 
-    result = sut._get_carryover_at_hour(
+    result = sut._get_carryover_at_hour(sut._CarryoverAtHourInputs(
         0,
         np.array([True]),
         np.array([False]),
         object(),
         np.zeros((5, 1)),
         np.zeros(1),
-    )
+    ))
 
     np.testing.assert_array_equal(result, np.zeros((5, 1)))
 
@@ -1488,14 +1488,14 @@ def test_carryover_at_hour_preserves_previous_comparison_and_current_target(
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_carryover_at_hour(
+    result = sut._get_carryover_at_hour(sut._CarryoverAtHourInputs(
         1,
         np.array([False, heating]),
         np.array([False, cooling]),
         area,
         rooms,
         targets,
-    )
+    ))
 
     assert result is expected
     assert len(calls) == 1

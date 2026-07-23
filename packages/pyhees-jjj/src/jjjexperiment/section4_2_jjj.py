@@ -600,6 +600,15 @@ class _RacHeatingCapacityInputs(NamedTuple):
     h_ex_d_t: object
     log_intermediates: object
 
+
+class _CarryoverAtHourInputs(NamedTuple):
+    t: object
+    H: object
+    C: object
+    A_HCZ_i: object
+    Theta_HBR_d_t_i: object
+    Theta_star_HBR_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1229,15 +1238,14 @@ def _get_rac_cooling_capacity(
         Q_max_CL_d_t,
     )
 
-def _get_carryover_at_hour(
-        t: int,
-        H: np.ndarray,
-        C: np.ndarray,
-        A_HCZ_i: np.ndarray,
-        Theta_HBR_d_t_i: np.ndarray,
-        Theta_star_HBR_d_t: np.ndarray,
-    ) -> np.ndarray:
+def _get_carryover_at_hour(inputs: _CarryoverAtHourInputs):
     """Determine one hour of carryover without changing branch priority."""
+    t = inputs.t
+    H = inputs.H
+    C = inputs.C
+    A_HCZ_i = inputs.A_HCZ_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
     isFirst = (t == 0)
     if H[t] and C[t]:
         raise ValueError("想定外の季節")
@@ -3493,8 +3501,8 @@ def calc_Q_UT_A(
             # TODO: 先頭時の扱いを考慮
             isFirst = (t == 0)
 
-            carryover = _get_carryover_at_hour(
-                t, H, C, A_HCZ_i, Theta_HBR_d_t_i, Theta_star_HBR_d_t)
+            carryover = _get_carryover_at_hour(_CarryoverAtHourInputs(
+                t, H, C, A_HCZ_i, Theta_HBR_d_t_i, Theta_star_HBR_d_t))
             carryovers[:, t] = carryover[:, 0]  # 確認用
 
             (
