@@ -275,6 +275,10 @@ def _assert_Theta_NR_2023_shapes(
     assert A_prt_i.shape == (5, 1), "A_prt_iの行列数が想定外"
 
 
+def _get_c_prt_48(U_prt: float, A_prt_i: Array5x1) -> Array5x1:
+    return U_prt * A_prt_i
+
+
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
         Theta_star_NR: float,
@@ -311,7 +315,7 @@ def get_Theta_NR_2023(
         Theta_HBR_i, V_dash_supply_i, V_supply_i, A_prt_i,
     )
     # 熱容量(間仕切り) [W/K]
-    c_prt = U_prt * A_prt_i
+    c_prt = _get_c_prt_48(U_prt, A_prt_i)
 
     c_p_air = dc.get_c_p_air()  # [J/(kg・K)]
     rho_air = dc.get_rho_air()  # [kg/m3]

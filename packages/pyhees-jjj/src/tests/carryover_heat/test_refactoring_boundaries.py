@@ -123,3 +123,8 @@ def test_assert_Theta_NR_2023_shapes_checks_four_zone_arrays():
 
     with pytest.raises(AssertionError):
         section4_2._assert_Theta_NR_2023_shapes(valid, np.zeros(5), valid, valid)
+
+
+def test_get_c_prt_48_preserves_watts_per_kelvin_units():
+    areas = np.arange(1.0, 6.0).reshape(5, 1)
+    np.testing.assert_array_equal(section4_2._get_c_prt_48(2.5, areas), 2.5 * areas)
