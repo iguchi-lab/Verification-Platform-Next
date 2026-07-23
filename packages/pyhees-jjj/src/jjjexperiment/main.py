@@ -624,6 +624,22 @@ def _get_cooling_electricity_type2(cool_ac_setting, house, climateFile, E_E_fan_
             cool_CRAC.dualcompressor,
         )
     )
+def _get_cooling_electricity_type4(case_name, cool_ac_setting, house, climateFile, E_E_fan_C_d_t, q_hs_CS_d_t, q_hs_CL_d_t, V_hs_supply_d_t, P_rac_fan_rtd_C, simu_R_C, cool_denchu_catalog, cool_real_inner):
+    return jjj_dc_a.calc_E_E_C_d_t_type4(
+        *_CoolingType4ElectricityInputs(
+            case_name,
+            cool_ac_setting.type,
+            house.region,
+            climateFile,
+            E_E_fan_C_d_t,
+            q_hs_CS_d_t + q_hs_CL_d_t,
+            V_hs_supply_d_t,
+            P_rac_fan_rtd_C,
+            simu_R_C,
+            cool_denchu_catalog,
+            cool_real_inner,
+        )
+    )
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -905,20 +921,19 @@ def calc_main(
             cool_CRAC,
         )
     elif cool_ac_setting.type == 計算モデル.電中研モデル:
-        E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type4(
-            *_CoolingType4ElectricityInputs(
-                case_name,
-                cool_ac_setting.type,
-                house.region,
-                climateFile,
-                E_E_fan_C_d_t,
-                q_hs_CS_d_t + q_hs_CL_d_t,
-                V_hs_supply_d_t,
-                P_rac_fan_rtd_C,
-                simu_R_C,
-                cool_denchu_catalog,
-                cool_real_inner,
-            )
+        E_E_C_d_t = _get_cooling_electricity_type4(
+            case_name,
+            cool_ac_setting,
+            house,
+            climateFile,
+            E_E_fan_C_d_t,
+            q_hs_CS_d_t,
+            q_hs_CL_d_t,
+            V_hs_supply_d_t,
+            P_rac_fan_rtd_C,
+            simu_R_C,
+            cool_denchu_catalog,
+            cool_real_inner,
         )
     else:
         raise Exception("冷房方式が不正です。")

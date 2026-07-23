@@ -637,3 +637,19 @@ def test_get_cooling_electricity_type2_preserves_argument_order(monkeypatch):
         'type', 6, 'climate.csv', 'fan', 'q-cs', 'q-cl', 'e-rtd-c',
         'q-rtd-c', 'q-max-c', 'c-af-c', 'dual-c',
     )]
+def test_get_cooling_electricity_type4_preserves_argument_order_and_capacity_sum(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.jjj_dc_a, 'calc_E_E_C_d_t_type4', lambda *args: calls.append(args) or 'electricity')
+    setting = SimpleNamespace(type='type')
+    house = SimpleNamespace(region=6)
+
+    result = experiment_main._get_cooling_electricity_type4(
+        'case', setting, house, 'climate.csv', 'fan', 2.0, 3.0, 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner'
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'case', 'type', 6, 'climate.csv', 'fan', 5.0, 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner',
+    )]
