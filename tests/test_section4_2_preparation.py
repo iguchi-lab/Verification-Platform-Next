@@ -2315,7 +2315,7 @@ def test_partition_heat_transfers_preserve_formula_11_assign_generation(
         lambda *args: events.append(("formula", args)) or transfers,
     )
 
-    result, next_frame = sut._get_partition_heat_transfers(frame, *inputs)
+    result, next_frame = sut._get_partition_heat_transfers(sut._PartitionHeatTransferInputs(frame, *inputs))
 
     assert result is transfers
     assert next_frame.generation == 1
@@ -2973,7 +2973,7 @@ def test_prepare_balanced_load_state_preserves_formula_11_10_generations(monkeyp
 
     assert result == (transfer, latent, final_frame)
     assert events == [
-        ("transfer", (first_frame, *inputs[:4])),
+        ("transfer", (sut._PartitionHeatTransferInputs(first_frame, *inputs[:4]),)),
         ("latent", (second_frame, inputs[4], inputs[5])),
     ]
 

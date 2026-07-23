@@ -793,6 +793,14 @@ class _NewBalancedNonRoomTemperatureInputs(NamedTuple):
     Theta_in_d_t: object
     Theta_uf_d_t: object
 
+
+class _PartitionHeatTransferInputs(NamedTuple):
+    df_output: object
+    U_prt: object
+    A_prt_i: object
+    Theta_star_HBR_d_t: object
+    Theta_star_NR_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2238,14 +2246,13 @@ def _get_actual_room_humidities(df_output, X_star_HBR_d_t):
     )
     return X_HBR_d_t_i, df_output
 
-def _get_partition_heat_transfers(
-        df_output,
-        U_prt,
-        A_prt_i,
-        Theta_star_HBR_d_t,
-        Theta_star_NR_d_t,
-    ):
+def _get_partition_heat_transfers(inputs: _PartitionHeatTransferInputs):
     """Calculate formula (11) and record the five partition-transfer columns."""
+    df_output = inputs.df_output
+    U_prt = inputs.U_prt
+    A_prt_i = inputs.A_prt_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
     Q_star_trs_prt_d_t_i = dc.get_Q_star_trs_prt_d_t_i(
         U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
     df_output = df_output.assign(
@@ -2712,8 +2719,8 @@ def _prepare_balanced_load_state(
         df_output, U_prt, A_prt_i, Theta_star_HBR_d_t,
         Theta_star_NR_d_t, load, region):
     """Calculate formulas (11) and (10), preserving DataFrame generations."""
-    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(
-        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t)
+    Q_star_trs_prt_d_t_i, df_output = _get_partition_heat_transfers(_PartitionHeatTransferInputs(
+        df_output, U_prt, A_prt_i, Theta_star_HBR_d_t, Theta_star_NR_d_t))
     L_star_CL_d_t_i, df_output = _get_balanced_latent_cooling_loads(
         df_output, load, region)
     return Q_star_trs_prt_d_t_i, L_star_CL_d_t_i, df_output
