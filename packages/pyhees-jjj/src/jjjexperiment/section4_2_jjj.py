@@ -278,6 +278,27 @@ class _NoCarryoverSupplyInputs(NamedTuple):
     Theta_ex_d_t: object
 
 
+class _NoCarryoverActualTemperatureInputs(NamedTuple):
+    house: object
+    skin: object
+    new_ufac: object
+    climate: object
+    Theta_star_HBR_d_t: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    U_prt: object
+    A_prt_i: object
+    A_HCZ_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_uf_d_t: object
+    Theta_star_NR_d_t: object
+    A_NR: object
+    V_vent_l_NR_d_t: object
+    V_dash_supply_d_t_i: object
+    r_A_NR_uf_1F_excl_bath: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2679,13 +2700,26 @@ def _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t):
     _logger.NDdebug("Theta_NR_d_t", Theta_NR_d_t)
 
 
-def _prepare_no_carryover_actual_temperature_state(
-        house, skin, new_ufac, climate, Theta_star_HBR_d_t,
-        V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
-        L_star_H_d_t_i, L_star_CS_d_t_i, Theta_uf_d_t,
-        Theta_star_NR_d_t, A_NR, V_vent_l_NR_d_t,
-        V_dash_supply_d_t_i, r_A_NR_uf_1F_excl_bath):
+def _prepare_no_carryover_actual_temperature_state(inputs: _NoCarryoverActualTemperatureInputs):
     """Calculate no-carryover formulas (46) and (48) in source order."""
+    house = inputs.house
+    skin = inputs.skin
+    new_ufac = inputs.new_ufac
+    climate = inputs.climate
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    U_prt = inputs.U_prt
+    A_prt_i = inputs.A_prt_i
+    A_HCZ_i = inputs.A_HCZ_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_uf_d_t = inputs.Theta_uf_d_t
+    Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
+    A_NR = inputs.A_NR
+    V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    r_A_NR_uf_1F_excl_bath = inputs.r_A_NR_uf_1F_excl_bath
     Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(
         house, skin, new_ufac, climate, Theta_star_HBR_d_t,
         V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
@@ -3229,12 +3263,12 @@ def calc_Q_UT_A(
         Theta_supply_d_t_i = supply_state.Theta_supply_d_t_i
         # (46), (48)　実際の居室・非居室の室温
         Theta_HBR_d_t_i, Theta_NR_d_t = \
-            _prepare_no_carryover_actual_temperature_state(
+            _prepare_no_carryover_actual_temperature_state(_NoCarryoverActualTemperatureInputs(
                 house, skin, new_ufac, climate, Theta_star_HBR_d_t,
                 V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i,
                 A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i, Theta_uf_d_t,
                 Theta_star_NR_d_t, A_NR, V_vent_l_NR_d_t,
-                V_dash_supply_d_t_i, r_A_NR_uf_1F_excl_bath)
+                V_dash_supply_d_t_i, r_A_NR_uf_1F_excl_bath))
     ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する

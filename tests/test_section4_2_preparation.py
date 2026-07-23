@@ -3339,9 +3339,9 @@ def test_prepare_no_carryover_actual_temperature_state_preserves_formula_order(
         sut, "_get_actual_non_room_temperatures_without_carryover",
         lambda *a: events.append(("non_room", a)) or non_room)
 
-    result = sut._prepare_no_carryover_actual_temperature_state(
+    result = sut._prepare_no_carryover_actual_temperature_state(sut._NoCarryoverActualTemperatureInputs(
         inputs[0], inputs[1], new_ufac, *inputs[2:11], theta_uf,
-        *inputs[11:], non_room_ratio)
+        *inputs[11:], non_room_ratio))
 
     assert result == (room, non_room)
     assert [event[0] for event in events] == ["room", "non_room"]
@@ -4103,4 +4103,31 @@ def test_no_carryover_supply_inputs_preserve_field_order():
         "V_hs_dsgn_H",
         "V_hs_dsgn_C",
         "Theta_ex_d_t",
+    )
+
+
+def test_no_carryover_actual_temperature_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(18))
+    inputs = sut._NoCarryoverActualTemperatureInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "house",
+        "skin",
+        "new_ufac",
+        "climate",
+        "Theta_star_HBR_d_t",
+        "V_supply_d_t_i",
+        "Theta_supply_d_t_i",
+        "U_prt",
+        "A_prt_i",
+        "A_HCZ_i",
+        "L_star_H_d_t_i",
+        "L_star_CS_d_t_i",
+        "Theta_uf_d_t",
+        "Theta_star_NR_d_t",
+        "A_NR",
+        "V_vent_l_NR_d_t",
+        "V_dash_supply_d_t_i",
+        "r_A_NR_uf_1F_excl_bath",
     )
