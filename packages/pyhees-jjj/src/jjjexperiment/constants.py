@@ -282,6 +282,12 @@ def _set_R_g(input: dict):
     R_g = float(input['R_g'])
 
 
+def _set_H_A_A_f_hex_small(input: dict):
+  if 'A_f_hex_small' in input['H_A']:
+    global A_f_hex_small_H
+    A_f_hex_small_H = float(input['H_A']['A_f_hex_small'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -304,9 +310,7 @@ def set_constants(input: dict):
 
   #以下、潜熱評価モデル追加対応
   if 'H_A' in input:
-    if 'A_f_hex_small' in input['H_A']:
-      global A_f_hex_small_H
-      A_f_hex_small_H = float(input['H_A']['A_f_hex_small'])
+    _set_H_A_A_f_hex_small(input)
     if 'A_e_hex_small' in input['H_A']:
       global A_e_hex_small_H
       A_e_hex_small_H = float(input['H_A']['A_e_hex_small'])
