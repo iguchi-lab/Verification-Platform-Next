@@ -57,6 +57,20 @@ import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 import jjjexperiment.v_min_input as jjj_V_min_input
 
 
+class _CoolingType2ElectricityInputs(NamedTuple):
+    type: object
+    region: object
+    climateFile: object
+    E_E_fan_C_d_t: object
+    q_hs_CS_d_t: object
+    q_hs_CL_d_t: object
+    e_rtd_C: object
+    q_rtd_C: object
+    q_max_C: object
+    input_C_af_C: object
+    dualcompressor_C: object
+
+
 class _CoolingType1And3ElectricityInputs(NamedTuple):
     type: object
     region: object
@@ -632,17 +646,19 @@ def calc_main(
         )
     elif cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type2(
-            type = cool_ac_setting.type,
-            region = house.region,
-            climateFile = climateFile,
-            E_E_fan_C_d_t = E_E_fan_C_d_t,
-            q_hs_CS_d_t = q_hs_CS_d_t,
-            q_hs_CL_d_t = q_hs_CL_d_t,
-            e_rtd_C = cool_CRAC.e_rtd,
-            q_rtd_C = cool_CRAC.q_rtd,
-            q_max_C = cool_CRAC.q_max,
-            input_C_af_C = cool_CRAC.input_C_af,
-            dualcompressor_C = cool_CRAC.dualcompressor
+            *_CoolingType2ElectricityInputs(
+                cool_ac_setting.type,
+                house.region,
+                climateFile,
+                E_E_fan_C_d_t,
+                q_hs_CS_d_t,
+                q_hs_CL_d_t,
+                cool_CRAC.e_rtd,
+                cool_CRAC.q_rtd,
+                cool_CRAC.q_max,
+                cool_CRAC.input_C_af,
+                cool_CRAC.dualcompressor,
+            )
         )
     elif cool_ac_setting.type == 計算モデル.電中研モデル:
         E_E_C_d_t = jjj_dc_a.calc_E_E_C_d_t_type4(
