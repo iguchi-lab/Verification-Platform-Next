@@ -672,3 +672,42 @@ def test_summarize_primary_energy_preserves_formula_sum_and_log_order(monkeypatc
         ('log', 'E_C [MJ/year]: 133.0'),
         ('print', ('E_H [MJ/year]: ', 57.0, ', E_C [MJ/year]: ', 133.0)),
     ]
+def test_write_outputs_and_build_test_result_preserves_csv_columns_and_return_contract(monkeypatch):
+    writes = []
+    monkeypatch.setattr(experiment_main.jjj_consts, 'version_info', lambda: '_v')
+    monkeypatch.setattr(pd.DataFrame, 'to_csv', lambda self, path, encoding: writes.append((self.copy(), path, encoding)))
+    monkeypatch.setattr(experiment_main, 'SutValues', lambda *args: ('input', args))
+    monkeypatch.setattr(experiment_main, 'ResultSummary', lambda *args: ('result', args))
+    values = np.array([1.0, 2.0])
+    output2 = pd.DataFrame({'heating-base': values})
+    climate = SimpleNamespace(get_Theta_ex_d_t=lambda: values + 1.0)
+    cool = SimpleNamespace(q_rtd=1.0, q_max=2.0, e_rtd=3.0)
+    heat = SimpleNamespace(q_rtd=4.0, q_max=5.0, e_rtd=6.0)
+
+    result = experiment_main._write_outputs_and_build_test_result(
+        'case', output2, climate, True, cool, heat, 100.0, 200.0,
+        values + 2, values + 3, values + 4, values + 5, values + 6, values + 7,
+        values + 8, values + 9, values + 10, values + 11, values + 12,
+        values + 13, values + 14, values + 15, values + 16, values + 17,
+        values + 18, values + 19,
+    )
+
+    assert result == {
+        'TInput': ('input', (1.0, 4.0, 2.0, 5.0, 3.0, 6.0)),
+        'TValue': ('result', (100.0, 200.0)),
+    }
+    assert [(path, encoding) for _, path, encoding in writes] == [
+        ('case_v_output1.csv', 'cp932'),
+        ('case_v_output2.csv', 'cp932'),
+    ]
+    assert list(writes[0][0].columns) == ['E_H [MJ/year]', 'E_C [MJ/year]']
+    assert list(writes[1][0].columns) == [
+        'heating-base',
+        'Theta_hs_C_out_d_t [℃]', 'Theta_hs_C_in_d_t [℃]', 'Theta_ex_d_t [℃]',
+        'V_hs_supply_C_d_t [m3/h]', 'V_hs_vent_C_d_t [m3/h]',
+        'E_H_d_t [MJ/h]', 'E_C_d_t [MJ/h]', 'E_E_H_d_t [kWh/h]', 'E_E_C_d_t [kWh/h]',
+        'E_UT_H_d_t [MJ/h]', 'E_UT_C_d_t [MJ/h]', 'L_H_d_t [MJ/h]',
+        'L_CS_d_t [MJ/h]', 'L_CL_d_t [MJ/h]', 'E_E_fan_H_d_t [kWh/h]',
+        'E_E_fan_C_d_t [kWh/h]', 'q_hs_H_d_t [Wh/h]', 'q_hs_CS_d_t [Wh/h]',
+        'q_hs_CL_d_t [Wh/h]',
+    ]

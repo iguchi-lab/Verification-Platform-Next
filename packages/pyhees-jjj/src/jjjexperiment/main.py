@@ -651,6 +651,51 @@ def _summarize_primary_energy(E_E_H_d_t, E_UT_H_d_t, E_E_C_d_t, E_UT_C_d_t):
     _logger.info(f"E_C [MJ/year]: {E_C}")
     print('E_H [MJ/year]: ', E_H, ', E_C [MJ/year]: ', E_C)
     return E_H_d_t, E_C_d_t, E_H, E_C
+def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mode, cool_CRAC, heat_CRAC, E_C, E_H, E_H_d_t, E_C_d_t, E_E_H_d_t, E_E_C_d_t, E_UT_H_d_t, E_UT_C_d_t, L_H_d_t, L_CS_d_t, L_CL_d_t, E_E_fan_H_d_t, E_E_fan_C_d_t, q_hs_H_d_t, q_hs_CS_d_t, q_hs_CL_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t):
+    df_output1 = pd.DataFrame(index=['合計値'])
+    df_output1['E_H [MJ/year]'] = E_H
+    df_output1['E_C [MJ/year]'] = E_C
+    df_output1.to_csv(
+        case_name + jjj_consts.version_info() + '_output1.csv',
+        encoding='cp932',
+    )
+
+    df_output2['Theta_hs_C_out_d_t [℃]'] = Theta_hs_out_d_t
+    df_output2['Theta_hs_C_in_d_t [℃]'] = Theta_hs_in_d_t
+    df_output2['Theta_ex_d_t [℃]'] = climate.get_Theta_ex_d_t()
+    df_output2['V_hs_supply_C_d_t [m3/h]'] = V_hs_supply_d_t
+    df_output2['V_hs_vent_C_d_t [m3/h]'] = V_hs_vent_d_t
+    df_output2['E_H_d_t [MJ/h]'] = E_H_d_t
+    df_output2['E_C_d_t [MJ/h]'] = E_C_d_t
+    df_output2['E_E_H_d_t [kWh/h]'] = E_E_H_d_t
+    df_output2['E_E_C_d_t [kWh/h]'] = E_E_C_d_t
+    df_output2['E_UT_H_d_t [MJ/h]'] = E_UT_H_d_t
+    df_output2['E_UT_C_d_t [MJ/h]'] = E_UT_C_d_t
+    df_output2['L_H_d_t [MJ/h]'] = L_H_d_t
+    df_output2['L_CS_d_t [MJ/h]'] = L_CS_d_t
+    df_output2['L_CL_d_t [MJ/h]'] = L_CL_d_t
+    df_output2['E_E_fan_H_d_t [kWh/h]'] = E_E_fan_H_d_t
+    df_output2['E_E_fan_C_d_t [kWh/h]'] = E_E_fan_C_d_t
+    df_output2['q_hs_H_d_t [Wh/h]'] = q_hs_H_d_t
+    df_output2['q_hs_CS_d_t [Wh/h]'] = q_hs_CS_d_t
+    df_output2['q_hs_CL_d_t [Wh/h]'] = q_hs_CL_d_t
+    df_output2.to_csv(
+        case_name + jjj_consts.version_info() + '_output2.csv',
+        encoding='cp932',
+    )
+
+    if test_mode:
+        i = SutValues(
+            cool_CRAC.q_rtd,
+            heat_CRAC.q_rtd,
+            cool_CRAC.q_max,
+            heat_CRAC.q_max,
+            cool_CRAC.e_rtd,
+            heat_CRAC.e_rtd,
+        )
+        r = ResultSummary(E_C, E_H)
+        return {'TInput': i, 'TValue': r}
+    return None
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -957,35 +1002,31 @@ def calc_main(
         E_E_C_d_t,
         E_UT_C_d_t,
     )
-    df_output1 = pd.DataFrame(index = ['合計値'])
-    df_output1['E_H [MJ/year]'] = E_H
-    df_output1['E_C [MJ/year]'] = E_C
-    df_output1.to_csv(case_name + jjj_consts.version_info() + '_output1.csv', encoding = 'cp932')
-
-    df_output2['Theta_hs_C_out_d_t [℃]']    = Theta_hs_out_d_t
-    df_output2['Theta_hs_C_in_d_t [℃]']     = Theta_hs_in_d_t
-    df_output2['Theta_ex_d_t [℃]']          = climate.get_Theta_ex_d_t()
-    df_output2['V_hs_supply_C_d_t [m3/h]']  = V_hs_supply_d_t
-    df_output2['V_hs_vent_C_d_t [m3/h]']    = V_hs_vent_d_t
-    df_output2['E_H_d_t [MJ/h]']            = E_H_d_t
-    df_output2['E_C_d_t [MJ/h]']            = E_C_d_t
-    df_output2['E_E_H_d_t [kWh/h]']         = E_E_H_d_t
-    df_output2['E_E_C_d_t [kWh/h]']         = E_E_C_d_t
-    df_output2['E_UT_H_d_t [MJ/h]']         = E_UT_H_d_t
-    df_output2['E_UT_C_d_t [MJ/h]']         = E_UT_C_d_t
-    df_output2['L_H_d_t [MJ/h]']            = L_H_d_t
-    df_output2['L_CS_d_t [MJ/h]']           = L_CS_d_t
-    df_output2['L_CL_d_t [MJ/h]']           = L_CL_d_t
-    df_output2['E_E_fan_H_d_t [kWh/h]']     = E_E_fan_H_d_t
-    df_output2['E_E_fan_C_d_t [kWh/h]']     = E_E_fan_C_d_t
-    df_output2['q_hs_H_d_t [Wh/h]']         = q_hs_H_d_t
-    df_output2['q_hs_CS_d_t [Wh/h]']        = q_hs_CS_d_t
-    df_output2['q_hs_CL_d_t [Wh/h]']        = q_hs_CL_d_t
-    df_output2.to_csv(case_name + jjj_consts.version_info() + '_output2.csv', encoding = 'cp932')
-
-    # NOTE: 結合テストで確認したい値を返すのに使用します
-    if test_mode:
-        i = SutValues(cool_CRAC.q_rtd, heat_CRAC.q_rtd, cool_CRAC.q_max, heat_CRAC.q_max, cool_CRAC.e_rtd, heat_CRAC.e_rtd)
-        r = ResultSummary(E_C, E_H)
-        # NOTE: 今後の拡張を想定して既存コードが壊れにくい辞書型にしています
-        return {'TInput':i, 'TValue':r}
+    return _write_outputs_and_build_test_result(
+        case_name,
+        df_output2,
+        climate,
+        test_mode,
+        cool_CRAC,
+        heat_CRAC,
+        E_C,
+        E_H,
+        E_H_d_t,
+        E_C_d_t,
+        E_E_H_d_t,
+        E_E_C_d_t,
+        E_UT_H_d_t,
+        E_UT_C_d_t,
+        L_H_d_t,
+        L_CS_d_t,
+        L_CL_d_t,
+        E_E_fan_H_d_t,
+        E_E_fan_C_d_t,
+        q_hs_H_d_t,
+        q_hs_CS_d_t,
+        q_hs_CL_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        V_hs_supply_d_t,
+        V_hs_vent_d_t,
+    )
