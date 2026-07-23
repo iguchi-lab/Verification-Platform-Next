@@ -1,4 +1,5 @@
 import json
+from typing import NamedTuple
 import numpy as np
 from injector import Injector, inject
 import pandas as pd
@@ -54,6 +55,28 @@ import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 
 # [F25-01] 最低風量の直接入力
 import jjjexperiment.v_min_input as jjj_V_min_input
+
+
+class _HeatingType1And3ElectricityInputs(NamedTuple):
+    type: object
+    E_E_fan_H_d_t: object
+    q_hs_H_d_t: object
+    Theta_hs_out_d_t: object
+    Theta_hs_in_d_t: object
+    Theta_ex_d_t: object
+    V_hs_supply_d_t: object
+    q_hs_rtd_C: object
+    q_hs_min_H: object
+    q_hs_mid_H: object
+    P_hs_mid_H: object
+    V_fan_mid_H: object
+    P_fan_mid_H: object
+    q_hs_rtd_H: object
+    P_fan_rtd_H: object
+    V_fan_rtd_H: object
+    P_hs_rtd_H: object
+    equipment_spec: object
+
 
 def calc(input_data: dict, test_mode=False):
     case_name = input_data.get('case_name', 'default')
@@ -320,25 +343,26 @@ def calc_main(
     ]:
         E_E_H_d_t \
             = jjj_dc_a.calc_E_E_H_d_t_type1_and_type3(
-                type = heat_ac_setting.type,
-                E_E_fan_H_d_t = E_E_fan_H_d_t,
-                q_hs_H_d_t = q_hs_H_d_t,
-                Theta_hs_out_d_t = Theta_hs_out_d_t,
-                Theta_hs_in_d_t = Theta_hs_in_d_t,
-                Theta_ex_d_t = climate.get_Theta_ex_d_t(),  # 空気温度
-                V_hs_supply_d_t = V_hs_supply_d_t,  # 風量
-                q_hs_rtd_C = cool_quantity.q_hs_rtd,  # 定格冷房能力※
-
-                equipment_spec = heat_ac_setting.equipment_spec,
-                q_hs_min_H = heat_quantity.q_hs_min,  # 最小暖房能力
-                q_hs_rtd_H = heat_quantity.q_hs_rtd,
-                q_hs_mid_H = heat_quantity.q_hs_mid,
-                P_hs_rtd_H = heat_quantity.P_hs_rtd,
-                P_hs_mid_H = heat_quantity.P_hs_mid,
-                V_fan_rtd_H = heat_quantity.V_fan_rtd,
-                V_fan_mid_H = heat_quantity.V_fan_mid,
-                P_fan_rtd_H = heat_quantity.P_fan_rtd,
-                P_fan_mid_H = heat_quantity.P_fan_mid
+                *_HeatingType1And3ElectricityInputs(
+                    heat_ac_setting.type,
+                    E_E_fan_H_d_t,
+                    q_hs_H_d_t,
+                    Theta_hs_out_d_t,
+                    Theta_hs_in_d_t,
+                    climate.get_Theta_ex_d_t(),  # 空気温度
+                    V_hs_supply_d_t,  # 風量
+                    cool_quantity.q_hs_rtd,  # 定格冷房能力※
+                    heat_quantity.q_hs_min,  # 最小暖房能力
+                    heat_quantity.q_hs_mid,
+                    heat_quantity.P_hs_mid,
+                    heat_quantity.V_fan_mid,
+                    heat_quantity.P_fan_mid,
+                    heat_quantity.q_hs_rtd,
+                    heat_quantity.P_fan_rtd,
+                    heat_quantity.V_fan_rtd,
+                    heat_quantity.P_hs_rtd,
+                    heat_ac_setting.equipment_spec,
+                )
             )
     elif heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
         E_E_H_d_t \
