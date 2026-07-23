@@ -123,3 +123,61 @@ def test_assert_Theta_NR_2023_shapes_checks_four_zone_arrays():
 
     with pytest.raises(AssertionError):
         section4_2._assert_Theta_NR_2023_shapes(valid, np.zeros(5), valid, valid)
+
+
+def test_get_c_prt_48_preserves_watts_per_kelvin_units():
+    areas = np.arange(1.0, 6.0).reshape(5, 1)
+    np.testing.assert_array_equal(section4_2._get_c_prt_48(2.5, areas), 2.5 * areas)
+
+
+def test_get_air_properties_48_preserves_pyhees_values(monkeypatch):
+    monkeypatch.setattr(section4_2.dc, 'get_c_p_air', lambda: 1006.0)
+    monkeypatch.setattr(section4_2.dc, 'get_rho_air', lambda: 1.2)
+    assert section4_2._get_air_properties_48() == (1006.0, 1.2)
+
+
+def test_get_k_prt_dash_i_48_preserves_formula_48d():
+    volume = np.arange(1.0, 6.0).reshape(5, 1) * 3600
+    c_prt = np.full((5, 1), 7.0)
+    np.testing.assert_array_equal(section4_2._get_k_prt_dash_i_48(2.0, 3.0, volume, c_prt), 6.0 * volume / 3600 + c_prt)
+
+
+def test_get_k_prt_i_48_preserves_formula_48c():
+    volume = np.arange(1.0, 6.0).reshape(5, 1) * 3600
+    c_prt = np.full((5, 1), 7.0)
+    np.testing.assert_array_equal(section4_2._get_k_prt_i_48(2.0, 3.0, volume, c_prt), 6.0 * volume / 3600 + c_prt)
+
+
+def test_get_k_evp_48_preserves_formula_48b():
+    expected = (2.5 - 0.35 * 0.5 * 2.4) * 40.0 + 1006.0 * 1.2 * (120.0 / 3600)
+    assert section4_2._get_k_evp_48(2.5, 40.0, 1006.0, 1.2, 120.0) == expected
+
+
+def test_get_balance_terms_48_preserves_val1_val2_val3():
+    k_dash = np.full((5, 1), 2.0)
+    k_prt = np.full((5, 1), 3.0)
+    temperatures = np.arange(18.0, 23.0).reshape(5, 1)
+    result = section4_2._get_balance_terms_48(k_dash, k_prt, 20.0, 18.0, temperatures, 4.0)
+    assert result == (-20.0, 30.0, 19.0)
+
+
+def test_get_carryover_state_48_preserves_activation_and_capacity(monkeypatch):
+    monkeypatch.setattr(section4_2.jjj_carryover_heat, 'get_C_NR', lambda area: 3600.0 if area == 40.0 else None)
+
+    assert section4_2._get_carryover_state_48(False, True, False, 19.0, 18.0, 40.0) == (True, False, 1.0, 1.0)
+    assert section4_2._get_carryover_state_48(False, True, False, 17.0, 18.0, 40.0) == (False, False, 0, 0)
+    assert section4_2._get_carryover_state_48(False, False, True, 17.0, 18.0, 40.0) == (False, True, -1.0, 1.0)
+    assert section4_2._get_carryover_state_48(True, True, False, 19.0, 18.0, 40.0) == (True, False, 1.0, 0)
+    with pytest.raises(ValueError):
+        section4_2._get_carryover_state_48(False, True, True, 18.0, 18.0, 40.0)
+
+
+def test_get_Theta_NR_48_preserves_formula_clip_and_float_contract():
+    neutral = section4_2._get_Theta_NR_48(18.0, 1.0, 2.0, 0.0, 0.0, 6.0, False, False, 20.0)
+    heating = section4_2._get_Theta_NR_48(18.0, 12.0, 0.0, 0.0, 0.0, 1.0, True, False, 20.0)
+    cooling = section4_2._get_Theta_NR_48(18.0, -12.0, 0.0, 0.0, 0.0, 1.0, False, True, 20.0)
+
+    assert neutral == 18.5
+    assert heating == 20.0
+    assert cooling == 20.0
+    assert isinstance(neutral, float)

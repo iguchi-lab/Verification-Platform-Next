@@ -275,6 +275,84 @@ def _assert_Theta_NR_2023_shapes(
     assert A_prt_i.shape == (5, 1), "A_prt_iの行列数が想定外"
 
 
+def _get_c_prt_48(U_prt: float, A_prt_i: Array5x1) -> Array5x1:
+    return U_prt * A_prt_i
+
+
+def _get_air_properties_48():
+    c_p_air = dc.get_c_p_air()  # [J/(kg・K)]
+    rho_air = dc.get_rho_air()  # [kg/m3]
+    return c_p_air, rho_air
+
+
+def _get_k_prt_dash_i_48(c_p_air, rho_air, V_dash_supply_i, c_prt):
+    return c_p_air * rho_air * (V_dash_supply_i / 3600) + c_prt
+
+
+def _get_k_prt_i_48(c_p_air, rho_air, V_supply_i, c_prt):
+    return c_p_air * rho_air * (V_supply_i / 3600) + c_prt
+
+
+def _get_k_evp_48(Q, A_NR, c_p_air, rho_air, V_vent_l_NR):
+    return (Q - 0.35 * 0.5 * 2.4) * A_NR \
+        + c_p_air * rho_air * (V_vent_l_NR / 3600)
+
+
+def _get_balance_terms_48(k_prt_dash_i, k_prt_i, Theta_star_HBR, Theta_star_NR, Theta_HBR_i, k_evp):
+    val1 = -1 * np.sum(k_prt_dash_i) * (Theta_star_HBR - Theta_star_NR)
+    val2 = np.sum(k_prt_i * (Theta_HBR_i - Theta_star_NR))
+    val3 = k_evp + np.sum(k_prt_i)
+    return val1, val2, val3
+
+
+def _get_carryover_state_48(isFirst, H, C, Theta_NR_before, Theta_star_NR, A_NR):
+    H = H and (Theta_NR_before >= Theta_star_NR)
+    C = C and (Theta_NR_before <= Theta_star_NR)
+
+    # H,C のチェック
+    if (H and C):
+        raise ValueError("想定外の季節")
+    # 暖房期に 過剰熱量が有効
+    elif H:
+        ac_theta_diff = Theta_NR_before - Theta_star_NR
+        assert ac_theta_diff >= 0, f"想定外の温度差 {Theta_NR_before} >= {Theta_star_NR}"
+    # 冷房期に 過剰熱量が有効
+    elif C:
+        ac_theta_diff = Theta_NR_before - Theta_star_NR
+        assert ac_theta_diff <= 0, f"想定外の温度差 {Theta_NR_before} <= {Theta_star_NR}"
+    else:
+        ac_theta_diff = 0  # 使用されないが定義は必要
+        pass
+
+    # (48a) NOTE: isFirst と過剰熱量無効のとき元式と一致するべき
+    C_NR = 0 if isFirst or not (H or C)  \
+        else jjj_carryover_heat.get_C_NR(A_NR) / 3600
+    return H, C, ac_theta_diff, C_NR
+
+
+def _get_Theta_NR_48(Theta_star_NR, val1, val2, ac_theta_diff, C_NR, val3, H, C, Theta_star_HBR):
+    Theta_NR = Theta_star_NR + (val1 + val2 + ac_theta_diff * C_NR) / (val3 + C_NR)
+
+    # TODO: Theta_NR が単増加してしまう問題がある
+    # -> 過剰熱量持越しの追い空調の停止条件を追加することが考えられる
+    # 今は、下のキャップロジックで仮対応しています
+
+    # 空調されている部屋以上に過剰熱量繰越が効くことはないため
+    if H:
+        Theta_NR = np.clip(Theta_NR, None, Theta_star_HBR)
+    elif C:
+        Theta_NR = np.clip(Theta_NR, Theta_star_HBR, None)
+
+    # NOTE: axis オプションによる次数の変化
+    # 次数を意識せずにfloatに総計するなら axisなしがよい
+    # np.sum(k_prt_i, axis=0) -> shape(5,1) -> shape(1,)
+    # np.sum(k_prt_i) -> shape(5,1) -> float
+
+    # 事後条件: 次数チェック
+    assert isinstance(Theta_NR, float), "Theta_NRの次数が想定外"
+    return Theta_NR
+
+
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
         Theta_star_NR: float,
@@ -311,62 +389,24 @@ def get_Theta_NR_2023(
         Theta_HBR_i, V_dash_supply_i, V_supply_i, A_prt_i,
     )
     # 熱容量(間仕切り) [W/K]
-    c_prt = U_prt * A_prt_i
+    c_prt = _get_c_prt_48(U_prt, A_prt_i)
 
-    c_p_air = dc.get_c_p_air()  # [J/(kg・K)]
-    rho_air = dc.get_rho_air()  # [kg/m3]
+    c_p_air, rho_air = _get_air_properties_48()
 
     # (48d) [W/K]
-    k_prt_dash_i = c_p_air * rho_air * (V_dash_supply_i / 3600) + c_prt
+    k_prt_dash_i = _get_k_prt_dash_i_48(c_p_air, rho_air, V_dash_supply_i, c_prt)
     # (48c) [W/K]
-    k_prt_i = c_p_air * rho_air * (V_supply_i / 3600) + c_prt
+    k_prt_i = _get_k_prt_i_48(c_p_air, rho_air, V_supply_i, c_prt)
     # (48b) [W/K]
-    k_evp = (Q - 0.35 * 0.5 * 2.4) * A_NR \
-        + c_p_air * rho_air * (V_vent_l_NR / 3600)
+    k_evp = _get_k_evp_48(Q, A_NR, c_p_air, rho_air, V_vent_l_NR)
 
-    val1 = -1 * np.sum(k_prt_dash_i) * (Theta_star_HBR - Theta_star_NR)
-    val2 = np.sum(k_prt_i * (Theta_HBR_i - Theta_star_NR))
-    val3 = k_evp + np.sum(k_prt_i)
+    val1, val2, val3 = _get_balance_terms_48(k_prt_dash_i, k_prt_i, Theta_star_HBR, Theta_star_NR, Theta_HBR_i, k_evp)
 
     # 過剰熱量発生条件
-    H = H and (Theta_NR_before >= Theta_star_NR)
-    C = C and (Theta_NR_before <= Theta_star_NR)
-
-    # H,C のチェック
-    if (H and C):
-        raise ValueError("想定外の季節")
-    # 暖房期に 過剰熱量が有効
-    elif H:
-        ac_theta_diff = Theta_NR_before - Theta_star_NR
-        assert ac_theta_diff >= 0, f"想定外の温度差 {Theta_NR_before} >= {Theta_star_NR}"
-    # 冷房期に 過剰熱量が有効
-    elif C:
-        ac_theta_diff = Theta_NR_before - Theta_star_NR
-        assert ac_theta_diff <= 0, f"想定外の温度差 {Theta_NR_before} <= {Theta_star_NR}"
-    else:
-        ac_theta_diff = 0  # 使用されないが定義は必要
-        pass
-
-    # (48a) NOTE: isFirst と過剰熱量無効のとき元式と一致するべき
-    C_NR = 0 if isFirst or not (H or C)  \
-        else jjj_carryover_heat.get_C_NR(A_NR) / 3600
-    Theta_NR = Theta_star_NR + (val1 + val2 + ac_theta_diff * C_NR) / (val3 + C_NR)
-
-    # TODO: Theta_NR が単増加してしまう問題がある
-    # -> 過剰熱量持越しの追い空調の停止条件を追加することが考えられる
-    # 今は、下のキャップロジックで仮対応しています
-
-    # 空調されている部屋以上に過剰熱量繰越が効くことはないため
-    if H:
-        Theta_NR = np.clip(Theta_NR, None, Theta_star_HBR)
-    elif C:
-        Theta_NR = np.clip(Theta_NR, Theta_star_HBR, None)
-
-    # NOTE: axis オプションによる次数の変化
-    # 次数を意識せずにfloatに総計するなら axisなしがよい
-    # np.sum(k_prt_i, axis=0) -> shape(5,1) -> shape(1,)
-    # np.sum(k_prt_i) -> shape(5,1) -> float
-
-    # 事後条件: 次数チェック
-    assert isinstance(Theta_NR, float), "Theta_NRの次数が想定外"
-    return Theta_NR
+    H, C, ac_theta_diff, C_NR = _get_carryover_state_48(
+        isFirst, H, C, Theta_NR_before, Theta_star_NR, A_NR,
+    )
+    return _get_Theta_NR_48(
+        Theta_star_NR, val1, val2, ac_theta_diff, C_NR, val3,
+        H, C, Theta_star_HBR,
+    )

@@ -3,6 +3,33 @@ import pyhees.section4_2 as dc
 from jjjexperiment.common import JJJ_HCM, jjj_cloning
 
 # NOTE: Q^,hs,d,t は 床下負荷増加分も見込む(2025/03)
+def _get_formula_40_properties():
+    c_p_air = dc.get_c_p_air()
+    rho_air = dc.get_rho_air()
+    Theta_set_H = dc.get_Theta_set_H()
+    Theta_set_C = dc.get_Theta_set_C()
+    X_set_C = dc.get_X_set_C()
+    return c_p_air, rho_air, Theta_set_H, Theta_set_C, X_set_C
+
+
+def _get_Q_hat_hs_H_envelope_40_1b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, Theta_set_H, Theta_ex):
+    return (
+        (Q - 0.35 * 0.5 * 2.4) * A_A
+        + (c_p_air * rho_air * (V_vent_l + sum_V_vent_g_i)) / 3600
+    ) * (Theta_set_H - Theta_ex)
+
+
+def _subtract_Q_hat_hs_H_gains_40_1b(Q_hat_hs_H, mu_H, A_A, J, q_gen, n_p, q_p_H):
+    Q_hat_hs_H -= mu_H * A_A * J  # 日射
+    Q_hat_hs_H -= q_gen  # 内部発熱
+    Q_hat_hs_H -= n_p * q_p_H  # 人体発熱
+    return Q_hat_hs_H
+
+
+def _get_Q_hat_hs_H_40_1a(Q_hat_hs_H):
+    return max(Q_hat_hs_H * 3600 * 1e-6, 0)
+
+
 @jjj_cloning
 def calc_Q_hat_hs(
         Q: float,
@@ -48,24 +75,15 @@ def calc_Q_hat_hs(
         (時点)１時間当たりの熱源機の風量を計算するための熱源機の暖房出力 [MJ/h]
     """
     # vectorize可能
-    c_p_air = dc.get_c_p_air()
-    rho_air = dc.get_rho_air()
-    Theta_set_H = dc.get_Theta_set_H()
-    Theta_set_C = dc.get_Theta_set_C()
-    X_set_C = dc.get_X_set_C()
+    c_p_air, rho_air, Theta_set_H, Theta_set_C, X_set_C = _get_formula_40_properties()
 
     match HCM:
         case JJJ_HCM.H:
             # (40-1b)
-            Q_hat_hs_H = (
-                (Q - 0.35 * 0.5 * 2.4) * A_A  # 外皮
-                + (c_p_air * rho_air * (V_vent_l + sum_V_vent_g_i)) / 3600  # 換気
-                ) * (Theta_set_H - Theta_ex)
-            Q_hat_hs_H -= mu_H * A_A * J  # 日射
-            Q_hat_hs_H -= q_gen  # 内部発熱
-            Q_hat_hs_H -= n_p * q_p_H  # 人体発熱
+            Q_hat_hs_H = _get_Q_hat_hs_H_envelope_40_1b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, Theta_set_H, Theta_ex)
+            Q_hat_hs_H = _subtract_Q_hat_hs_H_gains_40_1b(Q_hat_hs_H, mu_H, A_A, J, q_gen, n_p, q_p_H)
             # (40-1a)
-            return max(Q_hat_hs_H * 3600 * 1e-6, 0)
+            return _get_Q_hat_hs_H_40_1a(Q_hat_hs_H)
 
         case JJJ_HCM.C:
             # (40-2b)
