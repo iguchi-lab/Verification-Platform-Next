@@ -35,6 +35,20 @@ def get_Theta_uf_d_t_runup() -> np.ndarray:
     )
 
 
+def _get_floor_temperature_properties_and_defaults():
+    ro_air = algo.get_ro_air()
+    c_p_air = algo.get_c_p_air()
+    U_s = algo.get_U_s()
+    H_floor = 0.7
+    Theta_in_C = 27.0
+    Theta_in_H = 20.0
+    return ro_air, c_p_air, U_s, H_floor, Theta_in_C, Theta_in_H
+
+
+def _validate_r_A_ufvnt(r_A_ufvnt):
+    if r_A_ufvnt is None or r_A_ufvnt == 0:
+        raise ValueError("床下空調に使用する面積の割合が有効な値になっていない.")
+
 @log_res(['Theta_uf_d_t'])
 def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t):
     """定常状態での床下温度を求める
@@ -54,17 +68,10 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
 
     """
 
-    ro_air = algo.get_ro_air()    # 空気密度 [kg/m3]
-    c_p_air = algo.get_c_p_air()  # 空気の比熱 [kJ/kgK]
-    U_s = algo.get_U_s()          # 床の熱貫流率 [W/m2K]
-
-    H_floor = 0.7  # 床の温度差係数 [-]
-    Theta_in_C = 27.0  # 冷房時の室温 [℃]
-    Theta_in_H = 20.0  # 暖房時の室温 [℃]
+    ro_air, c_p_air, U_s, H_floor, Theta_in_C, Theta_in_H = _get_floor_temperature_properties_and_defaults()
 
     # 事前条件: 床下空調を使用しているので 有効な値が存在する
-    if (r_A_ufvnt is None or r_A_ufvnt == 0):
-        raise ValueError("床下空調に使用する面積の割合が有効な値になっていない.")
+    _validate_r_A_ufvnt(r_A_ufvnt)
 
     """NOTE: 床下空調(新ロジック)計算仕様"""
     # 床下利用は1階のみとする(2F居室は通常の空調)
