@@ -3425,7 +3425,7 @@ def test_record_capacity_state_outputs_preserves_frame_generations_and_order():
     output3 = Frame("output3")
     values = [object() for _ in range(17)]
 
-    result = sut._record_capacity_state_outputs(output, output3, *values)
+    result = sut._record_capacity_state_outputs(sut._CapacityStateOutputInputs(output, output3, *values))
 
     assert result == (output, output3)
     assert [(event[0], event[1]) for event in events] == [
@@ -4240,4 +4240,32 @@ def test_common_outlet_supply_output_inputs_preserve_field_order():
         "Theta_supply_d_t_i",
         "Theta_HBR_d_t_i",
         "Theta_NR_d_t",
+    )
+
+
+def test_capacity_state_output_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(19))
+    inputs = sut._CapacityStateOutputInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "df_output3",
+        "L_star_CL_d_t",
+        "L_star_CS_d_t",
+        "L_star_dash_CL_d_t",
+        "L_star_dash_C_d_t",
+        "C_df_H_d_t",
+        "Q_r_max_H_d_t",
+        "Q_r_max_C_d_t",
+        "L_max_CL_d_t",
+        "L_dash_CL_d_t",
+        "L_dash_C_d_t",
+        "q_r_max_C",
+        "SHF_L_min_c",
+        "SHF_dash_d_t",
+        "Q_hs_max_C_d_t",
+        "Q_hs_max_CL_d_t",
+        "Q_hs_max_CS_d_t",
+        "Q_hs_max_H_d_t",
     )

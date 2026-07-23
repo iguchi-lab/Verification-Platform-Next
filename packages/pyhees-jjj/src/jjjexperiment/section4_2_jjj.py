@@ -385,6 +385,28 @@ class _CommonOutletSupplyOutputInputs(NamedTuple):
     Theta_NR_d_t: object
 
 
+class _CapacityStateOutputInputs(NamedTuple):
+    df_output: object
+    df_output3: object
+    L_star_CL_d_t: object
+    L_star_CS_d_t: object
+    L_star_dash_CL_d_t: object
+    L_star_dash_C_d_t: object
+    C_df_H_d_t: object
+    Q_r_max_H_d_t: object
+    Q_r_max_C_d_t: object
+    L_max_CL_d_t: object
+    L_dash_CL_d_t: object
+    L_dash_C_d_t: object
+    q_r_max_C: object
+    SHF_L_min_c: object
+    SHF_dash_d_t: object
+    Q_hs_max_C_d_t: object
+    Q_hs_max_CL_d_t: object
+    Q_hs_max_CS_d_t: object
+    Q_hs_max_H_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2721,14 +2743,27 @@ def _record_common_outlet_and_supply_outputs(inputs: _CommonOutletSupplyOutputIn
         Theta_supply_d_t_i, Theta_HBR_d_t_i, Theta_NR_d_t)
 
 
-def _record_capacity_state_outputs(
-        df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
-        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_C, SHF_L_min_c,
-        SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
-        Q_hs_max_CS_d_t, Q_hs_max_H_d_t):
+def _record_capacity_state_outputs(inputs: _CapacityStateOutputInputs):
     """Record maximum capacity outputs without changing frame generations."""
+    df_output = inputs.df_output
+    df_output3 = inputs.df_output3
+    L_star_CL_d_t = inputs.L_star_CL_d_t
+    L_star_CS_d_t = inputs.L_star_CS_d_t
+    L_star_dash_CL_d_t = inputs.L_star_dash_CL_d_t
+    L_star_dash_C_d_t = inputs.L_star_dash_C_d_t
+    C_df_H_d_t = inputs.C_df_H_d_t
+    Q_r_max_H_d_t = inputs.Q_r_max_H_d_t
+    Q_r_max_C_d_t = inputs.Q_r_max_C_d_t
+    L_max_CL_d_t = inputs.L_max_CL_d_t
+    L_dash_CL_d_t = inputs.L_dash_CL_d_t
+    L_dash_C_d_t = inputs.L_dash_C_d_t
+    q_r_max_C = inputs.q_r_max_C
+    SHF_L_min_c = inputs.SHF_L_min_c
+    SHF_dash_d_t = inputs.SHF_dash_d_t
+    Q_hs_max_C_d_t = inputs.Q_hs_max_C_d_t
+    Q_hs_max_CL_d_t = inputs.Q_hs_max_CL_d_t
+    Q_hs_max_CS_d_t = inputs.Q_hs_max_CS_d_t
+    Q_hs_max_H_d_t = inputs.Q_hs_max_H_d_t
     df_output = df_output.assign(
         L_star_CL_d_t=L_star_CL_d_t,
         L_star_CS_d_t=L_star_CS_d_t,
@@ -3423,13 +3458,13 @@ def calc_Q_UT_A(
         L_star_H_d_t_i,
     )
     """ 最大暖冷房能力 """
-    df_output, df_output3 = _record_capacity_state_outputs(
+    df_output, df_output3 = _record_capacity_state_outputs(_CapacityStateOutputInputs(
         df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
         L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
         Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
         L_dash_CL_d_t, L_dash_C_d_t, q_r_max_C, SHF_L_min_c,
         SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
-        Q_hs_max_CS_d_t, Q_hs_max_H_d_t)
+        Q_hs_max_CS_d_t, Q_hs_max_H_d_t))
 
     """ 熱源機の出口・吹出口 - 負荷バランス時 / 実際 """
     df_output = _record_common_outlet_and_supply_outputs(_CommonOutletSupplyOutputInputs(
