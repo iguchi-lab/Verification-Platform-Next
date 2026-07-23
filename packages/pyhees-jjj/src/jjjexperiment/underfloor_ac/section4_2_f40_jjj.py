@@ -30,6 +30,15 @@ def _get_Q_hat_hs_H_40_1a(Q_hat_hs_H):
     return max(Q_hat_hs_H * 3600 * 1e-6, 0)
 
 
+def _get_Q_hat_hs_CS_40_2b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, Theta_ex, Theta_set_C, mu_C, J, q_gen, n_p, q_p_CS):
+    return (
+        ((Q - 0.35 * 0.5 * 2.4) * A_A
+        + (c_p_air * rho_air * (V_vent_l + sum_V_vent_g_i)) / 3600
+        ) * (Theta_ex - Theta_set_C)
+        + mu_C * A_A * J
+        + q_gen
+        + n_p * q_p_CS) * 3600 * 1e-6
+
 @jjj_cloning
 def calc_Q_hat_hs(
         Q: float,
@@ -87,13 +96,7 @@ def calc_Q_hat_hs(
 
         case JJJ_HCM.C:
             # (40-2b)
-            Q_hat_hs_CS = (
-                ((Q - 0.35 * 0.5 * 2.4) * A_A
-                + (c_p_air * rho_air * (V_vent_l + sum_V_vent_g_i)) / 3600
-                ) * (Theta_ex - Theta_set_C) \
-                + mu_C * A_A * J \
-                + q_gen \
-                + n_p * q_p_CS) * 3600 * 1e-6
+            Q_hat_hs_CS = _get_Q_hat_hs_CS_40_2b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, Theta_ex, Theta_set_C, mu_C, J, q_gen, n_p, q_p_CS)
             # (40-2c)
             Q_hat_hs_CL = (
                 (rho_air * (V_vent_l + sum_V_vent_g_i) * (X_ex - X_set_C) * 1e+3 + w_gen) * L_wtr \
