@@ -1652,6 +1652,10 @@ def test_actual_non_room_temperature_at_hour_preserves_slices(monkeypatch, t):
     np.testing.assert_array_equal(args[12], area_partition.reshape(-1, 1))
     assert args[13] == 2.7
     assert args[14] == (0 if t == 0 else theta_nr[t - 1])
+    assert sut._CarryoverActualNonRoomTemperatureInputs._fields == (
+        "isFirst", "H", "C", "M", "Theta_star_NR", "Theta_star_HBR",
+        "Theta_HBR_i", "A_NR", "V_vent_l_NR", "V_dash_supply_i",
+        "V_supply_i", "U_prt", "A_prt_i", "Q", "Theta_NR_before")
 
 
 @pytest.mark.parametrize(

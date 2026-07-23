@@ -475,6 +475,24 @@ class _ActualRoomTemperatureHourInputs(NamedTuple):
     Theta_HBR_d_t_i: object
 
 
+class _CarryoverActualNonRoomTemperatureInputs(NamedTuple):
+    isFirst: object
+    H: object
+    C: object
+    M: object
+    Theta_star_NR: object
+    Theta_star_HBR: object
+    Theta_HBR_i: object
+    A_NR: object
+    V_vent_l_NR: object
+    V_dash_supply_i: object
+    V_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    Theta_NR_before: object
+
+
 class _ActualNonRoomTemperatureHourInputs(NamedTuple):
     t: object
     isFirst: object
@@ -1767,7 +1785,7 @@ def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHo
     Q = inputs.Q
     Theta_NR_d_t = inputs.Theta_NR_d_t
     # (48)　実際の非居室の室温
-    return jjj_carryover_heat.get_Theta_NR_2023(
+    return jjj_carryover_heat.get_Theta_NR_2023(*_CarryoverActualNonRoomTemperatureInputs(
         isFirst, H[t], C[t], M[t],
         Theta_star_NR_d_t[t],
         Theta_star_HBR_d_t[t],
@@ -1779,7 +1797,7 @@ def _get_actual_non_room_temperature_at_hour(inputs: _ActualNonRoomTemperatureHo
         U_prt,
         A_prt_i.reshape(-1,1),  # (5,1)
         Q,
-        0 if t==0 else Theta_NR_d_t[t-1])
+        0 if t==0 else Theta_NR_d_t[t-1]))
 
 def _get_actual_loads(inputs: _ActualLoadsInputs):
     """Calculate formulas (7) through (5) in their original order."""
