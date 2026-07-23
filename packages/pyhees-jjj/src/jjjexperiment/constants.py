@@ -182,15 +182,19 @@ def _set_C1_BR_R_i(input: dict):
       C1_BR_R_i[i-1] = float(input[key])  # UIでNumberチェック済み
 
 
-def override_CR(input: dict):
-  """ SimHeatモデルの熱容量を上書きする 入力のある箇所のみ更新
-  """
+def _set_C1_NR_R(input: dict):
   global C1_NR_R
-
-  _set_C1_BR_R_i(input)
 
   if 'C1_NR_R' in input and input['C1_NR_R'] is not None:
     C1_NR_R = float(input['C1_NR_R'])  # UIでNumberチェック済み
+
+
+def override_CR(input: dict):
+  """ SimHeatモデルの熱容量を上書きする 入力のある箇所のみ更新
+  """
+  _set_C1_BR_R_i(input)
+
+  _set_C1_NR_R(input)
 
 def _set_Theta_hs_out_max_H_d_t_limit(input: dict):
   if 'Theta_hs_out_max_H_d_t_limit' in input:

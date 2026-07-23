@@ -172,3 +172,19 @@ def test_override_CR_room_capacities_boundary():
     assert constants.C1_BR_R_i == [original[0], 250.5, original[2], original[3], original[4]]
   finally:
     constants.C1_BR_R_i[:] = original
+
+
+def test_override_CR_non_room_capacity_boundary():
+  original = constants.C1_NR_R
+  try:
+    constants.override_CR({'C1_NR_R': '750.5'})
+    assert constants.C1_NR_R == 750.5
+    assert isinstance(constants.C1_NR_R, float)
+
+    constants.override_CR({'C1_NR_R': None})
+    assert constants.C1_NR_R == 750.5
+
+    constants.override_CR({})
+    assert constants.C1_NR_R == 750.5
+  finally:
+    constants.C1_NR_R = original
