@@ -8,6 +8,9 @@ def _get_formula_52_properties():
     U_s = dc.get_U_s()
     return c_p_air, rho_air, U_s
 
+
+def _get_A_NR_1F_52(A_NR, r_A_NR_1F_excl_bath):
+    return A_NR * r_A_NR_1F_excl_bath
 # NOTE: θ*NR,d,t は、室温の計算時に、床下からの貫流分を考慮(2025/03)
 @jjj_cloning  # section4_2/get_Theta_star_NR_d_t
 def get_Theta_star_NR(
@@ -48,7 +51,7 @@ def get_Theta_star_NR(
     c_p_air, rho_air, U_s = _get_formula_52_properties()
 
     #260112 非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    A_NR_1F = A_NR * r_A_NR_1F_excl_bath
+    A_NR_1F = _get_A_NR_1F_52(A_NR, r_A_NR_1F_excl_bath)
 
     # CHECK: k1 の Q 項に A_NR_1F を使っている。
     # k1 は非居室全体の熱コンダクタンス（外皮・換気・間仕切り）を表すため、
