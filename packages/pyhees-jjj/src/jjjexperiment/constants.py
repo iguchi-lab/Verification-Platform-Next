@@ -300,6 +300,12 @@ def _set_H_A_A_f_hex_large(input: dict):
     A_f_hex_large_H = float(input['H_A']['A_f_hex_large'])
 
 
+def _set_H_A_A_e_hex_large(input: dict):
+  if 'A_e_hex_large' in input['H_A']:
+    global A_e_hex_large_H
+    A_e_hex_large_H = float(input['H_A']['A_e_hex_large'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -325,9 +331,7 @@ def set_constants(input: dict):
     _set_H_A_A_f_hex_small(input)
     _set_H_A_A_e_hex_small(input)
     _set_H_A_A_f_hex_large(input)
-    if 'A_e_hex_large' in input['H_A']:
-      global A_e_hex_large_H
-      A_e_hex_large_H = float(input['H_A']['A_e_hex_large'])
+    _set_H_A_A_e_hex_large(input)
     if 'compressor_coeff' in input['H_A']:
       global a_r_H_t_t_a4
       a_r_H_t_t_a4 = float(input['H_A']['compressor_coeff'][0])
