@@ -1,3 +1,4 @@
+import importlib
 import numpy as np
 import pandas as pd
 import pytest
@@ -224,4 +225,268 @@ def test_run_heating_calc_Q_UT_A_preserves_bind_call_and_diagnostics(monkeypatch
         ('call', experiment_main.jjj_dc.calc_Q_UT_A),
         ('debug', 'V_hs_supply_d_t', 'supply'),
         ('debug', 'V_hs_vent_d_t', 'vent'),
+    ]
+
+def test_get_heating_fan_model_preserves_standard_fan_power(monkeypatch):
+    logged = []
+    monkeypatch.setattr(experiment_main._logger, 'info', logged.append)
+    setting = SimpleNamespace(type=experiment_main.計算モデル.ダクト式セントラル空調機, f_SFP=0.5)
+
+    result = experiment_main._get_heating_fan_model(setting, 200.0, None, None, 'case')
+
+    assert result == (100.0, None)
+    assert logged == ['P_rac_fan_rtd_H [W]: 100.0']
+
+
+def test_get_heating_fan_model_preserves_denchu_csv_and_unit_conversion(monkeypatch):
+    events = []
+    frame = SimpleNamespace(to_csv=lambda path, encoding: events.append(('csv', path, encoding)))
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_1, 'calc_R_and_Pc_H', lambda catalog: (2.0, 1.0, 0.0, 0.3))
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_2, 'simu_R', lambda *args: events.append(('simu', args)) or 'simu')
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_1, 'get_DataFrame_denchu_modeling_consts', lambda *args: events.append(('frame', args)) or frame)
+    monkeypatch.setattr(experiment_main.jjj_consts, 'version_info', lambda: '_v')
+    monkeypatch.setattr(experiment_main._logger, 'info', lambda message: events.append(('log', message)))
+    setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル, f_SFP=0.5)
+
+    result = experiment_main._get_heating_fan_model(setting, 200.0, 'catalog', 'inner', 'case')
+
+    assert result == (300.0, 'simu')
+    assert events == [
+        ('simu', (2.0, 1.0, 0.0)),
+        ('frame', ('catalog', 2.0, 1.0, 0.0, 'inner', 300.0)),
+        ('csv', 'case_v_denchu_consts_H_output.csv', 'cp932'),
+        ('log', 'P_rac_fan_rtd_H [W]: 300.0'),
+    ]
+
+def test_get_heating_capacity_and_HCM_preserves_call_order(monkeypatch):
+    events = []
+    climate = SimpleNamespace(
+        get_C_df_H_d_t=lambda: events.append('C_df') or 'C-df',
+        get_HCM_d_t=lambda: events.append('HCM') or 'hcm',
+    )
+    monkeypatch.setattr(
+        experiment_main.dc_a,
+        'get_q_hs_H_d_t',
+        lambda *args: events.append(('capacity', args)) or 'q-h',
+    )
+
+    result = experiment_main._get_heating_capacity_and_HCM('out', 'in', 'supply', climate, 6)
+
+    assert result == ('q-h', 'hcm')
+    assert events == ['C_df', ('capacity', ('out', 'in', 'supply', 'C-df', 6)), 'HCM']
+
+def test_get_latent_heating_fan_power_preserves_model_call(monkeypatch):
+    latent = importlib.import_module('jjjexperiment.latent_load.section4_2_a')
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(latent, 'get_E_E_fan_H_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.RAC活用型全館空調_潜熱評価モデル, f_SFP=0.4)
+
+    result = experiment_main._get_latent_heating_fan_power(setting, 'vent', 'q-h')
+
+    assert result == 'fan'
+    assert events == [('print', setting.type), ('call', ('vent', 'q-h', 0.4))]
+
+def test_get_standard_heating_fan_power_preserves_rac_fan_and_ventilation_option(monkeypatch):
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_E_E_fan_H_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(
+        type=experiment_main.計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        f_SFP=0.4,
+        subtract_ventilation_power='subtract',
+    )
+
+    result = experiment_main._get_standard_heating_fan_power(
+        setting, SimpleNamespace(P_fan_rtd=100.0), 200.0, 'vent', 'supply', 300.0, 'q-h', 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低風量直接入力.入力しない),
+        ('call', (200.0, 'vent', 'supply', 300.0, 'q-h', 6, 0.4, 'subtract')),
+    ]
+
+def test_get_minimum_volume_heating_fan_power_preserves_fixed_ventilation_option(monkeypatch):
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(experiment_main.dc_a, 'get_E_E_fan_H_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.ダクト式セントラル空調機, f_SFP=0.4)
+
+    result = experiment_main._get_minimum_volume_heating_fan_power(
+        setting, SimpleNamespace(P_fan_rtd=100.0), 200.0, 'vent', 'supply', 300.0, 'q-h', 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低電力直接入力.入力しない),
+        ('call', (
+            100.0, 'vent', 'supply', 300.0, 'q-h', 6, 0.4,
+            experiment_main.ファン消費電力から換気分を引く.換気分を引かない,
+        )),
+    ]
+
+def test_get_minimum_power_heating_fan_preserves_input_tuple(monkeypatch):
+    module = importlib.import_module('jjjexperiment.v_min_input.section4_2_a')
+    events = []
+    monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
+    monkeypatch.setattr(module, 'get_E_E_fan_d_t', lambda *args: events.append(('call', args)) or 'fan')
+    setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル)
+    v_min = SimpleNamespace(E_E_fan_logic='logic', E_E_fan_min=0.2)
+
+    result = experiment_main._get_minimum_power_heating_fan(
+        setting, SimpleNamespace(P_fan_rtd=100.0), v_min, 200.0, 'vent', 'supply', 300.0, 6
+    )
+
+    assert result == 'fan'
+    assert events == [
+        ('print', experiment_main.最低電力直接入力.入力する),
+        ('call', ('logic', 100.0, 'vent', 'supply', 300.0, 0.2, 6, False)),
+    ]
+
+def test_raise_invalid_heating_fan_input_preserves_value_error():
+    with pytest.raises(ValueError):
+        experiment_main._raise_invalid_heating_fan_input()
+
+def test_get_heating_electricity_type1_and_type3_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        experiment_main.jjj_dc_a,
+        'calc_E_E_H_d_t_type1_and_type3',
+        lambda *args: calls.append(args) or 'electricity',
+    )
+    setting = SimpleNamespace(type='type', equipment_spec='spec')
+    climate = SimpleNamespace(get_Theta_ex_d_t=lambda: 'theta-ex')
+    cool = SimpleNamespace(q_hs_rtd='q-rtd-c')
+    heat = SimpleNamespace(
+        q_hs_min='q-min-h', q_hs_mid='q-mid-h', P_hs_mid='p-mid-h',
+        V_fan_mid='v-mid-h', P_fan_mid='p-fan-mid-h', q_hs_rtd='q-rtd-h',
+        P_fan_rtd='p-fan-rtd-h', V_fan_rtd='v-fan-rtd-h', P_hs_rtd='p-rtd-h',
+    )
+
+    result = experiment_main._get_heating_electricity_type1_and_type3(
+        setting, 'fan', 'q-h', 'theta-out', 'theta-in', climate, 'supply', cool, heat
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'type', 'fan', 'q-h', 'theta-out', 'theta-in', 'theta-ex', 'supply',
+        'q-rtd-c', 'q-min-h', 'q-mid-h', 'p-mid-h', 'v-mid-h', 'p-fan-mid-h',
+        'q-rtd-h', 'p-fan-rtd-h', 'v-fan-rtd-h', 'p-rtd-h', 'spec',
+    )]
+def test_get_heating_electricity_type2_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        experiment_main.jjj_dc_a,
+        'calc_E_E_H_d_t_type2',
+        lambda *args: calls.append(args) or 'electricity',
+    )
+    setting = SimpleNamespace(type='type')
+    house = SimpleNamespace(region=6)
+    heat = SimpleNamespace(
+        e_rtd='e-rtd-h', q_rtd='q-rtd-h', q_max='q-max-h',
+        input_C_af='c-af-h', dualcompressor='dual-h',
+    )
+    cool = SimpleNamespace(q_rtd='q-rtd-c', q_max='q-max-c')
+
+    result = experiment_main._get_heating_electricity_type2(
+        setting, house, 'climate.csv', 'fan', 'q-h', heat, cool
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'type', 6, 'climate.csv', 'fan', 'q-h', 'e-rtd-h', 'q-rtd-h',
+        'q-rtd-c', 'q-max-h', 'q-max-c', 'c-af-h', 'dual-h',
+    )]
+def test_get_heating_electricity_type4_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        experiment_main.jjj_dc_a,
+        'calc_E_E_H_d_t_type4',
+        lambda *args: calls.append(args) or 'electricity',
+    )
+    setting = SimpleNamespace(type='type')
+    house = SimpleNamespace(region=6)
+
+    result = experiment_main._get_heating_electricity_type4(
+        'case', setting, house, 'climate.csv', 'fan', 'q-h', 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner'
+    )
+
+    assert result == 'electricity'
+    assert calls == [(
+        'case', 'type', 6, 'climate.csv', 'fan', 'q-h', 'supply',
+        'p-rac-fan', 'simu-r', 'catalog', 'inner',
+    )]
+def test_build_heating_output_dataframe_preserves_columns_values_and_diagnostics(monkeypatch):
+    size = 24 * 365
+    values = np.arange(size, dtype=float)
+    events = []
+    climate = SimpleNamespace(
+        get_Theta_ex_d_t=lambda: values + 2.0,
+        get_C_df_H_d_t=lambda: values + 5.0,
+    )
+    monkeypatch.setattr(
+        experiment_main._logger,
+        'NDdebug',
+        lambda name, value: events.append((name, value)),
+    )
+
+    result = experiment_main._build_heating_output_dataframe(
+        values, values + 1.0, values + 3.0, climate, values + 4.0, values + 6.0
+    )
+
+    assert list(result.columns) == [
+        'Q_UT_H_d_A_t [MJ/h]',
+        'Theta_hs_H_out_d_t [℃]',
+        'Theta_hs_H_in_d_t [℃]',
+        'Theta_ex_d_t [℃]',
+        'V_hs_supply_H_d_t [m3/h]',
+        'V_hs_vent_H_d_t [m3/h]',
+        'C_df_H_d_t [-]',
+    ]
+    assert len(result) == size
+    assert result.index[0] == pd.Timestamp('2023-01-01 01:00:00')
+    assert result.index[-1] == pd.Timestamp('2024-01-01 00:00:00')
+    assert result['Q_UT_H_d_A_t [MJ/h]'].isna().all()
+    np.testing.assert_array_equal(result['Theta_hs_H_out_d_t [℃]'], values + 1.0)
+    np.testing.assert_array_equal(result['Theta_hs_H_in_d_t [℃]'], values + 3.0)
+    np.testing.assert_array_equal(result['Theta_ex_d_t [℃]'], values + 2.0)
+    np.testing.assert_array_equal(result['V_hs_supply_H_d_t [m3/h]'], values + 4.0)
+    np.testing.assert_array_equal(result['V_hs_vent_H_d_t [m3/h]'], values + 6.0)
+    np.testing.assert_array_equal(result['C_df_H_d_t [-]'], values + 5.0)
+    assert events[0][0] == 'E_UT_H_d_t'
+    assert events[0][1] is values
+def test_get_V_hs_dsgn_C_preserves_model_specific_rated_airflow(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.dc_spec, 'get_V_fan_rtd_C', lambda q: calls.append(('rated', q)) or 300.0)
+    monkeypatch.setattr(experiment_main.dc_spec, 'get_V_fan_dsgn_C', lambda v: calls.append(('design', v)) or v * 1.1)
+
+    direct = experiment_main._get_V_hs_dsgn_C(
+        experiment_main.計算モデル.ダクト式セントラル空調機, 200.0, 5000.0
+    )
+    calculated = experiment_main._get_V_hs_dsgn_C(
+        experiment_main.計算モデル.電中研モデル, 200.0, 5000.0
+    )
+
+    assert direct == pytest.approx(220.0)
+    assert calculated == pytest.approx(330.0)
+    assert calls == [('design', 200.0), ('rated', 5000.0), ('design', 300.0)]
+    with pytest.raises(Exception, match='冷房方式が不正です。'):
+        experiment_main._get_V_hs_dsgn_C(object(), 200.0, 5000.0)
+
+
+def test_bind_cooling_design_airflows_preserves_type_contract_and_bind_order():
+    bound = []
+    injector = SimpleNamespace(binder=SimpleNamespace(bind=lambda key, to: bound.append((key, to))))
+    setting = SimpleNamespace(V_hs_dsgn=250.0)
+
+    result = experiment_main._bind_cooling_design_airflows(
+        injector, setting, SimpleNamespace(), SimpleNamespace()
+    )
+
+    assert result == (0.0, 250.0)
+    assert bound == [
+        (experiment_main.jjj_dc.VHS_DSGN_H, 0.0),
+        (experiment_main.jjj_dc.VHS_DSGN_C, 250.0),
     ]
