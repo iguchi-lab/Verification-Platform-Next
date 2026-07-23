@@ -270,6 +270,12 @@ def _set_change_supply_volume_before_vav_adjust(input: dict):
     change_supply_volume_before_vav_adjust = int(input['change_supply_volume_before_vav_adjust'])
 
 
+def _set_change_heat_source_outlet_required_temperature(input: dict):
+  if 'change_heat_source_outlet_required_temperature' in input:
+    global change_heat_source_outlet_required_temperature
+    change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -287,9 +293,7 @@ def set_constants(input: dict):
   _set_C_hm_C(input)
   _set_q_rtd_C_limit(input)
   _set_change_supply_volume_before_vav_adjust(input)
-  if 'change_heat_source_outlet_required_temperature' in input:
-    global change_heat_source_outlet_required_temperature
-    change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
+  _set_change_heat_source_outlet_required_temperature(input)
   if 'R_g' in input:
     global R_g
     R_g = float(input['R_g'])

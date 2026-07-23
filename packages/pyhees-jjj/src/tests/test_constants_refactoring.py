@@ -38,6 +38,7 @@ def test_set_constants_float_boundary(key, value, expected):
   ('key', 'value', 'expected'),
   [
     ('change_supply_volume_before_vav_adjust', '7', 7),
+    ('change_heat_source_outlet_required_temperature', '7', 7),
   ],
 )
 def test_set_constants_int_boundary(key, value, expected):
