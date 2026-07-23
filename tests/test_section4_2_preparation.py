@@ -742,7 +742,7 @@ def test_heat_source_supply_airflow_before_vav_uses_cav_seasons(monkeypatch):
         lambda region: (heating, cooling, mid),
     )
 
-    result = sut._get_heat_source_supply_airflow_before_vav(
+    result = sut._get_heat_source_supply_airflow_before_vav(sut._HeatSourceSupplyAirflowBeforeVavInputs(
         SimpleNamespace(type=object()),
         SimpleNamespace(region=6),
         SimpleNamespace(hs_CAV=True),
@@ -753,7 +753,7 @@ def test_heat_source_supply_airflow_before_vav_uses_cav_seasons(monkeypatch):
         200.0,
         object(),
         object(),
-    )
+    ))
 
     np.testing.assert_array_equal(result[:3], [1200.0, 1500.0, 0.0])
     np.testing.assert_array_equal(result[3:], np.zeros(24 * 365 - 3))
@@ -781,7 +781,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_2023_branch(
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_heat_source_supply_airflow_before_vav(
+    result = sut._get_heat_source_supply_airflow_before_vav(sut._HeatSourceSupplyAirflowBeforeVavInputs(
         SimpleNamespace(type=sut.計算モデル.RAC活用型全館空調_潜熱評価モデル),
         SimpleNamespace(region=7),
         SimpleNamespace(hs_CAV=False),
@@ -790,7 +790,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_2023_branch(
         300.0,
         *capacities,
         *loads,
-    )
+    ))
 
     assert result is expected
     assert calls == [(loads[load_index], 7, cooling)]
@@ -808,7 +808,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_standard_arguments(
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_heat_source_supply_airflow_before_vav(
+    result = sut._get_heat_source_supply_airflow_before_vav(sut._HeatSourceSupplyAirflowBeforeVavInputs(
         SimpleNamespace(type=object()),
         SimpleNamespace(region=5),
         SimpleNamespace(hs_CAV=False),
@@ -819,7 +819,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_standard_arguments(
         None,
         load,
         object(),
-    )
+    ))
 
     assert result is expected
     assert calls == [(250.0, 0, None, 100.0, None, load, 5)]
@@ -2865,9 +2865,9 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     assert tuple(name for name, _ in events[-1][2]) == tuple(
         f"V_dash_supply_d_t_{i}" for i in range(1, 6))
     heat_calls = [event for event in events if event[0] == "heat_airflow"]
-    assert heat_calls[0][1][-2] is q_initial
+    assert heat_calls[0][1][0].Q_hat_hs_d_t is q_initial
     if should_adjust:
-        assert heat_calls[1][1][-2] is q_ground
+        assert heat_calls[1][1][0].Q_hat_hs_d_t is q_ground
 
 def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monkeypatch):
     events = []

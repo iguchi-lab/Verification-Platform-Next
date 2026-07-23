@@ -494,6 +494,19 @@ class _UnderfloorOutdoorTransferInputs(NamedTuple):
     Q_hat_hs_d_t: object
 
 
+
+class _HeatSourceSupplyAirflowBeforeVavInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    V_hs_min: object
+    Q_hs_rtd_H: object
+    Q_hs_rtd_C: object
+    Q_hat_hs_d_t: object
+    Q_hat_hs_CS_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -682,19 +695,18 @@ def _prepare_underfloor_ground_response(
     return _UnderfloorGroundResponseResult(Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m)
 
 
-def _get_heat_source_supply_airflow_before_vav(
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        skin: OuterSkin,
-        V_hs_dsgn_H: float | None,
-        V_hs_dsgn_C: float | None,
-        V_hs_min: float,
-        Q_hs_rtd_H: float | None,
-        Q_hs_rtd_C: float | None,
-        Q_hat_hs_d_t: np.ndarray,
-        Q_hat_hs_CS_d_t: np.ndarray,
-    ) -> np.ndarray:
+def _get_heat_source_supply_airflow_before_vav(inputs: _HeatSourceSupplyAirflowBeforeVavInputs):
     """Calculate formula (36) without changing its branch priority."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    V_hs_dsgn_H = inputs.V_hs_dsgn_H
+    V_hs_dsgn_C = inputs.V_hs_dsgn_C
+    V_hs_min = inputs.V_hs_min
+    Q_hs_rtd_H = inputs.Q_hs_rtd_H
+    Q_hs_rtd_C = inputs.Q_hs_rtd_C
+    Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
+    Q_hat_hs_CS_d_t = inputs.Q_hat_hs_CS_d_t
     # (36)　VAV 調整前の熱源機の風量
     if skin.hs_CAV:
         H, C, M = dc_a.get_season_array_d_t(house.region)
@@ -2269,7 +2281,7 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
     A_s_ufac_i = None
     Theta_uf_d_t = None
     while True:
-        V_dash_hs_supply_d_t = _get_heat_source_supply_airflow_before_vav(
+        V_dash_hs_supply_d_t = _get_heat_source_supply_airflow_before_vav(_HeatSourceSupplyAirflowBeforeVavInputs(
             ac_setting,
             house,
             skin,
@@ -2280,7 +2292,7 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
             Q_hs_rtd_C,
             Q_hat_hs_d_t,
             Q_hat_hs_CS_d_t,
-        )
+        ))
         df_output['V_dash_hs_supply_d_t'] = V_dash_hs_supply_d_t
         supply_airflow = _get_supply_airflow_before_vav(
             ac_setting,
