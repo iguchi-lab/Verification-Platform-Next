@@ -62,3 +62,28 @@ def test_get_floor_Q1_Q2_preserves_seasonal_airflow_and_floor_conductance():
     assert Q1_C[1] == 2.4
     assert np.count_nonzero(Q1_H) == np.count_nonzero(Q1_C) == 1
     assert Q2 == 72.0
+
+def test_get_Theta_uf_d_t_preserves_seasonal_results_and_shape():
+    H = np.zeros(8760, dtype=bool)
+    C = np.zeros(8760, dtype=bool)
+    M = np.ones(8760, dtype=bool)
+    H[0], M[0] = True, False
+    C[1], M[1] = True, False
+    heating_load = np.zeros(8760)
+    cooling_load = np.zeros(8760)
+    heating_load[0] = 1000.0
+    cooling_load[1] = 500.0
+    Q1_H = np.zeros(8760)
+    Q1_C = np.zeros(8760)
+    Q1_H[0] = 2.0
+    Q1_C[1] = 3.0
+    theta_ex = np.full(8760, 23.0)
+
+    result = floor_temperature._get_Theta_uf_d_t(
+        H, C, M, heating_load, cooling_load, 20.0, 27.0, Q1_H, Q1_C, 10.0, theta_ex
+    )
+
+    assert result[0] == pytest.approx((1000.0 + 20.0 * 12.0) / 12.0)
+    assert result[1] == pytest.approx((-500.0 + 27.0 * 13.0) / 13.0)
+    assert result[2] == 23.0
+    assert result.shape == (8760,)

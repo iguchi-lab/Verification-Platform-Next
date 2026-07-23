@@ -86,6 +86,18 @@ def _get_floor_Q1_Q2(H, C, ro_air, c_p_air, V_dash_supply_flr1st_d_t, U_s, A_s_u
     assert Q1_C_d_t.shape == (24 * 365,)
     return Q1_H_d_t, Q1_C_d_t, Q2
 
+def _get_Theta_uf_d_t(H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t, Theta_in_H, Theta_in_C, Q1_H_d_t, Q1_C_d_t, Q2, Theta_ex_d_t):
+    Theta_uf_d_t = np.zeros(24 * 365)
+    Theta_uf_d_t[H] = (
+        (L_star_H_flr1st_d_t + Theta_in_H * (Q1_H_d_t + Q2)) / (Q1_H_d_t + Q2)
+    )[H]
+    Theta_uf_d_t[C] = (
+        (-1 * L_star_CS_flr1st_d_t + Theta_in_C * (Q1_C_d_t + Q2)) / (Q1_C_d_t + Q2)
+    )[C]
+    Theta_uf_d_t[M] = Theta_ex_d_t[M]
+    assert Theta_uf_d_t.shape == (24 * 365,)
+    return Theta_uf_d_t
+
 @log_res(['Theta_uf_d_t'])
 def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t):
     """定常状態での床下温度を求める
@@ -128,12 +140,7 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
 
     Q1_H_d_t, Q1_C_d_t, Q2 = _get_floor_Q1_Q2(H, C, ro_air, c_p_air, V_dash_supply_flr1st_d_t, U_s, A_s_ufvnt)
 
-    Theta_uf_d_t = np.zeros(24 * 365)  # NOTE: 床下はつながっているので d_t_i にならない
-    Theta_uf_d_t[H] = ((L_star_H_flr1st_d_t + Theta_in_H * (Q1_H_d_t + Q2)) / (Q1_H_d_t + Q2))[H]
-    Theta_uf_d_t[C] = ((-1 * L_star_CS_flr1st_d_t + Theta_in_C * (Q1_C_d_t + Q2)) / (Q1_C_d_t + Q2))[C]
-    Theta_uf_d_t[M] = Theta_ex_d_t[M]
-
-    return Theta_uf_d_t
+    return _get_Theta_uf_d_t(H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t, Theta_in_H, Theta_in_C, Q1_H_d_t, Q1_C_d_t, Q2, Theta_ex_d_t)
 
 
 def calc_sum_Theta_dash_g_surf_A_m_runup(Theta_uf_const: float, Theta_g_avg: float) -> float:
