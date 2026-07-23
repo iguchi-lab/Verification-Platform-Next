@@ -687,6 +687,16 @@ class _LegacyUnderfloorRequestedTemperatureInputs(NamedTuple):
     Theta_ex_d_t: object
     V_dash_supply_d_t_i: object
 
+
+class _CarryoverUnderfloorSupplyTemperatureInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    Theta_supply_d_t_i: object
+    Theta_ex_d_t: object
+    V_dash_supply_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1739,16 +1749,15 @@ def _adjust_legacy_underfloor_requested_temperatures(inputs: _LegacyUnderfloorRe
 
     return Theta_req_d_t_i
 
-def _adjust_carryover_underfloor_supply_temperatures(
-        ac_setting,
-        house,
-        skin,
-        load,
-        Theta_supply_d_t_i,
-        Theta_ex_d_t,
-        V_dash_supply_d_t_i,
-    ):
+def _adjust_carryover_underfloor_supply_temperatures(inputs: _CarryoverUnderfloorSupplyTemperatureInputs):
     """Apply the carryover second-pass clipping for underfloor air supply."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     for i in range(2):  # i=0,1
         Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
             house.region, house.A_A, house.A_MR, house.A_OR, skin.Q,
@@ -3216,9 +3225,9 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
         house, Theta_sur_d_t_i, Theta_hs_out_d_t, Theta_star_HBR_d_t,
         l_duct_i, V_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i))
     if skin.underfloor_air_conditioning_air_supply:
-        Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(
+        Theta_supply_d_t_i = _adjust_carryover_underfloor_supply_temperatures(_CarryoverUnderfloorSupplyTemperatureInputs(
             ac_setting, house, skin, load, Theta_supply_d_t_i,
-            Theta_ex_d_t, V_dash_supply_d_t_i)
+            Theta_ex_d_t, V_dash_supply_d_t_i))
     return _SupplyStateResult(
         X_hs_out_d_t,
         Theta_hs_out_min_C_d_t,

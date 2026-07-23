@@ -1731,10 +1731,10 @@ def test_carryover_underfloor_supply_temperatures_preserve_clipping(
 
     monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
 
-    result = sut._adjust_carryover_underfloor_supply_temperatures(
+    result = sut._adjust_carryover_underfloor_supply_temperatures(sut._CarryoverUnderfloorSupplyTemperatureInputs(
         _setting(setting_type), house, skin, load,
         theta_supply, theta_ex, airflows
-    )
+    ))
 
     assert result is theta_supply
     np.testing.assert_array_equal(result[0], expected_first)
