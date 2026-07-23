@@ -19,6 +19,24 @@ def _get_carryover_C_BR_i(A_HCZ_i: Array5x1) -> Array5x1:
     return jjj_carryover_heat.get_C_BR_i(A_HCZ_i)
 
 
+def _get_carryover_temperature_diff(H, C, Theta_HBR_i, Theta_star_HBR):
+    match (H, C):
+        case (np.True_, np.True_):
+            raise ValueError("想定外の季節")
+        case (np.True_, np.False_):
+            # temperature_diff = np.clip(Theta_HBR_i - Theta_star_HBR, 0, None)
+            temperature_diff = Theta_HBR_i - Theta_star_HBR
+        case (np.False_, np.True_):
+            # temperature_diff = np.clip(Theta_star_HBR - Theta_HBR_i, 0, None)
+            temperature_diff = Theta_star_HBR - Theta_HBR_i
+        case (np.False_, np.False_):
+            # 空調なし -> 過剰熱量なし
+            return None
+        case _:
+            raise ValueError("判別に失敗")
+
+    return temperature_diff
+
 def calc_carryover(
         H: np.bool,
         C: np.bool,
@@ -43,20 +61,9 @@ def calc_carryover(
 
     # NOTE('25/04): キャップはかけない
     # 温度が過剰の時に得をするだけでなく、未達の時に損する分を考慮するとのこと
-    match (H, C):
-        case (np.True_, np.True_):
-            raise ValueError("想定外の季節")
-        case (np.True_, np.False_):
-            # temperature_diff = np.clip(Theta_HBR_i - Theta_star_HBR, 0, None)
-            temperature_diff = Theta_HBR_i - Theta_star_HBR
-        case (np.False_, np.True_):
-            # temperature_diff = np.clip(Theta_star_HBR - Theta_HBR_i, 0, None)
-            temperature_diff = Theta_star_HBR - Theta_HBR_i
-        case (np.False_, np.False_):
-            # 空調なし -> 過剰熱量なし
-            return np.zeros((5, 1))
-        case _:
-            raise ValueError("判別に失敗")
+    temperature_diff = _get_carryover_temperature_diff(H, C, Theta_HBR_i, Theta_star_HBR)
+    if temperature_diff is None:
+        return np.zeros((5, 1))
 
     # 事後条件:
     assert np.all(0 <= cbri), "居室の熱容量は負にならない"

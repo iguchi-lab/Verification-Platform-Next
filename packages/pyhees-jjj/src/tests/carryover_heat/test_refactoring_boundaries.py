@@ -23,3 +23,19 @@ def test_get_carryover_C_BR_i_delegates_with_reshaped_areas(monkeypatch):
     result = section4_2._get_carryover_C_BR_i(areas)
 
     assert result is expected
+
+
+def test_get_carryover_temperature_diff_preserves_season_branches():
+    temperatures = np.arange(20.0, 25.0).reshape(5, 1)
+
+    np.testing.assert_array_equal(
+        section4_2._get_carryover_temperature_diff(np.True_, np.False_, temperatures, 21.0),
+        temperatures - 21.0,
+    )
+    np.testing.assert_array_equal(
+        section4_2._get_carryover_temperature_diff(np.False_, np.True_, temperatures, 21.0),
+        21.0 - temperatures,
+    )
+    assert section4_2._get_carryover_temperature_diff(np.False_, np.False_, temperatures, 21.0) is None
+    with pytest.raises(ValueError):
+        section4_2._get_carryover_temperature_diff(np.True_, np.True_, temperatures, 21.0)
