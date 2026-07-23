@@ -181,6 +181,17 @@ def calc(input_data: dict, test_mode=False):
     # NOTE: 引数全てを型解決できるようにする必要があった
     return injector.call_with_injection(calc_main)
 
+def _log_equipment_specs(cool_CRAC, heat_CRAC):
+    print("q_rtd_C, q_rtd_H, q_max_C, q_max_H, e_rtd_C, e_rtd_H")
+    print(cool_CRAC.q_rtd, heat_CRAC.q_rtd, cool_CRAC.q_max, heat_CRAC.q_max, cool_CRAC.e_rtd, heat_CRAC.e_rtd)
+
+    _logger.info(f"q_rtd_C [w]: {cool_CRAC.q_rtd}")
+    _logger.info(f"q_max_C [w]: {cool_CRAC.q_max}")
+    _logger.info(f"e_rtd_C [-]: {cool_CRAC.e_rtd}")
+    _logger.info(f"q_rtd_H [w]: {heat_CRAC.q_rtd}")
+    _logger.info(f"q_max_H [w]: {heat_CRAC.q_max}")
+    _logger.info(f"e_rtd_H [-]: {heat_CRAC.e_rtd}")
+
 @inject
 def calc_main(
     injector: Injector,
@@ -204,15 +215,7 @@ def calc_main(
     heat_real_inner: jjj_denchu_heat_ipt.RealInnerCondition,
     cool_real_inner: jjj_denchu_cool_ipt.RealInnerCondition
     ) -> dict | None:
-    print("q_rtd_C, q_rtd_H, q_max_C, q_max_H, e_rtd_C, e_rtd_H")
-    print(cool_CRAC.q_rtd, heat_CRAC.q_rtd, cool_CRAC.q_max, heat_CRAC.q_max, cool_CRAC.e_rtd, heat_CRAC.e_rtd)
-
-    _logger.info(f"q_rtd_C [w]: {cool_CRAC.q_rtd}")  # q[W] 送風機の単位[W]と同じ
-    _logger.info(f"q_max_C [w]: {cool_CRAC.q_max}")
-    _logger.info(f"e_rtd_C [-]: {cool_CRAC.e_rtd}")
-    _logger.info(f"q_rtd_H [w]: {heat_CRAC.q_rtd}")
-    _logger.info(f"q_max_H [w]: {heat_CRAC.q_max}")
-    _logger.info(f"e_rtd_H [-]: {heat_CRAC.e_rtd}")
+    _log_equipment_specs(cool_CRAC, heat_CRAC)
 
     # ドメインサービス
     climate = ClimateService(house.region, ufac, climateFile)
