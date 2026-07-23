@@ -683,12 +683,12 @@ def test_record_unprocessed_load_outputs_preserves_assign_order():
     sensible = [object() for _ in range(5)]
     heating = [object() for _ in range(5)]
 
-    result = sut._record_unprocessed_load_outputs(
+    result = sut._record_unprocessed_load_outputs(sut._UnprocessedLoadOutputRecordInputs(
         frame,
         latent,
         sensible,
         heating,
-    )
+    ))
 
     assert result.generation == 3
     assert frame.events == [
@@ -3660,7 +3660,7 @@ def test_prepare_unprocessed_load_state_preserves_calculate_record_order(
     assert result == (*loads, recorded)
     assert events == [
         ("calculate", (sut._UnprocessedLoadsInputs(*inputs),)),
-        ("record", (original, *loads)),
+        ("record", (sut._UnprocessedLoadOutputRecordInputs(original, *loads),)),
     ]
 
 

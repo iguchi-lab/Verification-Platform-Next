@@ -909,6 +909,13 @@ class _ActualLoadOutputRecordInputs(NamedTuple):
     L_dash_CS_d_t_i: object
     L_dash_H_d_t_i: object
 
+
+class _UnprocessedLoadOutputRecordInputs(NamedTuple):
+    df_output: object
+    Q_UT_CL_d_t_i: object
+    Q_UT_CS_d_t_i: object
+    Q_UT_H_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1888,12 +1895,11 @@ def _record_actual_load_outputs(inputs: _ActualLoadOutputRecordInputs):
         L_dash_H_d_t_5=L_dash_H_d_t_i[4],
     )
 
-def _record_unprocessed_load_outputs(
-        df_output: pd.DataFrame,
-        Q_UT_CL_d_t_i: np.ndarray,
-        Q_UT_CS_d_t_i: np.ndarray,
-        Q_UT_H_d_t_i: np.ndarray,
-    ) -> pd.DataFrame:
+def _record_unprocessed_load_outputs(inputs: _UnprocessedLoadOutputRecordInputs):
+    df_output = inputs.df_output
+    Q_UT_CL_d_t_i = inputs.Q_UT_CL_d_t_i
+    Q_UT_CS_d_t_i = inputs.Q_UT_CS_d_t_i
+    Q_UT_H_d_t_i = inputs.Q_UT_H_d_t_i
     df_output = df_output.assign(
         Q_UT_CL_d_t_1=Q_UT_CL_d_t_i[0],
         Q_UT_CL_d_t_2=Q_UT_CL_d_t_i[1],
@@ -3155,8 +3161,8 @@ def _prepare_unprocessed_load_state(
     Q_UT_CL_d_t_i = unprocessed_loads.Q_UT_CL_d_t_i
     Q_UT_CS_d_t_i = unprocessed_loads.Q_UT_CS_d_t_i
     Q_UT_H_d_t_i = unprocessed_loads.Q_UT_H_d_t_i
-    df_output = _record_unprocessed_load_outputs(
-        df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i)
+    df_output = _record_unprocessed_load_outputs(_UnprocessedLoadOutputRecordInputs(
+        df_output, Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i))
     return Q_UT_CL_d_t_i, Q_UT_CS_d_t_i, Q_UT_H_d_t_i, df_output
 
 
