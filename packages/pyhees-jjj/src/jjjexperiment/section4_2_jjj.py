@@ -746,6 +746,22 @@ class _NewUnderfloorBalancedLoadInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
 
+
+class _ActualRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
+    house: object
+    skin: object
+    new_ufac: object
+    climate: object
+    Theta_star_HBR_d_t: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    U_prt: object
+    A_prt_i: object
+    A_HCZ_i: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_uf_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2035,22 +2051,21 @@ def _adjust_new_underfloor_balanced_loads(inputs: _NewUnderfloorBalancedLoadInpu
     })
     return L_star_H_d_t_i, L_star_CS_d_t_i
 
-def _get_actual_room_temperatures_without_carryover(
-        house,
-        skin,
-        new_ufac,
-        climate,
-        Theta_star_HBR_d_t,
-        V_supply_d_t_i,
-        Theta_supply_d_t_i,
-        U_prt,
-        A_prt_i,
-        A_HCZ_i,
-        L_star_H_d_t_i,
-        L_star_CS_d_t_i,
-        Theta_uf_d_t,
-    ):
+def _get_actual_room_temperatures_without_carryover(inputs: _ActualRoomTemperaturesWithoutCarryoverInputs):
     """Calculate formula (46) while preserving the new/legacy branch."""
+    house = inputs.house
+    skin = inputs.skin
+    new_ufac = inputs.new_ufac
+    climate = inputs.climate
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    U_prt = inputs.U_prt
+    A_prt_i = inputs.A_prt_i
+    A_HCZ_i = inputs.A_HCZ_i
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_uf_d_t = inputs.Theta_uf_d_t
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         HCM = np.array(climate.get_HCM_d_t())
         A_s_ufac_i, _ = jjj_ufac_dc.get_A_s_ufac_i(
@@ -3173,12 +3188,12 @@ def _prepare_no_carryover_actual_temperature_state(inputs: _NoCarryoverActualTem
     V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
     V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     r_A_NR_uf_1F_excl_bath = inputs.r_A_NR_uf_1F_excl_bath
-    Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(
+    Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(_ActualRoomTemperaturesWithoutCarryoverInputs(
         house, skin, new_ufac, climate, Theta_star_HBR_d_t,
         V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
         L_star_H_d_t_i, L_star_CS_d_t_i,
         Theta_uf_d_t
-        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None)
+        if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None))
     Theta_NR_d_t = _get_actual_non_room_temperatures_without_carryover(
         skin, new_ufac, Theta_star_NR_d_t, Theta_star_HBR_d_t,
         Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t,
