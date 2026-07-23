@@ -111,3 +111,23 @@ def test_set_constants_H_A_airvolume_coeff_boundary():
   finally:
     for target, original in zip(targets, originals):
       setattr(constants, target, original)
+
+
+@pytest.mark.parametrize(
+  ('section', 'nested_key', 'targets'),
+  [
+    ('H_A', 'fan_coeff', ('P_fan_H_d_t_a4', 'P_fan_H_d_t_a3', 'P_fan_H_d_t_a2', 'P_fan_H_d_t_a1', 'P_fan_H_d_t_a0')),
+  ],
+)
+def test_set_constants_coefficient_boundary(section, nested_key, targets):
+  values = ['1.0', '2.0', '3.0', '4.0', '5.0']
+  originals = tuple(getattr(constants, target) for target in targets)
+  try:
+    constants.set_constants({section: {nested_key: values}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+
+    constants.set_constants({section: {}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+  finally:
+    for target, original in zip(targets, originals):
+      setattr(constants, target, original)
