@@ -68,3 +68,10 @@ def test_get_c_prt_46_preserves_hourly_conductance_units():
 def test_get_heat_loss_46_preserves_hourly_heat_loss_units():
     areas = np.arange(1.0, 6.0).reshape(5, 1)
     np.testing.assert_array_equal(section4_2._get_heat_loss_46(2.5, areas), 2.5 * areas * 3600)
+
+
+def test_get_C_BR_i_46_preserves_capacity_lookup(monkeypatch):
+    areas = np.arange(1.0, 6.0).reshape(5, 1)
+    expected = np.full((5, 1), 99.0)
+    monkeypatch.setattr(section4_2.jjj_carryover_heat, 'get_C_BR_i', lambda value: expected if value is areas else None)
+    assert section4_2._get_C_BR_i_46(areas) is expected
