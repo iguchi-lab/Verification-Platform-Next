@@ -275,11 +275,11 @@ def test_get_actual_loads_preserves_formula_order_and_clipping(
         lambda *args: result("H", *args),
     )
 
-    actual = sut._get_actual_loads(
+    actual = sut._get_actual_loads(sut._ActualLoadsInputs(
         SimpleNamespace(carry_over_heat=carryover),
         *inputs,
         6,
-    )
+    ))
 
     for value in actual:
         np.testing.assert_array_equal(value, expected)
@@ -310,7 +310,7 @@ def test_get_unprocessed_loads_preserves_formula_order_and_arguments(monkeypatch
         lambda *args: calls.append(("H", args)) or outputs[2],
     )
 
-    assert sut._get_unprocessed_loads(*inputs) == tuple(outputs)
+    assert sut._get_unprocessed_loads(sut._UnprocessedLoadsInputs(*inputs)) == tuple(outputs)
     assert calls == [
         ("CL", (inputs[0], inputs[1])),
         ("CS", (inputs[2], inputs[3])),
@@ -326,13 +326,13 @@ def test_get_unprocessed_energy_for_heating(monkeypatch):
     )
     heating_load = np.array([[1.0, 2.0], [3.0, 4.0]])
 
-    value, output_name = sut._get_unprocessed_energy(
+    value, output_name = sut._get_unprocessed_energy(sut._UnprocessedEnergyInputs(
         _setting(sut.HeatingAcSetting),
         object(),
         object(),
         heating_load,
         6,
-    )
+    ))
 
     np.testing.assert_array_equal(value, [12.0, 18.0])
     assert output_name == "E_UT_H_d_t"
@@ -349,13 +349,13 @@ def test_get_unprocessed_energy_for_cooling(monkeypatch):
         lambda *args: calls.append(args) or expected,
     )
 
-    assert sut._get_unprocessed_energy(
+    assert sut._get_unprocessed_energy(sut._UnprocessedEnergyInputs(
         _setting(sut.CoolingAcSetting),
         latent,
         sensible,
         object(),
         7,
-    ) == (expected, "E_UT_C_d_t")
+    )) == (expected, "E_UT_C_d_t")
     assert calls == [(latent, sensible, 7)]
 
 
@@ -364,7 +364,7 @@ def test_get_unprocessed_energy_rejects_unknown_setting():
         ValueError,
         match="ac_setting must be HeatingAcSetting or CoolingAcSetting",
     ):
-        sut._get_unprocessed_energy(object(), object(), object(), object(), 6)
+        sut._get_unprocessed_energy(sut._UnprocessedEnergyInputs(object(), object(), object(), object(), 6))
 
 def test_export_underfloor_output_preserves_filename_and_call_order(monkeypatch):
     calls = []
@@ -455,14 +455,14 @@ def test_export_standard_outputs_preserves_capacity_and_file_order(
             )
         )
 
-    sut._export_standard_outputs(
+    sut._export_standard_outputs(sut._StandardOutputExportInputs(
         "case",
         setting,
         house,
         frame(3),
         frame(4),
         frame(5),
-    )
+    ))
 
     assert calls == [
         ("capacity", "H", setting, house),
@@ -494,14 +494,14 @@ def test_export_standard_outputs_rejects_ambiguous_capacities(
     )
 
     with pytest.raises(Exception):
-        sut._export_standard_outputs(
+        sut._export_standard_outputs(sut._StandardOutputExportInputs(
             "case",
             object(),
             object(),
             object(),
             object(),
             object(),
-        )
+        ))
 
     assert calls == ["H", "C"]
 
@@ -544,7 +544,7 @@ def test_record_heat_source_outlet_outputs_preserves_write_order():
     theta_max = object()
     theta_out = object()
 
-    result = sut._record_heat_source_outlet_outputs(
+    result = sut._record_heat_source_outlet_outputs(sut._HeatSourceOutletOutputRecordInputs(
         frame,
         x_star,
         theta_star,
@@ -555,7 +555,7 @@ def test_record_heat_source_outlet_outputs_preserves_write_order():
         theta_min,
         theta_max,
         theta_out,
-    )
+    ))
 
     assert result.generation == 3
     assert frame.events == [
@@ -599,14 +599,14 @@ def test_record_supply_state_outputs_preserves_assign_order(before_is_none):
     theta_hbr = [object() for _ in range(5)]
     theta_nr = object()
 
-    result = sut._record_supply_state_outputs(
+    result = sut._record_supply_state_outputs(sut._SupplyStateOutputRecordInputs(
         frame,
         before,
         supply,
         theta_supply,
         theta_hbr,
         theta_nr,
-    )
+    ))
 
     expected_before = [None] * 5 if before_is_none else before_values
     assert result.generation == 4
@@ -1677,10 +1677,10 @@ def test_legacy_underfloor_requested_temperatures_preserve_first_pass_formula(
 
     monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
 
-    result = sut._adjust_legacy_underfloor_requested_temperatures(
+    result = sut._adjust_legacy_underfloor_requested_temperatures(sut._LegacyUnderfloorRequestedTemperatureInputs(
         _setting(setting_type), house, skin, load, r_a_ufvnt,
         theta_req, theta_ex, airflows
-    )
+    ))
 
     assert result is theta_req
     np.testing.assert_array_equal(result[0], expected_first)
@@ -1731,10 +1731,10 @@ def test_carryover_underfloor_supply_temperatures_preserve_clipping(
 
     monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
 
-    result = sut._adjust_carryover_underfloor_supply_temperatures(
+    result = sut._adjust_carryover_underfloor_supply_temperatures(sut._CarryoverUnderfloorSupplyTemperatureInputs(
         _setting(setting_type), house, skin, load,
         theta_supply, theta_ex, airflows
-    )
+    ))
 
     assert result is theta_supply
     np.testing.assert_array_equal(result[0], expected_first)
@@ -1799,11 +1799,11 @@ def test_new_underfloor_requested_temperatures_preserve_reverse_solve_and_limits
     monkeypatch.setattr(sut, "_get_q_hs_rtd_H", lambda *_: heating_capacity)
     monkeypatch.setattr(sut, "_get_q_hs_rtd_C", lambda *_: cooling_capacity)
 
-    result = sut._get_new_underfloor_requested_temperatures(
+    result = sut._get_new_underfloor_requested_temperatures(sut._NewUnderfloorRequestedTemperatureInputs(
         _setting(setting_type), house, skin, load, new_ufac, frame,
         theta_req, theta_ex, airflows, np.array([limit]),
         l_star_h, l_star_cs
-    )
+    ))
 
     np.testing.assert_array_equal(result[0], np.full(8760, expected_first))
     np.testing.assert_array_equal(result[1], np.full(8760, expected_first))
@@ -1852,10 +1852,10 @@ def test_new_underfloor_supply_temperatures_preserve_forward_solve_and_outputs(
 
     monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
 
-    result = sut._get_new_underfloor_supply_temperatures(
+    result = sut._get_new_underfloor_supply_temperatures(sut._NewUnderfloorSupplyTemperatureInputs(
         house, skin, load, new_ufac, frame,
         theta_supply, theta_hs_out, theta_ex, airflows
-    )
+    ))
 
     np.testing.assert_array_equal(result[0], theta_uf)
     np.testing.assert_array_equal(result[1], theta_uf)
@@ -1918,10 +1918,10 @@ def test_legacy_underfloor_supply_temperatures_preserve_where_operation(
         lambda *_args, **_kwargs: pytest.fail("legacy phase must retain np.where"),
     )
 
-    result = sut._adjust_legacy_underfloor_supply_temperatures(
+    result = sut._adjust_legacy_underfloor_supply_temperatures(sut._LegacyUnderfloorSupplyTemperatureInputs(
         _setting(setting_type), house, skin, load,
         theta_supply, theta_ex, airflows
-    )
+    ))
 
     assert result is theta_supply
     np.testing.assert_array_equal(result[0], expected_first)
@@ -1978,10 +1978,10 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
         lambda region: (heating, cooling, middle),
     )
 
-    result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(
+    result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(sut._NewUnderfloorBalancedLoadInputs(
         SimpleNamespace(region=6), new_ufac, FrameRecorder(), load, area,
         theta_room, theta_ex, l_star_h, l_star_cs
-    )
+    ))
 
     assert result_h is l_star_h
     assert result_cs is l_star_cs
@@ -3250,7 +3250,7 @@ def test_prepare_carryover_outlet_requirements_preserves_first_pass(
     assert [event[0] for event in events] == (
         ["requirements", "adjust"] if enabled else ["requirements"])
     if enabled:
-        assert events[1][1][4] == skin.YUCACO_r_A_ufvnt
+        assert events[1][1][0].r_A_ufvnt == skin.YUCACO_r_A_ufvnt
 
 
 @pytest.mark.parametrize("enabled", (False, True))
@@ -3469,10 +3469,10 @@ def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
 
     assert result is supply_frame
     assert [event[0] for event in events] == ["outlet", "supply"]
-    assert events[0][1][0] is original
-    assert events[1][1][0] is outlet_frame
-    assert events[0][1][1:] == tuple(inputs[:9])
-    assert events[1][1][1:] == tuple(inputs[9:])
+    assert events[0][1][0].df_output is original
+    assert events[1][1][0].df_output is outlet_frame
+    assert tuple(events[0][1][0])[1:] == tuple(inputs[:9])
+    assert tuple(events[1][1][0])[1:] == tuple(inputs[9:])
 
 
 def test_prepare_heat_source_outlet_temperature_output_preserves_formula_14(
@@ -3636,7 +3636,7 @@ def test_prepare_actual_load_state_preserves_calculate_record_order(
 
     assert result == (*loads, recorded)
     assert events == [
-        ("calculate", tuple(inputs)),
+        ("calculate", (sut._ActualLoadsInputs(*inputs),)),
         ("record", (original, *loads)),
     ]
 
@@ -3659,7 +3659,7 @@ def test_prepare_unprocessed_load_state_preserves_calculate_record_order(
 
     assert result == (*loads, recorded)
     assert events == [
-        ("calculate", tuple(inputs)),
+        ("calculate", (sut._UnprocessedLoadsInputs(*inputs),)),
         ("record", (original, *loads)),
     ]
 
@@ -3684,7 +3684,7 @@ def test_prepare_unprocessed_energy_state_preserves_calculate_record_order(
 
     assert result == (energy, recorded)
     assert events == [
-        ("calculate", tuple(inputs)),
+        ("calculate", (sut._UnprocessedEnergyInputs(*inputs),)),
         ("record", (original, output_name, energy)),
     ]
 
@@ -3703,9 +3703,9 @@ def test_export_and_build_calculation_result_preserves_order(monkeypatch):
 
     assert events == [
         ("underfloor", (inputs[0], inputs[1], inputs[3], inputs[4])),
-        ("standard", (
+        ("standard", (sut._StandardOutputExportInputs(
             inputs[0], inputs[1], inputs[2],
-            inputs[5], inputs[6], inputs[7])),
+            inputs[5], inputs[6], inputs[7]),)),
     ]
     assert result == tuple(inputs[8:])
 
