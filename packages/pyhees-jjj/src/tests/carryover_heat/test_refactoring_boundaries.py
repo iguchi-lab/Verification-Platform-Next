@@ -140,3 +140,9 @@ def test_get_k_prt_dash_i_48_preserves_formula_48d():
     volume = np.arange(1.0, 6.0).reshape(5, 1) * 3600
     c_prt = np.full((5, 1), 7.0)
     np.testing.assert_array_equal(section4_2._get_k_prt_dash_i_48(2.0, 3.0, volume, c_prt), 6.0 * volume / 3600 + c_prt)
+
+
+def test_get_k_prt_i_48_preserves_formula_48c():
+    volume = np.arange(1.0, 6.0).reshape(5, 1) * 3600
+    c_prt = np.full((5, 1), 7.0)
+    np.testing.assert_array_equal(section4_2._get_k_prt_i_48(2.0, 3.0, volume, c_prt), 6.0 * volume / 3600 + c_prt)
