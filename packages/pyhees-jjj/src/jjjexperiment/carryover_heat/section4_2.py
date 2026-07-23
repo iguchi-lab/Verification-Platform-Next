@@ -298,6 +298,13 @@ def _get_k_evp_48(Q, A_NR, c_p_air, rho_air, V_vent_l_NR):
         + c_p_air * rho_air * (V_vent_l_NR / 3600)
 
 
+def _get_balance_terms_48(k_prt_dash_i, k_prt_i, Theta_star_HBR, Theta_star_NR, Theta_HBR_i, k_evp):
+    val1 = -1 * np.sum(k_prt_dash_i) * (Theta_star_HBR - Theta_star_NR)
+    val2 = np.sum(k_prt_i * (Theta_HBR_i - Theta_star_NR))
+    val3 = k_evp + np.sum(k_prt_i)
+    return val1, val2, val3
+
+
 def get_Theta_NR_2023(
         isFirst: bool, H: bool, C: bool, M: bool,
         Theta_star_NR: float,
@@ -345,9 +352,7 @@ def get_Theta_NR_2023(
     # (48b) [W/K]
     k_evp = _get_k_evp_48(Q, A_NR, c_p_air, rho_air, V_vent_l_NR)
 
-    val1 = -1 * np.sum(k_prt_dash_i) * (Theta_star_HBR - Theta_star_NR)
-    val2 = np.sum(k_prt_i * (Theta_HBR_i - Theta_star_NR))
-    val3 = k_evp + np.sum(k_prt_i)
+    val1, val2, val3 = _get_balance_terms_48(k_prt_dash_i, k_prt_i, Theta_star_HBR, Theta_star_NR, Theta_HBR_i, k_evp)
 
     # 過剰熱量発生条件
     H = H and (Theta_NR_before >= Theta_star_NR)

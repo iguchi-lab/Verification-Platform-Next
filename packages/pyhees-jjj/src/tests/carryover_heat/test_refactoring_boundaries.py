@@ -151,3 +151,11 @@ def test_get_k_prt_i_48_preserves_formula_48c():
 def test_get_k_evp_48_preserves_formula_48b():
     expected = (2.5 - 0.35 * 0.5 * 2.4) * 40.0 + 1006.0 * 1.2 * (120.0 / 3600)
     assert section4_2._get_k_evp_48(2.5, 40.0, 1006.0, 1.2, 120.0) == expected
+
+
+def test_get_balance_terms_48_preserves_val1_val2_val3():
+    k_dash = np.full((5, 1), 2.0)
+    k_prt = np.full((5, 1), 3.0)
+    temperatures = np.arange(18.0, 23.0).reshape(5, 1)
+    result = section4_2._get_balance_terms_48(k_dash, k_prt, 20.0, 18.0, temperatures, 4.0)
+    assert result == (-20.0, 30.0, 19.0)
