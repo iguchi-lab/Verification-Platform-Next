@@ -3292,7 +3292,9 @@ def test_prepare_carryover_supply_state_preserves_second_pass(
     assert [event[0] for event in events] == (
         ["humidity", "temperatures", "airflows", "supply", "adjust"]
         if enabled else ["humidity", "temperatures", "airflows", "supply"])
-    assert events[2][2] == {"print_exec": False}
+    assert events[2][2] == {}
+    assert isinstance(events[2][1][0], sut._CappedSupplyAirflowInputs)
+    assert events[2][1][0].print_exec is False
 
 
 def test_update_carryover_actual_temperature_state_preserves_formula_order(
@@ -3318,7 +3320,9 @@ def test_update_carryover_actual_temperature_state_preserves_formula_order(
     assert np.all(room_state[:, 1:2] == room_hour)
     assert non_room_state[1] == 8.0
     assert [event[0] for event in events] == ["room", "non_room"]
-    assert events[1][1][7] is room_state
+    assert isinstance(
+        events[1][1][0], sut._ActualNonRoomTemperatureHourInputs)
+    assert events[1][1][0].Theta_HBR_d_t_i is room_state
 
 
 @pytest.mark.parametrize("enabled", (False, True))
