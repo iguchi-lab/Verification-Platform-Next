@@ -50,3 +50,11 @@ def test_calculate_carryover_result_preserves_units_and_capacity_contract():
     np.testing.assert_array_equal(result, 2.0 * temperature_diff)
     with pytest.raises(AssertionError):
         section4_2._calculate_carryover_result(-capacities, temperature_diff)
+
+
+def test_assert_Theta_HBR_i_2023_shapes_checks_all_zone_arrays():
+    valid = np.zeros((5, 1))
+    section4_2._assert_Theta_HBR_i_2023_shapes(*([valid] * 7))
+
+    with pytest.raises(AssertionError):
+        section4_2._assert_Theta_HBR_i_2023_shapes(valid.reshape(1, 5), *([valid] * 6))

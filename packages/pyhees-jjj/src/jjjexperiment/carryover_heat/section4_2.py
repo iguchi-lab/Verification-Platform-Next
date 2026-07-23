@@ -140,6 +140,25 @@ def get_L_star_CS_i_2024(
 # 意図しない前後インデックスの利用・上書きがないことが保証される
 # デメリットは、クライアントコードに知識が必要になる(時点の選択)
 
+def _assert_Theta_HBR_i_2023_shapes(
+        V_supply_i: Array5x1,
+        Theta_supply_i: Array5x1,
+        A_prt_i: Array5x1,
+        A_HCZ_i: Array5x1,
+        L_star_H_i: Array5x1,
+        L_star_CS_i: Array5x1,
+        Theta_HBR_before_i: Array5x1,
+    ) -> None:
+    # 事前条件: 次数チェック
+    assert V_supply_i.shape == (5, 1), "V_supply_iの行列数が想定外"
+    assert Theta_supply_i.shape == (5, 1), "Theta_supply_iの行列数が想定外"
+    assert A_prt_i.shape == (5, 1), "A_prt_iの行列数が想定外"
+    assert A_HCZ_i.shape == (5, 1), "A_HCZ_iの行列数が想定外"
+    assert L_star_H_i.shape == (5, 1), "L_star_H_iの行列数が想定外"
+    assert L_star_CS_i.shape == (5, 1), "L_star_CS_iの行列数が想定外"
+    assert Theta_HBR_before_i.shape == (5, 1), "Theta_HBR_before_iの行列数が想定外"
+
+
 def get_Theta_HBR_i_2023(
         H: bool, C: bool, M: bool,
         Theta_star_HBR: float,
@@ -170,15 +189,10 @@ def get_Theta_HBR_i_2023(
     Returns:
         (時点)暖冷房区画iの 過剰熱量繰越を考慮した 実際の居室の室温 [℃]
     """
-    # 事前条件: 次数チェック
-    assert V_supply_i.shape == (5, 1), "V_supply_iの行列数が想定外"
-    assert Theta_supply_i.shape == (5, 1), "Theta_supply_iの行列数が想定外"
-    assert A_prt_i.shape == (5, 1), "A_prt_iの行列数が想定外"
-    assert A_HCZ_i.shape == (5, 1), "A_HCZ_iの行列数が想定外"
-    assert L_star_H_i.shape == (5, 1), "L_star_H_iの行列数が想定外"
-    assert L_star_CS_i.shape == (5, 1), "L_star_CS_iの行列数が想定外"
-    assert Theta_HBR_before_i.shape == (5, 1), "Theta_HBR_before_iの行列数が想定外"
-
+    _assert_Theta_HBR_i_2023_shapes(
+        V_supply_i, Theta_supply_i, A_prt_i, A_HCZ_i,
+        L_star_H_i, L_star_CS_i, Theta_HBR_before_i,
+    )
     # NOTE: t = 1時間区切りなので必ずhで整理
 
     # 熱容量(間仕切り) [J/(K・h)]
