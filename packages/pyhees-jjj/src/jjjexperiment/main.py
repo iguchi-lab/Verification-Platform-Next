@@ -436,6 +436,19 @@ def _get_heating_electricity_type4(case_name, heat_ac_setting, house, climateFil
             heat_real_inner,
         )
     )
+def _build_heating_output_dataframe(E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, climate, V_hs_supply_d_t, V_hs_vent_d_t):
+    _logger.NDdebug("E_UT_H_d_t", E_UT_H_d_t)
+    df_output2 = pd.DataFrame(
+        index=pd.date_range(datetime(2023, 1, 1, 1, 0, 0), datetime(2024, 1, 1, 0, 0, 0), freq='h')
+    )
+    df_output2['Q_UT_H_d_A_t [MJ/h]'] = np.full(len(df_output2), np.nan)
+    df_output2['Theta_hs_H_out_d_t [℃]'] = Theta_hs_out_d_t
+    df_output2['Theta_hs_H_in_d_t [℃]'] = Theta_hs_in_d_t
+    df_output2['Theta_ex_d_t [℃]'] = climate.get_Theta_ex_d_t()
+    df_output2['V_hs_supply_H_d_t [m3/h]'] = V_hs_supply_d_t
+    df_output2['V_hs_vent_H_d_t [m3/h]'] = V_hs_vent_d_t
+    df_output2['C_df_H_d_t [-]'] = climate.get_C_df_H_d_t()
+    return df_output2
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -593,17 +606,14 @@ def calc_main(
     else:
         raise Exception("暖房方式が不正です。")
 
-    _logger.NDdebug("E_UT_H_d_t", E_UT_H_d_t)
-
-    df_output2 = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
-    df_output2['Q_UT_H_d_A_t [MJ/h]'] = np.full(len(df_output2), np.nan)  # 列数維持のため
-    df_output2['Theta_hs_H_out_d_t [℃]']    = Theta_hs_out_d_t
-    df_output2['Theta_hs_H_in_d_t [℃]']     = Theta_hs_in_d_t
-    df_output2['Theta_ex_d_t [℃]']          = climate.get_Theta_ex_d_t()
-    df_output2['V_hs_supply_H_d_t [m3/h]']  = V_hs_supply_d_t
-    df_output2['V_hs_vent_H_d_t [m3/h]']    = V_hs_vent_d_t
-    df_output2['C_df_H_d_t [-]']            = climate.get_C_df_H_d_t()
-
+    df_output2 = _build_heating_output_dataframe(
+        E_UT_H_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        climate,
+        V_hs_supply_d_t,
+        V_hs_vent_d_t,
+    )
     ##### 冷房消費電力の計算（kWh/h）
     print("冷房消費電力の計算")
 

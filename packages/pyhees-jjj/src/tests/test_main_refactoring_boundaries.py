@@ -418,3 +418,42 @@ def test_get_heating_electricity_type4_preserves_argument_order(monkeypatch):
         'case', 'type', 6, 'climate.csv', 'fan', 'q-h', 'supply',
         'p-rac-fan', 'simu-r', 'catalog', 'inner',
     )]
+def test_build_heating_output_dataframe_preserves_columns_values_and_diagnostics(monkeypatch):
+    size = 24 * 365
+    values = np.arange(size, dtype=float)
+    events = []
+    climate = SimpleNamespace(
+        get_Theta_ex_d_t=lambda: values + 2.0,
+        get_C_df_H_d_t=lambda: values + 5.0,
+    )
+    monkeypatch.setattr(
+        experiment_main._logger,
+        'NDdebug',
+        lambda name, value: events.append((name, value)),
+    )
+
+    result = experiment_main._build_heating_output_dataframe(
+        values, values + 1.0, values + 3.0, climate, values + 4.0, values + 6.0
+    )
+
+    assert list(result.columns) == [
+        'Q_UT_H_d_A_t [MJ/h]',
+        'Theta_hs_H_out_d_t [℃]',
+        'Theta_hs_H_in_d_t [℃]',
+        'Theta_ex_d_t [℃]',
+        'V_hs_supply_H_d_t [m3/h]',
+        'V_hs_vent_H_d_t [m3/h]',
+        'C_df_H_d_t [-]',
+    ]
+    assert len(result) == size
+    assert result.index[0] == pd.Timestamp('2023-01-01 01:00:00')
+    assert result.index[-1] == pd.Timestamp('2024-01-01 00:00:00')
+    assert result['Q_UT_H_d_A_t [MJ/h]'].isna().all()
+    np.testing.assert_array_equal(result['Theta_hs_H_out_d_t [℃]'], values + 1.0)
+    np.testing.assert_array_equal(result['Theta_hs_H_in_d_t [℃]'], values + 3.0)
+    np.testing.assert_array_equal(result['Theta_ex_d_t [℃]'], values + 2.0)
+    np.testing.assert_array_equal(result['V_hs_supply_H_d_t [m3/h]'], values + 4.0)
+    np.testing.assert_array_equal(result['V_hs_vent_H_d_t [m3/h]'], values + 6.0)
+    np.testing.assert_array_equal(result['C_df_H_d_t [-]'], values + 5.0)
+    assert events[0][0] == 'E_UT_H_d_t'
+    assert events[0][1] is values
