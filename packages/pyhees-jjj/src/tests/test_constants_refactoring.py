@@ -79,3 +79,18 @@ def test_set_constants_H_A_float_boundary(nested_key, target, value, expected):
     assert getattr(constants, target) == expected
   finally:
     setattr(constants, target, original)
+
+
+def test_set_constants_H_A_compressor_coeff_boundary():
+  targets = ('a_r_H_t_t_a4', 'a_r_H_t_t_a3', 'a_r_H_t_t_a2', 'a_r_H_t_t_a1', 'a_r_H_t_t_a0')
+  values = ['1.0', '2.0', '3.0', '4.0', '5.0']
+  originals = tuple(getattr(constants, target) for target in targets)
+  try:
+    constants.set_constants({'H_A': {'compressor_coeff': values}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+
+    constants.set_constants({'H_A': {}})
+    assert tuple(getattr(constants, target) for target in targets) == (1.0, 2.0, 3.0, 4.0, 5.0)
+  finally:
+    for target, original in zip(targets, originals):
+      setattr(constants, target, original)
