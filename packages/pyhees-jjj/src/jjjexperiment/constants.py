@@ -246,6 +246,12 @@ def _set_defrost_temp_rac(input: dict):
     defrost_temp_rac = float(input['defrost_temp_rac'])
 
 
+def _set_defrost_humid_rac(input: dict):
+  if 'defrost_humid_rac' in input:
+    global defrost_humid_rac
+    defrost_humid_rac = float(input['defrost_humid_rac'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -259,9 +265,7 @@ def set_constants(input: dict):
   _set_C_V_fan_dsgn_C(input)
   _set_C_df_H_d_t_defrost_rac(input)
   _set_defrost_temp_rac(input)
-  if 'defrost_humid_rac' in input:
-    global defrost_humid_rac
-    defrost_humid_rac = float(input['defrost_humid_rac'])
+  _set_defrost_humid_rac(input)
   if 'C_hm_C' in input:
     global C_hm_C
     C_hm_C = float(input['C_hm_C'])
