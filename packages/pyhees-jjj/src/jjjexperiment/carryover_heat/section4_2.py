@@ -171,6 +171,13 @@ def _get_C_BR_i_46(A_HCZ_i: Array5x1) -> Array5x1:
     return jjj_carryover_heat.get_C_BR_i(A_HCZ_i)
 
 
+def _get_ac_capacity_46(V_supply_i: Array5x1, Theta_supply_i: Array5x1, Theta_star_HBR: float):
+    c_ac_air = dc.get_c_p_air() * dc.get_rho_air() * V_supply_i
+    ac_theta_diff = np.abs(Theta_supply_i - Theta_star_HBR)  # [K]
+    ac_capacity = c_ac_air * ac_theta_diff  # [J/h]
+    return c_ac_air, ac_capacity
+
+
 def get_Theta_HBR_i_2023(
         H: bool, C: bool, M: bool,
         Theta_star_HBR: float,
@@ -217,10 +224,7 @@ def get_Theta_HBR_i_2023(
     cbri = _get_C_BR_i_46(A_HCZ_i)
 
     # 熱容量(空調空気) [J/(K・h)]
-    c_ac_air = dc.get_c_p_air() * dc.get_rho_air() * V_supply_i
-
-    ac_theta_diff = np.abs(Theta_supply_i - Theta_star_HBR)  # [K]
-    ac_capacity = c_ac_air * ac_theta_diff  # [J/h]
+    c_ac_air, ac_capacity = _get_ac_capacity_46(V_supply_i, Theta_supply_i, Theta_star_HBR)
 
     if (H and C):
         raise ValueError("想定外の季節")

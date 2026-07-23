@@ -75,3 +75,15 @@ def test_get_C_BR_i_46_preserves_capacity_lookup(monkeypatch):
     expected = np.full((5, 1), 99.0)
     monkeypatch.setattr(section4_2.jjj_carryover_heat, 'get_C_BR_i', lambda value: expected if value is areas else None)
     assert section4_2._get_C_BR_i_46(areas) is expected
+
+
+def test_get_ac_capacity_46_preserves_air_capacity_and_absolute_difference(monkeypatch):
+    monkeypatch.setattr(section4_2.dc, 'get_c_p_air', lambda: 2.0)
+    monkeypatch.setattr(section4_2.dc, 'get_rho_air', lambda: 3.0)
+    supply_volume = np.arange(1.0, 6.0).reshape(5, 1)
+    supply_temperature = np.arange(18.0, 23.0).reshape(5, 1)
+
+    c_ac_air, ac_capacity = section4_2._get_ac_capacity_46(supply_volume, supply_temperature, 20.0)
+
+    np.testing.assert_array_equal(c_ac_air, 6.0 * supply_volume)
+    np.testing.assert_array_equal(ac_capacity, c_ac_air * np.abs(supply_temperature - 20.0))
