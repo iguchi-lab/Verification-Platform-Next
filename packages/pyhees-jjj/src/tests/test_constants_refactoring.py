@@ -32,3 +32,22 @@ def test_set_constants_float_boundary(key, value, expected):
     assert getattr(constants, key) == expected
   finally:
     setattr(constants, key, original)
+
+
+@pytest.mark.parametrize(
+  ('key', 'value', 'expected'),
+  [
+    ('change_supply_volume_before_vav_adjust', '7', 7),
+  ],
+)
+def test_set_constants_int_boundary(key, value, expected):
+  original = getattr(constants, key)
+  try:
+    constants.set_constants({key: value})
+    assert getattr(constants, key) == expected
+    assert isinstance(getattr(constants, key), int)
+
+    constants.set_constants({})
+    assert getattr(constants, key) == expected
+  finally:
+    setattr(constants, key, original)
