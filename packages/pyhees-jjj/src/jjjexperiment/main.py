@@ -563,6 +563,24 @@ def _get_minimum_volume_cooling_fan_power(cool_ac_setting, cool_quantity, P_rac_
         cool_ac_setting.f_SFP,
         ファン消費電力から換気分を引く.換気分を引かない,
     )
+def _get_minimum_power_cooling_fan(cool_ac_setting, cool_quantity, v_min_cooling_input, P_rac_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, region):
+    print(最低電力直接入力.入力する)
+    P_fan_rtd = (
+        P_rac_fan_rtd_C
+        if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
+        else cool_quantity.P_fan_rtd
+    )
+    from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
+    return get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
+        v_min_cooling_input.E_E_fan_logic,
+        P_fan_rtd,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        V_hs_dsgn_C,
+        v_min_cooling_input.E_E_fan_min,
+        region,
+        True,
+    ))
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -797,22 +815,16 @@ def calc_main(
                             house.region,
                         )
                     case 最低電力直接入力.入力する:
-                        print(最低電力直接入力.入力する)
-
-                        E_E_fan_min_C = v_min_cooling_input.E_E_fan_min
-                        E_E_fan_logic = v_min_cooling_input.E_E_fan_logic
-
-                        from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
-                        E_E_fan_C_d_t = get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
-                                E_E_fan_logic,
-                                # ルームエアコンファン(P_rac_fan) OR 循環ファン(P_fan)
-                                P_rac_fan_rtd_C if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル else cool_quantity.P_fan_rtd,
-                                V_hs_vent_d_t,  # 上書きアリ
-                                V_hs_supply_d_t,
-                                V_hs_dsgn_C,
-                                E_E_fan_min_C,
-                                house.region,
-                                True))
+                        E_E_fan_C_d_t = _get_minimum_power_cooling_fan(
+                            cool_ac_setting,
+                            cool_quantity,
+                            v_min_cooling_input,
+                            P_rac_fan_rtd_C,
+                            V_hs_vent_d_t,
+                            V_hs_supply_d_t,
+                            V_hs_dsgn_C,
+                            house.region,
+                        )
                     case _:
                         raise ValueError
             case _:
