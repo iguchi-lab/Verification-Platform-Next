@@ -360,22 +360,14 @@ class Test既存計算維持_入力値切替_方式1:
         # NOTE: underfloor_insulation はダクトセントラルの計算には使用されていない
         assert result['TValue'].E_H == pytest.approx(expected_result_type1.E_H)
         assert result['TValue'].E_C == pytest.approx(expected_result_type1.E_C)
-
-    def test_入力値入替_23(self, expected_result_type1):
-        """ 以前のプログラムと同じ計算結果になる
-            空調空気を床下を通して給気する （☐：床下を通して給気しない or ☑：床下を通して給気する）
-            underfloor_air_conditioning_air_supply
-        """
+    def test_入力値入替_23(self):
+        """削除済みの旧床下空調入力は即時エラーになる。"""
         inputs = copy.deepcopy(self._inputs)
         inputs["underfloor_air_conditioning_air_supply"] = "2"
-        # NOTE: この設定のみで 他の床下関係インプットも強制されます
 
-        result = calc(inputs, test_mode=True)
+        with pytest.raises(ValueError, match="旧床下空調計算は削除"):
+            calc(inputs, test_mode=True)
 
-        assert result['TValue'].E_H != expected_result_type1.E_H
-        assert result['TValue'].E_H == pytest.approx(59047.04305281064)
-        assert result['TValue'].E_C != expected_result_type1.E_C
-        assert result['TValue'].E_C == pytest.approx(19511.84935219687)
 
     def test_入力値入替_24(self, expected_result_type1):
         """ 以前のプログラムと同じ計算結果になる

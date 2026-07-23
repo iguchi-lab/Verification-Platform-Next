@@ -29,7 +29,6 @@
     "underfloor_ventilation": "1",
     "r_A_ufvnt": 100.0,
     "underfloor_insulation": "1",
-    "underfloor_air_conditioning_air_supply": "1",
     "carry_over_heat": "1",
     "R_g": 0.15,
     "hs_CAV": "1",

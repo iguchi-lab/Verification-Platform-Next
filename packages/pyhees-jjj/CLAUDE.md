@@ -206,7 +206,7 @@ Custom logic (denchu models, underfloor considerations)
 Final energy consumption result
 ```
 
-Functions from `jjjexperiment.main` import both pyhees modules AND their own overrides, switching based on input parameters (e.g., `underfloor_air_conditioning_air_supply` flag).
+Functions from `jjjexperiment.main` import both pyhees modules AND their own overrides, switching based on input parameters (e.g., the new-underfloor `change_underfloor_temperature` flag).
 
 ## Input/Output Format
 
