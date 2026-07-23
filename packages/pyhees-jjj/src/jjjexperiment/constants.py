@@ -198,14 +198,18 @@ def _set_Theta_hs_out_min_C_d_t_limit(input: dict):
     Theta_hs_out_min_C_d_t_limit = float(input['Theta_hs_out_min_C_d_t_limit'])
 
 
+def _set_C_df_H_d_t_defrost_ductcentral(input: dict):
+  if 'C_df_H_d_t_defrost_ductcentral' in input:
+    global C_df_H_d_t_defrost_ductcentral
+    C_df_H_d_t_defrost_ductcentral = float(input['C_df_H_d_t_defrost_ductcentral'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
   _set_Theta_hs_out_max_H_d_t_limit(input)
   _set_Theta_hs_out_min_C_d_t_limit(input)
-  if 'C_df_H_d_t_defrost_ductcentral' in input:
-    global C_df_H_d_t_defrost_ductcentral
-    C_df_H_d_t_defrost_ductcentral = float(input['C_df_H_d_t_defrost_ductcentral'])
+  _set_C_df_H_d_t_defrost_ductcentral(input)
   if 'defrost_temp_ductcentral' in input:
     global defrost_temp_ductcentral
     defrost_temp_ductcentral = float(input['defrost_temp_ductcentral'])
