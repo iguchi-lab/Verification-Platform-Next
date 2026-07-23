@@ -742,7 +742,7 @@ def test_heat_source_supply_airflow_before_vav_uses_cav_seasons(monkeypatch):
         lambda region: (heating, cooling, mid),
     )
 
-    result = sut._get_heat_source_supply_airflow_before_vav(
+    result = sut._get_heat_source_supply_airflow_before_vav(sut._HeatSourceSupplyAirflowBeforeVavInputs(
         SimpleNamespace(type=object()),
         SimpleNamespace(region=6),
         SimpleNamespace(hs_CAV=True),
@@ -753,7 +753,7 @@ def test_heat_source_supply_airflow_before_vav_uses_cav_seasons(monkeypatch):
         200.0,
         object(),
         object(),
-    )
+    ))
 
     np.testing.assert_array_equal(result[:3], [1200.0, 1500.0, 0.0])
     np.testing.assert_array_equal(result[3:], np.zeros(24 * 365 - 3))
@@ -781,7 +781,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_2023_branch(
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_heat_source_supply_airflow_before_vav(
+    result = sut._get_heat_source_supply_airflow_before_vav(sut._HeatSourceSupplyAirflowBeforeVavInputs(
         SimpleNamespace(type=sut.計算モデル.RAC活用型全館空調_潜熱評価モデル),
         SimpleNamespace(region=7),
         SimpleNamespace(hs_CAV=False),
@@ -790,7 +790,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_2023_branch(
         300.0,
         *capacities,
         *loads,
-    )
+    ))
 
     assert result is expected
     assert calls == [(loads[load_index], 7, cooling)]
@@ -808,7 +808,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_standard_arguments(
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_heat_source_supply_airflow_before_vav(
+    result = sut._get_heat_source_supply_airflow_before_vav(sut._HeatSourceSupplyAirflowBeforeVavInputs(
         SimpleNamespace(type=object()),
         SimpleNamespace(region=5),
         SimpleNamespace(hs_CAV=False),
@@ -819,7 +819,7 @@ def test_heat_source_supply_airflow_before_vav_preserves_standard_arguments(
         None,
         load,
         object(),
-    )
+    ))
 
     assert result is expected
     assert calls == [(250.0, 0, None, 100.0, None, load, 5)]
@@ -848,14 +848,14 @@ def test_supply_airflow_before_vav_preserves_vav_formula_order(monkeypatch):
         lambda *args: calls.append(("supply", args)) or supply,
     )
 
-    result = sut._get_supply_airflow_before_vav(
+    result = sut._get_supply_airflow_before_vav(sut._SupplyAirflowBeforeVavInputs(
         SimpleNamespace(VAV=True),
         SimpleNamespace(region=6),
         SimpleNamespace(L_CS_d_t_i=sensible, L_H_d_t_i=heating),
         object(),
         heat_source_airflow,
         ventilation,
-    )
+    ))
 
     np.testing.assert_array_equal(result[0], ratios[:, 0:1])
     assert result[1] is ratios
@@ -884,14 +884,14 @@ def test_supply_airflow_before_vav_preserves_standard_formula_order(monkeypatch)
         lambda *args: calls.append(("supply", args)) or supply,
     )
 
-    result = sut._get_supply_airflow_before_vav(
+    result = sut._get_supply_airflow_before_vav(sut._SupplyAirflowBeforeVavInputs(
         SimpleNamespace(VAV=False),
         object(),
         object(),
         areas,
         heat_source_airflow,
         ventilation,
-    )
+    ))
 
     assert result[0] is ratios
     np.testing.assert_array_equal(
@@ -923,13 +923,13 @@ def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
         ) or np.full((12, 1), delta),
     )
 
-    result = sut._adjust_heat_source_output_for_room_to_underfloor_transfer(
+    result = sut._adjust_heat_source_output_for_room_to_underfloor_transfer(sut._RoomToUnderfloorTransferInputs(
         SimpleNamespace(U_s_vert=0.7, U_s_floor_ins=0.3),
         SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
         theta_out,
         theta_in,
         output,
-    )
+    ))
 
     assert result[0] is output
     np.testing.assert_array_equal(output, np.full(24 * 365, 76.0))
@@ -1032,7 +1032,7 @@ def test_underfloor_to_ground_transfer_preserves_argument_order(monkeypatch):
         ),
     )
 
-    result = sut._adjust_heat_source_output_for_underfloor_to_ground_transfer(
+    result = sut._adjust_heat_source_output_for_underfloor_to_ground_transfer(sut._UnderfloorGroundTransferInputs(
         setting,
         house,
         area,
@@ -1041,7 +1041,7 @@ def test_underfloor_to_ground_transfer_preserves_argument_order(monkeypatch):
         11.2,
         15.5,
         output,
-    )
+    ))
 
     assert result is output
     np.testing.assert_array_equal(output, 101.0 + theta)
@@ -1078,7 +1078,7 @@ def test_heat_source_outlet_requirements_preserve_formula_order(monkeypatch):
         lambda *args: calls.append(("temperature", args)) or outputs[2],
     )
 
-    result = sut._get_heat_source_outlet_requirements(*inputs, 6)
+    result = sut._get_heat_source_outlet_requirements(sut._HeatSourceOutletRequirementsInputs(*inputs, 6))
 
     assert result == tuple(outputs)
     assert calls == [
@@ -1100,7 +1100,7 @@ def test_heat_source_outlet_humidity_preserves_formula_arguments(monkeypatch):
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_heat_source_outlet_humidity(*inputs, 7)
+    result = sut._get_heat_source_outlet_humidity(sut._HeatSourceOutletHumidityInputs(*inputs, 7))
 
     assert result is expected
     assert calls == [((*inputs, 7))]
@@ -1127,11 +1127,11 @@ def test_heat_source_outlet_temperatures_preserve_formula_order(monkeypatch):
         lambda *args: calls.append(("outlet", args)) or outputs[2],
     )
 
-    result = sut._get_heat_source_outlet_temperatures(
+    result = sut._get_heat_source_outlet_temperatures(sut._HeatSourceOutletTemperaturesInputs(
         setting,
         house,
         *inputs,
-    )
+    ))
 
     assert result == tuple(outputs)
     assert calls == [
@@ -1227,7 +1227,7 @@ def test_supply_air_temperatures_preserve_formula_arguments(monkeypatch):
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_supply_air_temperatures(house, *inputs)
+    result = sut._get_supply_air_temperatures(sut._SupplyAirTemperaturesInputs(house, *inputs))
 
     assert result is expected
     assert calls == [((*inputs, 7))]
@@ -1285,9 +1285,9 @@ def test_standard_heat_source_capacity_limits_preserve_formula_order(monkeypatch
         calls.append(("defrost", ()))
         return outputs[3]
 
-    result = sut._get_standard_heat_source_capacity_limits(
+    result = sut._get_standard_heat_source_capacity_limits(sut._StandardHeatSourceCapacityLimitsInputs(
         setting, house, heating, cooling, shf, latent, get_defrost
-    )
+    ))
 
     assert result == tuple(outputs)
     assert calls == [
@@ -1337,9 +1337,9 @@ def test_rac_heating_capacity_preserves_formula_and_log_order(
         lambda name, value: calls.append(("NDdebug", name, value)),
     )
 
-    result = sut._get_rac_heating_capacity(
+    result = sut._get_rac_heating_capacity(sut._RacHeatingCapacityInputs(
         heating, cooling, theta, humidity, log_intermediates
-    )
+    ))
 
     assert result == outputs
     expected = [("ratio", (10.0, 8.0))]
@@ -1434,14 +1434,14 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
 
 def test_carryover_at_hour_rejects_overlapping_seasons_before_first_hour():
     with pytest.raises(ValueError, match="想定外の季節"):
-        sut._get_carryover_at_hour(
+        sut._get_carryover_at_hour(sut._CarryoverAtHourInputs(
             0,
             np.array([True]),
             np.array([True]),
             object(),
             np.zeros((5, 1)),
             np.zeros(1),
-        )
+        ))
 
 
 def test_carryover_at_hour_returns_first_hour_zero_without_calculation(monkeypatch):
@@ -1451,14 +1451,14 @@ def test_carryover_at_hour_returns_first_hour_zero_without_calculation(monkeypat
         lambda *args: pytest.fail("first hour must not calculate carryover"),
     )
 
-    result = sut._get_carryover_at_hour(
+    result = sut._get_carryover_at_hour(sut._CarryoverAtHourInputs(
         0,
         np.array([True]),
         np.array([False]),
         object(),
         np.zeros((5, 1)),
         np.zeros(1),
-    )
+    ))
 
     np.testing.assert_array_equal(result, np.zeros((5, 1)))
 
@@ -1488,14 +1488,14 @@ def test_carryover_at_hour_preserves_previous_comparison_and_current_target(
         lambda *args: calls.append(args) or expected,
     )
 
-    result = sut._get_carryover_at_hour(
+    result = sut._get_carryover_at_hour(sut._CarryoverAtHourInputs(
         1,
         np.array([False, heating]),
         np.array([False, cooling]),
         area,
         rooms,
         targets,
-    )
+    ))
 
     assert result is expected
     assert len(calls) == 1
@@ -1521,14 +1521,14 @@ def test_balanced_loads_at_hour_preserve_formula_order_and_slices(monkeypatch):
         lambda *args: calls.append(("cooling", args)) or outputs[1],
     )
 
-    result = sut._get_balanced_loads_at_hour(
+    result = sut._get_balanced_loads_at_hour(sut._BalancedLoadsAtHourInputs(
         1,
         np.array([False, True, False]),
         np.array([False, False, True]),
         SimpleNamespace(L_H_d_t_i=heating, L_CS_d_t_i=cooling),
         transfer,
         carryover,
-    )
+    ))
 
     assert result == outputs
     assert calls[0][0] == "heating"
@@ -2865,9 +2865,9 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     assert tuple(name for name, _ in events[-1][2]) == tuple(
         f"V_dash_supply_d_t_{i}" for i in range(1, 6))
     heat_calls = [event for event in events if event[0] == "heat_airflow"]
-    assert heat_calls[0][1][-2] is q_initial
+    assert heat_calls[0][1][0].Q_hat_hs_d_t is q_initial
     if should_adjust:
-        assert heat_calls[1][1][-2] is q_ground
+        assert heat_calls[1][1][0].Q_hat_hs_d_t is q_ground
 
 def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monkeypatch):
     events = []
