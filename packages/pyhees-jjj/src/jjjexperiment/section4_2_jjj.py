@@ -676,6 +676,17 @@ class _SupplyStateOutputRecordInputs(NamedTuple):
     Theta_HBR_d_t_i: object
     Theta_NR_d_t: object
 
+
+class _LegacyUnderfloorRequestedTemperatureInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    load: object
+    r_A_ufvnt: object
+    Theta_req_d_t_i: object
+    Theta_ex_d_t: object
+    V_dash_supply_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1696,17 +1707,16 @@ def _record_unprocessed_energy_output(
     df_output[output_name] = E_UT_d_t
     return df_output
 
-def _adjust_legacy_underfloor_requested_temperatures(
-        ac_setting,
-        house,
-        skin,
-        load,
-        r_A_ufvnt,
-        Theta_req_d_t_i,
-        Theta_ex_d_t,
-        V_dash_supply_d_t_i,
-    ):
+def _adjust_legacy_underfloor_requested_temperatures(inputs: _LegacyUnderfloorRequestedTemperatureInputs):
     """Apply the existing first-pass correction for legacy underfloor air supply."""
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    skin = inputs.skin
+    load = inputs.load
+    r_A_ufvnt = inputs.r_A_ufvnt
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     for i in range(2):  # i=0,1
         Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
             house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, r_A_ufvnt,
@@ -2765,9 +2775,9 @@ def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirem
             Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i,
             Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i)
     elif skin.underfloor_air_conditioning_air_supply:
-        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
+        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(_LegacyUnderfloorRequestedTemperatureInputs(
             ac_setting, house, skin, load, skin.r_A_ufac,
-            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i))
         assert np.shape(Theta_req_d_t_i) == (5, 8760), "想定外の行列数です"
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 
@@ -3246,9 +3256,9 @@ def _prepare_carryover_outlet_requirements(inputs: _CarryoverOutletRequirementIn
     X_req_d_t_i = outlet_requirements.X_req_d_t_i
     Theta_req_d_t_i = outlet_requirements.Theta_req_d_t_i
     if skin.underfloor_air_conditioning_air_supply:
-        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(
+        Theta_req_d_t_i = _adjust_legacy_underfloor_requested_temperatures(_LegacyUnderfloorRequestedTemperatureInputs(
             ac_setting, house, skin, load, skin.YUCACO_r_A_ufvnt,
-            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i)
+            Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i))
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 
 

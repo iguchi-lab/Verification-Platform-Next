@@ -1677,10 +1677,10 @@ def test_legacy_underfloor_requested_temperatures_preserve_first_pass_formula(
 
     monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
 
-    result = sut._adjust_legacy_underfloor_requested_temperatures(
+    result = sut._adjust_legacy_underfloor_requested_temperatures(sut._LegacyUnderfloorRequestedTemperatureInputs(
         _setting(setting_type), house, skin, load, r_a_ufvnt,
         theta_req, theta_ex, airflows
-    )
+    ))
 
     assert result is theta_req
     np.testing.assert_array_equal(result[0], expected_first)
@@ -3250,7 +3250,7 @@ def test_prepare_carryover_outlet_requirements_preserves_first_pass(
     assert [event[0] for event in events] == (
         ["requirements", "adjust"] if enabled else ["requirements"])
     if enabled:
-        assert events[1][1][4] == skin.YUCACO_r_A_ufvnt
+        assert events[1][1][0].r_A_ufvnt == skin.YUCACO_r_A_ufvnt
 
 
 @pytest.mark.parametrize("enabled", (False, True))
