@@ -258,6 +258,12 @@ def _set_C_hm_C(input: dict):
     C_hm_C = float(input['C_hm_C'])
 
 
+def _set_q_rtd_C_limit(input: dict):
+  if 'q_rtd_C_limit' in input:
+    global q_rtd_C_limit
+    q_rtd_C_limit = float(input['q_rtd_C_limit'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -273,9 +279,7 @@ def set_constants(input: dict):
   _set_defrost_temp_rac(input)
   _set_defrost_humid_rac(input)
   _set_C_hm_C(input)
-  if 'q_rtd_C_limit' in input:
-    global q_rtd_C_limit
-    q_rtd_C_limit = float(input['q_rtd_C_limit'])
+  _set_q_rtd_C_limit(input)
   if 'change_supply_volume_before_vav_adjust' in input:
     global change_supply_volume_before_vav_adjust
     change_supply_volume_before_vav_adjust = int(input['change_supply_volume_before_vav_adjust'])
