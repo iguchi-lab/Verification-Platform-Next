@@ -37,6 +37,11 @@ def _get_carryover_temperature_diff(H, C, Theta_HBR_i, Theta_star_HBR):
 
     return temperature_diff
 
+def _calculate_carryover_result(cbri: Array5x1, temperature_diff: Array5x1) -> Array5x1:
+    assert np.all(0 <= cbri), "居室の熱容量は負にならない"
+    return cbri * temperature_diff / 1_000_000  # J/h -> MJ/h
+
+
 def calc_carryover(
         H: np.bool,
         C: np.bool,
@@ -65,12 +70,7 @@ def calc_carryover(
     if temperature_diff is None:
         return np.zeros((5, 1))
 
-    # 事後条件:
-    assert np.all(0 <= cbri), "居室の熱容量は負にならない"
-    # assert np.all(0 <= temperature_diff), "ここで温度差は正になるよう算出"
-    # NOTE: 負の過剰熱量を仕様上許容しています
-
-    return cbri * temperature_diff / 1_000_000  # J/h -> MJ/h
+    return _calculate_carryover_result(cbri, temperature_diff)
 
 # NOTE:
 # MATRIX[:, t] -> Shape(5, )

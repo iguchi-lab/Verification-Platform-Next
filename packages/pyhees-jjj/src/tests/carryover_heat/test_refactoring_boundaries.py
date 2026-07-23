@@ -39,3 +39,14 @@ def test_get_carryover_temperature_diff_preserves_season_branches():
     assert section4_2._get_carryover_temperature_diff(np.False_, np.False_, temperatures, 21.0) is None
     with pytest.raises(ValueError):
         section4_2._get_carryover_temperature_diff(np.True_, np.True_, temperatures, 21.0)
+
+
+def test_calculate_carryover_result_preserves_units_and_capacity_contract():
+    capacities = np.full((5, 1), 2_000_000.0)
+    temperature_diff = np.arange(-2.0, 3.0).reshape(5, 1)
+
+    result = section4_2._calculate_carryover_result(capacities, temperature_diff)
+
+    np.testing.assert_array_equal(result, 2.0 * temperature_diff)
+    with pytest.raises(AssertionError):
+        section4_2._calculate_carryover_result(-capacities, temperature_diff)
