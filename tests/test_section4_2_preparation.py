@@ -3025,8 +3025,8 @@ def test_prepare_no_carryover_balanced_loads_preserves_formula_and_adjustment_or
         sut, "_adjust_new_underfloor_balanced_loads",
         lambda *a: events.append(("adjust", a)) or (adjusted_h, adjusted_c))
 
-    result = sut._prepare_no_carryover_balanced_loads(
-        house, new_ufac, inputs[0], load, *inputs[1:])
+    result = sut._prepare_no_carryover_balanced_loads(sut._NoCarryoverBalancedLoadInputs(
+        house, new_ufac, inputs[0], load, *inputs[1:]))
 
     assert result == ((adjusted_h, adjusted_c) if enabled else (heating, sensible_c))
     assert [e[0] for e in events] == (["cool", "heat", "adjust"] if enabled else ["cool", "heat"])

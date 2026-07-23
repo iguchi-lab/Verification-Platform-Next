@@ -857,6 +857,17 @@ class _BalancedLoadStateInputs(NamedTuple):
     load: object
     region: object
 
+
+class _NoCarryoverBalancedLoadInputs(NamedTuple):
+    house: object
+    new_ufac: object
+    new_ufac_df: object
+    load: object
+    A_s_ufac_i: object
+    Theta_star_HBR_d_t: object
+    Theta_ex_d_t: object
+    Q_star_trs_prt_d_t_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2832,10 +2843,16 @@ def _initialize_carryover_hourly_state(region):
         M,
     )
 
-def _prepare_no_carryover_balanced_loads(
-        house, new_ufac, new_ufac_df, load, A_s_ufac_i,
-        Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i):
+def _prepare_no_carryover_balanced_loads(inputs: _NoCarryoverBalancedLoadInputs):
     """Calculate formulas (9) and (8), including the new-underfloor adjustment."""
+    house = inputs.house
+    new_ufac = inputs.new_ufac
+    new_ufac_df = inputs.new_ufac_df
+    load = inputs.load
+    A_s_ufac_i = inputs.A_s_ufac_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    Q_star_trs_prt_d_t_i = inputs.Q_star_trs_prt_d_t_i
     L_star_CS_d_t_i = dc.get_L_star_CS_d_t_i(
         load.L_CS_d_t_i, Q_star_trs_prt_d_t_i, house.region)
     L_star_H_d_t_i = dc.get_L_star_H_d_t_i(
@@ -3843,9 +3860,9 @@ def calc_Q_UT_A(
         # NOTE: 床下空調のための r_A_ufvnt の上書きはココより前に行わない
         # 外気導入の負荷削減の計算までは、削減ナシ(r_A_ufvnt=None) のままであるべきため
         # (9), (8)　冷房顕熱・暖房の負荷バランス
-        L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(
+        L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(_NoCarryoverBalancedLoadInputs(
             house, new_ufac, new_ufac_df, load, A_s_ufac_i,
-            Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i)
+            Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i))
         capacity_state = _prepare_no_carryover_capacity_state(
             ac_setting, house, heat_CRAC, cool_CRAC, load, climate,
             Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)
