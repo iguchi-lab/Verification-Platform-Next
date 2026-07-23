@@ -221,6 +221,15 @@ def _override_heating_load_from_csv(L_H_d_t_i, loadFile):
         return load.iloc[:, :12].T.values
     return L_H_d_t_i
 
+def _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR):
+    return calc_cooling_load(
+        house.region, house.A_A, house.A_MR, house.A_OR,
+        skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR,
+        skin.r_A_ufvnt, skin.underfloor_insulation,
+        cool_ac_setting.mode.name, heat_ac_setting.mode.name,
+        mode_MR, mode_OR, skin.TS, hex.to_dict(),
+    )
+
 @inject
 def calc_main(
     injector: Injector,
@@ -268,9 +277,7 @@ def calc_main(
         """冷房潜熱負荷 [MJ/h]"""
 
         if loadFile == '-':
-            L_CS_d_t_i, L_CL_d_t_i = \
-                calc_cooling_load(house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.r_A_ufvnt
-                        , skin.underfloor_insulation, cool_ac_setting.mode.name, heat_ac_setting.mode.name, mode_MR, mode_OR, skin.TS, hex.to_dict())
+            L_CS_d_t_i, L_CL_d_t_i = _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR)
         else:
             load = pd.read_csv(loadFile, nrows=24 * 365)
             L_CS_d_t_i = load.iloc[::,12:24].T.values

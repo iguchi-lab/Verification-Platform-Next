@@ -106,3 +106,26 @@ def test_override_heating_load_from_csv_preserves_calculated_load_without_file(m
     monkeypatch.setattr(experiment_main.pd, 'read_csv', lambda *args, **kwargs: pytest.fail('must not read CSV'))
 
     assert experiment_main._override_heating_load_from_csv(calculated, '-') is calculated
+
+def test_calc_standard_cooling_load_preserves_argument_order(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main, 'calc_cooling_load', lambda *args: calls.append(args) or ('CS', 'CL'))
+    house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
+    skin = SimpleNamespace(
+        Q=2.0, mu_H=0.1, mu_C=0.2, NV_MR=1.0, NV_OR=2.0,
+        r_A_ufvnt='ratio', underfloor_insulation='insulation', TS='TS',
+    )
+    cool = SimpleNamespace(mode=SimpleNamespace(name='cool-mode'))
+    heat = SimpleNamespace(mode=SimpleNamespace(name='heat-mode'))
+    hex_info = SimpleNamespace(to_dict=lambda: {'hex': True})
+
+    result = experiment_main._calc_standard_cooling_load(
+        house, skin, hex_info, cool, heat, 'mode-mr', 'mode-or'
+    )
+
+    assert result == ('CS', 'CL')
+    assert calls == [(
+        6, 120.0, 30.0, 50.0, 2.0, 0.1, 0.2, 1.0, 2.0,
+        'ratio', 'insulation', 'cool-mode', 'heat-mode',
+        'mode-mr', 'mode-or', 'TS', {'hex': True},
+    )]
