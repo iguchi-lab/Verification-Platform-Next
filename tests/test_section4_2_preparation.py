@@ -1337,9 +1337,9 @@ def test_rac_heating_capacity_preserves_formula_and_log_order(
         lambda name, value: calls.append(("NDdebug", name, value)),
     )
 
-    result = sut._get_rac_heating_capacity(
+    result = sut._get_rac_heating_capacity(sut._RacHeatingCapacityInputs(
         heating, cooling, theta, humidity, log_intermediates
-    )
+    ))
 
     assert result == outputs
     expected = [("ratio", (10.0, 8.0))]

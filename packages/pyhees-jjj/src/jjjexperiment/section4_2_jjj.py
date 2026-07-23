@@ -592,6 +592,14 @@ class _StandardHeatSourceCapacityLimitsInputs(NamedTuple):
     L_star_dash_CL_d_t: object
     get_C_df_H_d_t: object
 
+
+class _RacHeatingCapacityInputs(NamedTuple):
+    heat_CRAC: object
+    cool_CRAC: object
+    Theta_ex_d_t: object
+    h_ex_d_t: object
+    log_intermediates: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1140,14 +1148,13 @@ def _get_standard_heat_source_capacity_limits(inputs: _StandardHeatSourceCapacit
         Q_hs_max_H_d_t,
     )
 
-def _get_rac_heating_capacity(
-        heat_CRAC: HeatCRACSpec,
-        cool_CRAC: CoolCRACSpec,
-        Theta_ex_d_t: np.ndarray,
-        h_ex_d_t: np.ndarray,
-        log_intermediates: bool,
-    ) -> tuple[float, np.ndarray, np.ndarray]:
+def _get_rac_heating_capacity(inputs: _RacHeatingCapacityInputs):
     """Calculate the RAC maximum heating capacity in its original order."""
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
+    Theta_ex_d_t = inputs.Theta_ex_d_t
+    h_ex_d_t = inputs.h_ex_d_t
+    log_intermediates = inputs.log_intermediates
     # 最大暖房能力比
     q_r_max_H = rac.get_q_r_max_H(heat_CRAC.q_max, heat_CRAC.q_rtd)
     if log_intermediates:
@@ -2604,9 +2611,9 @@ def _prepare_no_carryover_capacity_state(
             計算モデル.電中研モデル]:
         C_df_H_d_t = climate.get_C_df_H_d_t()
         _logger.debug(f'C_df_H_d_t: {C_df_H_d_t}')
-        rac_heating = _get_rac_heating_capacity(
+        rac_heating = _get_rac_heating_capacity(_RacHeatingCapacityInputs(
             heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
-            log_intermediates=True)
+            log_intermediates=True))
         q_r_max_H = rac_heating.q_r_max_H
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
@@ -3223,9 +3230,9 @@ def _prepare_carryover_capacity_state(
             計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
             計算モデル.電中研モデル]:
         C_df_H_d_t = dc.get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t)
-        rac_heating = _get_rac_heating_capacity(
+        rac_heating = _get_rac_heating_capacity(_RacHeatingCapacityInputs(
             heat_CRAC, cool_CRAC, Theta_ex_d_t, h_ex_d_t,
-            log_intermediates=False)
+            log_intermediates=False))
         q_r_max_H = rac_heating.q_r_max_H
         Q_r_max_H_d_t = rac_heating.Q_r_max_H_d_t
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
