@@ -398,6 +398,20 @@ def _set_C_A_heat_transfer_coeff(input: dict):
     a_c_hex_c_a0_C = float(input['C_A']['heat_transfer_coeff'][4])
 
 
+def _set_C_A_compressor_coeff(input: dict):
+  if 'compressor_coeff' in input['C_A']:
+    global a_r_C_t_t_a4
+    a_r_C_t_t_a4 = float(input['C_A']['compressor_coeff'][0])
+    global a_r_C_t_t_a3
+    a_r_C_t_t_a3 = float(input['C_A']['compressor_coeff'][1])
+    global a_r_C_t_t_a2
+    a_r_C_t_t_a2 = float(input['C_A']['compressor_coeff'][2])
+    global a_r_C_t_t_a1
+    a_r_C_t_t_a1 = float(input['C_A']['compressor_coeff'][3])
+    global a_r_C_t_t_a0
+    a_r_C_t_t_a0 = float(input['C_A']['compressor_coeff'][4])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -435,17 +449,7 @@ def set_constants(input: dict):
     _set_C_A_A_f_hex_large(input)
     _set_C_A_A_e_hex_large(input)
     _set_C_A_heat_transfer_coeff(input)
-    if 'compressor_coeff' in input['C_A']:
-      global a_r_C_t_t_a4
-      a_r_C_t_t_a4 = float(input['C_A']['compressor_coeff'][0])
-      global a_r_C_t_t_a3
-      a_r_C_t_t_a3 = float(input['C_A']['compressor_coeff'][1])
-      global a_r_C_t_t_a2
-      a_r_C_t_t_a2 = float(input['C_A']['compressor_coeff'][2])
-      global a_r_C_t_t_a1
-      a_r_C_t_t_a1 = float(input['C_A']['compressor_coeff'][3])
-      global a_r_C_t_t_a0
-      a_r_C_t_t_a0 = float(input['C_A']['compressor_coeff'][4])
+    _set_C_A_compressor_coeff(input)
     if 'airvolume_minimum' in input['C_A']:
       global airvolume_minimum_C
       airvolume_minimum_C = float(input['C_A']['airvolume_minimum'])
