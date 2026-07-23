@@ -131,3 +131,22 @@ def test_set_constants_coefficient_boundary(section, nested_key, targets):
   finally:
     for target, original in zip(targets, originals):
       setattr(constants, target, original)
+
+
+@pytest.mark.parametrize(
+  ('nested_key', 'target', 'value', 'expected'),
+  [
+    ('A_f_hex_small', 'A_f_hex_small_C', '2.75', 2.75),
+  ],
+)
+def test_set_constants_C_A_float_boundary(nested_key, target, value, expected):
+  original = getattr(constants, target)
+  try:
+    constants.set_constants({'C_A': {nested_key: value}})
+    assert getattr(constants, target) == expected
+    assert isinstance(getattr(constants, target), float)
+
+    constants.set_constants({'C_A': {}})
+    assert getattr(constants, target) == expected
+  finally:
+    setattr(constants, target, original)

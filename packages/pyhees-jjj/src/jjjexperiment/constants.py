@@ -360,6 +360,12 @@ def _set_H_A_fan_coeff(input: dict):
     P_fan_H_d_t_a0 = float(input['H_A']['fan_coeff'][4])
 
 
+def _set_C_A_A_f_hex_small(input: dict):
+  if 'A_f_hex_small' in input['C_A']:
+    global A_f_hex_small_C
+    A_f_hex_small_C = float(input['C_A']['A_f_hex_small'])
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
@@ -392,9 +398,7 @@ def set_constants(input: dict):
     _set_H_A_airvolume_coeff(input)
     _set_H_A_fan_coeff(input)
   if 'C_A' in input:
-    if 'A_f_hex_small' in input['C_A']:
-      global A_f_hex_small_C
-      A_f_hex_small_C = float(input['C_A']['A_f_hex_small'])
+    _set_C_A_A_f_hex_small(input)
     if 'A_e_hex_small' in input['C_A']:
       global A_e_hex_small_C
       A_e_hex_small_C = float(input['C_A']['A_e_hex_small'])
