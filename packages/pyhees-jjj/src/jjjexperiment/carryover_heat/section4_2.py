@@ -163,6 +163,10 @@ def _get_c_prt_46(U_prt: float, A_prt_i: Array5x1) -> Array5x1:
     return U_prt * A_prt_i * 3600
 
 
+def _get_heat_loss_46(Q: float, A_HCZ_i: Array5x1) -> Array5x1:
+    return Q * A_HCZ_i * 3600
+
+
 def get_Theta_HBR_i_2023(
         H: bool, C: bool, M: bool,
         Theta_star_HBR: float,
@@ -203,7 +207,7 @@ def get_Theta_HBR_i_2023(
     c_prt = _get_c_prt_46(U_prt, A_prt_i)
 
     # 熱損失 [J/(K・h)]
-    heat_loss = Q * A_HCZ_i * 3600
+    heat_loss = _get_heat_loss_46(Q, A_HCZ_i)
 
     # 熱容量(居室) [J/K]
     cbri = jjj_carryover_heat.get_C_BR_i(A_HCZ_i)
