@@ -159,6 +159,10 @@ def _assert_Theta_HBR_i_2023_shapes(
     assert Theta_HBR_before_i.shape == (5, 1), "Theta_HBR_before_iの行列数が想定外"
 
 
+def _get_c_prt_46(U_prt: float, A_prt_i: Array5x1) -> Array5x1:
+    return U_prt * A_prt_i * 3600
+
+
 def get_Theta_HBR_i_2023(
         H: bool, C: bool, M: bool,
         Theta_star_HBR: float,
@@ -196,7 +200,7 @@ def get_Theta_HBR_i_2023(
     # NOTE: t = 1時間区切りなので必ずhで整理
 
     # 熱容量(間仕切り) [J/(K・h)]
-    c_prt = U_prt * A_prt_i * 3600
+    c_prt = _get_c_prt_46(U_prt, A_prt_i)
 
     # 熱損失 [J/(K・h)]
     heat_loss = Q * A_HCZ_i * 3600

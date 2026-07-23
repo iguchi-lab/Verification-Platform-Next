@@ -58,3 +58,8 @@ def test_assert_Theta_HBR_i_2023_shapes_checks_all_zone_arrays():
 
     with pytest.raises(AssertionError):
         section4_2._assert_Theta_HBR_i_2023_shapes(valid.reshape(1, 5), *([valid] * 6))
+
+
+def test_get_c_prt_46_preserves_hourly_conductance_units():
+    areas = np.arange(1.0, 6.0).reshape(5, 1)
+    np.testing.assert_array_equal(section4_2._get_c_prt_46(2.5, areas), 2.5 * areas * 3600)
