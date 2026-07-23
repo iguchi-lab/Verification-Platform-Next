@@ -249,6 +249,22 @@ def _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i):
     L_CL_d_t = np.sum(L_CL_d_t_i, axis=0)
     return L_H_d_t, L_CS_d_t, L_CL_d_t
 
+def _get_V_hs_dsgn_H(type: 計算モデル, v_fan_rtd, q_rtd_H):
+    if type in [
+        計算モデル.ダクト式セントラル空調機,
+        計算モデル.RAC活用型全館空調_潜熱評価モデル,
+    ]:
+        V_fan_rtd_H = v_fan_rtd
+    elif type in [
+        計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        計算モデル.電中研モデル,
+    ]:
+        V_fan_rtd_H = dc_spec.get_V_fan_rtd_H(q_rtd_H)
+    else:
+        raise Exception("暖房方式が不正です。")
+
+    return dc_spec.get_V_fan_dsgn_H(V_fan_rtd_H)
+
 @inject
 def calc_main(
     injector: Injector,
@@ -309,22 +325,6 @@ def calc_main(
     ##### 暖房消費電力の計算（kWh/h）
     print("暖房消費電力の計算")
 
-    def get_V_hs_dsgn_H(type: 計算モデル, v_fan_rtd, q_rtd_H):
-        if type in [
-            計算モデル.ダクト式セントラル空調機,
-            計算モデル.RAC活用型全館空調_潜熱評価モデル
-        ]:
-            V_fan_rtd_H = v_fan_rtd
-        elif type in [
-            計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
-            計算モデル.電中研モデル
-        ]:
-            V_fan_rtd_H = dc_spec.get_V_fan_rtd_H(q_rtd_H)
-        else:
-            raise Exception("暖房方式が不正です。")
-
-        return dc_spec.get_V_fan_dsgn_H(V_fan_rtd_H)
-
     def arr_summary(arr: np.ndarray):
         return {
             "MAX  ": max(arr),
@@ -334,7 +334,7 @@ def calc_main(
 
     V_hs_dsgn_H: float =  \
         heat_ac_setting.V_hs_dsgn if heat_ac_setting.V_hs_dsgn > 0  \
-        else get_V_hs_dsgn_H(heat_ac_setting.type, heat_quantity.V_fan_rtd, heat_CRAC.q_rtd)
+        else _get_V_hs_dsgn_H(heat_ac_setting.type, heat_quantity.V_fan_rtd, heat_CRAC.q_rtd)
     """ 暖房時の送風機の設計風量 [m3/h] """
 
     V_hs_dsgn_C: float = 0.0  # NOTE: 暖房負荷計算時は空

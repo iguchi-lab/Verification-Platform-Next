@@ -168,3 +168,21 @@ def test_sum_zone_loads_preserves_axis_zero_aggregation():
     np.testing.assert_array_equal(result[0], np.array([5.0, 7.0, 9.0]))
     np.testing.assert_array_equal(result[1], np.array([25.0, 27.0, 29.0]))
     np.testing.assert_array_equal(result[2], np.array([45.0, 47.0, 49.0]))
+
+def test_get_V_hs_dsgn_H_preserves_model_specific_rated_airflow(monkeypatch):
+    calls = []
+    monkeypatch.setattr(experiment_main.dc_spec, 'get_V_fan_rtd_H', lambda q: calls.append(('rated', q)) or 300.0)
+    monkeypatch.setattr(experiment_main.dc_spec, 'get_V_fan_dsgn_H', lambda v: calls.append(('design', v)) or v * 1.1)
+
+    direct = experiment_main._get_V_hs_dsgn_H(
+        experiment_main.計算モデル.ダクト式セントラル空調機, 200.0, 5000.0
+    )
+    calculated = experiment_main._get_V_hs_dsgn_H(
+        experiment_main.計算モデル.電中研モデル, 200.0, 5000.0
+    )
+
+    assert direct == pytest.approx(220.0)
+    assert calculated == pytest.approx(330.0)
+    assert calls == [('design', 200.0), ('rated', 5000.0), ('design', 300.0)]
+    with pytest.raises(Exception, match='暖房方式が不正です'):
+        experiment_main._get_V_hs_dsgn_H(object(), 200.0, 5000.0)
