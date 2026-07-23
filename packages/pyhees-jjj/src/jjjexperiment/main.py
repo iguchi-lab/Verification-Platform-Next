@@ -181,6 +181,113 @@ def calc(input_data: dict, test_mode=False):
     # NOTE: 引数全てを型解決できるようにする必要があった
     return injector.call_with_injection(calc_main)
 
+def _log_equipment_specs(cool_CRAC, heat_CRAC):
+    print("q_rtd_C, q_rtd_H, q_max_C, q_max_H, e_rtd_C, e_rtd_H")
+    print(cool_CRAC.q_rtd, heat_CRAC.q_rtd, cool_CRAC.q_max, heat_CRAC.q_max, cool_CRAC.e_rtd, heat_CRAC.e_rtd)
+
+    _logger.info(f"q_rtd_C [w]: {cool_CRAC.q_rtd}")
+    _logger.info(f"q_max_C [w]: {cool_CRAC.q_max}")
+    _logger.info(f"e_rtd_C [-]: {cool_CRAC.e_rtd}")
+    _logger.info(f"q_rtd_H [w]: {heat_CRAC.q_rtd}")
+    _logger.info(f"q_max_H [w]: {heat_CRAC.q_max}")
+    _logger.info(f"e_rtd_H [-]: {heat_CRAC.e_rtd}")
+
+def _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_setting):
+    climate = ClimateService(house.region, ufac, climateFile)
+    heat_quantity = HeatQuantityService(heat_ac_setting, house.region, house.A_A)
+    cool_quantity = CoolQuantityService(cool_ac_setting, house.region, house.A_A)
+    return climate, heat_quantity, cool_quantity
+
+def _get_virtual_heating_devices_and_modes(region):
+    H_MR = None
+    H_OR = None
+
+    spec_MR, spec_OR = get_virtual_heating_devices(region, H_MR, H_OR)
+    mode_MR, mode_OR = calc_heating_mode(region=region, H_MR=spec_MR, H_OR=spec_OR)
+    return spec_MR, spec_OR, mode_MR, mode_OR
+
+def _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setting, spec_MR, spec_OR, mode_MR, mode_OR):
+    return calc_heating_load(
+        house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR,
+        skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.TS,
+        skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation,
+        heat_ac_setting.mode.name, cool_ac_setting.mode.name,
+        spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC,
+    )
+
+def _override_heating_load_from_csv(L_H_d_t_i, loadFile):
+    if loadFile != '-':
+        load = pd.read_csv(loadFile, nrows=24 * 365)
+        return load.iloc[:, :12].T.values
+    return L_H_d_t_i
+
+def _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR):
+    return calc_cooling_load(
+        house.region, house.A_A, house.A_MR, house.A_OR,
+        skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR,
+        skin.r_A_ufvnt, skin.underfloor_insulation,
+        cool_ac_setting.mode.name, heat_ac_setting.mode.name,
+        mode_MR, mode_OR, skin.TS, hex.to_dict(),
+    )
+
+def _load_cooling_load_from_csv(loadFile):
+    load = pd.read_csv(loadFile, nrows=24 * 365)
+    L_CS_d_t_i = load.iloc[:, 12:24].T.values
+    L_CL_d_t_i = load.iloc[:, 24:].T.values
+    return L_CS_d_t_i, L_CL_d_t_i
+
+def _bind_load_dti(injector, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i):
+    load_dti = jjj_dc.Load_DTI(
+        L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i,
+        L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i,
+    )
+    injector.binder.bind(jjj_dc.Load_DTI, to=load_dti)
+
+def _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i):
+    L_H_d_t = np.sum(L_H_d_t_i, axis=0)
+    L_CS_d_t = np.sum(L_CS_d_t_i, axis=0)
+    L_CL_d_t = np.sum(L_CL_d_t_i, axis=0)
+    return L_H_d_t, L_CS_d_t, L_CL_d_t
+
+def _get_V_hs_dsgn_H(type: 計算モデル, v_fan_rtd, q_rtd_H):
+    if type in [
+        計算モデル.ダクト式セントラル空調機,
+        計算モデル.RAC活用型全館空調_潜熱評価モデル,
+    ]:
+        V_fan_rtd_H = v_fan_rtd
+    elif type in [
+        計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        計算モデル.電中研モデル,
+    ]:
+        V_fan_rtd_H = dc_spec.get_V_fan_rtd_H(q_rtd_H)
+    else:
+        raise Exception("暖房方式が不正です。")
+
+    return dc_spec.get_V_fan_dsgn_H(V_fan_rtd_H)
+
+def _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat_CRAC):
+    V_hs_dsgn_H = (
+        heat_ac_setting.V_hs_dsgn
+        if heat_ac_setting.V_hs_dsgn > 0
+        else _get_V_hs_dsgn_H(heat_ac_setting.type, heat_quantity.V_fan_rtd, heat_CRAC.q_rtd)
+    )
+    V_hs_dsgn_C = 0.0
+
+    assert isinstance(V_hs_dsgn_H, float), "V_hs_dsgn_Hの型が不正"
+    injector.binder.bind(jjj_dc.VHS_DSGN_H, to=V_hs_dsgn_H)
+    assert isinstance(V_hs_dsgn_C, float), "V_hs_dsgn_Cの型が不正"
+    injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
+    return V_hs_dsgn_H, V_hs_dsgn_C
+
+def _run_heating_calc_Q_UT_A(injector, heat_ac_setting):
+    injector.binder.bind(jjj_dc.ActiveAcSetting, to=heat_ac_setting)
+    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t = (
+        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
+    )
+    _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
+    _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
+    return E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t
+
 @inject
 def calc_main(
     injector: Injector,
@@ -204,36 +311,12 @@ def calc_main(
     heat_real_inner: jjj_denchu_heat_ipt.RealInnerCondition,
     cool_real_inner: jjj_denchu_cool_ipt.RealInnerCondition
     ) -> dict | None:
-    print("q_rtd_C, q_rtd_H, q_max_C, q_max_H, e_rtd_C, e_rtd_H")
-    print(cool_CRAC.q_rtd, heat_CRAC.q_rtd, cool_CRAC.q_max, heat_CRAC.q_max, cool_CRAC.e_rtd, heat_CRAC.e_rtd)
-
-    _logger.info(f"q_rtd_C [w]: {cool_CRAC.q_rtd}")  # q[W] 送風機の単位[W]と同じ
-    _logger.info(f"q_max_C [w]: {cool_CRAC.q_max}")
-    _logger.info(f"e_rtd_C [-]: {cool_CRAC.e_rtd}")
-    _logger.info(f"q_rtd_H [w]: {heat_CRAC.q_rtd}")
-    _logger.info(f"q_max_H [w]: {heat_CRAC.q_max}")
-    _logger.info(f"e_rtd_H [-]: {heat_CRAC.e_rtd}")
+    _log_equipment_specs(cool_CRAC, heat_CRAC)
 
     # ドメインサービス
-    climate = ClimateService(house.region, ufac, climateFile)
-    heat_quantity = HeatQuantityService(heat_ac_setting, house.region, house.A_A)
-    cool_quantity = CoolQuantityService(cool_ac_setting, house.region, house.A_A)
+    climate, heat_quantity, cool_quantity = _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_setting)
 
-    H_MR = None
-    """主たる居室暖房機器"""
-    H_OR = None
-    """その他居室暖房機器"""
-    H_HS = None
-    """温水暖房の種類"""
-    C_MR = None
-    """主たる居室冷房機器"""
-    C_OR = None
-    """その他居室冷房機器"""
-
-    # 実質的な暖房機器の仕様を取得
-    spec_MR, spec_OR = get_virtual_heating_devices(house.region, H_MR, H_OR)
-    # 暖房方式及び運転方法の区分
-    mode_MR, mode_OR = calc_heating_mode(region=house.region, H_MR=spec_MR, H_OR=spec_OR)
+    spec_MR, spec_OR, mode_MR, mode_OR = _get_virtual_heating_devices_and_modes(house.region)
 
     ##### 暖房負荷の取得（MJ/h）
     L_H_d_t_i: np.ndarray
@@ -242,13 +325,8 @@ def calc_main(
     with jjj_common.injector_context(injector):  # ネスト内からの利用に備える
         # L_dash_H_R_d_t_i, L_dash_CS_R_d_t_iは負荷ファイルから読み取れないため自動計算する。
         # 読み込んだ負荷と整合性が取れないため、正しい実装ではない。
-        L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = \
-            calc_heating_load(house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C
-                , skin.NV_MR, skin.NV_OR, skin.TS, skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation
-                , heat_ac_setting.mode.name, cool_ac_setting.mode.name, spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC)
-        if loadFile != '-':
-            load = pd.read_csv(loadFile, nrows=24 * 365)
-            L_H_d_t_i = load.iloc[::,:12].T.values
+        L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setting, spec_MR, spec_OR, mode_MR, mode_OR)
+        L_H_d_t_i = _override_heating_load_from_csv(L_H_d_t_i, loadFile)
 
         ##### 冷房負荷の取得（MJ/h）
         L_CS_d_t_i: np.ndarray
@@ -257,43 +335,18 @@ def calc_main(
         """冷房潜熱負荷 [MJ/h]"""
 
         if loadFile == '-':
-            L_CS_d_t_i, L_CL_d_t_i = \
-                calc_cooling_load(house.region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.r_A_ufvnt
-                        , skin.underfloor_insulation, cool_ac_setting.mode.name, heat_ac_setting.mode.name, mode_MR, mode_OR, skin.TS, hex.to_dict())
+            L_CS_d_t_i, L_CL_d_t_i = _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR)
         else:
-            load = pd.read_csv(loadFile, nrows=24 * 365)
-            L_CS_d_t_i = load.iloc[::,12:24].T.values
-            L_CL_d_t_i = load.iloc[::,24:].T.values
+            L_CS_d_t_i, L_CL_d_t_i = _load_cooling_load_from_csv(loadFile)
 
     # 負荷をあつめたデータクラス
-    injector.binder.bind(jjj_dc.Load_DTI, to=jjj_dc.Load_DTI(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i))
+    _bind_load_dti(injector, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i)
 
     # NOTE: 出力用の下記が計算できるのは、負荷が上書きされない前提
-    L_H_d_t: np.ndarray = np.sum(L_H_d_t_i, axis=0)
-    """暖房負荷の全区画合計 [MJ/h]"""
-    L_CS_d_t: np.ndarray = np.sum(L_CS_d_t_i, axis=0)
-    """冷房顕熱負荷の全区画合計 [MJ/h]"""
-    L_CL_d_t: np.ndarray = np.sum(L_CL_d_t_i, axis=0)
-    """冷房潜熱負荷の全区画合計 [MJ/h]"""
+    L_H_d_t, L_CS_d_t, L_CL_d_t = _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
 
     ##### 暖房消費電力の計算（kWh/h）
     print("暖房消費電力の計算")
-
-    def get_V_hs_dsgn_H(type: 計算モデル, v_fan_rtd, q_rtd_H):
-        if type in [
-            計算モデル.ダクト式セントラル空調機,
-            計算モデル.RAC活用型全館空調_潜熱評価モデル
-        ]:
-            V_fan_rtd_H = v_fan_rtd
-        elif type in [
-            計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
-            計算モデル.電中研モデル
-        ]:
-            V_fan_rtd_H = dc_spec.get_V_fan_rtd_H(q_rtd_H)
-        else:
-            raise Exception("暖房方式が不正です。")
-
-        return dc_spec.get_V_fan_dsgn_H(V_fan_rtd_H)
 
     def arr_summary(arr: np.ndarray):
         return {
@@ -302,28 +355,9 @@ def calc_main(
             "AVG  ": np.average(arr[np.nonzero(arr)])
         }
 
-    V_hs_dsgn_H: float =  \
-        heat_ac_setting.V_hs_dsgn if heat_ac_setting.V_hs_dsgn > 0  \
-        else get_V_hs_dsgn_H(heat_ac_setting.type, heat_quantity.V_fan_rtd, heat_CRAC.q_rtd)
-    """ 暖房時の送風機の設計風量 [m3/h] """
+    V_hs_dsgn_H, V_hs_dsgn_C = _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat_CRAC)
 
-    V_hs_dsgn_C: float = 0.0  # NOTE: 暖房負荷計算時は空
-    """ 冷房時の送風機の設計風量 [m3/h] """
-
-    # 型バインド
-    assert isinstance(V_hs_dsgn_H, float), "V_hs_dsgn_Hの型が不正"
-    injector.binder.bind(jjj_dc.VHS_DSGN_H, to=V_hs_dsgn_H)
-    assert isinstance(V_hs_dsgn_C, float), "V_hs_dsgn_Cの型が不正"
-    injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
-
-    injector.binder.bind(jjj_dc.ActiveAcSetting, to=heat_ac_setting)  # 暖房負荷アクティブ
-
-    E_UT_H_d_t: np.ndarray
-    """暖房設備の未処理暖房負荷の設計一次エネルギー消費量相当値(MJ/h)"""
-    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t = \
-        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
-    _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
-    _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
+    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = _run_heating_calc_Q_UT_A(injector, heat_ac_setting)
 
     if heat_ac_setting.type == 計算モデル.電中研モデル:
         R2, R1, R0, P_rac_fan_rtd_H = jjjexperiment.denchu.denchu_1.calc_R_and_Pc_H(heat_denchu_catalog)
