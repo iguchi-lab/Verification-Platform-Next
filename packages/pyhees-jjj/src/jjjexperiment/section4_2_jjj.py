@@ -820,6 +820,21 @@ class _ActualRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     Theta_uf_d_t: object
 
 
+class _UnderfloorActualNonRoomTemperatureInputs(NamedTuple):
+    Theta_star_NR: object
+    Theta_star_HBR: object
+    Theta_HBR_i: object
+    A_NR: object
+    V_vent_l_NR: object
+    V_dash_supply_i: object
+    V_supply_i: object
+    U_prt: object
+    A_prt_i: object
+    Q: object
+    Theta_uf: object
+    r_A_NR_1F_excl_bath: object
+
+
 class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     skin: object
     new_ufac: object
@@ -2413,20 +2428,20 @@ def _get_actual_non_room_temperatures_without_carryover(inputs: _ActualNonRoomTe
     r_A_NR_uf_1F_excl_bath = inputs.r_A_NR_uf_1F_excl_bath
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         return np.array([
-            get_Theta_NR(
-                Theta_star_NR=Theta_star_NR_d_t[t],
-                Theta_star_HBR=Theta_star_HBR_d_t[t],
-                Theta_HBR_i=Theta_HBR_d_t_i[:, t:t + 1],
-                A_NR=A_NR,
-                V_vent_l_NR=V_vent_l_NR_d_t[t],
-                V_dash_supply_i=V_dash_supply_d_t_i[:, t:t + 1],
-                V_supply_i=V_supply_d_t_i[:, t:t + 1],
-                U_prt=U_prt,
-                A_prt_i=A_prt_i.reshape(-1, 1),
-                Q=skin.Q,
-                Theta_uf=Theta_uf_d_t[t],
-                r_A_NR_1F_excl_bath=r_A_NR_uf_1F_excl_bath,
-            ) for t in range(24 * 365)
+            get_Theta_NR(*_UnderfloorActualNonRoomTemperatureInputs(
+                Theta_star_NR_d_t[t],
+                Theta_star_HBR_d_t[t],
+                Theta_HBR_d_t_i[:, t:t + 1],
+                A_NR,
+                V_vent_l_NR_d_t[t],
+                V_dash_supply_d_t_i[:, t:t + 1],
+                V_supply_d_t_i[:, t:t + 1],
+                U_prt,
+                A_prt_i.reshape(-1, 1),
+                skin.Q,
+                Theta_uf_d_t[t],
+                r_A_NR_uf_1F_excl_bath,
+            )) for t in range(24 * 365)
         ])
 
     # 改変なし元式
