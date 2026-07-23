@@ -479,6 +479,23 @@ def _bind_cooling_design_airflows(injector, cool_ac_setting, cool_quantity, cool
     assert isinstance(V_hs_dsgn_C, float), "V_hs_dsgn_Cの型が不正"
     injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
     return V_hs_dsgn_H, V_hs_dsgn_C
+def _get_cooling_fan_model(cool_ac_setting, V_hs_dsgn_C, cool_denchu_catalog, cool_real_inner, case_name):
+    simu_R_C = None
+    if cool_ac_setting.type == 計算モデル.電中研モデル:
+        R2, R1, R0, P_rac_fan_rtd_C = jjjexperiment.denchu.denchu_1.calc_R_and_Pc_C(cool_denchu_catalog)
+        P_rac_fan_rtd_C = 1000 * P_rac_fan_rtd_C
+        simu_R_C = jjjexperiment.denchu.denchu_2.simu_R(R2, R1, R0)
+        df_denchu_consts = jjjexperiment.denchu.denchu_1.get_DataFrame_denchu_modeling_consts(
+            cool_denchu_catalog, R2, R1, R0, cool_real_inner, P_rac_fan_rtd_C
+        )
+        df_denchu_consts.to_csv(
+            case_name + jjj_consts.version_info() + '_denchu_consts_C_output.csv',
+            encoding='cp932',
+        )
+    else:
+        P_rac_fan_rtd_C = V_hs_dsgn_C * cool_ac_setting.f_SFP
+    _logger.info(f"P_rac_fan_rtd_C [W]: {P_rac_fan_rtd_C}")
+    return P_rac_fan_rtd_C, simu_R_C
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
@@ -655,21 +672,13 @@ def calc_main(
     )
     injector.binder.bind(jjj_dc.ActiveAcSetting, to=cool_ac_setting)  # 冷房負荷アクティブ
 
-    if cool_ac_setting.type == 計算モデル.電中研モデル:
-        R2, R1, R0, P_rac_fan_rtd_C = jjjexperiment.denchu.denchu_1.calc_R_and_Pc_C(cool_denchu_catalog)
-        P_rac_fan_rtd_C = 1000 * P_rac_fan_rtd_C  # kW -> W
-        simu_R_C = jjjexperiment.denchu.denchu_2.simu_R(R2, R1, R0)
-
-        """ 電柱研モデルのモデリング定数の確認のためのCSV出力 """
-        df_denchu_consts = jjjexperiment.denchu.denchu_1 \
-            .get_DataFrame_denchu_modeling_consts(cool_denchu_catalog, R2, R1, R0, cool_real_inner, P_rac_fan_rtd_C)
-        df_denchu_consts.to_csv(case_name + jjj_consts.version_info() + '_denchu_consts_C_output.csv', encoding='cp932')
-        del R2, R1, R0
-    else:
-        P_rac_fan_rtd_C: float = V_hs_dsgn_C * cool_ac_setting.f_SFP
-    """定格冷房能力運転時の送風機の消費電力(W)"""
-    _logger.info(f"P_rac_fan_rtd_C [W]: {P_rac_fan_rtd_C}")
-
+    P_rac_fan_rtd_C, simu_R_C = _get_cooling_fan_model(
+        cool_ac_setting,
+        V_hs_dsgn_C,
+        cool_denchu_catalog,
+        cool_real_inner,
+        case_name,
+    )
     E_UT_C_d_t: np.ndarray  # NOTE: ベースプログラムでは E_UT_C, E_C_UT が統一されていない
     """冷房設備の未処理冷房負荷の設計一次エネルギー消費量相当値(MJ/h)"""
     E_UT_C_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = \
