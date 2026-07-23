@@ -37,11 +37,11 @@ body:
     id: work_package
     attributes:
       label: 作業パッケージとPR分割
-      description: 1つの設計上の成果、20〜30境界または500〜1,000行程度を目安にしたPR構成、必要なPR間の依存順を記載してください。
+      description: 1つの設計上の成果、低リスク領域では30〜50境界または800〜1,500行程度を目安にしたPR構成、必要なPR間の依存順を記載してください。
       placeholder: |
         設計上の成果：
-        想定規模：25境界、約800行
-        PR 1：境界1〜25
+        想定規模：40境界、約1,200行
+        PR 1：境界1〜40
         依存順：なし
     validations:
       required: true
