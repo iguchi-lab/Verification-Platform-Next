@@ -186,45 +186,93 @@ def override_CR(input: dict):
   if 'C1_NR_R' in input and input['C1_NR_R'] is not None:
     C1_NR_R = float(input['C1_NR_R'])  # UIでNumberチェック済み
 
-def set_constants(input: dict):
-  """ 更新したい部分のみの辞書でも利用可能
-  """
+def _set_Theta_hs_out_max_H_d_t_limit(input: dict):
   if 'Theta_hs_out_max_H_d_t_limit' in input:
     global Theta_hs_out_max_H_d_t_limit
     Theta_hs_out_max_H_d_t_limit = float(input['Theta_hs_out_max_H_d_t_limit'])
+
+
+def _set_Theta_hs_out_min_C_d_t_limit(input: dict):
   if 'Theta_hs_out_min_C_d_t_limit' in input:
     global Theta_hs_out_min_C_d_t_limit
     Theta_hs_out_min_C_d_t_limit = float(input['Theta_hs_out_min_C_d_t_limit'])
+
+
+def _set_C_df_H_d_t_defrost_ductcentral(input: dict):
   if 'C_df_H_d_t_defrost_ductcentral' in input:
     global C_df_H_d_t_defrost_ductcentral
     C_df_H_d_t_defrost_ductcentral = float(input['C_df_H_d_t_defrost_ductcentral'])
+
+
+def _set_defrost_temp_ductcentral(input: dict):
   if 'defrost_temp_ductcentral' in input:
     global defrost_temp_ductcentral
     defrost_temp_ductcentral = float(input['defrost_temp_ductcentral'])
+
+
+def _set_defrost_humid_ductcentral(input: dict):
   if 'defrost_humid_ductcentral' in input:
     global defrost_humid_ductcentral
     defrost_humid_ductcentral = float(input['defrost_humid_ductcentral'])
+
+
+def _set_phi_i(input: dict):
   if 'phi_i' in input:
     global phi_i
     phi_i = float(input['phi_i'])
+
+
+def _set_C_V_fan_dsgn_H(input: dict):
   if 'C_V_fan_dsgn_H' in input:
     global C_V_fan_dsgn_H
     C_V_fan_dsgn_H = float(input['C_V_fan_dsgn_H'])
+
+
+def _set_C_V_fan_dsgn_C(input: dict):
   if 'C_V_fan_dsgn_C' in input:
     global C_V_fan_dsgn_C
     C_V_fan_dsgn_C = float(input['C_V_fan_dsgn_C'])
+
+
+def _set_C_df_H_d_t_defrost_rac(input: dict):
   if 'C_df_H_d_t_defrost_rac' in input:
     global C_df_H_d_t_defrost_rac
     C_df_H_d_t_defrost_rac = float(input['C_df_H_d_t_defrost_rac'])
+
+
+def _set_defrost_temp_rac(input: dict):
   if 'defrost_temp_rac' in input:
     global defrost_temp_rac
     defrost_temp_rac = float(input['defrost_temp_rac'])
+
+
+def _set_defrost_humid_rac(input: dict):
   if 'defrost_humid_rac' in input:
     global defrost_humid_rac
     defrost_humid_rac = float(input['defrost_humid_rac'])
+
+
+def _set_C_hm_C(input: dict):
   if 'C_hm_C' in input:
     global C_hm_C
     C_hm_C = float(input['C_hm_C'])
+
+
+def set_constants(input: dict):
+  """ 更新したい部分のみの辞書でも利用可能
+  """
+  _set_Theta_hs_out_max_H_d_t_limit(input)
+  _set_Theta_hs_out_min_C_d_t_limit(input)
+  _set_C_df_H_d_t_defrost_ductcentral(input)
+  _set_defrost_temp_ductcentral(input)
+  _set_defrost_humid_ductcentral(input)
+  _set_phi_i(input)
+  _set_C_V_fan_dsgn_H(input)
+  _set_C_V_fan_dsgn_C(input)
+  _set_C_df_H_d_t_defrost_rac(input)
+  _set_defrost_temp_rac(input)
+  _set_defrost_humid_rac(input)
+  _set_C_hm_C(input)
   if 'q_rtd_C_limit' in input:
     global q_rtd_C_limit
     q_rtd_C_limit = float(input['q_rtd_C_limit'])
