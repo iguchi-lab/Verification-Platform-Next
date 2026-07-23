@@ -146,3 +146,8 @@ def test_get_k_prt_i_48_preserves_formula_48c():
     volume = np.arange(1.0, 6.0).reshape(5, 1) * 3600
     c_prt = np.full((5, 1), 7.0)
     np.testing.assert_array_equal(section4_2._get_k_prt_i_48(2.0, 3.0, volume, c_prt), 6.0 * volume / 3600 + c_prt)
+
+
+def test_get_k_evp_48_preserves_formula_48b():
+    expected = (2.5 - 0.35 * 0.5 * 2.4) * 40.0 + 1006.0 * 1.2 * (120.0 / 3600)
+    assert section4_2._get_k_evp_48(2.5, 40.0, 1006.0, 1.2, 120.0) == expected
