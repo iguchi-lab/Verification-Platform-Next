@@ -455,14 +455,14 @@ def test_export_standard_outputs_preserves_capacity_and_file_order(
             )
         )
 
-    sut._export_standard_outputs(
+    sut._export_standard_outputs(sut._StandardOutputExportInputs(
         "case",
         setting,
         house,
         frame(3),
         frame(4),
         frame(5),
-    )
+    ))
 
     assert calls == [
         ("capacity", "H", setting, house),
@@ -494,14 +494,14 @@ def test_export_standard_outputs_rejects_ambiguous_capacities(
     )
 
     with pytest.raises(Exception):
-        sut._export_standard_outputs(
+        sut._export_standard_outputs(sut._StandardOutputExportInputs(
             "case",
             object(),
             object(),
             object(),
             object(),
             object(),
-        )
+        ))
 
     assert calls == ["H", "C"]
 
@@ -3703,9 +3703,9 @@ def test_export_and_build_calculation_result_preserves_order(monkeypatch):
 
     assert events == [
         ("underfloor", (inputs[0], inputs[1], inputs[3], inputs[4])),
-        ("standard", (
+        ("standard", (sut._StandardOutputExportInputs(
             inputs[0], inputs[1], inputs[2],
-            inputs[5], inputs[6], inputs[7])),
+            inputs[5], inputs[6], inputs[7]),)),
     ]
     assert result == tuple(inputs[8:])
 

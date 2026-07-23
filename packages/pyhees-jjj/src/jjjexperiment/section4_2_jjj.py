@@ -645,6 +645,15 @@ class _UnprocessedEnergyInputs(NamedTuple):
     Q_UT_H_d_t_i: object
     region: object
 
+
+class _StandardOutputExportInputs(NamedTuple):
+    case_name: object
+    ac_setting: object
+    house: object
+    df_output3: object
+    df_output2: object
+    df_output: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1482,14 +1491,13 @@ def _export_underfloor_output(
         # ネスト関数内で更新されているデータフレーム
         new_ufac_df.export_to_csv(filename)
 
-def _export_standard_outputs(
-        case_name: CaseName,
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        df_output3: pd.DataFrame,
-        df_output2: pd.DataFrame,
-        df_output: pd.DataFrame,
-    ) -> None:
+def _export_standard_outputs(inputs: _StandardOutputExportInputs):
+    case_name = inputs.case_name
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    df_output3 = inputs.df_output3
+    df_output2 = inputs.df_output2
+    df_output = inputs.df_output
     match(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house)):
         case(None, None):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
@@ -2833,8 +2841,8 @@ def _export_and_build_calculation_result(inputs: _CalculationExportInputs):
     V_hs_vent_d_t = inputs.V_hs_vent_d_t
     _export_underfloor_output(
         case_name, ac_setting, new_ufac, new_ufac_df)
-    _export_standard_outputs(
-        case_name, ac_setting, house, df_output3, df_output2, df_output)
+    _export_standard_outputs(_StandardOutputExportInputs(
+        case_name, ac_setting, house, df_output3, df_output2, df_output))
     return (
         E_UT_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t,
         X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t,
