@@ -609,6 +609,15 @@ class _CarryoverAtHourInputs(NamedTuple):
     Theta_HBR_d_t_i: object
     Theta_star_HBR_d_t: object
 
+
+class _BalancedLoadsAtHourInputs(NamedTuple):
+    t: object
+    H: object
+    C: object
+    load: object
+    Q_star_trs_prt_d_t_i: object
+    carryover: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1268,15 +1277,14 @@ def _get_carryover_at_hour(inputs: _CarryoverAtHourInputs):
         # 空調がなくてもすぐ次のループに行かず (46)(48)式の計算は行う
         return np.zeros((5, 1))
 
-def _get_balanced_loads_at_hour(
-        t: int,
-        H: np.ndarray,
-        C: np.ndarray,
-        load: Load_DTI,
-        Q_star_trs_prt_d_t_i: np.ndarray,
-        carryover: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray]:
+def _get_balanced_loads_at_hour(inputs: _BalancedLoadsAtHourInputs):
     """Calculate formulas (8) and (9) for one hour in their original order."""
+    t = inputs.t
+    H = inputs.H
+    C = inputs.C
+    load = inputs.load
+    Q_star_trs_prt_d_t_i = inputs.Q_star_trs_prt_d_t_i
+    carryover = inputs.carryover
     # (8)　熱損失を含む負荷バランス時の暖房負荷
     L_star_H_i = jjj_carryover_heat.get_L_star_H_i_2024(
         H[t],
@@ -3508,8 +3516,8 @@ def calc_Q_UT_A(
             (
                 L_star_H_d_t_i[:, t:t+1],
                 L_star_CS_d_t_i[:, t:t+1],
-            ) = _get_balanced_loads_at_hour(
-                t, H, C, load, Q_star_trs_prt_d_t_i, carryover)
+            ) = _get_balanced_loads_at_hour(_BalancedLoadsAtHourInputs(
+                t, H, C, load, Q_star_trs_prt_d_t_i, carryover))
             capacity_state = _prepare_carryover_capacity_state(
                 ac_setting, house, heat_CRAC, cool_CRAC, load,
                 Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i)

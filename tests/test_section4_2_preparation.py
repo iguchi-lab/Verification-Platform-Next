@@ -1521,14 +1521,14 @@ def test_balanced_loads_at_hour_preserve_formula_order_and_slices(monkeypatch):
         lambda *args: calls.append(("cooling", args)) or outputs[1],
     )
 
-    result = sut._get_balanced_loads_at_hour(
+    result = sut._get_balanced_loads_at_hour(sut._BalancedLoadsAtHourInputs(
         1,
         np.array([False, True, False]),
         np.array([False, False, True]),
         SimpleNamespace(L_H_d_t_i=heating, L_CS_d_t_i=cooling),
         transfer,
         carryover,
-    )
+    ))
 
     assert result == outputs
     assert calls[0][0] == "heating"
