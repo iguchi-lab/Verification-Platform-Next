@@ -667,6 +667,15 @@ class _HeatSourceOutletOutputRecordInputs(NamedTuple):
     Theta_hs_out_max_H_d_t: object
     Theta_hs_out_d_t: object
 
+
+class _SupplyStateOutputRecordInputs(NamedTuple):
+    df_output: object
+    V_supply_d_t_i_before: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    Theta_HBR_d_t_i: object
+    Theta_NR_d_t: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -1584,14 +1593,13 @@ def _record_heat_source_outlet_outputs(inputs: _HeatSourceOutletOutputRecordInpu
         Theta_hs_out_d_t=Theta_hs_out_d_t,
     )
 
-def _record_supply_state_outputs(
-        df_output: pd.DataFrame,
-        V_supply_d_t_i_before: np.ndarray | None,
-        V_supply_d_t_i: np.ndarray,
-        Theta_supply_d_t_i: np.ndarray,
-        Theta_HBR_d_t_i: np.ndarray,
-        Theta_NR_d_t: np.ndarray,
-    ) -> pd.DataFrame:
+def _record_supply_state_outputs(inputs: _SupplyStateOutputRecordInputs):
+    df_output = inputs.df_output
+    V_supply_d_t_i_before = inputs.V_supply_d_t_i_before
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    Theta_NR_d_t = inputs.Theta_NR_d_t
     # NOTE: 2024/02/14 WG の話で出力してほしいデータになりました
     df_output = df_output.assign(
         V_supply_d_t_1_before=V_supply_d_t_i_before[0] if V_supply_d_t_i_before is not None else None,
@@ -2989,9 +2997,9 @@ def _record_common_outlet_and_supply_outputs(inputs: _CommonOutletSupplyOutputIn
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
         X_hs_out_d_t, Theta_hs_out_min_C_d_t,
         Theta_hs_out_max_H_d_t, Theta_hs_out_d_t))
-    return _record_supply_state_outputs(
+    return _record_supply_state_outputs(_SupplyStateOutputRecordInputs(
         df_output, V_supply_d_t_i_before, V_supply_d_t_i,
-        Theta_supply_d_t_i, Theta_HBR_d_t_i, Theta_NR_d_t)
+        Theta_supply_d_t_i, Theta_HBR_d_t_i, Theta_NR_d_t))
 
 
 def _record_capacity_state_outputs(inputs: _CapacityStateOutputInputs):

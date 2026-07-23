@@ -599,14 +599,14 @@ def test_record_supply_state_outputs_preserves_assign_order(before_is_none):
     theta_hbr = [object() for _ in range(5)]
     theta_nr = object()
 
-    result = sut._record_supply_state_outputs(
+    result = sut._record_supply_state_outputs(sut._SupplyStateOutputRecordInputs(
         frame,
         before,
         supply,
         theta_supply,
         theta_hbr,
         theta_nr,
-    )
+    ))
 
     expected_before = [None] * 5 if before_is_none else before_values
     assert result.generation == 4
@@ -3470,9 +3470,9 @@ def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
     assert result is supply_frame
     assert [event[0] for event in events] == ["outlet", "supply"]
     assert events[0][1][0].df_output is original
-    assert events[1][1][0] is outlet_frame
+    assert events[1][1][0].df_output is outlet_frame
     assert tuple(events[0][1][0])[1:] == tuple(inputs[:9])
-    assert events[1][1][1:] == tuple(inputs[9:])
+    assert tuple(events[1][1][0])[1:] == tuple(inputs[9:])
 
 
 def test_prepare_heat_source_outlet_temperature_output_preserves_formula_14(
