@@ -186,12 +186,16 @@ def override_CR(input: dict):
   if 'C1_NR_R' in input and input['C1_NR_R'] is not None:
     C1_NR_R = float(input['C1_NR_R'])  # UIでNumberチェック済み
 
-def set_constants(input: dict):
-  """ 更新したい部分のみの辞書でも利用可能
-  """
+def _set_Theta_hs_out_max_H_d_t_limit(input: dict):
   if 'Theta_hs_out_max_H_d_t_limit' in input:
     global Theta_hs_out_max_H_d_t_limit
     Theta_hs_out_max_H_d_t_limit = float(input['Theta_hs_out_max_H_d_t_limit'])
+
+
+def set_constants(input: dict):
+  """ 更新したい部分のみの辞書でも利用可能
+  """
+  _set_Theta_hs_out_max_H_d_t_limit(input)
   if 'Theta_hs_out_min_C_d_t_limit' in input:
     global Theta_hs_out_min_C_d_t_limit
     Theta_hs_out_min_C_d_t_limit = float(input['Theta_hs_out_min_C_d_t_limit'])
