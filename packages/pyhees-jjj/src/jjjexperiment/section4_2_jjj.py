@@ -425,6 +425,23 @@ class _CalculationExportInputs(NamedTuple):
     V_hs_vent_d_t: object
 
 
+class _CappedSupplyAirflowInputs(NamedTuple):
+    v_supply_cap_dto: object
+    ac_setting: object
+    house: object
+    L_star_H_d_t_i: object
+    L_star_CS_d_t_i: object
+    Theta_sur_d_t_i: object
+    l_duct_i: object
+    Theta_star_HBR_d_t: object
+    V_vent_g_i: object
+    V_dash_supply_d_t_i: object
+    Theta_hs_out_d_t: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    print_exec: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -885,23 +902,22 @@ def _get_heat_source_outlet_temperatures(
         Theta_hs_out_d_t,
     )
 
-def _get_capped_supply_airflows(
-        v_supply_cap_dto: VSupplyCapDto,
-        ac_setting: ActiveAcSetting,
-        house: HouseInfo,
-        L_star_H_d_t_i: np.ndarray,
-        L_star_CS_d_t_i: np.ndarray,
-        Theta_sur_d_t_i: np.ndarray,
-        l_duct_i: np.ndarray,
-        Theta_star_HBR_d_t: np.ndarray,
-        V_vent_g_i: np.ndarray,
-        V_dash_supply_d_t_i: np.ndarray,
-        Theta_hs_out_d_t: np.ndarray,
-        V_hs_dsgn_H: float | None,
-        V_hs_dsgn_C: float | None,
-        print_exec: bool,
-    ) -> tuple[np.ndarray, np.ndarray]:
+def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
     """Calculate and cap formula (43) while preserving JJJ diagnostics."""
+    v_supply_cap_dto = inputs.v_supply_cap_dto
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    L_star_H_d_t_i = inputs.L_star_H_d_t_i
+    L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_sur_d_t_i = inputs.Theta_sur_d_t_i
+    l_duct_i = inputs.l_duct_i
+    Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
+    V_vent_g_i = inputs.V_vent_g_i
+    V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Theta_hs_out_d_t = inputs.Theta_hs_out_d_t
+    V_hs_dsgn_H = inputs.V_hs_dsgn_H
+    V_hs_dsgn_C = inputs.V_hs_dsgn_C
+    print_exec = inputs.print_exec
     # (43)　暖冷房区画𝑖の吹き出し風量
     V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                 , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
@@ -2579,11 +2595,11 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
     Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
     Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
-    capped_airflows = _get_capped_supply_airflows(
+    capped_airflows = _get_capped_supply_airflows(_CappedSupplyAirflowInputs(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
         V_vent_g_i, V_dash_supply_d_t_i, Theta_hs_out_d_t,
-        V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True)
+        V_hs_dsgn_H, V_hs_dsgn_C, print_exec=True))
     V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
     V_supply_d_t_i = capped_airflows.V_supply_d_t_i
     Theta_supply_d_t_i = _get_supply_air_temperatures(
@@ -2965,11 +2981,11 @@ def _prepare_carryover_supply_state(inputs: _CarryoverSupplyInputs):
     Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
     Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
     Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
-    capped_airflows = _get_capped_supply_airflows(
+    capped_airflows = _get_capped_supply_airflows(_CappedSupplyAirflowInputs(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i,
         Theta_star_HBR_d_t, V_vent_g_i, V_dash_supply_d_t_i,
-        Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False)
+        Theta_hs_out_d_t, V_hs_dsgn_H, V_hs_dsgn_C, print_exec=False))
     V_supply_d_t_i_before = capped_airflows.V_supply_d_t_i_before
     V_supply_d_t_i = capped_airflows.V_supply_d_t_i
     Theta_supply_d_t_i = _get_supply_air_temperatures(

@@ -1176,13 +1176,13 @@ def test_capped_supply_airflows_preserve_call_order_and_diagnostics(
         lambda *args, **kwargs: calls.append(("cap", args, kwargs)) or after,
     )
 
-    result = sut._get_capped_supply_airflows(
+    result = sut._get_capped_supply_airflows(sut._CappedSupplyAirflowInputs(
         cap,
         setting,
         house,
         *inputs,
         print_exec=print_exec,
-    )
+    ))
 
     assert result == (before, after)
     assert calls == [
@@ -4292,4 +4292,27 @@ def test_calculation_export_inputs_preserve_field_order():
         "X_hs_in_d_t",
         "V_hs_supply_d_t",
         "V_hs_vent_d_t",
+    )
+
+
+def test_capped_supply_airflow_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(14))
+    inputs = sut._CappedSupplyAirflowInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "v_supply_cap_dto",
+        "ac_setting",
+        "house",
+        "L_star_H_d_t_i",
+        "L_star_CS_d_t_i",
+        "Theta_sur_d_t_i",
+        "l_duct_i",
+        "Theta_star_HBR_d_t",
+        "V_vent_g_i",
+        "V_dash_supply_d_t_i",
+        "Theta_hs_out_d_t",
+        "V_hs_dsgn_H",
+        "V_hs_dsgn_C",
+        "print_exec",
     )
