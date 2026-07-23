@@ -2,6 +2,12 @@ import pyhees.section4_2 as dc
 # JJJ
 from jjjexperiment.common import JJJ_HCM, jjj_cloning
 
+def _get_formula_52_properties():
+    c_p_air = dc.get_c_p_air()
+    rho_air = dc.get_rho_air()
+    U_s = dc.get_U_s()
+    return c_p_air, rho_air, U_s
+
 # NOTE: θ*NR,d,t は、室温の計算時に、床下からの貫流分を考慮(2025/03)
 @jjj_cloning  # section4_2/get_Theta_star_NR_d_t
 def get_Theta_star_NR(
@@ -39,9 +45,7 @@ def get_Theta_star_NR(
     # NOTE: 新床下空調ロジックのみで使用可能
 
     # vectorize可能
-    c_p_air = dc.get_c_p_air()
-    rho_air = dc.get_rho_air()
-    U_s = dc.get_U_s()  # U_s_vert でないチェック済み
+    c_p_air, rho_air, U_s = _get_formula_52_properties()
 
     #260112 非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
     A_NR_1F = A_NR * r_A_NR_1F_excl_bath
