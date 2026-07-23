@@ -3399,8 +3399,8 @@ def test_export_carryover_diagnostics_preserves_columns_and_filename(
     monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_version")
     values = [object() for _ in range(5)]
 
-    sut._export_carryover_diagnostics(
-        "case", object(), object(), carryover, Frame(), values)
+    sut._export_carryover_diagnostics(sut._CarryoverDiagnosticExportInputs(
+        "case", object(), object(), carryover, Frame(), values))
 
     if mode == "disabled":
         assert events == []

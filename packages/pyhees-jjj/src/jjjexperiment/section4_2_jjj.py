@@ -981,6 +981,15 @@ class _HeatSourceOutletTemperatureOutputInputs(NamedTuple):
     Theta_hs_out_min_C_d_t: object
 
 
+class _CarryoverDiagnosticExportInputs(NamedTuple):
+    case_name: object
+    ac_setting: object
+    house: object
+    carryover_heat_dto: object
+    df_carryover_output: object
+    carryovers: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -3417,10 +3426,14 @@ def _record_capacity_state_outputs(inputs: _CapacityStateOutputInputs):
     return df_output, df_output3
 
 
-def _export_carryover_diagnostics(
-        case_name, ac_setting, house, carryover_heat_dto,
-        df_carryover_output, carryovers):
+def _export_carryover_diagnostics(inputs: _CarryoverDiagnosticExportInputs):
     """Export carryover diagnostics with the legacy mode-specific filename."""
+    case_name = inputs.case_name
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    carryover_heat_dto = inputs.carryover_heat_dto
+    df_carryover_output = inputs.df_carryover_output
+    carryovers = inputs.carryovers
     if carryover_heat_dto.carry_over_heat != 過剰熱量繰越計算.行う:
         return
     df_carryover_output = df_carryover_output.assign(
@@ -4072,9 +4085,9 @@ def calc_Q_UT_A(
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
     _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t)
 
-    _export_carryover_diagnostics(
+    _export_carryover_diagnostics(_CarryoverDiagnosticExportInputs(
         case_name, ac_setting, house, carryover_heat_dto,
-        df_carryover_output, carryovers if "carryovers" in locals() else None)
+        df_carryover_output, carryovers if "carryovers" in locals() else None))
 
     """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
     df_output = _record_balanced_load_outputs(
