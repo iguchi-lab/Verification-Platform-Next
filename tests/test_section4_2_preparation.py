@@ -2761,7 +2761,7 @@ def test_prepare_rated_heat_source_capacity_state_preserves_write_order(monkeypa
         or sut._RatedHeatSourceCapacitiesResult(heating, cooling),
     )
 
-    result = sut._prepare_rated_heat_source_capacity_state(Frame(), *inputs)
+    result = sut._prepare_rated_heat_source_capacity_state(sut._RatedHeatSourceCapacityStateInputs(Frame(), *inputs))
 
     assert result == (heating, cooling)
     assert events == [

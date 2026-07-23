@@ -829,6 +829,14 @@ class _BalancedRoomAndDuctStateInputs(NamedTuple):
     l_duct_in_i: object
     l_duct_ex_i: object
 
+
+class _RatedHeatSourceCapacityStateInputs(NamedTuple):
+    df_output3: object
+    ac_setting: object
+    house: object
+    heat_CRAC: object
+    cool_CRAC: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2532,9 +2540,13 @@ def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
     df_output3['V_hs_min'] = [V_hs_min]
     return V_hs_min
 
-def _prepare_rated_heat_source_capacity_state(
-        df_output3, ac_setting, house, heat_CRAC, cool_CRAC):
+def _prepare_rated_heat_source_capacity_state(inputs: _RatedHeatSourceCapacityStateInputs):
     """Prepare rated heat-source capacities and preserve output write order."""
+    df_output3 = inputs.df_output3
+    ac_setting = inputs.ac_setting
+    house = inputs.house
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
     rated_capacities = _get_rated_heat_source_capacities(
         ac_setting,
         house,
@@ -3633,13 +3645,13 @@ def calc_Q_UT_A(
     ))
     # (39)　熱源機の最低風量
     V_hs_min = _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i)
-    Q_hs_rtd_H, Q_hs_rtd_C = _prepare_rated_heat_source_capacity_state(
+    Q_hs_rtd_H, Q_hs_rtd_C = _prepare_rated_heat_source_capacity_state(_RatedHeatSourceCapacityStateInputs(
         df_output3,
         ac_setting,
         house,
         heat_CRAC,
         cool_CRAC,
-    )
+    ))
     (
         Theta_in_d_t,
         Phi_A_0,
