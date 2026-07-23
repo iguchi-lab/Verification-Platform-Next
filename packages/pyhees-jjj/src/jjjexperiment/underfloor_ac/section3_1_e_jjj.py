@@ -57,6 +57,24 @@ def _get_floor_area_and_supply(A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, 
     )
     return A_s_ufvnt, r_A_uf_i, V_dash_supply_flr1st_d_t
 
+def _get_floor_season_masks_and_loads(Theta_ex_d_t, Theta_in_H, Theta_in_C, r_A_uf_i, endi, L_star_H_d_t_i, L_star_CS_d_t_i):
+    H = Theta_ex_d_t < Theta_in_H
+    C = Theta_ex_d_t > Theta_in_C
+    M = np.logical_not(np.logical_or(H, C))
+
+    L_star_H_flr1st_d_t = np.zeros(24 * 365)
+    L_star_H_flr1st_d_t[H] = np.sum(
+        r_A_uf_i[:endi, np.newaxis] * L_star_H_d_t_i[:endi, H], axis=0
+    ) * 1000
+    L_star_CS_flr1st_d_t = np.zeros(24 * 365)
+    L_star_CS_flr1st_d_t[C] = np.sum(
+        r_A_uf_i[:endi, np.newaxis] * L_star_CS_d_t_i[:endi, C], axis=0
+    ) * 1000
+
+    assert L_star_H_flr1st_d_t.shape == (24 * 365,)
+    assert L_star_CS_flr1st_d_t.shape == (24 * 365,)
+    return H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t
+
 @log_res(['Theta_uf_d_t'])
 def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t):
     """定常状態での床下温度を求める
@@ -92,22 +110,7 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
     # 当該住戸の暖冷房区画iの空気を供給する床下空間に接する床の面積 (m2) (7)
     A_s_ufvnt, r_A_uf_i, V_dash_supply_flr1st_d_t = _get_floor_area_and_supply(A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, endi)
 
-    H = Theta_ex_d_t < Theta_in_H
-    C = Theta_ex_d_t > Theta_in_C
-    M = np.logical_not(np.logical_or(H, C))
-
-    # TODO: 冷房が 暖房と同じでよいかは要検討
-    L_star_H_flr1st_d_t = np.zeros(24 * 365)
-    L_star_H_flr1st_d_t[H]  \
-      = np.sum(r_A_uf_i[:endi, np.newaxis] * L_star_H_d_t_i[:endi, H], axis=0)  \
-        * 1000  # [kJ/h]
-    L_star_CS_flr1st_d_t = np.zeros(24 * 365)
-    L_star_CS_flr1st_d_t[C]  \
-      = np.sum(r_A_uf_i[:endi, np.newaxis] * L_star_CS_d_t_i[:endi, C], axis=0)  \
-        * 1000  # [kJ/h]
-
-    assert L_star_H_flr1st_d_t.shape == (24 * 365,)
-    assert L_star_CS_flr1st_d_t.shape == (24 * 365,)
+    H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t = _get_floor_season_masks_and_loads(Theta_ex_d_t, Theta_in_H, Theta_in_C, r_A_uf_i, endi, L_star_H_d_t_i, L_star_CS_d_t_i)
 
     # upper2_H = U_s * A_s_ufvnt * ((Theta_in_H - Theta_ex_d_t[H]) * H_floor - Theta_in_H) * 3.6
     # upper2_C = U_s * A_s_ufvnt * ((Theta_in_C - Theta_ex_d_t[C]) * H_floor - Theta_in_C) * 3.6
