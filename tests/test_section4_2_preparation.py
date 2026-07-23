@@ -3178,7 +3178,8 @@ def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, st
         sut, "_get_rac_cooling_capacity",
         lambda *a, **k: events.append(("rac_cool", a, k)) or cool_caps)
 
-    result = sut._prepare_carryover_capacity_state(setting, *inputs)
+    result = sut._prepare_carryover_capacity_state(
+        sut._CarryoverCapacityStateInputs(setting, *inputs))
 
     expected = (["loads", "standard"] if standard
                 else ["defrost", "rac_heat", "rac_cool"])
