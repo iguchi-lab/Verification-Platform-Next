@@ -26,6 +26,10 @@ def _subtract_Q_hat_hs_H_gains_40_1b(Q_hat_hs_H, mu_H, A_A, J, q_gen, n_p, q_p_H
     return Q_hat_hs_H
 
 
+def _get_Q_hat_hs_H_40_1a(Q_hat_hs_H):
+    return max(Q_hat_hs_H * 3600 * 1e-6, 0)
+
+
 @jjj_cloning
 def calc_Q_hat_hs(
         Q: float,
@@ -79,7 +83,7 @@ def calc_Q_hat_hs(
             Q_hat_hs_H = _get_Q_hat_hs_H_envelope_40_1b(Q, A_A, c_p_air, rho_air, V_vent_l, sum_V_vent_g_i, Theta_set_H, Theta_ex)
             Q_hat_hs_H = _subtract_Q_hat_hs_H_gains_40_1b(Q_hat_hs_H, mu_H, A_A, J, q_gen, n_p, q_p_H)
             # (40-1a)
-            return max(Q_hat_hs_H * 3600 * 1e-6, 0)
+            return _get_Q_hat_hs_H_40_1a(Q_hat_hs_H)
 
         case JJJ_HCM.C:
             # (40-2b)
