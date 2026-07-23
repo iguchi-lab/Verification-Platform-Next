@@ -64,6 +64,7 @@ def test_set_constants_int_boundary(key, value, expected):
   [
     ('A_f_hex_small', 'A_f_hex_small_H', '2.75', 2.75),
     ('A_e_hex_small', 'A_e_hex_small_H', '2.75', 2.75),
+    ('A_f_hex_large', 'A_f_hex_large_H', '2.75', 2.75),
   ],
 )
 def test_set_constants_H_A_float_boundary(nested_key, target, value, expected):
