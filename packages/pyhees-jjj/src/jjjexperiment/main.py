@@ -206,6 +206,15 @@ def _get_virtual_heating_devices_and_modes(region):
     mode_MR, mode_OR = calc_heating_mode(region=region, H_MR=spec_MR, H_OR=spec_OR)
     return spec_MR, spec_OR, mode_MR, mode_OR
 
+def _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setting, spec_MR, spec_OR, mode_MR, mode_OR):
+    return calc_heating_load(
+        house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR,
+        skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.TS,
+        skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation,
+        heat_ac_setting.mode.name, cool_ac_setting.mode.name,
+        spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC,
+    )
+
 @inject
 def calc_main(
     injector: Injector,
@@ -243,10 +252,7 @@ def calc_main(
     with jjj_common.injector_context(injector):  # ネスト内からの利用に備える
         # L_dash_H_R_d_t_i, L_dash_CS_R_d_t_iは負荷ファイルから読み取れないため自動計算する。
         # 読み込んだ負荷と整合性が取れないため、正しい実装ではない。
-        L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = \
-            calc_heating_load(house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR, skin.Q, skin.mu_H, skin.mu_C
-                , skin.NV_MR, skin.NV_OR, skin.TS, skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation
-                , heat_ac_setting.mode.name, cool_ac_setting.mode.name, spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC)
+        L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setting, spec_MR, spec_OR, mode_MR, mode_OR)
         if loadFile != '-':
             load = pd.read_csv(loadFile, nrows=24 * 365)
             L_H_d_t_i = load.iloc[::,:12].T.values
