@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, NamedTuple, NewType
+from typing import NamedTuple, NewType
 import numpy as np
 import pandas as pd
 from datetime import datetime
