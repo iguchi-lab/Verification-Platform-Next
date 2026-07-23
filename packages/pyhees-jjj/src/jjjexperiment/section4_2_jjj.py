@@ -367,6 +367,24 @@ class _CarryoverActualTemperatureInputs(NamedTuple):
     Theta_NR_d_t: object
 
 
+class _CommonOutletSupplyOutputInputs(NamedTuple):
+    df_output: object
+    X_star_hs_in_d_t: object
+    Theta_star_hs_in_d_t: object
+    X_hs_out_min_C_d_t: object
+    X_req_d_t_i: object
+    Theta_req_d_t_i: object
+    X_hs_out_d_t: object
+    Theta_hs_out_min_C_d_t: object
+    Theta_hs_out_max_H_d_t: object
+    Theta_hs_out_d_t: object
+    V_supply_d_t_i_before: object
+    V_supply_d_t_i: object
+    Theta_supply_d_t_i: object
+    Theta_HBR_d_t_i: object
+    Theta_NR_d_t: object
+
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2676,14 +2694,23 @@ def _prepare_heat_source_outlet_temperature_output(
     return Theta_hs_out_d_t, df_output
 
 
-def _record_common_outlet_and_supply_outputs(
-        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
-        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
-        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
-        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
-        Theta_HBR_d_t_i, Theta_NR_d_t):
+def _record_common_outlet_and_supply_outputs(inputs: _CommonOutletSupplyOutputInputs):
     """Record common heat-source outlet then supply state outputs."""
+    df_output = inputs.df_output
+    X_star_hs_in_d_t = inputs.X_star_hs_in_d_t
+    Theta_star_hs_in_d_t = inputs.Theta_star_hs_in_d_t
+    X_hs_out_min_C_d_t = inputs.X_hs_out_min_C_d_t
+    X_req_d_t_i = inputs.X_req_d_t_i
+    Theta_req_d_t_i = inputs.Theta_req_d_t_i
+    X_hs_out_d_t = inputs.X_hs_out_d_t
+    Theta_hs_out_min_C_d_t = inputs.Theta_hs_out_min_C_d_t
+    Theta_hs_out_max_H_d_t = inputs.Theta_hs_out_max_H_d_t
+    Theta_hs_out_d_t = inputs.Theta_hs_out_d_t
+    V_supply_d_t_i_before = inputs.V_supply_d_t_i_before
+    V_supply_d_t_i = inputs.V_supply_d_t_i
+    Theta_supply_d_t_i = inputs.Theta_supply_d_t_i
+    Theta_HBR_d_t_i = inputs.Theta_HBR_d_t_i
+    Theta_NR_d_t = inputs.Theta_NR_d_t
     df_output = _record_heat_source_outlet_outputs(
         df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
@@ -3405,13 +3432,13 @@ def calc_Q_UT_A(
         Q_hs_max_CS_d_t, Q_hs_max_H_d_t)
 
     """ 熱源機の出口・吹出口 - 負荷バランス時 / 実際 """
-    df_output = _record_common_outlet_and_supply_outputs(
+    df_output = _record_common_outlet_and_supply_outputs(_CommonOutletSupplyOutputInputs(
         df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
         X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
         X_hs_out_d_t, Theta_hs_out_min_C_d_t,
         Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
         V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
-        Theta_HBR_d_t_i, Theta_NR_d_t)
+        Theta_HBR_d_t_i, Theta_NR_d_t))
     """ 吹出口 - 熱源機の出口 """
     # (14)　熱源機の出口における空気温度
     Theta_hs_out_d_t, df_output = \

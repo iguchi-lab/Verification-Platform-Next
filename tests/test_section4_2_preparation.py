@@ -3460,8 +3460,8 @@ def test_record_common_outlet_and_supply_outputs_preserves_generation_order(
         sut, "_record_supply_state_outputs",
         lambda *a: events.append(("supply", a)) or supply_frame)
 
-    result = sut._record_common_outlet_and_supply_outputs(
-        original, *inputs)
+    result = sut._record_common_outlet_and_supply_outputs(sut._CommonOutletSupplyOutputInputs(
+        original, *inputs))
 
     assert result is supply_frame
     assert [event[0] for event in events] == ["outlet", "supply"]
@@ -4215,5 +4215,29 @@ def test_carryover_actual_temperature_inputs_preserve_field_order():
         "A_NR",
         "V_vent_l_NR_d_t",
         "V_dash_supply_d_t_i",
+        "Theta_NR_d_t",
+    )
+
+
+def test_common_outlet_supply_output_inputs_preserve_field_order():
+    values = tuple(object() for _ in range(15))
+    inputs = sut._CommonOutletSupplyOutputInputs(*values)
+
+    assert tuple(inputs) == values
+    assert inputs._fields == (
+        "df_output",
+        "X_star_hs_in_d_t",
+        "Theta_star_hs_in_d_t",
+        "X_hs_out_min_C_d_t",
+        "X_req_d_t_i",
+        "Theta_req_d_t_i",
+        "X_hs_out_d_t",
+        "Theta_hs_out_min_C_d_t",
+        "Theta_hs_out_max_H_d_t",
+        "Theta_hs_out_d_t",
+        "V_supply_d_t_i_before",
+        "V_supply_d_t_i",
+        "Theta_supply_d_t_i",
+        "Theta_HBR_d_t_i",
         "Theta_NR_d_t",
     )
