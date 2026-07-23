@@ -4,6 +4,26 @@ import pyhees.section4_2 as dc
 from .inputs.v_supply_cap_dto import VSupplyCapDto
 from jjjexperiment.inputs.options import Vサプライの上限キャップ
 
+
+def _expand_ventilation_airflow(V_vent_g_i: np.ndarray) -> np.ndarray:
+    V_vent_g_i = np.reshape(V_vent_g_i, (5, 1))
+    return V_vent_g_i.repeat(24 * 365, axis=1)
+
+
+def _get_season_arrays(region: int):
+    return dc.get_season_array_d_t(region)
+
+
+def _cap_legacy_supply_airflow(
+        V_supply_d_t_i: np.ndarray,
+        V_dash_supply_d_t_i: np.ndarray,
+        V_vent_g_i: np.ndarray,
+) -> np.ndarray:
+    # 吹き出し風量V_(supply,d,t,i)は、VAV調整前の吹き出し風量V_(supply,d,t,i)^'を上回る場合はVAV調整前の
+    # 吹き出し風量V_(supply,d,t,i)^'に等しいとし、全般換気量V_(vent,g,i)を下回る場合は全般換気量V_(vent,g,i)に等しいとする
+    return np.clip(V_supply_d_t_i, V_vent_g_i, V_dash_supply_d_t_i)
+
+
 # NOTE: 過剰熱量ループ内でも使用しているため
 # @log_res(['V_supply_d_t_i'])
 def cap_V_supply_d_t_i(
@@ -14,7 +34,7 @@ def cap_V_supply_d_t_i(
         region: int,
         V_hs_dsgn_H: float,
         V_hs_dsgn_C: float,
-        print_exec = True):
+        print_exec=True):
     """
     Args:
         V_supply_d_t_i: 未キャップ 日付dの時刻tにおける 暖冷房区画iの吹き出し風量 [m3/h]
@@ -28,20 +48,20 @@ def cap_V_supply_d_t_i(
         V_supply_d_t_i: キャップ済 日付dの時刻tにおける 暖冷房区画iの吹き出し風量 [m3/h]
 
     """
-    V_vent_g_i = np.reshape(V_vent_g_i, (5, 1))
-    V_vent_g_i = V_vent_g_i.repeat(24 * 365, axis=1)
+    V_vent_g_i = _expand_ventilation_airflow(V_vent_g_i)
 
-    H, C, M = dc.get_season_array_d_t(region)
+    H, C, M = _get_season_arrays(region)
 
     if V_supply_cap_dto.v_supply_cap_logic == Vサプライの上限キャップ.従来:
-        if print_exec: print(Vサプライの上限キャップ.従来)
-
-        # 吹き出し風量V_(supply,d,t,i)は、VAV調整前の吹き出し風量V_(supply,d,t,i)^'を上回る場合はVAV調整前の \
-        # 吹き出し風量V_(supply,d,t,i)^'に等しいとし、全般換気量V_(vent,g,i)を下回る場合は全般換気量V_(vent,g,i)に等しいとする
-        new_V_supply_d_t_i = np.clip(V_supply_d_t_i, V_vent_g_i, V_dash_supply_d_t_i)
+        if print_exec:
+            print(Vサプライの上限キャップ.従来)
+        new_V_supply_d_t_i = _cap_legacy_supply_airflow(
+            V_supply_d_t_i, V_dash_supply_d_t_i, V_vent_g_i,
+        )
 
     elif V_supply_cap_dto.v_supply_cap_logic == Vサプライの上限キャップ.設計風量_全室で均一:
-        if print_exec: print(Vサプライの上限キャップ.設計風量_全室で均一)
+        if print_exec:
+            print(Vサプライの上限キャップ.設計風量_全室で均一)
         # 委員より提案 案1('24/01)
 
         """ 設計風量をキャップ上限とする """
@@ -73,7 +93,8 @@ def cap_V_supply_d_t_i(
         assert all(check[C] <= V_hs_dsgn_C)
 
     elif V_supply_cap_dto.v_supply_cap_logic == Vサプライの上限キャップ.設計風量_風量増室のみ:
-        if print_exec: print(Vサプライの上限キャップ.設計風量_風量増室のみ)
+        if print_exec:
+            print(Vサプライの上限キャップ.設計風量_風量増室のみ)
         # 委員より提案 案2('24/01)
 
         """ 設計風量をキャップ上限とする """
