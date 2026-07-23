@@ -96,6 +96,50 @@ def test_uniform_logic_preserves_none_design_airflow_as_unbounded(monkeypatch):
     np.testing.assert_array_equal(result[:, 0], [20, 30, 80, 120, 200])
 
 
+def test_prepare_supply_cap_state_preserves_clip_totals_and_season_masks():
+    H, C, _ = _seasons()
+    state = sut._prepare_supply_cap_state(
+        _hourly_zones([10, 30, 80, 120, 200]),
+        _hourly_zones([20, 20, 20, 20, 20]),
+        H,
+        C,
+        400,
+        500,
+    )
+
+    np.testing.assert_array_equal(state.V_supply_d_t_i[:, 0], [20, 30, 80, 120, 200])
+    assert state.V_supply_d_t[0] == 450
+    assert state.overflow_mask_H_d_t[0]
+    assert not state.overflow_mask_C_d_t[0]
+    assert not state.overflow_mask_H_d_t[1]
+    assert not state.overflow_mask_C_d_t[1]
+
+
+def test_uniform_reduction_ratio_preserves_ceiling_rounding_and_default_one():
+    totals = np.array([550.0001, 540.0])
+    mask = np.array([True, False])
+
+    result = sut._get_uniform_reduction_ratio(totals, 550.0, mask)
+
+    np.testing.assert_array_equal(result, [550.0 / 550.001, 1.0])
+
+
+def test_uniform_design_cap_preserves_heating_then_cooling_ratio_application():
+    supply = np.array([[200.0, 200.0], [100.0, 100.0]])
+    state = sut._SupplyCapState(
+        supply,
+        np.array([300.0, 300.0]),
+        np.array([True, False]),
+        np.array([False, True]),
+    )
+
+    result = sut._apply_uniform_design_cap(state, 270.0, 240.0)
+
+    np.testing.assert_array_equal(
+        result,
+        supply * np.array([0.9, 0.8])[np.newaxis, :],
+    )
+
 def test_public_orchestration_preserves_invalid_logic_error_after_season_lookup(monkeypatch):
     calls = []
     monkeypatch.setattr(

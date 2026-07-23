@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 import numpy as np
 import pyhees.section4_2 as dc
 
@@ -23,6 +25,81 @@ def _cap_legacy_supply_airflow(
     # 吹き出し風量V_(supply,d,t,i)^'に等しいとし、全般換気量V_(vent,g,i)を下回る場合は全般換気量V_(vent,g,i)に等しいとする
     return np.clip(V_supply_d_t_i, V_vent_g_i, V_dash_supply_d_t_i)
 
+
+class _SupplyCapState(NamedTuple):
+    V_supply_d_t_i: np.ndarray
+    V_supply_d_t: np.ndarray
+    overflow_mask_H_d_t: np.ndarray
+    overflow_mask_C_d_t: np.ndarray
+
+
+def _normalize_design_airflows(V_hs_dsgn_H, V_hs_dsgn_C):
+    V_hs_dsgn_C = V_hs_dsgn_C if V_hs_dsgn_C is not None else float("inf")
+    V_hs_dsgn_H = V_hs_dsgn_H if V_hs_dsgn_H is not None else float("inf")
+    return V_hs_dsgn_H, V_hs_dsgn_C
+
+
+def _prepare_supply_cap_state(
+        V_supply_d_t_i: np.ndarray,
+        V_vent_g_i: np.ndarray,
+        H: np.ndarray,
+        C: np.ndarray,
+        V_hs_dsgn_H: float,
+        V_hs_dsgn_C: float,
+) -> _SupplyCapState:
+    V_supply_d_t_i = np.clip(V_supply_d_t_i, V_vent_g_i, None)
+    V_supply_d_t = np.sum(V_supply_d_t_i, axis=0)
+    overflow_mask_H_d_t = np.logical_and(H, V_supply_d_t > V_hs_dsgn_H)
+    overflow_mask_C_d_t = np.logical_and(C, V_supply_d_t > V_hs_dsgn_C)
+    return _SupplyCapState(
+        V_supply_d_t_i,
+        V_supply_d_t,
+        overflow_mask_H_d_t,
+        overflow_mask_C_d_t,
+    )
+
+
+def _get_uniform_reduction_ratio(
+        V_supply_d_t: np.ndarray,
+        V_hs_dsgn: float,
+        overflow_mask_d_t: np.ndarray,
+) -> np.ndarray:
+    return np.divide(
+        np.full(len(V_supply_d_t), V_hs_dsgn, dtype=float),
+        np.ceil(V_supply_d_t * 1000) / 1000,
+        where=overflow_mask_d_t,
+        out=np.ones_like(V_supply_d_t, dtype=float),
+    )
+
+
+def _apply_uniform_design_cap(
+        state: _SupplyCapState,
+        V_hs_dsgn_H: float,
+        V_hs_dsgn_C: float,
+) -> np.ndarray:
+    ratios_H = _get_uniform_reduction_ratio(
+        state.V_supply_d_t, V_hs_dsgn_H, state.overflow_mask_H_d_t,
+    )
+    ratios_C = _get_uniform_reduction_ratio(
+        state.V_supply_d_t, V_hs_dsgn_C, state.overflow_mask_C_d_t,
+    )
+    return (
+        state.V_supply_d_t_i
+        * ratios_H[np.newaxis, :]
+        * ratios_C[np.newaxis, :]
+    )
+
+
+def _assert_design_airflow_caps(
+        new_V_supply_d_t_i: np.ndarray,
+        H: np.ndarray,
+        C: np.ndarray,
+        V_hs_dsgn_H: float,
+        V_hs_dsgn_C: float,
+) -> None:
+    check = np.sum(new_V_supply_d_t_i, axis=0)
+    assert all(check[H] <= V_hs_dsgn_H)
+    assert all(check[C] <= V_hs_dsgn_C)
 
 # NOTE: 過剰熱量ループ内でも使用しているため
 # @log_res(['V_supply_d_t_i'])
@@ -63,35 +140,19 @@ def cap_V_supply_d_t_i(
         if print_exec:
             print(Vサプライの上限キャップ.設計風量_全室で均一)
         # 委員より提案 案1('24/01)
-
-        """ 設計風量をキャップ上限とする """
-        V_hs_dsgn_C = V_hs_dsgn_C if V_hs_dsgn_C is not None else float('inf')
-        V_hs_dsgn_H = V_hs_dsgn_H if V_hs_dsgn_H is not None else float('inf')
-
-        """ キャップを超える時刻を調べる """
-        V_supply_d_t_i = np.clip(V_supply_d_t_i, V_vent_g_i, None)
-        V_supply_d_t = np.sum(V_supply_d_t_i, axis=0)  # 1d-shape(5, )
-
-        overflow_mask_H_d_t = np.logical_and(H, V_supply_d_t > V_hs_dsgn_H)
-        overflow_mask_C_d_t = np.logical_and(C, V_supply_d_t > V_hs_dsgn_C)
-
-        """ 全体にかける縮小率を算出 """  # 全体適用なので案1では1d-array
-        ratios_H = np.divide(
-          np.full(len(V_supply_d_t), V_hs_dsgn_H, dtype=float),
-          np.ceil(V_supply_d_t * 1000) / 1000,  # NOTE: 計算速度と四捨五入による設計風量超え防止のため
-          where=overflow_mask_H_d_t, out=np.ones_like(V_supply_d_t, dtype=float))
-        ratios_C = np.divide(
-          np.full(len(V_supply_d_t), V_hs_dsgn_C, dtype=float),
-          np.ceil(V_supply_d_t * 1000) / 1000,
-          where=overflow_mask_C_d_t, out=np.ones_like(V_supply_d_t, dtype=float))
-
-        new_V_supply_d_t_i = V_supply_d_t_i * ratios_H[np.newaxis, :] * ratios_C[np.newaxis, :]
-
-        """ 事後条件を確認 """
-        check = np.sum(new_V_supply_d_t_i, axis=0)
-        assert all(check[H] <= V_hs_dsgn_H)
-        assert all(check[C] <= V_hs_dsgn_C)
-
+        V_hs_dsgn_H, V_hs_dsgn_C = _normalize_design_airflows(
+            V_hs_dsgn_H, V_hs_dsgn_C,
+        )
+        state = _prepare_supply_cap_state(
+            V_supply_d_t_i, V_vent_g_i, H, C,
+            V_hs_dsgn_H, V_hs_dsgn_C,
+        )
+        new_V_supply_d_t_i = _apply_uniform_design_cap(
+            state, V_hs_dsgn_H, V_hs_dsgn_C,
+        )
+        _assert_design_airflow_caps(
+            new_V_supply_d_t_i, H, C, V_hs_dsgn_H, V_hs_dsgn_C,
+        )
     elif V_supply_cap_dto.v_supply_cap_logic == Vサプライの上限キャップ.設計風量_風量増室のみ:
         if print_exec:
             print(Vサプライの上限キャップ.設計風量_風量増室のみ)
