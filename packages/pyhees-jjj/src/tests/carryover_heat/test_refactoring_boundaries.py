@@ -87,3 +87,24 @@ def test_get_ac_capacity_46_preserves_air_capacity_and_absolute_difference(monke
 
     np.testing.assert_array_equal(c_ac_air, 6.0 * supply_volume)
     np.testing.assert_array_equal(ac_capacity, c_ac_air * np.abs(supply_temperature - 20.0))
+
+
+def test_get_Theta_HBR_i_46_preserves_season_equations():
+    shape = (5, 1)
+    ac_capacity = np.full(shape, 30.0)
+    c_ac_air = np.full(shape, 2.0)
+    c_prt = np.full(shape, 3.0)
+    heat_loss = np.full(shape, 4.0)
+    cbri = np.full(shape, 1.0)
+    heating_load = np.full(shape, 0.00001)
+    cooling_load = np.full(shape, 0.00002)
+
+    heating = section4_2._get_Theta_HBR_i_46(True, False, False, 20.0, heating_load, cooling_load, ac_capacity, c_ac_air, c_prt, heat_loss, cbri)
+    cooling = section4_2._get_Theta_HBR_i_46(False, True, False, 20.0, heating_load, cooling_load, ac_capacity, c_ac_air, c_prt, heat_loss, cbri)
+    middle = section4_2._get_Theta_HBR_i_46(False, False, True, 20.0, heating_load, cooling_load, ac_capacity, c_ac_air, c_prt, heat_loss, cbri)
+
+    np.testing.assert_array_equal(heating, np.full(shape, 22.0))
+    np.testing.assert_array_equal(cooling, np.full(shape, 19.0))
+    np.testing.assert_array_equal(middle, np.full(shape, 20.0))
+    with pytest.raises(ValueError):
+        section4_2._get_Theta_HBR_i_46(True, True, False, 20.0, heating_load, cooling_load, ac_capacity, c_ac_air, c_prt, heat_loss, cbri)

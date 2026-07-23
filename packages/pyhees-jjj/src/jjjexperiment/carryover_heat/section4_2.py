@@ -178,6 +178,31 @@ def _get_ac_capacity_46(V_supply_i: Array5x1, Theta_supply_i: Array5x1, Theta_st
     return c_ac_air, ac_capacity
 
 
+def _get_Theta_HBR_i_46(
+        H, C, M, Theta_star_HBR, L_star_H_i, L_star_CS_i,
+        ac_capacity, c_ac_air, c_prt, heat_loss, cbri,
+    ):
+    if (H and C):
+        raise ValueError("想定外の季節")
+    elif H:  # 暖房期 (46-1)
+        load_capacity = L_star_H_i * 10**6  # [MJ/h] -> [J/h]
+        Theta_HBR_i = Theta_star_HBR \
+                    + (ac_capacity - load_capacity) \
+                    / (c_ac_air + c_prt + heat_loss + cbri)
+        # NOTE: 負荷バランス時の居室の室温で下限を設定 -> しない
+        # Theta_HBR_i = np.clip(Theta_HBR_i, Theta_star_HBR, None)
+    elif C:  # 冷房期 (46-2)
+        load_capacity = L_star_CS_i * 10**6  # [MJ/h] -> [J/h]
+        Theta_HBR_i = Theta_star_HBR \
+                    -1 * (ac_capacity - load_capacity) \
+                    / (c_ac_air + c_prt + heat_loss + cbri)
+        # NOTE: 負荷バランス時の居室の室温で下限を設定 -> しない
+        # Theta_HBR_i = np.clip(Theta_HBR_i, None, Theta_star_HBR)
+    elif M:  # 中間期 (46-3)
+        Theta_HBR_i = Theta_star_HBR * np.ones((5, 1))
+    return Theta_HBR_i
+
+
 def get_Theta_HBR_i_2023(
         H: bool, C: bool, M: bool,
         Theta_star_HBR: float,
@@ -226,25 +251,10 @@ def get_Theta_HBR_i_2023(
     # 熱容量(空調空気) [J/(K・h)]
     c_ac_air, ac_capacity = _get_ac_capacity_46(V_supply_i, Theta_supply_i, Theta_star_HBR)
 
-    if (H and C):
-        raise ValueError("想定外の季節")
-    elif H:  # 暖房期 (46-1)
-        load_capacity = L_star_H_i * 10**6  # [MJ/h] -> [J/h]
-        Theta_HBR_i = Theta_star_HBR \
-                    + (ac_capacity - load_capacity) \
-                    / (c_ac_air + c_prt + heat_loss + cbri)
-        # NOTE: 負荷バランス時の居室の室温で下限を設定 -> しない
-        # Theta_HBR_i = np.clip(Theta_HBR_i, Theta_star_HBR, None)
-    elif C:  # 冷房期 (46-2)
-        load_capacity = L_star_CS_i * 10**6  # [MJ/h] -> [J/h]
-        Theta_HBR_i = Theta_star_HBR \
-                    -1 * (ac_capacity - load_capacity) \
-                    / (c_ac_air + c_prt + heat_loss + cbri)
-        # NOTE: 負荷バランス時の居室の室温で下限を設定 -> しない
-        # Theta_HBR_i = np.clip(Theta_HBR_i, None, Theta_star_HBR)
-    elif M:  # 中間期 (46-3)
-        Theta_HBR_i = Theta_star_HBR * np.ones((5, 1))
-
+    Theta_HBR_i = _get_Theta_HBR_i_46(
+        H, C, M, Theta_star_HBR, L_star_H_i, L_star_CS_i,
+        ac_capacity, c_ac_air, c_prt, heat_loss, cbri,
+    )
     # 事後条件:
     assert Theta_HBR_i.shape == (5, 1), "Theta_HBR_iの行列数が想定外"
     return Theta_HBR_i
