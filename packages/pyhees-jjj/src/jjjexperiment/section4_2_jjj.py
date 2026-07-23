@@ -923,6 +923,13 @@ class _ClimateConditionInputs(NamedTuple):
     new_ufac: object
     climateFile: object
 
+
+class _GeneralVentilationStateInputs(NamedTuple):
+    df_output2: object
+    v_min_input: object
+    A_HCZ_i: object
+    A_HCZ_R_i: object
+
 # NOTE: クライアントコード側で切り替える(bind)するためのギミック
 @dataclass
 class ActiveAcSetting:
@@ -2488,9 +2495,12 @@ def _prepare_local_ventilation_state(df_output):
     )
     return V_vent_l_NR_d_t, V_vent_l_d_t, df_output
 
-def _prepare_general_ventilation_state(
-        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i):
+def _prepare_general_ventilation_state(inputs: _GeneralVentilationStateInputs):
     """Calculate formula (62) while preserving the minimum-airflow branch."""
+    df_output2 = inputs.df_output2
+    v_min_input = inputs.v_min_input
+    A_HCZ_i = inputs.A_HCZ_i
+    A_HCZ_R_i = inputs.A_HCZ_R_i
     V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
     if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
         V_vent_g_i = rescale_V_vent_g_i(V_vent_g_i, v_min_input.V_hs_min)
@@ -3706,8 +3716,8 @@ def calc_Q_UT_A(
     )
 
     # (62)　全般換気量
-    V_vent_g_i = _prepare_general_ventilation_state(
-        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i)
+    V_vent_g_i = _prepare_general_ventilation_state(_GeneralVentilationStateInputs(
+        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i))
 
     # (61)　間仕切の熱貫流率
     U_prt, A_prt_i = _prepare_partition_state(_PartitionStateInputs(

@@ -2568,7 +2568,7 @@ def test_prepare_general_ventilation_state_preserves_formula_62_branch(monkeypat
         V_hs_min=500.0,
     )
     a_hcz, ratios = object(), object()
-    result = sut._prepare_general_ventilation_state(Frame(), setting, a_hcz, ratios)
+    result = sut._prepare_general_ventilation_state(sut._GeneralVentilationStateInputs(Frame(), setting, a_hcz, ratios))
     assert result is (adjusted if direct else base)
     assert events[0] == ("base", (a_hcz, ratios))
     assert [e[0] for e in events] == (["base", "scale", "write"] if direct else ["base", "write"])
