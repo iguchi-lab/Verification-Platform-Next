@@ -288,6 +288,24 @@ def _run_heating_calc_Q_UT_A(injector, heat_ac_setting):
     _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
     return E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t
 
+def _get_heating_fan_model(heat_ac_setting, V_hs_dsgn_H, heat_denchu_catalog, heat_real_inner, case_name):
+    simu_R_H = None
+    if heat_ac_setting.type == 計算モデル.電中研モデル:
+        R2, R1, R0, P_rac_fan_rtd_H = jjjexperiment.denchu.denchu_1.calc_R_and_Pc_H(heat_denchu_catalog)
+        P_rac_fan_rtd_H = 1000 * P_rac_fan_rtd_H
+        simu_R_H = jjjexperiment.denchu.denchu_2.simu_R(R2, R1, R0)
+        df_denchu_consts = jjjexperiment.denchu.denchu_1.get_DataFrame_denchu_modeling_consts(
+            heat_denchu_catalog, R2, R1, R0, heat_real_inner, P_rac_fan_rtd_H
+        )
+        df_denchu_consts.to_csv(
+            case_name + jjj_consts.version_info() + '_denchu_consts_H_output.csv',
+            encoding='cp932',
+        )
+    else:
+        P_rac_fan_rtd_H = V_hs_dsgn_H * heat_ac_setting.f_SFP
+    _logger.info(f"P_rac_fan_rtd_H [W]: {P_rac_fan_rtd_H}")
+    return P_rac_fan_rtd_H, simu_R_H
+
 @inject
 def calc_main(
     injector: Injector,
@@ -359,20 +377,7 @@ def calc_main(
 
     E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = _run_heating_calc_Q_UT_A(injector, heat_ac_setting)
 
-    if heat_ac_setting.type == 計算モデル.電中研モデル:
-        R2, R1, R0, P_rac_fan_rtd_H = jjjexperiment.denchu.denchu_1.calc_R_and_Pc_H(heat_denchu_catalog)
-        P_rac_fan_rtd_H = 1000 * P_rac_fan_rtd_H  # kW -> W
-        simu_R_H = jjjexperiment.denchu.denchu_2.simu_R(R2, R1, R0)
-
-        """ 電柱研モデルのモデリング定数の確認のためのCSV出力 """
-        df_denchu_consts = jjjexperiment.denchu.denchu_1 \
-            .get_DataFrame_denchu_modeling_consts(heat_denchu_catalog, R2, R1, R0, heat_real_inner, P_rac_fan_rtd_H)
-        df_denchu_consts.to_csv(case_name + jjj_consts.version_info() + '_denchu_consts_H_output.csv', encoding='cp932')
-        del R2, R1, R0
-    else:
-        P_rac_fan_rtd_H = V_hs_dsgn_H * heat_ac_setting.f_SFP
-    """定格暖房能力運転時の送風機の消費電力(W)"""
-    _logger.info(f"P_rac_fan_rtd_H [W]: {P_rac_fan_rtd_H}")
+    P_rac_fan_rtd_H, simu_R_H = _get_heating_fan_model(heat_ac_setting, V_hs_dsgn_H, heat_denchu_catalog, heat_real_inner, case_name)
 
     # (3) 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力(W)
     q_hs_H_d_t = \

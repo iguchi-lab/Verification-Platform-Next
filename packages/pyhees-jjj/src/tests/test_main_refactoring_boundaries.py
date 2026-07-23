@@ -225,3 +225,34 @@ def test_run_heating_calc_Q_UT_A_preserves_bind_call_and_diagnostics(monkeypatch
         ('debug', 'V_hs_supply_d_t', 'supply'),
         ('debug', 'V_hs_vent_d_t', 'vent'),
     ]
+
+def test_get_heating_fan_model_preserves_standard_fan_power(monkeypatch):
+    logged = []
+    monkeypatch.setattr(experiment_main._logger, 'info', logged.append)
+    setting = SimpleNamespace(type=experiment_main.計算モデル.ダクト式セントラル空調機, f_SFP=0.5)
+
+    result = experiment_main._get_heating_fan_model(setting, 200.0, None, None, 'case')
+
+    assert result == (100.0, None)
+    assert logged == ['P_rac_fan_rtd_H [W]: 100.0']
+
+
+def test_get_heating_fan_model_preserves_denchu_csv_and_unit_conversion(monkeypatch):
+    events = []
+    frame = SimpleNamespace(to_csv=lambda path, encoding: events.append(('csv', path, encoding)))
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_1, 'calc_R_and_Pc_H', lambda catalog: (2.0, 1.0, 0.0, 0.3))
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_2, 'simu_R', lambda *args: events.append(('simu', args)) or 'simu')
+    monkeypatch.setattr(experiment_main.jjjexperiment.denchu.denchu_1, 'get_DataFrame_denchu_modeling_consts', lambda *args: events.append(('frame', args)) or frame)
+    monkeypatch.setattr(experiment_main.jjj_consts, 'version_info', lambda: '_v')
+    monkeypatch.setattr(experiment_main._logger, 'info', lambda message: events.append(('log', message)))
+    setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル, f_SFP=0.5)
+
+    result = experiment_main._get_heating_fan_model(setting, 200.0, 'catalog', 'inner', 'case')
+
+    assert result == (300.0, 'simu')
+    assert events == [
+        ('simu', (2.0, 1.0, 0.0)),
+        ('frame', ('catalog', 2.0, 1.0, 0.0, 'inner', 300.0)),
+        ('csv', 'case_v_denchu_consts_H_output.csv', 'cp932'),
+        ('log', 'P_rac_fan_rtd_H [W]: 300.0'),
+    ]
