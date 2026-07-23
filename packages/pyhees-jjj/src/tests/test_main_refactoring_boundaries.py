@@ -129,3 +129,14 @@ def test_calc_standard_cooling_load_preserves_argument_order(monkeypatch):
         'ratio', 'insulation', 'cool-mode', 'heat-mode',
         'mode-mr', 'mode-or', 'TS', {'hex': True},
     )]
+
+def test_load_cooling_load_from_csv_preserves_sensible_and_latent_columns(monkeypatch):
+    load = pd.DataFrame(np.arange(60).reshape(2, 30))
+    calls = []
+    monkeypatch.setattr(experiment_main.pd, 'read_csv', lambda path, nrows: calls.append((path, nrows)) or load)
+
+    sensible, latent = experiment_main._load_cooling_load_from_csv('loads.csv')
+
+    np.testing.assert_array_equal(sensible, load.iloc[:, 12:24].T.values)
+    np.testing.assert_array_equal(latent, load.iloc[:, 24:].T.values)
+    assert calls == [('loads.csv', 8760)]

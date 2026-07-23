@@ -230,6 +230,12 @@ def _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setti
         mode_MR, mode_OR, skin.TS, hex.to_dict(),
     )
 
+def _load_cooling_load_from_csv(loadFile):
+    load = pd.read_csv(loadFile, nrows=24 * 365)
+    L_CS_d_t_i = load.iloc[:, 12:24].T.values
+    L_CL_d_t_i = load.iloc[:, 24:].T.values
+    return L_CS_d_t_i, L_CL_d_t_i
+
 @inject
 def calc_main(
     injector: Injector,
@@ -279,9 +285,7 @@ def calc_main(
         if loadFile == '-':
             L_CS_d_t_i, L_CL_d_t_i = _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR)
         else:
-            load = pd.read_csv(loadFile, nrows=24 * 365)
-            L_CS_d_t_i = load.iloc[::,12:24].T.values
-            L_CL_d_t_i = load.iloc[::,24:].T.values
+            L_CS_d_t_i, L_CL_d_t_i = _load_cooling_load_from_csv(loadFile)
 
     # 負荷をあつめたデータクラス
     injector.binder.bind(jjj_dc.Load_DTI, to=jjj_dc.Load_DTI(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i))
