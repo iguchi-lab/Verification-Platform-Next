@@ -15,6 +15,10 @@ def _prepare_carryover_zone_areas(
     return A_HCZ_i.reshape(-1, 1)
 
 
+def _get_carryover_C_BR_i(A_HCZ_i: Array5x1) -> Array5x1:
+    return jjj_carryover_heat.get_C_BR_i(A_HCZ_i)
+
+
 def calc_carryover(
         H: np.bool,
         C: np.bool,
@@ -35,7 +39,7 @@ def calc_carryover(
 
     # 熱容量の取得
     A_HCZ_i = _prepare_carryover_zone_areas(A_HCZ_i, Theta_HBR_i)
-    cbri = jjj_carryover_heat.get_C_BR_i(A_HCZ_i)
+    cbri = _get_carryover_C_BR_i(A_HCZ_i)
 
     # NOTE('25/04): キャップはかけない
     # 温度が過剰の時に得をするだけでなく、未達の時に損する分を考慮するとのこと

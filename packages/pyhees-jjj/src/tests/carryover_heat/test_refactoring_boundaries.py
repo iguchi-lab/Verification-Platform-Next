@@ -13,3 +13,13 @@ def test_prepare_carryover_zone_areas_preserves_shape_contract():
     np.testing.assert_array_equal(result, areas.reshape(5, 1))
     with pytest.raises(AssertionError):
         section4_2._prepare_carryover_zone_areas(areas.reshape(5, 1), temperatures)
+
+
+def test_get_carryover_C_BR_i_delegates_with_reshaped_areas(monkeypatch):
+    areas = np.arange(1.0, 6.0).reshape(5, 1)
+    expected = np.full((5, 1), 42.0)
+    monkeypatch.setattr(section4_2.jjj_carryover_heat, 'get_C_BR_i', lambda value: expected if value is areas else None)
+
+    result = section4_2._get_carryover_C_BR_i(areas)
+
+    assert result is expected
