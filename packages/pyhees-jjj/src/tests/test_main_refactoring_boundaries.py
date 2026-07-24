@@ -711,3 +711,123 @@ def test_write_outputs_and_build_test_result_preserves_csv_columns_and_return_co
         'E_E_fan_C_d_t [kWh/h]', 'q_hs_H_d_t [Wh/h]', 'q_hs_CS_d_t [Wh/h]',
         'q_hs_CL_d_t [Wh/h]',
     ]
+
+
+@pytest.mark.parametrize(
+    ("load_file", "cooling_event"),
+    [
+        ("-", ("cooling-calculated",)),
+        ("loads.csv", ("cooling-csv", "loads.csv")),
+    ],
+)
+def test_prepare_main_load_state_preserves_order_context_and_result(monkeypatch, load_file, cooling_event):
+    events = []
+    values = {name: object() for name in [
+        "climate", "heat_quantity", "cool_quantity", "H-calculated", "H", "dash-H", "dash-CS",
+        "CS", "CL", "H-sum", "CS-sum", "CL-sum", "V-H", "V-C",
+    ]}
+    injector = object()
+    house = SimpleNamespace(region=6)
+
+    class InjectorContext:
+        def __enter__(self):
+            events.append(("context-enter",))
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            events.append(("context-exit", exc_type, exc_value, traceback))
+
+    monkeypatch.setattr(experiment_main, "_log_equipment_specs", lambda cool, heat: events.append(("log", cool, heat)))
+    monkeypatch.setattr(
+        experiment_main,
+        "_create_domain_services",
+        lambda *args: events.append(("services", args))
+        or (values["climate"], values["heat_quantity"], values["cool_quantity"]),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_get_virtual_heating_devices_and_modes",
+        lambda region: events.append(("virtual", region)) or ("spec-MR", "spec-OR", "mode-MR", "mode-OR"),
+    )
+    monkeypatch.setattr(
+        experiment_main.jjj_common,
+        "injector_context",
+        lambda actual: events.append(("context", actual)) or InjectorContext(),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_calc_standard_heating_load",
+        lambda *args: events.append(("heating", args))
+        or (values["H-calculated"], values["dash-H"], values["dash-CS"]),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_override_heating_load_from_csv",
+        lambda load, path: events.append(("heating-override", load, path)) or values["H"],
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_calc_standard_cooling_load",
+        lambda *args: events.append(("cooling-calculated",)) or (values["CS"], values["CL"]),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_load_cooling_load_from_csv",
+        lambda path: events.append(("cooling-csv", path)) or (values["CS"], values["CL"]),
+    )
+    monkeypatch.setattr(experiment_main, "_bind_load_dti", lambda *args: events.append(("bind-loads", args)))
+    monkeypatch.setattr(
+        experiment_main,
+        "_sum_zone_loads",
+        lambda *args: events.append(("sum-loads", args))
+        or (values["H-sum"], values["CS-sum"], values["CL-sum"]),
+    )
+    monkeypatch.setattr("builtins.print", lambda *args: events.append(("print", args)))
+    monkeypatch.setattr(
+        experiment_main,
+        "_bind_heating_design_airflows",
+        lambda *args: events.append(("bind-design", args)) or (values["V-H"], values["V-C"]),
+    )
+
+    inputs = experiment_main._MainLoadPreparationInputs(
+        injector=injector,
+        climateFile="climate.csv",
+        loadFile=load_file,
+        house=house,
+        skin="skin",
+        hex="hex",
+        ufac="ufac",
+        heat_ac_setting="heat-setting",
+        cool_ac_setting="cool-setting",
+        heat_CRAC="heat-crac",
+        cool_CRAC="cool-crac",
+    )
+    result = experiment_main._prepare_main_load_state(inputs)
+
+    assert events == [
+        ("log", "cool-crac", "heat-crac"),
+        ("services", (house, "ufac", "climate.csv", "heat-setting", "cool-setting")),
+        ("virtual", 6),
+        ("context", injector),
+        ("context-enter",),
+        ("heating", (house, "skin", "hex", "heat-setting", "cool-setting", "spec-MR", "spec-OR", "mode-MR", "mode-OR")),
+        ("heating-override", values["H-calculated"], load_file),
+        cooling_event,
+        ("context-exit", None, None, None),
+        ("bind-loads", (injector, values["H"], values["CS"], values["CL"], values["dash-H"], values["dash-CS"])),
+        ("sum-loads", (values["H"], values["CS"], values["CL"])),
+        ("print", ("暖房消費電力の計算",)),
+        ("bind-design", (injector, "heat-setting", values["heat_quantity"], "heat-crac")),
+    ]
+    assert result == experiment_main._MainLoadPreparationResult(
+        climate=values["climate"],
+        heat_quantity=values["heat_quantity"],
+        cool_quantity=values["cool_quantity"],
+        L_H_d_t_i=values["H"],
+        L_CS_d_t_i=values["CS"],
+        L_CL_d_t_i=values["CL"],
+        L_H_d_t=values["H-sum"],
+        L_CS_d_t=values["CS-sum"],
+        L_CL_d_t=values["CL-sum"],
+        V_hs_dsgn_H=values["V-H"],
+        V_hs_dsgn_C=values["V-C"],
+    )

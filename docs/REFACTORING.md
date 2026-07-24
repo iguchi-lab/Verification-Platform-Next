@@ -133,6 +133,7 @@
 - [PR #122](https://github.com/iguchi-lab/Verification-Platform-Next/pull/122): `section4_2_a_jjj.py`のtype1/2/3暖冷房電力を、公開API、建研式番号、評価・ログ順を維持した13式境界へ分離し、type4の数値・CSV副作用は変更対象から除外しました。
 - [PR #124](https://github.com/iguchi-lab/Verification-Platform-Next/pull/124): `section4_2_a_jjj.py`のtype4暖冷房について、8760時刻index、列順、ファイル名、encoding、ログ順、例外伝播、数値結果を契約テストで固定し、DataFrame構築とCSV書き出しの4つの高リスク副作用境界を分離しました。
 - [PR #126](https://github.com/iguchi-lab/Verification-Platform-Next/pull/126): `calc_Q_UT_A`の設計風量正規化から定格熱源能力まで約24の分岐前準備境界を、4つのDataFrameの生成・更新順、建研変数名、公開API、数値結果を維持した内部コンテキストへ集約し、床下準備以降の高リスク本文を変更対象から除外しました。
+- [PR #128](https://github.com/iguchi-lab/Verification-Platform-Next/pull/128): `calc_main`の機器ログ・サービス生成から負荷取得/CSV選択・DI登録・zone集約・暖房設計風量まで約12の準備境界を、評価順、injector context範囲、公開API、数値結果を維持した内部コンテキストへ集約し、暖冷房方式分岐を変更対象から除外しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
@@ -140,7 +141,7 @@
 
 以下は最新`main`の再棚卸しに基づく候補であり、着手順ではありません。1つの設計上の成果と共通の検証方法をIssueへ記録して選びます。低リスク領域のPRは30〜50境界または800〜1,500行程度を目安とし、高リスク領域は件数より安全性を優先します。
 
-1. `section4_2_jjj.py`の`calc_Q_UT_A`と`main.py`の`calc_main`に残る長いオーケストレーションを整理する。`calc_Q_UT_A`の分岐前準備はPR #126でコンテキスト化済み。残る前時刻依存、8760時間ループ、床下第1・第2パス、季節分岐は高リスクとして小さく扱い、同じ入力コンテキストを共有する抽出済みヘルパー群だけを安全にまとめる。
+1. `section4_2_jjj.py`の`calc_Q_UT_A`と`main.py`の`calc_main`に残る長いオーケストレーションを整理する。`calc_Q_UT_A`の分岐前準備はPR #126、`calc_main`の負荷・暖房設計風量準備はPR #128でコンテキスト化済み。残る前時刻依存、8760時間ループ、床下第1・第2パス、季節分岐、暖冷房方式分岐は高リスクとして小さく扱い、同じ入力コンテキストを共有する抽出済みヘルパー群だけを安全にまとめる。
 2. 6つの`pyhees`ファイルに残る`pyhees -> jjjexperiment`逆依存を、依存元と検証方法ごとに分けて削減する。建研由来ファイルへの変更になるため、一般的な低リスクPRより小さくし、上流との差分追跡を優先する。
 3. カレントディレクトリ、グローバル状態、暗黙のCSVファイル名などの残存副作用を境界へ集約する。グローバル更新、DataFrame/CSV出力、インプレース更新は分離し、単純なDataFrame列組み立てだけを低リスク群としてまとめる。type4電中研モデルのDataFrame構築とCSV書き出しはPR #124で境界化済み。
 
