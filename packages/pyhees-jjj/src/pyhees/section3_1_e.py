@@ -7,13 +7,26 @@ from math import sqrt
 from functools import lru_cache
 
 # JJJ_EXPERIMENT ADD
-import jjjexperiment.constants as jjj_consts
 from pyhees.jjj_markers import jjj_cloned, jjj_mod
-from jjjexperiment.logger import log_res
 # NOTE: pyhees->jjj 方向の依存はファイルスコープとしては可能な限り控える
 # インプットデータクラスとロジックを分離しているためデータクラスのみインポート可能
 from jjjexperiment.inputs.options import 床下空調ロジック
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
+
+def _get_default_ground_surface_resistance():
+    return 0.15
+
+
+_ground_surface_resistance_provider = _get_default_ground_surface_resistance
+
+
+def _set_ground_surface_resistance_provider(provider):
+    global _ground_surface_resistance_provider
+    _ground_surface_resistance_provider = provider
+
+
+def _get_ground_surface_resistance():
+    return _ground_surface_resistance_provider()
 
 # ============================================================================
 # E.2 床下温度
@@ -405,7 +418,7 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
     # 地盤またはそれを覆う基礎の表面熱伝達抵抗 ((m2・K)/W)
     #R_g = 0.15
     #R_g = 0.15 + 2.63  #フェノバボード50mm
-    R_g = getattr(jjj_consts, 'R_g', 0.15)
+    R_g = _get_ground_surface_resistance()
 
     # 吸熱応答係数の初項
     Phi_A_0 = 0.025504994

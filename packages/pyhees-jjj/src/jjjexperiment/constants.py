@@ -463,9 +463,13 @@ def _set_C_A_fan_coeff(input: dict):
 
 
 def _register_pyhees_scalar_override_providers():
+  import pyhees.section3_1_e as underfloor_temperature
   import pyhees.section4_2_b as dc_spec
   import pyhees.section4_3_a as rac_spec
 
+  underfloor_temperature._set_ground_surface_resistance_provider(
+    lambda: globals().get('R_g', 0.15)
+  )
   dc_spec._set_design_airflow_coefficient_provider(
     lambda: (C_V_fan_dsgn_H, C_V_fan_dsgn_C)
   )
