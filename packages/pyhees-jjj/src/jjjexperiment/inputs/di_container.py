@@ -88,6 +88,13 @@ class JJJExperimentModule(Module):
 
     def _validate_and_update_inputs(self):
         """データクラスを跨いだ整合性のロジック"""
+        new_ufac_enabled, carry_over_enabled = self._validate_feature_inputs()
+        self._update_underfloor_input(new_ufac_enabled)
+        self._update_minimum_airflow_inputs()
+        self._log_carryover(carry_over_enabled)
+
+    def _validate_feature_inputs(self) -> tuple[bool, bool]:
+        """機能フラグを読み取り、更新前に組み合わせを検証する。"""
         # まだプロバイダーは使用しない書き方にする(できるけど)
         new_ufac_flg = self._input.get('change_underfloor_temperature', None)
         removed_ufac_flg = self._input.get(
@@ -114,6 +121,10 @@ class JJJExperimentModule(Module):
                 'どちらか一方を無効にしてください。'
             )
 
+        return new_ufac_enabled, carry_over_enabled
+
+    def _update_underfloor_input(self, new_ufac_enabled: bool) -> None:
+        """床下利用状態を入力辞書へ反映し、従来のログを出力する。"""
         if new_ufac_enabled:
             print("新・床下空調ロジックを使用")
             # 新床下空調
@@ -129,6 +140,8 @@ class JJJExperimentModule(Module):
             else:
                 raise KeyError('r_A_ufvnt が設定されていません')
 
+    def _update_minimum_airflow_inputs(self) -> None:
+        """最低風量入力に応じて暖冷房設定を順番に更新する。"""
         # NOTE: 最小風量直接入力が有効な場合は subtract は無意味なので強制オフ
         # デフォルト値（換気分を引く）は各データクラス側で保持する
         for ha_key in ['H_A', 'C_A']:
@@ -139,6 +152,9 @@ class JJJExperimentModule(Module):
                     self._input[ha_key]['subtract_ventilation_power'] = ファン消費電力から換気分を引く.換気分を引かない.value
                     print(f"{ha_key}: subtract_ventilation_power を強制オフ (最低風量直接入力有効)")
 
+    @staticmethod
+    def _log_carryover(carry_over_enabled: bool) -> None:
+        """過剰熱量繰越の従来ログを最後に出力する。"""
         if carry_over_enabled:
             print("過剰熱量繰越を行う")
 
