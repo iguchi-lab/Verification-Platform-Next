@@ -131,6 +131,7 @@
 - [PR #118](https://github.com/iguchi-lab/Verification-Platform-Next/pull/118): DIコンテナの入力間検証、床下状態更新、最低風量補正、繰越ログを4つの高リスク境界へ分離し、例外前後の状態と更新・ログ順を契約テストで固定しました。
 - [PR #120](https://github.com/iguchi-lab/Verification-Platform-Next/pull/120): 建研由来モジュールと誤認しやすかった潜熱評価・最低風量の独自`section4_2_a.py`を、圧縮機効率・送風機電力の責務名へ移行し、旧名を同一関数オブジェクトを再公開する互換shimへ限定しました。
 - [PR #122](https://github.com/iguchi-lab/Verification-Platform-Next/pull/122): `section4_2_a_jjj.py`のtype1/2/3暖冷房電力を、公開API、建研式番号、評価・ログ順を維持した13式境界へ分離し、type4の数値・CSV副作用は変更対象から除外しました。
+- [PR #124](https://github.com/iguchi-lab/Verification-Platform-Next/pull/124): `section4_2_a_jjj.py`のtype4暖冷房について、8760時刻index、列順、ファイル名、encoding、ログ順、例外伝播、数値結果を契約テストで固定し、DataFrame構築とCSV書き出しの4つの高リスク副作用境界を分離しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
@@ -140,7 +141,7 @@
 
 1. `section4_2_jjj.py`の`calc_Q_UT_A`と`main.py`の`calc_main`に残る長いオーケストレーションを整理する。前時刻依存、8760時間ループ、床下第1・第2パス、季節分岐は高リスクとして小さく扱い、同じ入力コンテキストを共有する抽出済みヘルパー群だけを安全にまとめる。
 2. 6つの`pyhees`ファイルに残る`pyhees -> jjjexperiment`逆依存を、依存元と検証方法ごとに分けて削減する。建研由来ファイルへの変更になるため、一般的な低リスクPRより小さくし、上流との差分追跡を優先する。
-3. カレントディレクトリ、グローバル状態、暗黙のCSVファイル名などの副作用を境界へ集約する。グローバル更新、DataFrame/CSV出力、インプレース更新は分離し、単純なDataFrame列組み立てだけを低リスク群としてまとめる。`section4_2_a_jjj.py`のtype4電中研モデルに残るDataFrame組み立てとCSV出力も、この高リスク候補で扱う。
+3. カレントディレクトリ、グローバル状態、暗黙のCSVファイル名などの残存副作用を境界へ集約する。グローバル更新、DataFrame/CSV出力、インプレース更新は分離し、単純なDataFrame列組み立てだけを低リスク群としてまとめる。type4電中研モデルのDataFrame構築とCSV書き出しはPR #124で境界化済み。
 
 ## 1作業パッケージの進め方
 
