@@ -35,6 +35,9 @@ def get_Theta_uf_d_t_runup() -> np.ndarray:
     )
 
 
+algo._set_new_underfloor_runup_temperature_provider(get_Theta_uf_d_t_runup)
+
+
 def _get_floor_temperature_properties_and_defaults():
     ro_air = algo.get_ro_air()
     c_p_air = algo.get_c_p_air()

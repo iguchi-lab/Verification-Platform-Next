@@ -3,7 +3,7 @@
 ## 概要
 暖房時の送風機消費電力量 `E_E_fan_H_d_t` 計算における、空調システム種別とユーザー入力設定による分岐パターンを示します。
 
-潜熱評価モデルの送風機電力は jjjexperiment.latent_load.fan_power、最低風量・最低電力入力の送風機電力は jjjexperiment.v_min_input.fan_power に実装します。旧 section4_2_a モジュールは import 互換用の shim です。
+潜熱評価モデルの送風機電力は jjjexperiment.latent_load.fan_power、最低風量・最低電力入力の送風機電力は jjjexperiment.v_min_input.fan_power に実装します。Verification Platform Next刷新後は旧 section4_2_a モジュールを提供せず、責務名のモジュールを直接 import します。
 
 ## フローダイアグラム
 

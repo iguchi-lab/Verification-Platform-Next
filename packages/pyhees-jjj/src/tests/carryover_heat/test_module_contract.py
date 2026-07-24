@@ -1,4 +1,3 @@
-import importlib
 import inspect
 
 import jjjexperiment.carryover_heat as carryover_heat
@@ -87,11 +86,3 @@ def test_carryover_package_preserves_public_name_set():
 def test_carryover_package_preserves_get_c_exports():
     for name in ("get_C_BR_i", "get_C_NR"):
         assert getattr(carryover_heat, name) is getattr(get_C, name)
-
-
-def test_legacy_section4_2_import_is_the_jjj_implementation_module():
-    legacy = importlib.import_module("jjjexperiment.carryover_heat.section4_2")
-
-    assert legacy is section4_2_jjj
-    for name in EXPECTED_FUNCTIONS:
-        assert getattr(legacy, name) is getattr(section4_2_jjj, name)

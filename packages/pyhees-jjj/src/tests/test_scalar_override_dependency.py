@@ -29,6 +29,11 @@ assert rac_spec.get_q_rtd_C(100.0) == 5600
     )
 
 
+def test_registered_ground_surface_resistance_default_is_explicit():
+    assert jjj_consts.R_g == 0.15
+    assert underfloor_temperature._get_ground_surface_resistance() == 0.15
+
+
 def test_registered_providers_preserve_direct_constant_assignment(monkeypatch):
     monkeypatch.setattr(jjj_consts, "R_g", 2.78, raising=False)
     monkeypatch.setattr(jjj_consts, "C_V_fan_dsgn_H", 0.82)

@@ -286,6 +286,9 @@ def _set_change_heat_source_outlet_required_temperature(input: dict):
     change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
 
 
+R_g = 0.15
+
+
 def _set_R_g(input: dict):
   if 'R_g' in input:
     global R_g

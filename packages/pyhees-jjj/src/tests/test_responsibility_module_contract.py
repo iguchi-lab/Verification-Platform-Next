@@ -7,36 +7,22 @@ import jjjexperiment.constants as jjj_consts
 from jjjexperiment.inputs.options import ファン消費電力算定方法
 import jjjexperiment.latent_load.compressor_efficiency as latent_compressor
 import jjjexperiment.latent_load.fan_power as latent_fan
-import jjjexperiment.latent_load.section4_2_a as latent
 import jjjexperiment.v_min_input.fan_power as v_min_fan
-import jjjexperiment.v_min_input.section4_2_a as v_min
 
 
 def _parameter_names(function):
     return tuple(inspect.signature(function).parameters)
 
 
-def test_legacy_module_names_reexport_identical_functions():
-    assert latent.get_e_r_H_d_t is latent_compressor.get_e_r_H_d_t
-    assert latent.get_e_r_C_d_t is latent_compressor.get_e_r_C_d_t
-    assert latent.get_E_E_fan_H_d_t is latent_fan.get_E_E_fan_H_d_t
-    assert latent.get_E_E_fan_C_d_t is latent_fan.get_E_E_fan_C_d_t
-    assert latent._calc_polynomial_4th is latent_fan._calc_polynomial_4th
-    assert latent._calc_E_E_fan_d_t is latent_fan._calc_E_E_fan_d_t
-    assert v_min.get_E_E_fan_d_t is v_min_fan.get_E_E_fan_d_t
-    assert v_min._solve_linear_system is v_min_fan._solve_linear_system
-    assert v_min._solve_cubic_system is v_min_fan._solve_cubic_system
-
-
 def test_latent_load_public_signatures_are_stable():
-    assert _parameter_names(latent.get_e_r_H_d_t) == ("q_hs_H_d_t",)
-    assert _parameter_names(latent.get_e_r_C_d_t) == ("q_hs_C_d_t",)
-    assert _parameter_names(latent.get_E_E_fan_H_d_t) == (
+    assert _parameter_names(latent_compressor.get_e_r_H_d_t) == ("q_hs_H_d_t",)
+    assert _parameter_names(latent_compressor.get_e_r_C_d_t) == ("q_hs_C_d_t",)
+    assert _parameter_names(latent_fan.get_E_E_fan_H_d_t) == (
         "V_hs_vent_d_t",
         "q_hs_H_d_t",
         "f_SFP",
     )
-    assert _parameter_names(latent.get_E_E_fan_C_d_t) == (
+    assert _parameter_names(latent_fan.get_E_E_fan_C_d_t) == (
         "V_hs_vent_d_t",
         "q_hs_C_d_t",
         "f_SFP",
@@ -47,11 +33,11 @@ def test_latent_load_public_signatures_are_stable():
     ("function", "coefficient_names"),
     [
         (
-            latent.get_e_r_H_d_t,
+            latent_compressor.get_e_r_H_d_t,
             ("a_r_H_t_t_a4", "a_r_H_t_t_a3", "a_r_H_t_t_a2", "a_r_H_t_t_a1", "a_r_H_t_t_a0"),
         ),
         (
-            latent.get_e_r_C_d_t,
+            latent_compressor.get_e_r_C_d_t,
             ("a_r_C_t_t_a4", "a_r_C_t_t_a3", "a_r_C_t_t_a2", "a_r_C_t_t_a1", "a_r_C_t_t_a0"),
         ),
     ],
@@ -72,7 +58,7 @@ def test_latent_load_compressor_efficiency_preserves_polynomial(function, coeffi
 
 
 def test_v_min_public_and_solver_signatures_are_stable():
-    assert _parameter_names(v_min.get_E_E_fan_d_t) == (
+    assert _parameter_names(v_min_fan.get_E_E_fan_d_t) == (
         "E_E_fan_logic",
         "P_fan_rtd",
         "V_hs_vent_d_t",
@@ -82,8 +68,8 @@ def test_v_min_public_and_solver_signatures_are_stable():
         "region",
         "for_cooling",
     )
-    assert _parameter_names(v_min._solve_linear_system) == ("x1", "x2", "y1", "y2")
-    assert _parameter_names(v_min._solve_cubic_system) == ("x1", "x2", "y1", "y2")
+    assert _parameter_names(v_min_fan._solve_linear_system) == ("x1", "x2", "y1", "y2")
+    assert _parameter_names(v_min_fan._solve_cubic_system) == ("x1", "x2", "y1", "y2")
 
 
 def test_v_min_linear_and_cubic_solvers_preserve_endpoints():
@@ -92,8 +78,8 @@ def test_v_min_linear_and_cubic_solvers_preserve_endpoints():
     y1 = 50.0
     y2 = 250.0
 
-    linear_a, linear_b = v_min._solve_linear_system(x1, x2, y1, y2)
-    cubic_a, cubic_b = v_min._solve_cubic_system(x1, x2, y1, y2)
+    linear_a, linear_b = v_min_fan._solve_linear_system(x1, x2, y1, y2)
+    cubic_a, cubic_b = v_min_fan._solve_cubic_system(x1, x2, y1, y2)
 
     np.testing.assert_allclose(linear_a * x1 + linear_b, y1)
     np.testing.assert_allclose(linear_a * x2 + linear_b, y2)
@@ -105,7 +91,7 @@ def test_v_min_invalid_fan_logic_preserves_exception():
     values = np.zeros(24 * 365)
 
     with pytest.raises(ValueError, match="^Invalid E_E_fan_logic$"):
-        v_min.get_E_E_fan_d_t(
+        v_min_fan.get_E_E_fan_d_t(
             E_E_fan_logic=object(),
             P_fan_rtd=200.0,
             V_hs_vent_d_t=values,
@@ -125,7 +111,7 @@ def test_v_min_fan_power_preserves_shape_and_nonnegative_result(logic):
     ventilation = np.full(24 * 365, 100.0)
     supply = np.full(24 * 365, 300.0)
 
-    actual = v_min.get_E_E_fan_d_t(
+    actual = v_min_fan.get_E_E_fan_d_t(
         E_E_fan_logic=logic,
         P_fan_rtd=250.0,
         V_hs_vent_d_t=ventilation,
