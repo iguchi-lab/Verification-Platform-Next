@@ -142,6 +142,14 @@ class JJJExperimentModule(Module):
         if carry_over_enabled:
             print("過剰熱量繰越を行う")
 
+    def _get_root_input(self) -> dict:
+        """Return the root input shared by providers."""
+        return self._input if self._input is not None else {}
+
+    def _get_ac_input(self, key: str) -> dict:
+        """Return one heating or cooling input shared by providers."""
+        return self._input[key] if self._input is not None and key in self._input else {}
+
     # NOTE: プロバイダーについて
     # 現在はDI解決用データクラスのみを提供しています
     # 計算用のエンティティについては自分でデータクラスを注入して利用します
@@ -169,28 +177,28 @@ class JJJExperimentModule(Module):
     @singleton
     @provider
     def create_houseinfo(self) -> common_input.HouseInfo:
-        return common_input.HouseInfo.from_dict(self._input if self._input is not None else {})
+        return common_input.HouseInfo.from_dict(self._get_root_input())
     @singleton
     @provider
     def provide_outer_skin(self) -> common_input.OuterSkin:
-        return common_input.OuterSkin.from_dict(self._input if self._input is not None else {})
+        return common_input.OuterSkin.from_dict(self._get_root_input())
     @singleton
     @provider
     def provide_heatexchangeventilation(self) -> common_input.HEX:
-        return common_input.HEX.from_dict(self._input if self._input is not None else {})
+        return common_input.HEX.from_dict(self._get_root_input())
 
     @singleton
     @provider
     def provide_heating_ac_setting(self) -> HeatingAcSetting:
         return HeatingAcSetting.from_dict(
-            self._input['H_A'] if self._input is not None and 'H_A' in self._input else {}
+            self._get_ac_input('H_A')
         )
 
     @singleton
     @provider
     def provide_cooling_ac_setting(self) -> CoolingAcSetting:
         return CoolingAcSetting.from_dict(
-            self._input['C_A'] if self._input is not None and 'C_A' in self._input else {}
+            self._get_ac_input('C_A')
         )
 
     @singleton
@@ -199,7 +207,7 @@ class JJJExperimentModule(Module):
         house_info = self.create_houseinfo()
         return common_cooling_input.CRACSpecification \
             .from_dict(
-                self._input['C_A'] if self._input is not None and 'C_A' in self._input else {},
+                self._get_ac_input('C_A'),
                 house_info.A_A)
     @singleton
     @provider
@@ -207,7 +215,7 @@ class JJJExperimentModule(Module):
         cool_crac_input = self.provide_common_cooling_crac_input()
         return common_heating_input.CRACSpecification \
             .from_dict(
-                self._input['H_A'] if self._input is not None and 'H_A' in self._input else {},
+                self._get_ac_input('H_A'),
                 # NOTE: ルームエアコン冷房情報を使用する
                 cool_crac_input.q_rtd, cool_crac_input.q_max, cool_crac_input.e_rtd)
 
@@ -216,30 +224,30 @@ class JJJExperimentModule(Module):
     @provider
     def provide_denchu_catalog_heating_input(self) -> denchu_heating_input.DenchuCatalogSpecification:
         return denchu_heating_input.DenchuCatalogSpecification \
-            .from_dict(self._input['H_A'] if self._input is not None and 'H_A' in self._input else {})
+            .from_dict(self._get_ac_input('H_A'))
     @singleton
     @provider
     def provide_denchu_catalog_cooling_input(self) -> denchu_cooling_input.DenchuCatalogSpecification:
         return denchu_cooling_input.DenchuCatalogSpecification \
-            .from_dict(self._input['C_A'] if self._input is not None and 'C_A' in self._input else {})
+            .from_dict(self._get_ac_input('C_A'))
 
     # F23-01 Vサプライの上限キャップ変更
     @singleton
     @provider
     def provide_v_supply_cap_dto(self) -> VSupplyCapDto:
-        return VSupplyCapDto.from_dict(self._input if self._input is not None else {})
+        return VSupplyCapDto.from_dict(self._get_root_input())
 
     # F24-04 過剰熱量繰越
     @singleton
     @provider
     def provide_carryover_heat_dto(self) -> CarryoverHeatDto:
-        return CarryoverHeatDto.from_dict(self._input if self._input is not None else {})
+        return CarryoverHeatDto.from_dict(self._get_root_input())
 
     # F24-05 新・床下空調
     @singleton
     @provider
     def provide_underfloor_ac_input(self) -> ufac_input.UnderfloorAc:
-        return ufac_input.UnderfloorAc.from_dict(self._input if self._input is not None else {})
+        return ufac_input.UnderfloorAc.from_dict(self._get_root_input())
     @singleton
     @provider
     def provide_uf_vars_data_frame(self) -> ufac_input.UfVarsDataFrame:
@@ -250,9 +258,9 @@ class JJJExperimentModule(Module):
     @provider
     def provide_v_min_heating_input(self) -> v_min_heating_input.InputMinVolumeInput:
         return v_min_heating_input.InputMinVolumeInput \
-            .from_dict(self._input['H_A'] if self._input is not None and 'H_A' in self._input else {})
+            .from_dict(self._get_ac_input('H_A'))
     @singleton
     @provider
     def provide_v_min_cooling_input(self) -> v_min_cooling_input.InputMinVolumeInput:
         return v_min_cooling_input.InputMinVolumeInput \
-            .from_dict(self._input['C_A'] if self._input is not None and 'C_A' in self._input else {})
+            .from_dict(self._get_ac_input('C_A'))
