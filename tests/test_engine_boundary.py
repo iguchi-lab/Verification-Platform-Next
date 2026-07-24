@@ -38,12 +38,10 @@ EXPECTED_REVERSE_DEPENDENCIES = {
         "jjjexperiment.inputs.options",
         "jjjexperiment.logger",
     },
-    "section4_2_b.py": {"jjjexperiment.constants"},
     "section4_3.py": {
         "jjjexperiment.common",
         "jjjexperiment.constants",
     },
-    "section4_3_a.py": {"jjjexperiment.constants"},
 }
 
 # Temporary migration allowlist. Remove modules as their wildcard imports are made explicit.

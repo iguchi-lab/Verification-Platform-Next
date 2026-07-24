@@ -462,6 +462,19 @@ def _set_C_A_fan_coeff(input: dict):
     P_fan_C_d_t_a0 = float(input['C_A']['fan_coeff'][4])
 
 
+def _register_pyhees_scalar_override_providers():
+  import pyhees.section4_2_b as dc_spec
+  import pyhees.section4_3_a as rac_spec
+
+  dc_spec._set_design_airflow_coefficient_provider(
+    lambda: (C_V_fan_dsgn_H, C_V_fan_dsgn_C)
+  )
+  rac_spec._set_cooling_capacity_limit_provider(lambda: q_rtd_C_limit)
+
+
+_register_pyhees_scalar_override_providers()
+
+
 def set_constants(input: dict):
   """ 更新したい部分のみの辞書でも利用可能
   """
