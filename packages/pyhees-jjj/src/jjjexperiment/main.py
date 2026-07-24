@@ -168,6 +168,34 @@ class _HeatingType1And3ElectricityInputs(NamedTuple):
     equipment_spec: object
 
 
+class _MainLoadPreparationInputs(NamedTuple):
+    injector: Injector
+    climateFile: object
+    loadFile: object
+    house: HouseInfo
+    skin: OuterSkin
+    hex: HEX
+    ufac: object
+    heat_ac_setting: HeatingAcSetting
+    cool_ac_setting: CoolingAcSetting
+    heat_CRAC: HeatCRACSpec
+    cool_CRAC: CoolCRACSpec
+
+
+class _MainLoadPreparationResult(NamedTuple):
+    climate: object
+    heat_quantity: object
+    cool_quantity: object
+    L_H_d_t_i: object
+    L_CS_d_t_i: object
+    L_CL_d_t_i: object
+    L_H_d_t: object
+    L_CS_d_t: object
+    L_CL_d_t: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+
+
 def calc(input_data: dict, test_mode=False):
     case_name = input_data.get('case_name', 'default')
     with open(case_name + jjj_consts.version_info() + '_input.json', 'w') as f:
@@ -699,6 +727,93 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
 def _raise_invalid_heating_fan_input():
     raise ValueError
 
+def _prepare_main_load_state(inputs: _MainLoadPreparationInputs):
+    injector = inputs.injector
+    climateFile = inputs.climateFile
+    loadFile = inputs.loadFile
+    house = inputs.house
+    skin = inputs.skin
+    hex = inputs.hex
+    ufac = inputs.ufac
+    heat_ac_setting = inputs.heat_ac_setting
+    cool_ac_setting = inputs.cool_ac_setting
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
+
+    _log_equipment_specs(cool_CRAC, heat_CRAC)
+
+    # ドメインサービス
+    climate, heat_quantity, cool_quantity = _create_domain_services(
+        house, ufac, climateFile, heat_ac_setting, cool_ac_setting
+    )
+
+    spec_MR, spec_OR, mode_MR, mode_OR = _get_virtual_heating_devices_and_modes(house.region)
+
+    with jjj_common.injector_context(injector):  # ネスト内からの利用に備える
+        # L_dash_H_R_d_t_i, L_dash_CS_R_d_t_iは負荷ファイルから読み取れないため自動計算する。
+        # 読み込んだ負荷と整合性が取れないため、正しい実装ではない。
+        L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = _calc_standard_heating_load(
+            house,
+            skin,
+            hex,
+            heat_ac_setting,
+            cool_ac_setting,
+            spec_MR,
+            spec_OR,
+            mode_MR,
+            mode_OR,
+        )
+        L_H_d_t_i = _override_heating_load_from_csv(L_H_d_t_i, loadFile)
+
+        if loadFile == '-':
+            L_CS_d_t_i, L_CL_d_t_i = _calc_standard_cooling_load(
+                house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR
+            )
+        else:
+            L_CS_d_t_i, L_CL_d_t_i = _load_cooling_load_from_csv(loadFile)
+
+    # 負荷をあつめたデータクラス
+    _bind_load_dti(
+        injector,
+        L_H_d_t_i,
+        L_CS_d_t_i,
+        L_CL_d_t_i,
+        L_dash_H_R_d_t_i,
+        L_dash_CS_R_d_t_i,
+    )
+
+    # NOTE: 出力用の下記が計算できるのは、負荷が上書きされない前提
+    L_H_d_t, L_CS_d_t, L_CL_d_t = _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
+
+    ##### 暖房消費電力の計算（kWh/h）
+    print("暖房消費電力の計算")
+
+    def arr_summary(arr: np.ndarray):
+        return {
+            "MAX  ": max(arr),
+            "ZEROS": arr.size - np.count_nonzero(arr),
+            "AVG  ": np.average(arr[np.nonzero(arr)])
+        }
+
+    V_hs_dsgn_H, V_hs_dsgn_C = _bind_heating_design_airflows(
+        injector, heat_ac_setting, heat_quantity, heat_CRAC
+    )
+
+    return _MainLoadPreparationResult(
+        climate=climate,
+        heat_quantity=heat_quantity,
+        cool_quantity=cool_quantity,
+        L_H_d_t_i=L_H_d_t_i,
+        L_CS_d_t_i=L_CS_d_t_i,
+        L_CL_d_t_i=L_CL_d_t_i,
+        L_H_d_t=L_H_d_t,
+        L_CS_d_t=L_CS_d_t,
+        L_CL_d_t=L_CL_d_t,
+        V_hs_dsgn_H=V_hs_dsgn_H,
+        V_hs_dsgn_C=V_hs_dsgn_C,
+    )
+
+
 @inject
 def calc_main(
     injector: Injector,
@@ -722,51 +837,32 @@ def calc_main(
     heat_real_inner: jjj_denchu_heat_ipt.RealInnerCondition,
     cool_real_inner: jjj_denchu_cool_ipt.RealInnerCondition
     ) -> dict | None:
-    _log_equipment_specs(cool_CRAC, heat_CRAC)
-
-    # ドメインサービス
-    climate, heat_quantity, cool_quantity = _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_setting)
-
-    spec_MR, spec_OR, mode_MR, mode_OR = _get_virtual_heating_devices_and_modes(house.region)
-
-    ##### 暖房負荷の取得（MJ/h）
-    L_H_d_t_i: np.ndarray
-    """暖房負荷 [MJ/h]"""
-
-    with jjj_common.injector_context(injector):  # ネスト内からの利用に備える
-        # L_dash_H_R_d_t_i, L_dash_CS_R_d_t_iは負荷ファイルから読み取れないため自動計算する。
-        # 読み込んだ負荷と整合性が取れないため、正しい実装ではない。
-        L_H_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i = _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setting, spec_MR, spec_OR, mode_MR, mode_OR)
-        L_H_d_t_i = _override_heating_load_from_csv(L_H_d_t_i, loadFile)
-
-        ##### 冷房負荷の取得（MJ/h）
-        L_CS_d_t_i: np.ndarray
-        """冷房顕熱負荷 [MJ/h]"""
-        L_CL_d_t_i: np.ndarray
-        """冷房潜熱負荷 [MJ/h]"""
-
-        if loadFile == '-':
-            L_CS_d_t_i, L_CL_d_t_i = _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR)
-        else:
-            L_CS_d_t_i, L_CL_d_t_i = _load_cooling_load_from_csv(loadFile)
-
-    # 負荷をあつめたデータクラス
-    _bind_load_dti(injector, L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i, L_dash_H_R_d_t_i, L_dash_CS_R_d_t_i)
-
-    # NOTE: 出力用の下記が計算できるのは、負荷が上書きされない前提
-    L_H_d_t, L_CS_d_t, L_CL_d_t = _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i)
-
-    ##### 暖房消費電力の計算（kWh/h）
-    print("暖房消費電力の計算")
-
-    def arr_summary(arr: np.ndarray):
-        return {
-            "MAX  ": max(arr),
-            "ZEROS": arr.size - np.count_nonzero(arr),
-            "AVG  ": np.average(arr[np.nonzero(arr)])
-        }
-
-    V_hs_dsgn_H, V_hs_dsgn_C = _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat_CRAC)
+    preparation = _prepare_main_load_state(
+        _MainLoadPreparationInputs(
+            injector=injector,
+            climateFile=climateFile,
+            loadFile=loadFile,
+            house=house,
+            skin=skin,
+            hex=hex,
+            ufac=ufac,
+            heat_ac_setting=heat_ac_setting,
+            cool_ac_setting=cool_ac_setting,
+            heat_CRAC=heat_CRAC,
+            cool_CRAC=cool_CRAC,
+        )
+    )
+    climate = preparation.climate
+    heat_quantity = preparation.heat_quantity
+    cool_quantity = preparation.cool_quantity
+    L_H_d_t_i = preparation.L_H_d_t_i
+    L_CS_d_t_i = preparation.L_CS_d_t_i
+    L_CL_d_t_i = preparation.L_CL_d_t_i
+    L_H_d_t = preparation.L_H_d_t
+    L_CS_d_t = preparation.L_CS_d_t
+    L_CL_d_t = preparation.L_CL_d_t
+    V_hs_dsgn_H = preparation.V_hs_dsgn_H
+    V_hs_dsgn_C = preparation.V_hs_dsgn_C
 
     E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = _run_heating_calc_Q_UT_A(injector, heat_ac_setting)
 
