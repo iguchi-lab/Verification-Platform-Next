@@ -113,6 +113,47 @@ class _DwellingAreasAndWaterHeatResult(NamedTuple):
     A_NR: object
     L_wtr: object
 
+class _CalculationPreparationInputs(NamedTuple):
+    house: object
+    ac_setting: object
+    skin: object
+    heat_CRAC: object
+    cool_CRAC: object
+    new_ufac: object
+    v_min_heat_input: object
+    v_min_cool_input: object
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    climateFile: object
+
+
+class _CalculationPreparationResult(NamedTuple):
+    V_hs_dsgn_H: object
+    V_hs_dsgn_C: object
+    df_output: object
+    df_output2: object
+    df_output3: object
+    df_carryover_output: object
+    climate: object
+    Theta_ex_d_t: object
+    h_ex_d_t: object
+    A_HCZ_i: object
+    A_NR: object
+    L_wtr: object
+    V_vent_l_NR_d_t: object
+    V_vent_g_i: object
+    U_prt: object
+    A_prt_i: object
+    l_duct_i: object
+    X_star_HBR_d_t: object
+    Theta_star_HBR_d_t: object
+    Theta_sur_d_t_i: object
+    Q_hat_hs_d_t: object
+    Q_hat_hs_CS_d_t: object
+    V_hs_min: object
+    Q_hs_rtd_H: object
+    Q_hs_rtd_C: object
+
 class _BalancedRoomAndDuctStateResult(NamedTuple):
     X_star_HBR_d_t: object
     Theta_star_HBR_d_t: object
@@ -3752,6 +3793,168 @@ def _log_supply_temperatures(Theta_supply_d_t_i):
     """Preserve the five diagnostic writes around underfloor adjustment."""
     for i in range(5):
         _logger.NDdebug(f"Theta_supply_d_t_{i + 1}", Theta_supply_d_t_i[i])
+def _prepare_calculation_state(inputs: _CalculationPreparationInputs):
+    house = inputs.house
+    ac_setting = inputs.ac_setting
+    skin = inputs.skin
+    heat_CRAC = inputs.heat_CRAC
+    cool_CRAC = inputs.cool_CRAC
+    new_ufac = inputs.new_ufac
+
+    # NOTE: 暖房・冷房で二回実行される。定格能力のどちらが None かで判別している
+    V_hs_dsgn_H, V_hs_dsgn_C = _normalize_design_airflows(
+        inputs.V_hs_dsgn_H,
+        inputs.V_hs_dsgn_C,
+    )
+
+    df_output = pd.DataFrame(index=pd.date_range(
+        datetime(2023, 1, 1, 1, 0, 0),
+        datetime(2024, 1, 1, 0, 0, 0),
+        freq='h'))
+    df_output2 = pd.DataFrame()
+    df_output3 = pd.DataFrame()
+
+    # 熱繰越調査用出力ファイル
+    df_carryover_output = pd.DataFrame(index=pd.date_range(
+        datetime(2023, 1, 1, 1, 0, 0),
+        datetime(2024, 1, 1, 0, 0, 0),
+        freq='h'))
+
+    # 気象条件
+    climate_conditions = _prepare_climate_conditions(_ClimateConditionInputs(
+        df_output, house, new_ufac, inputs.climateFile))
+    climate = climate_conditions.climate
+    Theta_ex_d_t = climate_conditions.Theta_ex_d_t
+    X_ex_d_t = climate_conditions.X_ex_d_t
+    J_d_t = climate_conditions.J_d_t
+    h_ex_d_t = climate_conditions.h_ex_d_t
+
+    # 主たる居室・その他居室・非居室の面積
+    dwelling_state = _prepare_dwelling_areas_and_water_heat(
+        df_output2, df_output3, house)
+    A_HCZ_i = dwelling_state.A_HCZ_i
+    A_HCZ_R_i = dwelling_state.A_HCZ_R_i
+    A_NR = dwelling_state.A_NR
+    L_wtr = dwelling_state.L_wtr
+
+    # (66d) 非居室の在室人数
+    n_p_d_t = _prepare_occupancy_state(df_output, house, A_NR)
+
+    # 人体発熱
+    q_p_H = dc.get_q_p_H()
+    q_p_CS = dc.get_q_p_CS()
+    q_p_CL = dc.get_q_p_CL()
+    df_output3['q_p_H'] = [q_p_H]
+    df_output3['q_p_CS'] = [q_p_CS]
+    df_output3['q_p_CL'] = [q_p_CL]
+
+    # (65d) 非居室の内部発湿
+    w_gen_d_t = _prepare_internal_moisture_state(df_output, house, A_NR)
+
+    # (64d) 非居室の内部発熱
+    q_gen_d_t = _prepare_internal_heat_state(df_output, house, A_NR)
+
+    # (63) 局所排気量
+    V_vent_l_NR_d_t, V_vent_l_d_t, df_output = \
+        _prepare_local_ventilation_state(df_output)
+
+    v_min_input = _select_minimum_airflow_input(
+        ac_setting,
+        inputs.v_min_heat_input,
+        inputs.v_min_cool_input,
+    )
+
+    # (62) 全般換気量
+    V_vent_g_i = _prepare_general_ventilation_state(
+        _GeneralVentilationStateInputs(
+            df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i))
+
+    # (61) 間仕切の熱貫流率
+    U_prt, A_prt_i = _prepare_partition_state(_PartitionStateInputs(
+        df_output2, df_output3, house, skin, A_HCZ_i, A_NR))
+
+    # (59), (58), (57), (56) 等価外気温度とダクト長さ
+    Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i = \
+        _prepare_duct_geometry_state(_DuctGeometryStateInputs(
+            df_output, df_output2, house, Theta_ex_d_t, J_d_t))
+
+    # (51), (50), (55), (54) 負荷バランス時の室内・ダクト周囲状態
+    balanced_room_state = _prepare_balanced_room_and_duct_state(
+        _BalancedRoomAndDuctStateInputs(
+            df_output,
+            ac_setting,
+            house,
+            X_ex_d_t,
+            Theta_ex_d_t,
+            Theta_SAT_d_t,
+            l_duct_in_i,
+            l_duct_ex_i,
+        ))
+    X_star_HBR_d_t = balanced_room_state.X_star_HBR_d_t
+    Theta_star_HBR_d_t = balanced_room_state.Theta_star_HBR_d_t
+    Theta_attic_d_t = balanced_room_state.Theta_attic_d_t
+    Theta_sur_d_t_i = balanced_room_state.Theta_sur_d_t_i
+    df_output = balanced_room_state.df_output
+
+    # (40)-1st 熱源機の風量を計算するための熱源機の出力
+    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(
+        _InitialHeatSourceOutputInputs(
+            df_output,
+            house,
+            skin,
+            V_vent_l_d_t,
+            V_vent_g_i,
+            J_d_t,
+            q_gen_d_t,
+            n_p_d_t,
+            q_p_H,
+            q_p_CS,
+            q_p_CL,
+            X_ex_d_t,
+            w_gen_d_t,
+            Theta_ex_d_t,
+            L_wtr,
+        ))
+
+    # (39) 熱源機の最低風量
+    V_hs_min = _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i)
+    Q_hs_rtd_H, Q_hs_rtd_C = _prepare_rated_heat_source_capacity_state(
+        _RatedHeatSourceCapacityStateInputs(
+            df_output3,
+            ac_setting,
+            house,
+            heat_CRAC,
+            cool_CRAC,
+        ))
+
+    return _CalculationPreparationResult(
+        V_hs_dsgn_H,
+        V_hs_dsgn_C,
+        df_output,
+        df_output2,
+        df_output3,
+        df_carryover_output,
+        climate,
+        Theta_ex_d_t,
+        h_ex_d_t,
+        A_HCZ_i,
+        A_NR,
+        L_wtr,
+        V_vent_l_NR_d_t,
+        V_vent_g_i,
+        U_prt,
+        A_prt_i,
+        l_duct_i,
+        X_star_HBR_d_t,
+        Theta_star_HBR_d_t,
+        Theta_sur_d_t_i,
+        Q_hat_hs_d_t,
+        Q_hat_hs_CS_d_t,
+        V_hs_min,
+        Q_hs_rtd_H,
+        Q_hs_rtd_C,
+    )
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -3772,118 +3975,44 @@ def calc_Q_UT_A(
         load: Load_DTI):
     """未処理負荷と機器の計算に必要な変数を取得"""
 
-    # NOTE: 暖房・冷房で二回実行される。定格能力のどちらが None かで判別している
-    V_hs_dsgn_H, V_hs_dsgn_C = _normalize_design_airflows(
-        V_hs_dsgn_H,
-        V_hs_dsgn_C,
-    )
-
-    df_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
-    df_output2 = pd.DataFrame()
-    df_output3 = pd.DataFrame()
-
-    # 熱繰越調査用出力ファイル
-    df_carryover_output  = pd.DataFrame(index = pd.date_range(datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
-
-    # 気象条件
-    climate_conditions = _prepare_climate_conditions(_ClimateConditionInputs(df_output, house, new_ufac, climateFile))
-    climate = climate_conditions.climate
-    Theta_ex_d_t = climate_conditions.Theta_ex_d_t
-    X_ex_d_t = climate_conditions.X_ex_d_t
-    J_d_t = climate_conditions.J_d_t
-    h_ex_d_t = climate_conditions.h_ex_d_t
-
-    #主たる居室・その他居室・非居室の面積
-    dwelling_state = _prepare_dwelling_areas_and_water_heat(
-        df_output2, df_output3, house)
-    A_HCZ_i = dwelling_state.A_HCZ_i
-    A_HCZ_R_i = dwelling_state.A_HCZ_R_i
-    A_NR = dwelling_state.A_NR
-    L_wtr = dwelling_state.L_wtr
-
-    # (66d)　非居室の在室人数
-    n_p_d_t = _prepare_occupancy_state(df_output, house, A_NR)
-
-    # 人体発熱
-    q_p_H = dc.get_q_p_H()
-    q_p_CS = dc.get_q_p_CS()
-    q_p_CL = dc.get_q_p_CL()
-    df_output3['q_p_H'] = [q_p_H]
-    df_output3['q_p_CS'] = [q_p_CS]
-    df_output3['q_p_CL'] = [q_p_CL]
-
-    # (65d)　非居室の内部発湿
-    w_gen_d_t = _prepare_internal_moisture_state(df_output, house, A_NR)
-
-    # (64d)　非居室の内部発熱
-    q_gen_d_t = _prepare_internal_heat_state(df_output, house, A_NR)
-
-    # (63)　局所排気量
-    V_vent_l_NR_d_t, V_vent_l_d_t, df_output = _prepare_local_ventilation_state(
-        df_output)
-
-    v_min_input = _select_minimum_airflow_input(
-        ac_setting,
-        v_min_heat_input,
-        v_min_cool_input,
-    )
-
-    # (62)　全般換気量
-    V_vent_g_i = _prepare_general_ventilation_state(_GeneralVentilationStateInputs(
-        df_output2, v_min_input, A_HCZ_i, A_HCZ_R_i))
-
-    # (61)　間仕切の熱貫流率
-    U_prt, A_prt_i = _prepare_partition_state(_PartitionStateInputs(
-        df_output2, df_output3, house, skin, A_HCZ_i, A_NR))
-
-    # (59), (58), (57), (56)　等価外気温度とダクト長さ
-    Theta_SAT_d_t, l_duct_ex_i, l_duct_in_i, l_duct_i = \
-        _prepare_duct_geometry_state(_DuctGeometryStateInputs(
-            df_output, df_output2, house, Theta_ex_d_t, J_d_t))
-    # (51), (50), (55), (54)　負荷バランス時の室内・ダクト周囲状態
-    balanced_room_state = _prepare_balanced_room_and_duct_state(_BalancedRoomAndDuctStateInputs(
-        df_output,
-        ac_setting,
+    preparation = _prepare_calculation_state(_CalculationPreparationInputs(
         house,
-        X_ex_d_t,
-        Theta_ex_d_t,
-        Theta_SAT_d_t,
-        l_duct_in_i,
-        l_duct_ex_i,
-    ))
-    X_star_HBR_d_t = balanced_room_state.X_star_HBR_d_t
-    Theta_star_HBR_d_t = balanced_room_state.Theta_star_HBR_d_t
-    Theta_attic_d_t = balanced_room_state.Theta_attic_d_t
-    Theta_sur_d_t_i = balanced_room_state.Theta_sur_d_t_i
-    df_output = balanced_room_state.df_output
-
-    # (40)-1st　熱源機の風量を計算するための熱源機の出力
-    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(_InitialHeatSourceOutputInputs(
-        df_output,
-        house,
+        ac_setting,
         skin,
-        V_vent_l_d_t,
-        V_vent_g_i,
-        J_d_t,
-        q_gen_d_t,
-        n_p_d_t,
-        q_p_H,
-        q_p_CS,
-        q_p_CL,
-        X_ex_d_t,
-        w_gen_d_t,
-        Theta_ex_d_t,
-        L_wtr,
-    ))
-    # (39)　熱源機の最低風量
-    V_hs_min = _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i)
-    Q_hs_rtd_H, Q_hs_rtd_C = _prepare_rated_heat_source_capacity_state(_RatedHeatSourceCapacityStateInputs(
-        df_output3,
-        ac_setting,
-        house,
         heat_CRAC,
         cool_CRAC,
+        new_ufac,
+        v_min_heat_input,
+        v_min_cool_input,
+        V_hs_dsgn_H,
+        V_hs_dsgn_C,
+        climateFile,
     ))
+    V_hs_dsgn_H = preparation.V_hs_dsgn_H
+    V_hs_dsgn_C = preparation.V_hs_dsgn_C
+    df_output = preparation.df_output
+    df_output2 = preparation.df_output2
+    df_output3 = preparation.df_output3
+    df_carryover_output = preparation.df_carryover_output
+    climate = preparation.climate
+    Theta_ex_d_t = preparation.Theta_ex_d_t
+    h_ex_d_t = preparation.h_ex_d_t
+    A_HCZ_i = preparation.A_HCZ_i
+    A_NR = preparation.A_NR
+    L_wtr = preparation.L_wtr
+    V_vent_l_NR_d_t = preparation.V_vent_l_NR_d_t
+    V_vent_g_i = preparation.V_vent_g_i
+    U_prt = preparation.U_prt
+    A_prt_i = preparation.A_prt_i
+    l_duct_i = preparation.l_duct_i
+    X_star_HBR_d_t = preparation.X_star_HBR_d_t
+    Theta_star_HBR_d_t = preparation.Theta_star_HBR_d_t
+    Theta_sur_d_t_i = preparation.Theta_sur_d_t_i
+    Q_hat_hs_d_t = preparation.Q_hat_hs_d_t
+    Q_hat_hs_CS_d_t = preparation.Q_hat_hs_CS_d_t
+    V_hs_min = preparation.V_hs_min
+    Q_hs_rtd_H = preparation.Q_hs_rtd_H
+    Q_hs_rtd_C = preparation.Q_hs_rtd_C
     (
         Theta_in_d_t,
         Phi_A_0,
