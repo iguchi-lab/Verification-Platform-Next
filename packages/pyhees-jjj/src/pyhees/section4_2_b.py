@@ -4,7 +4,16 @@
 # ============================================================================
 
 # JJJ_EXPERIMENT ADD
-import jjjexperiment.constants as jjj_consts
+def _get_default_design_airflow_coefficients():
+    return 0.79, 0.79
+
+
+_design_airflow_coefficient_provider = _get_default_design_airflow_coefficients
+
+
+def _set_design_airflow_coefficient_provider(provider):
+    global _design_airflow_coefficient_provider
+    _design_airflow_coefficient_provider = provider
 
 # ============================================================================
 # B.2 熱源機
@@ -330,7 +339,8 @@ def get_V_fan_dsgn_H(V_fan_rtd_H):
       暖房時の送風機の設計風量（m3/h）
 
     """
-    return V_fan_rtd_H * jjj_consts.C_V_fan_dsgn_H
+    C_V_fan_dsgn_H, _ = _design_airflow_coefficient_provider()
+    return V_fan_rtd_H * C_V_fan_dsgn_H
 
 
 def get_V_fan_dsgn_C(V_fan_rtd_C):
@@ -343,7 +353,8 @@ def get_V_fan_dsgn_C(V_fan_rtd_C):
       冷房時の送風機の設計風量（m3/h）
 
     """
-    return V_fan_rtd_C * jjj_consts.C_V_fan_dsgn_C
+    _, C_V_fan_dsgn_C = _design_airflow_coefficient_provider()
+    return V_fan_rtd_C * C_V_fan_dsgn_C
 
 
 # ============================================================================

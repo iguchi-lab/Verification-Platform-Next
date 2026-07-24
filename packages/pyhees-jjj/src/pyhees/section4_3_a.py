@@ -3,7 +3,16 @@
 # ============================================================================
 
 # JJJ_EXPERIMENT ADD
-import jjjexperiment.constants as jjj_consts
+def _get_default_cooling_capacity_limit():
+    return 5600
+
+
+_cooling_capacity_limit_provider = _get_default_cooling_capacity_limit
+
+
+def _set_cooling_capacity_limit_provider(provider):
+    global _cooling_capacity_limit_provider
+    _cooling_capacity_limit_provider = provider
 
 # ============================================================================
 # A.2 定格能力
@@ -35,7 +44,8 @@ def get_q_rtd_C(A_HCZ):
 
     """
     q_rtd_C = 190.5 * A_HCZ + 45.6
-    return min(jjj_consts.q_rtd_C_limit, q_rtd_C)
+    q_rtd_C_limit = _cooling_capacity_limit_provider()
+    return min(q_rtd_C_limit, q_rtd_C)
 
 
 # ============================================================================
