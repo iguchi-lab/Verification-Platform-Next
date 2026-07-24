@@ -10,15 +10,18 @@
 
 ## 現在の基準
 
-このモノレポへ取り込んだ `pyhees-jjj` の固定コミットは次のとおりです。
+このモノレポへ取り込んだ建築研究所公式 `pyhees` の固定基準は次のとおりです。
 
-- fork commit: `0f91ba8381df1b4960557b92b39339385cc9009f`
-- engine version: `_20260323`
+- upstream version: `3.10.0`
+- upstream commit: `d5224c4a01def00a8421bcd2fcc0d4b4a5b88644`
+- previous upstream commit: `2de59208427e719edacfeffaa47d46e964c4fc63`（Ver.3.9相当）
+- imported fork commit: `0f91ba8381df1b4960557b92b39339385cc9009f`
+- engine version: `_20260413`
 - legacy form version: `260715`
 
 この値は `regression/phase5/manifest.json` と一致させます。
 
-固定コミットは独自変更を含むforkのコミットです。対応する `BRI-EES-House/pyhees` の正確な基準コミットは、現在の履歴と文書だけでは確定できていません。次回の上流更新前に上流リポジトリとの比較で特定し、この文書へコミットIDを追記します。推測したバージョン名で更新しません。
+Ver.3.10更新では、公式のVer.3.9からVer.3.10への1コミットをファイル単位で3-way統合しました。変更対象8ファイルのうち5ファイルはVer.3.9と一致し、`section2_2.py`、`section4_8.py`、`section9_3.py`にあったfork独自差分は保持したまま公式変更を取り込んでいます。`pyhees-jjj`のパッケージ版は製品側の版であり、公式`pyhees`の版とは分けて管理します。
 
 ## 変更方針
 
