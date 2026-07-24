@@ -1,6 +1,7 @@
 import os
 import pytest
 import numpy as np
+import pyhees.section3_1_e as algo
 # JJJ
 from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.inputs.common import HouseInfo
@@ -50,6 +51,9 @@ class Test_床下空調時_共通:
 
         # Assert
         assert len(arr) == 24 * 365
+        np.testing.assert_array_equal(
+            algo._get_new_underfloor_runup_temperature(), arr
+        )
         # 第1期間 [0, 2663]: 27.69 ℃
         assert arr[0]    == pytest.approx(27.69)
         assert arr[2663] == pytest.approx(27.69)

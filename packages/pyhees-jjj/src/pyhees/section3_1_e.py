@@ -28,6 +28,20 @@ def _set_ground_surface_resistance_provider(provider):
 def _get_ground_surface_resistance():
     return _ground_surface_resistance_provider()
 
+
+_new_underfloor_runup_temperature_provider = None
+
+
+def _set_new_underfloor_runup_temperature_provider(provider):
+    global _new_underfloor_runup_temperature_provider
+    _new_underfloor_runup_temperature_provider = provider
+
+
+def _get_new_underfloor_runup_temperature():
+    if _new_underfloor_runup_temperature_provider is None:
+        raise RuntimeError("New underfloor runup temperature provider is not registered")
+    return _new_underfloor_runup_temperature_provider()
+
 # ============================================================================
 # E.2 床下温度
 # ============================================================================
@@ -464,9 +478,8 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
 
     # 助走計算用床下温度
     if new_ufac is not None and new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        from jjjexperiment.underfloor_ac.section3_1_e import get_Theta_uf_d_t_runup as jjj_ufac_get_Theta_uf_d_t_runup
         #260112 IGUCHI 新床下空調用固定値
-        Theta_uf_runup = jjj_ufac_get_Theta_uf_d_t_runup()
+        Theta_uf_runup = _get_new_underfloor_runup_temperature()
     else:
         Theta_uf_runup = get_Theta_uf_d_t_runup(underfloor_insulation, Theta_ex_d_t)
 
