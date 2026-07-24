@@ -312,3 +312,128 @@ def test_cooling_selectors_preserve_invalid_input_errors():
             SimpleNamespace(type=invalid_setting),
             *( ["value"] * 16 ),
         )
+
+def test_run_heating_phase_preserves_order_and_result_context(monkeypatch):
+    events = []
+    values = {name: object() for name in (
+        "unprocessed", "outlet", "inlet", "supply", "ventilation",
+        "rated-fan", "simulation", "capacity", "fan", "electricity", "frame",
+    )}
+    monkeypatch.setattr(
+        experiment_main,
+        "_run_heating_calc_Q_UT_A",
+        lambda *args: events.append(("calculate", args)) or (
+            values["unprocessed"], values["outlet"], values["inlet"],
+            values["supply"], values["ventilation"],
+        ),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_get_heating_fan_model",
+        lambda *args: events.append(("fan-model", args))
+        or (values["rated-fan"], values["simulation"]),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_get_heating_capacity_and_HCM",
+        lambda *args: events.append(("capacity", args))
+        or (values["capacity"], "HCM"),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_select_heating_fan_power",
+        lambda *args: events.append(("fan", args)) or values["fan"],
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_select_heating_electricity",
+        lambda *args: events.append(("electricity", args)) or values["electricity"],
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_build_heating_output_dataframe",
+        lambda *args: events.append(("frame", args)) or values["frame"],
+    )
+    inputs = experiment_main._HeatingPhaseInputs(
+        injector="injector", case_name="case", climateFile="climate.csv",
+        v_min_heating_input="minimum", house=SimpleNamespace(region=6),
+        heat_ac_setting="setting", heat_CRAC="heat-crac", cool_CRAC="cool-crac",
+        heat_denchu_catalog="catalog", heat_real_inner="inner", climate="climate",
+        heat_quantity="heat-quantity", cool_quantity="cool-quantity",
+        V_hs_dsgn_H="design",
+    )
+
+    result = experiment_main._run_heating_phase(inputs)
+
+    assert [event[0] for event in events] == [
+        "calculate", "fan-model", "capacity", "fan", "electricity", "frame",
+    ]
+    assert result == experiment_main._HeatingPhaseResult(
+        values["unprocessed"], values["electricity"], values["fan"],
+        values["capacity"], values["frame"],
+    )
+
+
+def test_run_cooling_phase_preserves_bind_order_and_result_context(monkeypatch):
+    events = []
+    values = {name: object() for name in (
+        "unprocessed", "outlet", "inlet", "outlet-humidity", "inlet-humidity",
+        "supply", "ventilation", "sensible", "latent", "capacity",
+        "rated-fan", "simulation", "fan", "electricity",
+    )}
+
+    class Binder:
+        def bind(self, *args, **kwargs):
+            events.append(("bind", args, kwargs))
+
+    injector = SimpleNamespace(binder=Binder())
+    monkeypatch.setattr(
+        experiment_main,
+        "_bind_cooling_design_airflows",
+        lambda *args: events.append(("design", args)) or ("design-H", "design-C"),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_get_cooling_fan_model",
+        lambda *args: events.append(("fan-model", args))
+        or (values["rated-fan"], values["simulation"]),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_run_cooling_calc_Q_UT_A",
+        lambda *args: events.append(("calculate", args)) or (
+            values["unprocessed"], values["outlet"], values["inlet"],
+            values["outlet-humidity"], values["inlet-humidity"], values["supply"],
+            values["ventilation"], values["sensible"], values["latent"],
+            values["capacity"],
+        ),
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_select_cooling_fan_power",
+        lambda *args: events.append(("fan", args)) or values["fan"],
+    )
+    monkeypatch.setattr(
+        experiment_main,
+        "_select_cooling_electricity",
+        lambda *args: events.append(("electricity", args)) or values["electricity"],
+    )
+    monkeypatch.setattr("builtins.print", lambda *args: events.append(("print", args)))
+    inputs = experiment_main._CoolingPhaseInputs(
+        injector=injector, case_name="case", climateFile="climate.csv",
+        v_min_cooling_input="minimum", house=SimpleNamespace(region=6),
+        cool_ac_setting="setting", cool_CRAC="cool-crac",
+        cool_denchu_catalog="catalog", cool_real_inner="inner", climate="climate",
+        cool_quantity="cool-quantity",
+    )
+
+    result = experiment_main._run_cooling_phase(inputs)
+
+    assert [event[0] for event in events] == [
+        "print", "design", "bind", "fan-model", "calculate", "fan", "electricity",
+    ]
+    assert result == experiment_main._CoolingPhaseResult(
+        values["unprocessed"], values["electricity"], values["fan"],
+        values["sensible"], values["latent"], values["outlet"], values["inlet"],
+        values["supply"], values["ventilation"],
+    )

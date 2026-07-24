@@ -168,6 +168,56 @@ class _HeatingType1And3ElectricityInputs(NamedTuple):
     equipment_spec: object
 
 
+class _HeatingPhaseInputs(NamedTuple):
+    injector: Injector
+    case_name: object
+    climateFile: object
+    v_min_heating_input: object
+    house: HouseInfo
+    heat_ac_setting: HeatingAcSetting
+    heat_CRAC: HeatCRACSpec
+    cool_CRAC: CoolCRACSpec
+    heat_denchu_catalog: object
+    heat_real_inner: object
+    climate: object
+    heat_quantity: object
+    cool_quantity: object
+    V_hs_dsgn_H: object
+
+
+class _HeatingPhaseResult(NamedTuple):
+    E_UT_H_d_t: object
+    E_E_H_d_t: object
+    E_E_fan_H_d_t: object
+    q_hs_H_d_t: object
+    df_output2: object
+
+
+class _CoolingPhaseInputs(NamedTuple):
+    injector: Injector
+    case_name: object
+    climateFile: object
+    v_min_cooling_input: object
+    house: HouseInfo
+    cool_ac_setting: CoolingAcSetting
+    cool_CRAC: CoolCRACSpec
+    cool_denchu_catalog: object
+    cool_real_inner: object
+    climate: object
+    cool_quantity: object
+
+
+class _CoolingPhaseResult(NamedTuple):
+    E_UT_C_d_t: object
+    E_E_C_d_t: object
+    E_E_fan_C_d_t: object
+    q_hs_CS_d_t: object
+    q_hs_CL_d_t: object
+    Theta_hs_out_d_t: object
+    Theta_hs_in_d_t: object
+    V_hs_supply_d_t: object
+    V_hs_vent_d_t: object
+
 class _MainLoadPreparationInputs(NamedTuple):
     injector: Injector
     climateFile: object
@@ -1071,6 +1121,152 @@ def _prepare_main_load_state(inputs: _MainLoadPreparationInputs):
     )
 
 
+def _run_heating_phase(inputs: _HeatingPhaseInputs):
+    (
+        E_UT_H_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        V_hs_supply_d_t,
+        V_hs_vent_d_t,
+    ) = _run_heating_calc_Q_UT_A(inputs.injector, inputs.heat_ac_setting)
+    P_rac_fan_rtd_H, simu_R_H = _get_heating_fan_model(
+        inputs.heat_ac_setting,
+        inputs.V_hs_dsgn_H,
+        inputs.heat_denchu_catalog,
+        inputs.heat_real_inner,
+        inputs.case_name,
+    )
+    q_hs_H_d_t, _ = _get_heating_capacity_and_HCM(
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        V_hs_supply_d_t,
+        inputs.climate,
+        inputs.house.region,
+    )
+    E_E_fan_H_d_t = _select_heating_fan_power(
+        inputs.heat_ac_setting,
+        inputs.heat_quantity,
+        inputs.v_min_heating_input,
+        P_rac_fan_rtd_H,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        inputs.V_hs_dsgn_H,
+        q_hs_H_d_t,
+        inputs.house.region,
+    )
+    E_E_H_d_t = _select_heating_electricity(
+        inputs.case_name,
+        inputs.climateFile,
+        inputs.heat_ac_setting,
+        inputs.house,
+        inputs.climate,
+        inputs.heat_CRAC,
+        inputs.cool_CRAC,
+        inputs.heat_quantity,
+        inputs.cool_quantity,
+        inputs.heat_denchu_catalog,
+        inputs.heat_real_inner,
+        E_E_fan_H_d_t,
+        q_hs_H_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        V_hs_supply_d_t,
+        P_rac_fan_rtd_H,
+        simu_R_H,
+    )
+    df_output2 = _build_heating_output_dataframe(
+        E_UT_H_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        inputs.climate,
+        V_hs_supply_d_t,
+        V_hs_vent_d_t,
+    )
+    return _HeatingPhaseResult(
+        E_UT_H_d_t=E_UT_H_d_t,
+        E_E_H_d_t=E_E_H_d_t,
+        E_E_fan_H_d_t=E_E_fan_H_d_t,
+        q_hs_H_d_t=q_hs_H_d_t,
+        df_output2=df_output2,
+    )
+
+
+def _run_cooling_phase(inputs: _CoolingPhaseInputs):
+    print("冷房消費電力の計算")
+    _, V_hs_dsgn_C = _bind_cooling_design_airflows(
+        inputs.injector,
+        inputs.cool_ac_setting,
+        inputs.cool_quantity,
+        inputs.cool_CRAC,
+    )
+    inputs.injector.binder.bind(jjj_dc.ActiveAcSetting, to=inputs.cool_ac_setting)
+    P_rac_fan_rtd_C, simu_R_C = _get_cooling_fan_model(
+        inputs.cool_ac_setting,
+        V_hs_dsgn_C,
+        inputs.cool_denchu_catalog,
+        inputs.cool_real_inner,
+        inputs.case_name,
+    )
+    (
+        E_UT_C_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        X_hs_out_d_t,
+        X_hs_in_d_t,
+        V_hs_supply_d_t,
+        V_hs_vent_d_t,
+        q_hs_CS_d_t,
+        q_hs_CL_d_t,
+        q_hs_C_d_t,
+    ) = _run_cooling_calc_Q_UT_A(
+        inputs.injector,
+        inputs.cool_ac_setting,
+        inputs.house.region,
+    )
+    E_E_fan_C_d_t = _select_cooling_fan_power(
+        inputs.cool_ac_setting,
+        inputs.cool_quantity,
+        inputs.v_min_cooling_input,
+        P_rac_fan_rtd_C,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        V_hs_dsgn_C,
+        q_hs_C_d_t,
+        inputs.house.region,
+    )
+    E_E_C_d_t = _select_cooling_electricity(
+        inputs.case_name,
+        inputs.climateFile,
+        inputs.cool_ac_setting,
+        inputs.house,
+        inputs.climate,
+        inputs.cool_CRAC,
+        inputs.cool_quantity,
+        inputs.cool_denchu_catalog,
+        inputs.cool_real_inner,
+        E_E_fan_C_d_t,
+        q_hs_CS_d_t,
+        q_hs_CL_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        X_hs_out_d_t,
+        X_hs_in_d_t,
+        V_hs_supply_d_t,
+        P_rac_fan_rtd_C,
+        simu_R_C,
+    )
+    return _CoolingPhaseResult(
+        E_UT_C_d_t=E_UT_C_d_t,
+        E_E_C_d_t=E_E_C_d_t,
+        E_E_fan_C_d_t=E_E_fan_C_d_t,
+        q_hs_CS_d_t=q_hs_CS_d_t,
+        q_hs_CL_d_t=q_hs_CL_d_t,
+        Theta_hs_out_d_t=Theta_hs_out_d_t,
+        Theta_hs_in_d_t=Theta_hs_in_d_t,
+        V_hs_supply_d_t=V_hs_supply_d_t,
+        V_hs_vent_d_t=V_hs_vent_d_t,
+    )
+
 @inject
 def calc_main(
     injector: Injector,
@@ -1109,142 +1305,49 @@ def calc_main(
             cool_CRAC=cool_CRAC,
         )
     )
-    climate = preparation.climate
-    heat_quantity = preparation.heat_quantity
-    cool_quantity = preparation.cool_quantity
-    L_H_d_t_i = preparation.L_H_d_t_i
-    L_CS_d_t_i = preparation.L_CS_d_t_i
-    L_CL_d_t_i = preparation.L_CL_d_t_i
-    L_H_d_t = preparation.L_H_d_t
-    L_CS_d_t = preparation.L_CS_d_t
-    L_CL_d_t = preparation.L_CL_d_t
-    V_hs_dsgn_H = preparation.V_hs_dsgn_H
-    V_hs_dsgn_C = preparation.V_hs_dsgn_C
-
-    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = _run_heating_calc_Q_UT_A(injector, heat_ac_setting)
-
-    P_rac_fan_rtd_H, simu_R_H = _get_heating_fan_model(heat_ac_setting, V_hs_dsgn_H, heat_denchu_catalog, heat_real_inner, case_name)
-
-    # (3) 日付dの時刻tにおける1時間当たりの熱源機の平均暖房能力(W)
-    q_hs_H_d_t, HCM = _get_heating_capacity_and_HCM(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, climate, house.region)
-
-    E_E_fan_H_d_t: Array8760
-    E_E_fan_H_d_t = _select_heating_fan_power(
-        heat_ac_setting,
-        heat_quantity,
-        v_min_heating_input,
-        P_rac_fan_rtd_H,
-        V_hs_vent_d_t,
-        V_hs_supply_d_t,
-        V_hs_dsgn_H,
-        q_hs_H_d_t,
-        house.region,
+    heating = _run_heating_phase(
+        _HeatingPhaseInputs(
+            injector=injector,
+            case_name=case_name,
+            climateFile=climateFile,
+            v_min_heating_input=v_min_heating_input,
+            house=house,
+            heat_ac_setting=heat_ac_setting,
+            heat_CRAC=heat_CRAC,
+            cool_CRAC=cool_CRAC,
+            heat_denchu_catalog=heat_denchu_catalog,
+            heat_real_inner=heat_real_inner,
+            climate=preparation.climate,
+            heat_quantity=preparation.heat_quantity,
+            cool_quantity=preparation.cool_quantity,
+            V_hs_dsgn_H=preparation.V_hs_dsgn_H,
+        )
     )
-    E_E_H_d_t: np.ndarray
-    """日付dの時刻tにおける1時間当たり 暖房時の消費電力量 [kWh/h]"""
-    E_E_H_d_t = _select_heating_electricity(
-        case_name,
-        climateFile,
-        heat_ac_setting,
-        house,
-        climate,
-        heat_CRAC,
-        cool_CRAC,
-        heat_quantity,
-        cool_quantity,
-        heat_denchu_catalog,
-        heat_real_inner,
-        E_E_fan_H_d_t,
-        q_hs_H_d_t,
-        Theta_hs_out_d_t,
-        Theta_hs_in_d_t,
-        V_hs_supply_d_t,
-        P_rac_fan_rtd_H,
-        simu_R_H,
+    cooling = _run_cooling_phase(
+        _CoolingPhaseInputs(
+            injector=injector,
+            case_name=case_name,
+            climateFile=climateFile,
+            v_min_cooling_input=v_min_cooling_input,
+            house=house,
+            cool_ac_setting=cool_ac_setting,
+            cool_CRAC=cool_CRAC,
+            cool_denchu_catalog=cool_denchu_catalog,
+            cool_real_inner=cool_real_inner,
+            climate=preparation.climate,
+            cool_quantity=preparation.cool_quantity,
+        )
     )
-    df_output2 = _build_heating_output_dataframe(
-        E_UT_H_d_t,
-        Theta_hs_out_d_t,
-        Theta_hs_in_d_t,
-        climate,
-        V_hs_supply_d_t,
-        V_hs_vent_d_t,
-    )
-    ##### 冷房消費電力の計算（kWh/h）
-    print("冷房消費電力の計算")
-
-    V_hs_dsgn_H, V_hs_dsgn_C = _bind_cooling_design_airflows(
-        injector,
-        cool_ac_setting,
-        cool_quantity,
-        cool_CRAC,
-    )
-    injector.binder.bind(jjj_dc.ActiveAcSetting, to=cool_ac_setting)
-    P_rac_fan_rtd_C, simu_R_C = _get_cooling_fan_model(
-        cool_ac_setting,
-        V_hs_dsgn_C,
-        cool_denchu_catalog,
-        cool_real_inner,
-        case_name,
-    )
-    (
-        E_UT_C_d_t,
-        Theta_hs_out_d_t,
-        Theta_hs_in_d_t,
-        X_hs_out_d_t,
-        X_hs_in_d_t,
-        V_hs_supply_d_t,
-        V_hs_vent_d_t,
-        q_hs_CS_d_t,
-        q_hs_CL_d_t,
-        q_hs_C_d_t,
-    ) = _run_cooling_calc_Q_UT_A(injector, cool_ac_setting, house.region)
-    E_E_fan_C_d_t = _select_cooling_fan_power(
-        cool_ac_setting,
-        cool_quantity,
-        v_min_cooling_input,
-        P_rac_fan_rtd_C,
-        V_hs_vent_d_t,
-        V_hs_supply_d_t,
-        V_hs_dsgn_C,
-        q_hs_C_d_t,
-        house.region,
-    )
-    E_E_C_d_t: np.ndarray
-    """日付dの時刻tにおける1時間当たりの冷房時の消費電力量(kWh/h)"""
-    E_E_C_d_t = _select_cooling_electricity(
-        case_name,
-        climateFile,
-        cool_ac_setting,
-        house,
-        climate,
-        cool_CRAC,
-        cool_quantity,
-        cool_denchu_catalog,
-        cool_real_inner,
-        E_E_fan_C_d_t,
-        q_hs_CS_d_t,
-        q_hs_CL_d_t,
-        Theta_hs_out_d_t,
-        Theta_hs_in_d_t,
-        X_hs_out_d_t,
-        X_hs_in_d_t,
-        V_hs_supply_d_t,
-        P_rac_fan_rtd_C,
-        simu_R_C,
-    )
-    ##### 計算結果のまとめ
-
     E_H_d_t, E_C_d_t, E_H, E_C = _summarize_primary_energy(
-        E_E_H_d_t,
-        E_UT_H_d_t,
-        E_E_C_d_t,
-        E_UT_C_d_t,
+        heating.E_E_H_d_t,
+        heating.E_UT_H_d_t,
+        cooling.E_E_C_d_t,
+        cooling.E_UT_C_d_t,
     )
     return _write_outputs_and_build_test_result(
         case_name,
-        df_output2,
-        climate,
+        heating.df_output2,
+        preparation.climate,
         test_mode,
         cool_CRAC,
         heat_CRAC,
@@ -1252,20 +1355,20 @@ def calc_main(
         E_H,
         E_H_d_t,
         E_C_d_t,
-        E_E_H_d_t,
-        E_E_C_d_t,
-        E_UT_H_d_t,
-        E_UT_C_d_t,
-        L_H_d_t,
-        L_CS_d_t,
-        L_CL_d_t,
-        E_E_fan_H_d_t,
-        E_E_fan_C_d_t,
-        q_hs_H_d_t,
-        q_hs_CS_d_t,
-        q_hs_CL_d_t,
-        Theta_hs_out_d_t,
-        Theta_hs_in_d_t,
-        V_hs_supply_d_t,
-        V_hs_vent_d_t,
+        heating.E_E_H_d_t,
+        cooling.E_E_C_d_t,
+        heating.E_UT_H_d_t,
+        cooling.E_UT_C_d_t,
+        preparation.L_H_d_t,
+        preparation.L_CS_d_t,
+        preparation.L_CL_d_t,
+        heating.E_E_fan_H_d_t,
+        cooling.E_E_fan_C_d_t,
+        heating.q_hs_H_d_t,
+        cooling.q_hs_CS_d_t,
+        cooling.q_hs_CL_d_t,
+        cooling.Theta_hs_out_d_t,
+        cooling.Theta_hs_in_d_t,
+        cooling.V_hs_supply_d_t,
+        cooling.V_hs_vent_d_t,
     )
