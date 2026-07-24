@@ -1,8 +1,21 @@
 from dataclasses import dataclass
 from typing import Optional
 # JJJ
+from ._parsing import parse_present_fields
 from .options import 全般換気機能, 機器仕様手動入力タイプ, 暖房方式, 冷房方式, 計算モデル, ファン消費電力から換気分を引く
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
+
+_EQUIPMENT_INPUT_FIELDS = (
+    ('q_hs_rtd', 'q_hs_rtd_input', float),
+    ('P_hs_rtd', 'P_hs_rtd_input', float),
+    ('V_fan_rtd', 'V_fan_rtd_input', float),
+    ('P_fan_rtd', 'P_fan_rtd_input', float),
+    ('q_hs_mid', 'q_hs_mid_input', float),
+    ('P_hs_mid', 'P_hs_mid_input', float),
+    ('V_fan_mid', 'V_fan_mid_input', float),
+    ('P_fan_mid', 'P_fan_mid_input', float),
+)
+
 
 @dataclass
 class AcSetting:
@@ -73,23 +86,8 @@ class AcSetting:
         if 'input_V_hs_dsgn' in data and int(data['input_V_hs_dsgn']) == 2:
             kwargs['V_hs_dsgn'] = float(data['V_hs_dsgn'])
 
-        # 機器仕様入力フィールドを愚直にパース
-        if 'q_hs_rtd' in data:
-            kwargs['q_hs_rtd_input'] = float(data['q_hs_rtd'])
-        if 'P_hs_rtd' in data:
-            kwargs['P_hs_rtd_input'] = float(data['P_hs_rtd'])
-        if 'V_fan_rtd' in data:
-            kwargs['V_fan_rtd_input'] = float(data['V_fan_rtd'])
-        if 'P_fan_rtd' in data:
-            kwargs['P_fan_rtd_input'] = float(data['P_fan_rtd'])
-        if 'q_hs_mid' in data:
-            kwargs['q_hs_mid_input'] = float(data['q_hs_mid'])
-        if 'P_hs_mid' in data:
-            kwargs['P_hs_mid_input'] = float(data['P_hs_mid'])
-        if 'V_fan_mid' in data:
-            kwargs['V_fan_mid_input'] = float(data['V_fan_mid'])
-        if 'P_fan_mid' in data:
-            kwargs['P_fan_mid_input'] = float(data['P_fan_mid'])
+        # 機器仕様入力フィールドを定義順にパース
+        kwargs.update(parse_present_fields(data, _EQUIPMENT_INPUT_FIELDS))
 
         return kwargs
 
