@@ -1,8 +1,61 @@
 from dataclasses import dataclass
 from typing import Optional
 # JJJ
+from ._parsing import parse_present_fields
 from .options import 全般換気機能, 機器仕様手動入力タイプ, 暖房方式, 冷房方式, 計算モデル, ファン消費電力から換気分を引く
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
+
+_EQUIPMENT_INPUT_FIELDS = (
+    ('q_hs_rtd', 'q_hs_rtd_input', float),
+    ('P_hs_rtd', 'P_hs_rtd_input', float),
+    ('V_fan_rtd', 'V_fan_rtd_input', float),
+    ('P_fan_rtd', 'P_fan_rtd_input', float),
+    ('q_hs_mid', 'q_hs_mid_input', float),
+    ('P_hs_mid', 'P_hs_mid_input', float),
+    ('V_fan_mid', 'V_fan_mid_input', float),
+    ('P_fan_mid', 'P_fan_mid_input', float),
+)
+
+
+def _parse_model_fields(data: dict) -> dict:
+    kwargs = {}
+    if 'type' in data:
+        kwargs['type'] = 計算モデル(int(data['type']))
+    if 'input' in data:
+        input_mode = 機器仕様手動入力タイプ(int(data['input']))
+        kwargs['input_mode'] = input_mode
+        kwargs['equipment_spec'] = input_mode.name
+    return kwargs
+
+
+def _parse_air_distribution_fields(data: dict) -> dict:
+    kwargs = {}
+    if 'VAV' in data:
+        kwargs['VAV'] = int(data['VAV']) == 2
+    if 'general_ventilation' in data:
+        kwargs['general_ventilation'] = int(data['general_ventilation']) == 全般換気機能.あり.value
+
+    if 'duct_insulation' in data:
+        if data['duct_insulation'] == '全てもしくは一部が断熱区画外である' or int(data['duct_insulation']) == 1:
+            kwargs['duct_insulation'] = '全てもしくは一部が断熱区画外である'
+        elif str(data['duct_insulation']) == '全て断熱区画内である' or int(data['duct_insulation']) == 2:
+            kwargs['duct_insulation'] = '全て断熱区画内である'
+        else:
+            raise ValueError('ダクトが通過する空間の入力が不正です。')
+
+    if 'subtract_ventilation_power' in data:
+        kwargs['subtract_ventilation_power'] = ファン消費電力から換気分を引く(int(data['subtract_ventilation_power']))
+    return kwargs
+
+
+def _parse_optional_design_fields(data: dict) -> dict:
+    kwargs = {}
+    if 'input_f_SFP' in data and data['input_f_SFP'] == 2:
+        kwargs['f_SFP'] = float(data['f_SFP'])
+    if 'input_V_hs_dsgn' in data and int(data['input_V_hs_dsgn']) == 2:
+        kwargs['V_hs_dsgn'] = float(data['V_hs_dsgn'])
+    return kwargs
+
 
 @dataclass
 class AcSetting:
@@ -44,52 +97,12 @@ class AcSetting:
         """共通フィールドのパース処理"""
         # modeは子クラスで設定するため、ここでは設定しない
         kwargs = {}
-        # 入力モードをenumで設定
-        if 'type' in data:
-            kwargs['type'] = 計算モデル(int(data['type']))
-        if 'input' in data:
-            input_mode = 機器仕様手動入力タイプ(int(data['input']))
-            kwargs['input_mode'] = input_mode
-            kwargs['equipment_spec'] = input_mode.name
+        kwargs.update(_parse_model_fields(data))
+        kwargs.update(_parse_air_distribution_fields(data))
+        kwargs.update(_parse_optional_design_fields(data))
 
-        if 'VAV' in data:
-            kwargs['VAV'] = int(data['VAV']) == 2
-        if 'general_ventilation' in data:
-            kwargs['general_ventilation'] = int(data['general_ventilation']) == 全般換気機能.あり.value
-
-        if 'duct_insulation' in data:
-            if data['duct_insulation'] == '全てもしくは一部が断熱区画外である' or int(data['duct_insulation']) == 1:
-                kwargs['duct_insulation'] = '全てもしくは一部が断熱区画外である'
-            elif str(data['duct_insulation']) == '全て断熱区画内である' or int(data['duct_insulation']) == 2:
-                kwargs['duct_insulation'] = '全て断熱区画内である'
-            else:
-                raise ValueError('ダクトが通過する空間の入力が不正です。')
-
-        if 'subtract_ventilation_power' in data:
-            kwargs['subtract_ventilation_power'] = ファン消費電力から換気分を引く(int(data['subtract_ventilation_power']))
-
-        if 'input_f_SFP' in data and data['input_f_SFP'] == 2:
-            kwargs['f_SFP'] = float(data['f_SFP'])
-        if 'input_V_hs_dsgn' in data and int(data['input_V_hs_dsgn']) == 2:
-            kwargs['V_hs_dsgn'] = float(data['V_hs_dsgn'])
-
-        # 機器仕様入力フィールドを愚直にパース
-        if 'q_hs_rtd' in data:
-            kwargs['q_hs_rtd_input'] = float(data['q_hs_rtd'])
-        if 'P_hs_rtd' in data:
-            kwargs['P_hs_rtd_input'] = float(data['P_hs_rtd'])
-        if 'V_fan_rtd' in data:
-            kwargs['V_fan_rtd_input'] = float(data['V_fan_rtd'])
-        if 'P_fan_rtd' in data:
-            kwargs['P_fan_rtd_input'] = float(data['P_fan_rtd'])
-        if 'q_hs_mid' in data:
-            kwargs['q_hs_mid_input'] = float(data['q_hs_mid'])
-        if 'P_hs_mid' in data:
-            kwargs['P_hs_mid_input'] = float(data['P_hs_mid'])
-        if 'V_fan_mid' in data:
-            kwargs['V_fan_mid_input'] = float(data['V_fan_mid'])
-        if 'P_fan_mid' in data:
-            kwargs['P_fan_mid_input'] = float(data['P_fan_mid'])
+        # 機器仕様入力フィールドを定義順にパース
+        kwargs.update(parse_present_fields(data, _EQUIPMENT_INPUT_FIELDS))
 
         return kwargs
 

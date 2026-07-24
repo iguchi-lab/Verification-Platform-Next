@@ -1,10 +1,28 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from ._parsing import parse_present_fields
+
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 # for scope of import *
 __all__ = ['HouseInfo', 'OuterSkin', 'HEX']
+
+_HOUSE_INFO_FIELDS = (
+    ('A_A', 'A_A', float),
+    ('A_MR', 'A_MR', float),
+    ('A_OR', 'A_OR', float),
+    ('region', 'region', int),
+)
+
+_OUTER_SKIN_FIELDS = (
+    ('A_env', 'A_env', float),
+    ('A_A', 'A_A', float),
+    ('U_A', 'U_A', float),
+    ('eta_A_H', 'eta_A_H', float),
+    ('eta_A_C', 'eta_A_C', float),
+)
+
 
 @dataclass
 class HouseInfo:
@@ -29,15 +47,7 @@ class HouseInfo:
 
     @classmethod
     def from_dict(cls, data: dict) -> 'HouseInfo':
-        kwargs = {}
-        if 'A_A' in data:
-            kwargs['A_A'] = float(data['A_A'])
-        if 'A_MR' in data:
-            kwargs['A_MR'] = float(data['A_MR'])
-        if 'A_OR' in data:
-            kwargs['A_OR'] = float(data['A_OR'])
-        if 'region' in data:
-            kwargs['region'] = int(data['region'])
+        kwargs = parse_present_fields(data, _HOUSE_INFO_FIELDS)
         return cls(**kwargs)
 
 @dataclass
@@ -87,17 +97,7 @@ class OuterSkin:
 
     @classmethod
     def from_dict(cls, data: dict) -> 'OuterSkin':
-        kwargs = {}
-        if 'A_env' in data:
-            kwargs['A_env'] = float(data['A_env'])
-        if 'A_A' in data:
-            kwargs['A_A'] = float(data['A_A'])
-        if 'U_A' in data:
-            kwargs['U_A'] = float(data['U_A'])
-        if 'eta_A_H' in data:
-            kwargs['eta_A_H'] = float(data['eta_A_H'])
-        if 'eta_A_C' in data:
-            kwargs['eta_A_C'] = float(data['eta_A_C'])
+        kwargs = parse_present_fields(data, _OUTER_SKIN_FIELDS)
 
         from pyhees.section3_2 import calc_r_env, get_Q_dash, get_mu_H, get_mu_C
         kwargs['r_env'] = calc_r_env(
