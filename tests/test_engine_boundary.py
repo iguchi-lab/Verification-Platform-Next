@@ -51,9 +51,8 @@ EXPECTED_MAIN_WILDCARD_IMPORTS: set[str] = set()
 
 EXPECTED_OPTIONS_WILDCARD_IMPORTERS: set[str] = set()
 
-# Package __init__.py files may deliberately re-export a public API. Implementation
-# modules must make their dependencies explicit; shrink this migration allowlist as
-# each remaining boundary is refactored.
+# All jjjexperiment modules, including package re-export modules, must make their
+# dependencies explicit.
 EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
 
 EXPECTED_DENCHU_TEST_WILDCARD_IMPORTS: set[tuple[str, str]] = set()
@@ -165,8 +164,6 @@ def test_options_wildcard_imports_match_migration_allowlist():
 def test_implementation_wildcard_imports_match_migration_allowlist():
     wildcard_imports = set()
     for path in sorted(JJJEXPERIMENT_SOURCE.rglob("*.py")):
-        if path.name == "__init__.py":
-            continue
 
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         wildcard_imports.update(
@@ -178,7 +175,7 @@ def test_implementation_wildcard_imports_match_migration_allowlist():
         )
 
     assert wildcard_imports == EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS, (
-        "Implementation modules must use explicit imports. Do not add a wildcard "
+        "JJJ modules must use explicit imports. Do not add a wildcard "
         "import. If an existing wildcard import was removed, reduce "
         "EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS in the same refactoring commit.\n"
         f"expected={EXPECTED_IMPLEMENTATION_WILDCARD_IMPORTS}\n"
