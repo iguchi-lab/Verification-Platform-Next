@@ -3,6 +3,8 @@
 ## 概要
 暖房時の送風機消費電力量 `E_E_fan_H_d_t` 計算における、空調システム種別とユーザー入力設定による分岐パターンを示します。
 
+潜熱評価モデルの送風機電力は jjjexperiment.latent_load.fan_power、最低風量・最低電力入力の送風機電力は jjjexperiment.v_min_input.fan_power に実装します。旧 section4_2_a モジュールは import 互換用の shim です。
+
 ## フローダイアグラム
 
 ```mermaid
@@ -10,7 +12,7 @@ flowchart TD
 
 Start([開始: E_E_fan_H_d_t 計算]) --> TypeCheck{計算モデル heat_ac_setting.type}
 
-TypeCheck -->|RAC活用型全館空調_潜熱評価モデル| LatentModel[潜熱評価モデル<br/>jjj_latent_dc_a.get_E_E_fan_H_d_t使用]
+TypeCheck -->|RAC活用型全館空調_潜熱評価モデル| LatentModel[潜熱評価モデル<br/>latent_fan_power.get_E_E_fan_H_d_t使用]
 LatentModel --> EndLatent[E_E_fan_H_d_t<br/>潜熱評価専用計算]
 
 TypeCheck -->|ダクト式セントラル空調機<br/>RAC活用型全館空調_現行省エネ法RACモデル<br/>電中研モデル| MinVolumeCheck{他モデル 最小風量入力 v_min_heating_input.input_V_hs_min}
@@ -54,7 +56,7 @@ style CubicFormula fill:#ffebee
 ### 1. 潜熱評価モデル
 - **タイプ**: `RAC活用型全館空調_潜熱評価モデル`
 - **ロジック**: 潜熱評価専用計算
-- **結果**: `jjj_latent_dc_a.get_E_E_fan_H_d_t` 使用
+- **結果**: `latent_fan_power.get_E_E_fan_H_d_t` 使用
 
 ### 2. 従来式
 - **タイプ**: `ダクト式セントラル空調機`, `RAC活用型全館空調_現行省エネ法RACモデル`, `電中研モデル`

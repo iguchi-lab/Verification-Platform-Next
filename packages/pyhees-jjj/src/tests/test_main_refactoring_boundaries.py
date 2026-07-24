@@ -276,7 +276,7 @@ def test_get_heating_capacity_and_HCM_preserves_call_order(monkeypatch):
     assert events == ['C_df', ('capacity', ('out', 'in', 'supply', 'C-df', 6)), 'HCM']
 
 def test_get_latent_heating_fan_power_preserves_model_call(monkeypatch):
-    latent = importlib.import_module('jjjexperiment.latent_load.section4_2_a')
+    latent = importlib.import_module('jjjexperiment.latent_load.fan_power')
     events = []
     monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
     monkeypatch.setattr(latent, 'get_E_E_fan_H_d_t', lambda *args: events.append(('call', args)) or 'fan')
@@ -327,7 +327,7 @@ def test_get_minimum_volume_heating_fan_power_preserves_fixed_ventilation_option
     ]
 
 def test_get_minimum_power_heating_fan_preserves_input_tuple(monkeypatch):
-    module = importlib.import_module('jjjexperiment.v_min_input.section4_2_a')
+    module = importlib.import_module('jjjexperiment.v_min_input.fan_power')
     events = []
     monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
     monkeypatch.setattr(module, 'get_E_E_fan_d_t', lambda *args: events.append(('call', args)) or 'fan')
@@ -532,7 +532,7 @@ def test_run_cooling_calc_Q_UT_A_preserves_call_capacity_and_diagnostics(monkeyp
         ('capacity', ('theta-out', 'theta-in', 'x-out', 'x-in', 'supply', 6)),
     ]
 def test_get_latent_cooling_fan_power_preserves_model_call(monkeypatch):
-    latent = importlib.import_module('jjjexperiment.latent_load.section4_2_a')
+    latent = importlib.import_module('jjjexperiment.latent_load.fan_power')
     events = []
     monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
     monkeypatch.setattr(latent, 'get_E_E_fan_C_d_t', lambda *args: events.append(('call', args)) or 'fan')
@@ -580,7 +580,7 @@ def test_get_minimum_volume_cooling_fan_power_preserves_fixed_ventilation_option
         )),
     ]
 def test_get_minimum_power_cooling_fan_preserves_input_tuple(monkeypatch):
-    module = importlib.import_module('jjjexperiment.v_min_input.section4_2_a')
+    module = importlib.import_module('jjjexperiment.v_min_input.fan_power')
     events = []
     monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
     monkeypatch.setattr(module, 'get_E_E_fan_d_t', lambda *args: events.append(('call', args)) or 'fan')

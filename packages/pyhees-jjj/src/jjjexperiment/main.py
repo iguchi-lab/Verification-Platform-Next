@@ -319,8 +319,8 @@ def _get_heating_capacity_and_HCM(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply
 
 def _get_latent_heating_fan_power(heat_ac_setting, V_hs_vent_d_t, q_hs_H_d_t):
     print(heat_ac_setting.type)
-    import jjjexperiment.latent_load.section4_2_a as jjj_latent_dc_a
-    return jjj_latent_dc_a.get_E_E_fan_H_d_t(
+    import jjjexperiment.latent_load.fan_power as latent_fan_power
+    return latent_fan_power.get_E_E_fan_H_d_t(
         V_hs_vent_d_t, q_hs_H_d_t, heat_ac_setting.f_SFP
     )
 
@@ -367,7 +367,7 @@ def _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating
         if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
         else heat_quantity.P_fan_rtd
     )
-    from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
+    from jjjexperiment.v_min_input.fan_power import get_E_E_fan_d_t
     return get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
         v_min_heating_input.E_E_fan_logic,
         P_fan_rtd,
@@ -525,8 +525,8 @@ def _run_cooling_calc_Q_UT_A(injector, cool_ac_setting, region):
     )
 def _get_latent_cooling_fan_power(cool_ac_setting, V_hs_vent_d_t, q_hs_C_d_t):
     print(cool_ac_setting.type)
-    import jjjexperiment.latent_load.section4_2_a as jjj_latent_dc_a
-    return jjj_latent_dc_a.get_E_E_fan_C_d_t(
+    import jjjexperiment.latent_load.fan_power as latent_fan_power
+    return latent_fan_power.get_E_E_fan_C_d_t(
         V_hs_vent_d_t, q_hs_C_d_t, cool_ac_setting.f_SFP
     )
 def _get_standard_cooling_fan_power(cool_ac_setting, cool_quantity, P_rac_fan_rtd_C, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t, region):
@@ -570,7 +570,7 @@ def _get_minimum_power_cooling_fan(cool_ac_setting, cool_quantity, v_min_cooling
         if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
         else cool_quantity.P_fan_rtd
     )
-    from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
+    from jjjexperiment.v_min_input.fan_power import get_E_E_fan_d_t
     return get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
         v_min_cooling_input.E_E_fan_logic,
         P_fan_rtd,

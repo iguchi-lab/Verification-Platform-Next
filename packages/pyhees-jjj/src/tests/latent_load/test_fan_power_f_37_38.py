@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from jjjexperiment.latent_load.section4_2_a import get_E_E_fan_H_d_t, get_E_E_fan_C_d_t
+from jjjexperiment.latent_load.fan_power import get_E_E_fan_H_d_t, get_E_E_fan_C_d_t
 
 class Test暖房送風機消費電力:
     """暖房送風機消費電力のユニットテスト (式37: get_E_E_fan_H_d_t)"""

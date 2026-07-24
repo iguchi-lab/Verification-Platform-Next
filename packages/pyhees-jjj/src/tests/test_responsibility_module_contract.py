@@ -5,12 +5,27 @@ import pytest
 
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.inputs.options import ファン消費電力算定方法
+import jjjexperiment.latent_load.compressor_efficiency as latent_compressor
+import jjjexperiment.latent_load.fan_power as latent_fan
 import jjjexperiment.latent_load.section4_2_a as latent
+import jjjexperiment.v_min_input.fan_power as v_min_fan
 import jjjexperiment.v_min_input.section4_2_a as v_min
 
 
 def _parameter_names(function):
     return tuple(inspect.signature(function).parameters)
+
+
+def test_legacy_module_names_reexport_identical_functions():
+    assert latent.get_e_r_H_d_t is latent_compressor.get_e_r_H_d_t
+    assert latent.get_e_r_C_d_t is latent_compressor.get_e_r_C_d_t
+    assert latent.get_E_E_fan_H_d_t is latent_fan.get_E_E_fan_H_d_t
+    assert latent.get_E_E_fan_C_d_t is latent_fan.get_E_E_fan_C_d_t
+    assert latent._calc_polynomial_4th is latent_fan._calc_polynomial_4th
+    assert latent._calc_E_E_fan_d_t is latent_fan._calc_E_E_fan_d_t
+    assert v_min.get_E_E_fan_d_t is v_min_fan.get_E_E_fan_d_t
+    assert v_min._solve_linear_system is v_min_fan._solve_linear_system
+    assert v_min._solve_cubic_system is v_min_fan._solve_cubic_system
 
 
 def test_latent_load_public_signatures_are_stable():
