@@ -17,6 +17,46 @@ _EQUIPMENT_INPUT_FIELDS = (
 )
 
 
+def _parse_model_fields(data: dict) -> dict:
+    kwargs = {}
+    if 'type' in data:
+        kwargs['type'] = 計算モデル(int(data['type']))
+    if 'input' in data:
+        input_mode = 機器仕様手動入力タイプ(int(data['input']))
+        kwargs['input_mode'] = input_mode
+        kwargs['equipment_spec'] = input_mode.name
+    return kwargs
+
+
+def _parse_air_distribution_fields(data: dict) -> dict:
+    kwargs = {}
+    if 'VAV' in data:
+        kwargs['VAV'] = int(data['VAV']) == 2
+    if 'general_ventilation' in data:
+        kwargs['general_ventilation'] = int(data['general_ventilation']) == 全般換気機能.あり.value
+
+    if 'duct_insulation' in data:
+        if data['duct_insulation'] == '全てもしくは一部が断熱区画外である' or int(data['duct_insulation']) == 1:
+            kwargs['duct_insulation'] = '全てもしくは一部が断熱区画外である'
+        elif str(data['duct_insulation']) == '全て断熱区画内である' or int(data['duct_insulation']) == 2:
+            kwargs['duct_insulation'] = '全て断熱区画内である'
+        else:
+            raise ValueError('ダクトが通過する空間の入力が不正です。')
+
+    if 'subtract_ventilation_power' in data:
+        kwargs['subtract_ventilation_power'] = ファン消費電力から換気分を引く(int(data['subtract_ventilation_power']))
+    return kwargs
+
+
+def _parse_optional_design_fields(data: dict) -> dict:
+    kwargs = {}
+    if 'input_f_SFP' in data and data['input_f_SFP'] == 2:
+        kwargs['f_SFP'] = float(data['f_SFP'])
+    if 'input_V_hs_dsgn' in data and int(data['input_V_hs_dsgn']) == 2:
+        kwargs['V_hs_dsgn'] = float(data['V_hs_dsgn'])
+    return kwargs
+
+
 @dataclass
 class AcSetting:
     """AC設定のピュアデータクラス"""
@@ -57,34 +97,9 @@ class AcSetting:
         """共通フィールドのパース処理"""
         # modeは子クラスで設定するため、ここでは設定しない
         kwargs = {}
-        # 入力モードをenumで設定
-        if 'type' in data:
-            kwargs['type'] = 計算モデル(int(data['type']))
-        if 'input' in data:
-            input_mode = 機器仕様手動入力タイプ(int(data['input']))
-            kwargs['input_mode'] = input_mode
-            kwargs['equipment_spec'] = input_mode.name
-
-        if 'VAV' in data:
-            kwargs['VAV'] = int(data['VAV']) == 2
-        if 'general_ventilation' in data:
-            kwargs['general_ventilation'] = int(data['general_ventilation']) == 全般換気機能.あり.value
-
-        if 'duct_insulation' in data:
-            if data['duct_insulation'] == '全てもしくは一部が断熱区画外である' or int(data['duct_insulation']) == 1:
-                kwargs['duct_insulation'] = '全てもしくは一部が断熱区画外である'
-            elif str(data['duct_insulation']) == '全て断熱区画内である' or int(data['duct_insulation']) == 2:
-                kwargs['duct_insulation'] = '全て断熱区画内である'
-            else:
-                raise ValueError('ダクトが通過する空間の入力が不正です。')
-
-        if 'subtract_ventilation_power' in data:
-            kwargs['subtract_ventilation_power'] = ファン消費電力から換気分を引く(int(data['subtract_ventilation_power']))
-
-        if 'input_f_SFP' in data and data['input_f_SFP'] == 2:
-            kwargs['f_SFP'] = float(data['f_SFP'])
-        if 'input_V_hs_dsgn' in data and int(data['input_V_hs_dsgn']) == 2:
-            kwargs['V_hs_dsgn'] = float(data['V_hs_dsgn'])
+        kwargs.update(_parse_model_fields(data))
+        kwargs.update(_parse_air_distribution_fields(data))
+        kwargs.update(_parse_optional_design_fields(data))
 
         # 機器仕様入力フィールドを定義順にパース
         kwargs.update(parse_present_fields(data, _EQUIPMENT_INPUT_FIELDS))
