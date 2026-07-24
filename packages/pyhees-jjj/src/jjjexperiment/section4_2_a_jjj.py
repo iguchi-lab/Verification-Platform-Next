@@ -141,6 +141,53 @@ def _calc_type2_cooling_rac_electricity(
         q_hs_CS_d_t * 3.6/1000, q_hs_CL_d_t * 3.6/1000,  # L_H[MJ/h]
         q_max_C, input_C_af_C, climateFile)
 
+
+def _build_type4_heating_output(
+        q_hs_H_d_t, COP_H_d_t, E_E_CRAC_H_d_t, E_E_fan_H_d_t):
+    df_output_denchuH = pd.DataFrame(index=pd.date_range(
+        datetime(2023, 1, 1, 1, 0, 0), datetime(2024, 1, 1, 0, 0, 0),
+        freq='h'))
+    return df_output_denchuH.assign(
+        q_hs_H_d_t=q_hs_H_d_t,  # W
+        COP_H_d_t=COP_H_d_t,
+        E_E_CRAC_H_d_t=E_E_CRAC_H_d_t,  # kW
+        E_E_fan_H_d_t=E_E_fan_H_d_t,  # kW
+        E_E_H_d_t=E_E_CRAC_H_d_t + E_E_fan_H_d_t)  # kW
+
+
+def _write_type4_heating_output(
+        case_name, q_hs_H_d_t, COP_H_d_t, E_E_CRAC_H_d_t,
+        E_E_fan_H_d_t):
+    df_output_denchuH = _build_type4_heating_output(
+        q_hs_H_d_t, COP_H_d_t, E_E_CRAC_H_d_t, E_E_fan_H_d_t)
+    df_output_denchuH.to_csv(
+        case_name + jjj_consts.version_info() + '_denchu_H_output.csv',
+        encoding='cp932')  # =Shift_JIS
+
+
+def _build_type4_cooling_output(
+        q_hs_C_d_t, COP_C_d_t, E_E_CRAC_C_d_t, E_E_fan_C_d_t):
+    df_output_denchuC = pd.DataFrame(index=pd.date_range(
+        datetime(2023, 1, 1, 1, 0, 0), datetime(2024, 1, 1, 0, 0, 0),
+        freq='h'))
+    return df_output_denchuC.assign(
+        q_hs_C_d_t=q_hs_C_d_t,  # W
+        COP_C_d_t=COP_C_d_t,
+        E_E_CRAC_C_d_t=E_E_CRAC_C_d_t,  # kW
+        E_E_fan_C_d_t=E_E_fan_C_d_t,  # kW
+        E_E_C_d_t=E_E_CRAC_C_d_t + E_E_fan_C_d_t)  # kW
+
+
+def _write_type4_cooling_output(
+        case_name, q_hs_C_d_t, COP_C_d_t, E_E_CRAC_C_d_t,
+        E_E_fan_C_d_t):
+    df_output_denchuC = _build_type4_cooling_output(
+        q_hs_C_d_t, COP_C_d_t, E_E_CRAC_C_d_t, E_E_fan_C_d_t)
+    df_output_denchuC.to_csv(
+        case_name + jjj_consts.version_info() + '_denchu_C_output.csv',
+        encoding='cp932')  # =Shift_JIS
+
+
 @log_res(['E_E_H_d_t(type:1,3)'])
 def calc_E_E_H_d_t_type1_and_type3(
         type: 計算モデル,
@@ -237,17 +284,9 @@ def calc_E_E_H_d_t_type4(
                                where=COP_H_d_t!=0)  # kWh
 
     # 電中研モデル調査用
-    df_output_denchuH = pd.DataFrame(index = pd.date_range(
-        datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
-
-    df_output_denchuH = df_output_denchuH.assign(
-        q_hs_H_d_t = q_hs_H_d_t,  # W
-        COP_H_d_t = COP_H_d_t,
-        E_E_CRAC_H_d_t = E_E_CRAC_H_d_t,  # kW
-        E_E_fan_H_d_t = E_E_fan_H_d_t,  # kW
-        E_E_H_d_t = E_E_CRAC_H_d_t + E_E_fan_H_d_t  # kW
-    )
-    df_output_denchuH.to_csv(case_name + jjj_consts.version_info() + '_denchu_H_output.csv', encoding='cp932')  # =Shift_JIS
+    _write_type4_heating_output(
+        case_name, q_hs_H_d_t, COP_H_d_t, E_E_CRAC_H_d_t,
+        E_E_fan_H_d_t)
 
     E_E_H_d_t = E_E_fan_H_d_t + E_E_CRAC_H_d_t
     return E_E_H_d_t
@@ -356,17 +395,9 @@ def calc_E_E_C_d_t_type4(
                         where=COP_C_d_t!=0)  # kWh
 
     # 電中研モデル調査用
-    df_output_denchuC = pd.DataFrame(index = pd.date_range(
-        datetime(2023,1,1,1,0,0), datetime(2024,1,1,0,0,0), freq='h'))
-
-    df_output_denchuC = df_output_denchuC.assign(
-        q_hs_C_d_t = q_hs_C_d_t,  # W
-        COP_C_d_t = COP_C_d_t,
-        E_E_CRAC_C_d_t = E_E_CRAC_C_d_t,  # kW
-        E_E_fan_C_d_t = E_E_fan_C_d_t,  # kW
-        E_E_C_d_t = E_E_CRAC_C_d_t + E_E_fan_C_d_t  # kW
-    )
-    df_output_denchuC.to_csv(case_name + jjj_consts.version_info() + '_denchu_C_output.csv', encoding='cp932')  # =Shift_JIS
+    _write_type4_cooling_output(
+        case_name, q_hs_C_d_t, COP_C_d_t, E_E_CRAC_C_d_t,
+        E_E_fan_C_d_t)
 
     _logger.NDdebug("E_E_CRAC_C_d_t", E_E_CRAC_C_d_t)
     E_E_C_d_t = E_E_CRAC_C_d_t + E_E_fan_C_d_t  # (2)
