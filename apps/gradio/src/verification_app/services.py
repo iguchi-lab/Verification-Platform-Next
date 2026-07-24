@@ -15,6 +15,8 @@ CalculationFunction = Callable[[dict[str, Any]], Any]
 VersionFunction = Callable[[], str]
 GraphFunction = Callable[[Mapping[str, Any], Path, str], tuple[Any, ...]]
 
+_CALCULATION_CWD_LOCK = threading.Lock()
+
 
 @dataclass(frozen=True, slots=True)
 class CalculationResult:
@@ -39,14 +41,13 @@ class CalculationService:
         self._version_info = version_info
         self._workdir = workdir
         self._build_graphs = build_graphs
-        self._lock = threading.Lock()
 
     def run(self, values: Mapping[str, Any]) -> CalculationResult:
         input_data: dict[str, Any] | None = None
         output = io.StringIO()
         try:
             input_data = build_input_data(values)
-            with self._lock, redirect_stdout(output), redirect_stderr(output):
+            with _CALCULATION_CWD_LOCK, redirect_stdout(output), redirect_stderr(output):
                 workdir = (self._workdir or Path.cwd()).resolve()
                 workdir.mkdir(parents=True, exist_ok=True)
                 previous_cwd = Path.cwd()

@@ -14,8 +14,6 @@ import pyhees.section4_2_a as dc_a
 import pyhees.section4_2_b as dc_spec
 
 # 床下
-import pyhees.section3_1 as ld
-from pyhees.section3_2 import calc_r_env, get_Q_dash, get_mu_H, get_mu_C
 
 """ オーバーライドロジック """
 
@@ -51,7 +49,6 @@ import jjjexperiment.artifact_paths as artifact_paths
 import jjjexperiment.common as jjj_common
 from jjjexperiment.result import ResultSummary, SutValues
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
-from jjjexperiment.common import Array8760
 import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 
 # [F25-01] 最低風量の直接入力
