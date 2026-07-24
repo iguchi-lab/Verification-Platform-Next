@@ -21,6 +21,7 @@ import pyhees.section4_2_a as dc_a
 """ JJJ_EXPERIMENT ORIGINAL """
 from jjjexperiment.common import Array5x8760, jjj_cloning
 import jjjexperiment.constants as jjj_consts
+import jjjexperiment.artifact_paths as artifact_paths
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
 from jjjexperiment.inputs.options import (
     VAVありなしの吹出風量,
@@ -2054,7 +2055,9 @@ def _export_underfloor_output(inputs: _UnderfloorOutputExportInputs):
     new_ufac_df = inputs.new_ufac_df
     # 床下空調新ロジック調査用変数の出力
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        filename = case_name + jjj_consts.version_info() + _get_output_suffix(ac_setting) + "_output_uf.csv"
+        filename = artifact_paths.underfloor_output_csv_path(
+            artifact_paths.artifact_prefix(case_name),
+            _get_output_suffix(ac_setting)[1:])
         # ネスト関数内で更新されているデータフレーム
         new_ufac_df.export_to_csv(filename)
 
@@ -2069,13 +2072,13 @@ def _export_standard_outputs(inputs: _StandardOutputExportInputs):
         case(None, None):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
         case(_, None):
-            df_output3.to_csv(case_name + jjj_consts.version_info() + '_H_output3.csv', encoding = 'cp932')
-            df_output2.to_csv(case_name + jjj_consts.version_info() + '_H_output4.csv', encoding = 'cp932')
-            df_output.to_csv(case_name  + jjj_consts.version_info() + '_H_output5.csv', encoding = 'cp932')
+            df_output3.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "H", 3), encoding = 'cp932')
+            df_output2.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "H", 4), encoding = 'cp932')
+            df_output.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "H", 5), encoding = 'cp932')
         case(None, _):
-            df_output3.to_csv(case_name + jjj_consts.version_info() + '_C_output3.csv', encoding = 'cp932')
-            df_output2.to_csv(case_name + jjj_consts.version_info() + '_C_output4.csv', encoding = 'cp932')
-            df_output.to_csv(case_name  + jjj_consts.version_info() + '_C_output5.csv', encoding = 'cp932')
+            df_output3.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "C", 3), encoding = 'cp932')
+            df_output2.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "C", 4), encoding = 'cp932')
+            df_output.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "C", 5), encoding = 'cp932')
         case(_, _):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
 
@@ -3588,13 +3591,11 @@ def _export_carryover_diagnostics(inputs: _CarryoverDiagnosticExportInputs):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
         case (_, None):
             df_carryover_output.to_csv(
-                case_name + jjj_consts.version_info()
-                + '_H_carryover_output.csv',
+                artifact_paths.carryover_output_csv_path(case_name, "H"),
                 encoding='cp932')
         case (None, _):
             df_carryover_output.to_csv(
-                case_name + jjj_consts.version_info()
-                + '_C_carryover_output.csv',
+                artifact_paths.carryover_output_csv_path(case_name, "C"),
                 encoding='cp932')
         case (_, _):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")

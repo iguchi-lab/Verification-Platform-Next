@@ -58,11 +58,11 @@ import jjjexperiment.artifact_paths as sut
             "casev-test_C_carryover_output.csv",
         ),
         (
-            lambda: sut.underfloor_output_csv_path("case", "H"),
+            lambda: sut.underfloor_output_csv_path(sut.artifact_prefix("case"), "H"),
             "casev-test_H_output_uf.csv",
         ),
         (
-            lambda: sut.underfloor_output_csv_path("case", "C"),
+            lambda: sut.underfloor_output_csv_path(sut.artifact_prefix("case"), "C"),
             "casev-test_C_output_uf.csv",
         ),
     ),

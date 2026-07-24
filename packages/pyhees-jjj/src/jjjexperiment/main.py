@@ -47,6 +47,7 @@ from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
 
 import jjjexperiment.constants as jjj_consts
+import jjjexperiment.artifact_paths as artifact_paths
 import jjjexperiment.common as jjj_common
 from jjjexperiment.result import ResultSummary, SutValues
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
@@ -248,7 +249,7 @@ class _MainLoadPreparationResult(NamedTuple):
 
 def calc(input_data: dict, test_mode=False):
     case_name = input_data.get('case_name', 'default')
-    with open(case_name + jjj_consts.version_info() + '_input.json', 'w') as f:
+    with open(artifact_paths.input_json_path(case_name), 'w') as f:
         json.dump(input_data, f, indent=4)
 
     # グローバル定数の設定
@@ -376,7 +377,7 @@ def _get_heating_fan_model(heat_ac_setting, V_hs_dsgn_H, heat_denchu_catalog, he
             heat_denchu_catalog, R2, R1, R0, heat_real_inner, P_rac_fan_rtd_H
         )
         df_denchu_consts.to_csv(
-            case_name + jjj_consts.version_info() + '_denchu_consts_H_output.csv',
+            artifact_paths.denchu_constants_csv_path(case_name, "H"),
             encoding='cp932',
         )
     else:
@@ -694,7 +695,7 @@ def _get_cooling_fan_model(cool_ac_setting, V_hs_dsgn_C, cool_denchu_catalog, co
             cool_denchu_catalog, R2, R1, R0, cool_real_inner, P_rac_fan_rtd_C
         )
         df_denchu_consts.to_csv(
-            case_name + jjj_consts.version_info() + '_denchu_consts_C_output.csv',
+            artifact_paths.denchu_constants_csv_path(case_name, "C"),
             encoding='cp932',
         )
     else:
@@ -991,7 +992,7 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
     df_output1['E_H [MJ/year]'] = E_H
     df_output1['E_C [MJ/year]'] = E_C
     df_output1.to_csv(
-        case_name + jjj_consts.version_info() + '_output1.csv',
+        artifact_paths.main_output_csv_path(case_name, 1),
         encoding='cp932',
     )
 
@@ -1015,7 +1016,7 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
     df_output2['q_hs_CS_d_t [Wh/h]'] = q_hs_CS_d_t
     df_output2['q_hs_CL_d_t [Wh/h]'] = q_hs_CL_d_t
     df_output2.to_csv(
-        case_name + jjj_consts.version_info() + '_output2.csv',
+        artifact_paths.main_output_csv_path(case_name, 2),
         encoding='cp932',
     )
 

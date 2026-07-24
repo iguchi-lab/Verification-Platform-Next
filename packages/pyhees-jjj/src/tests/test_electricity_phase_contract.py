@@ -279,7 +279,7 @@ def _type4_args(season):
 def test_type4_heating_preserves_dataframe_and_csv_contract(monkeypatch):
     events = []
     cop = np.full(8760, 2.0)
-    monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_v")
+    monkeypatch.setattr(sut.artifact_paths.jjj_consts, "version_info", lambda: "_v")
     _record(monkeypatch, sut.denchu_2, "calc_COP_H_d_t", events, cop)
     monkeypatch.setattr(
         sut.pd.DataFrame,
@@ -317,7 +317,7 @@ def test_type4_heating_preserves_dataframe_and_csv_contract(monkeypatch):
 def test_type4_cooling_preserves_dataframe_csv_log_and_return_order(monkeypatch):
     events = []
     cop = np.full(8760, 4.0)
-    monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_v")
+    monkeypatch.setattr(sut.artifact_paths.jjj_consts, "version_info", lambda: "_v")
     _record(monkeypatch, sut.denchu_2, "calc_COP_C_d_t", events, cop)
     monkeypatch.setattr(
         sut.pd.DataFrame,
