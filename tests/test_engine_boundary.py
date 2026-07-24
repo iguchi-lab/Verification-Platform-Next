@@ -26,19 +26,16 @@ EXPECTED_REVERSE_DEPENDENCIES = {
         "jjjexperiment.underfloor_ac.section3_1_e",
     },
     "section4_2.py": {
-        "jjjexperiment.common",
         "jjjexperiment.constants",
         "jjjexperiment.inputs.options",
         "jjjexperiment.logger",
     },
     "section4_2_a.py": {
-        "jjjexperiment.common",
         "jjjexperiment.constants",
         "jjjexperiment.inputs.options",
         "jjjexperiment.logger",
     },
     "section4_3.py": {
-        "jjjexperiment.common",
         "jjjexperiment.constants",
     },
 }
