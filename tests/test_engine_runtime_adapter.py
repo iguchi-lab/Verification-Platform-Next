@@ -1,4 +1,7 @@
+import jjjexperiment.common as jjj_common
 import jjjexperiment.constants as jjj_constants
+import jjjexperiment.logger as jjj_logger
+from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
 from jjjexperiment.inputs import options
 from pyhees import jjj_runtime
 
@@ -74,3 +77,53 @@ def test_runtime_constant_provider_tracks_direct_assignments(monkeypatch):
     for name, value in overrides.items():
         monkeypatch.setattr(jjj_constants, name, value)
         assert jjj_runtime.get_constant(name) == value
+
+def test_runtime_logging_preserves_result_metadata_and_dynamic_handler():
+    events = []
+    jjj_runtime.set_result_logger(
+        lambda function, result, labels: events.append(
+            (function.__name__, result, labels)
+        )
+    )
+
+    try:
+        @jjj_runtime.log_res(["value"])
+        def sample(value):
+            return value + 1
+
+        assert sample.__name__ == "sample"
+        assert sample(4) == 5
+        assert events == [("sample", 5, ["value"])]
+    finally:
+        jjj_runtime.set_result_logger(jjj_logger._record_result)
+
+
+def test_underfloor_context_resolver_preserves_explicit_values():
+    new_ufac = object()
+    new_ufac_df = object()
+
+    assert jjj_runtime.resolve_underfloor_context(new_ufac, new_ufac_df) == (
+        new_ufac,
+        new_ufac_df,
+    )
+
+
+def test_underfloor_context_resolver_fills_only_missing_values():
+    configured_ufac = object()
+    configured_frame = object()
+    values = {UnderfloorAc: configured_ufac, UfVarsDataFrame: configured_frame}
+
+    class FakeInjector:
+        def get(self, key):
+            return values[key]
+
+    explicit_ufac = object()
+    with jjj_common.injector_context(FakeInjector()):
+        assert jjj_runtime.resolve_underfloor_context(None, None) == (
+            configured_ufac,
+            configured_frame,
+        )
+        assert jjj_runtime.resolve_underfloor_context(explicit_ufac, None) == (
+            explicit_ufac,
+            configured_frame,
+        )

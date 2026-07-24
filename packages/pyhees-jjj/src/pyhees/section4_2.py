@@ -53,10 +53,12 @@ from pyhees.section11_6 import \
     get_table_7
 
 # JJJ
-from pyhees.jjj_runtime import get_constant as _jjj_constant
+from pyhees.jjj_runtime import (
+    get_constant as _jjj_constant,
+    log_res,
+    計算モデル,
+)
 from pyhees.jjj_markers import jjj_cloned, jjj_mod
-from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
-from jjjexperiment.inputs.options import 計算モデル
 
 
 @jjj_cloned

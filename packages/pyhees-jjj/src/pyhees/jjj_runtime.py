@@ -6,6 +6,7 @@ importせず、既定動作と実行時providerだけを保持する。
 
 from enum import Enum
 from functools import wraps
+from typing import Protocol
 
 
 class 計算モデル(Enum):
@@ -23,6 +24,14 @@ class 床下空調ロジック(Enum):
 class ファン消費電力から換気分を引く(Enum):
     換気分を引く = 1
     換気分を引かない = 2
+
+class UnderfloorAc(Protocol):
+    new_ufac_flg: 床下空調ロジック
+
+
+class UfVarsDataFrame(Protocol):
+    def update_df(self, data: dict):
+        ...
 
 
 _DEFAULT_CONSTANTS = {
