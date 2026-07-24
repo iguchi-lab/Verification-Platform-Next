@@ -407,6 +407,72 @@ def _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating
         False,
     ))
 
+def _select_heating_fan_power(
+    heat_ac_setting,
+    heat_quantity,
+    v_min_heating_input,
+    P_rac_fan_rtd_H,
+    V_hs_vent_d_t,
+    V_hs_supply_d_t,
+    V_hs_dsgn_H,
+    q_hs_H_d_t,
+    region,
+):
+    if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
+        return _get_latent_heating_fan_power(
+            heat_ac_setting, V_hs_vent_d_t, q_hs_H_d_t
+        )
+
+    if heat_ac_setting.type not in [
+        計算モデル.ダクト式セントラル空調機,
+        計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
+        計算モデル.電中研モデル,
+    ]:
+        _raise_invalid_heating_fan_input()
+
+    print(heat_ac_setting.type)
+    match v_min_heating_input.input_V_hs_min:
+        case 最低風量直接入力.入力しない:
+            return _get_standard_heating_fan_power(
+                heat_ac_setting,
+                heat_quantity,
+                P_rac_fan_rtd_H,
+                V_hs_vent_d_t,
+                V_hs_supply_d_t,
+                V_hs_dsgn_H,
+                q_hs_H_d_t,
+                region,
+            )
+        case 最低風量直接入力.入力する:
+            print(最低風量直接入力.入力する)
+            match v_min_heating_input.input_E_E_fan_min:
+                case 最低電力直接入力.入力しない:
+                    return _get_minimum_volume_heating_fan_power(
+                        heat_ac_setting,
+                        heat_quantity,
+                        P_rac_fan_rtd_H,
+                        V_hs_vent_d_t,
+                        V_hs_supply_d_t,
+                        V_hs_dsgn_H,
+                        q_hs_H_d_t,
+                        region,
+                    )
+                case 最低電力直接入力.入力する:
+                    return _get_minimum_power_heating_fan(
+                        heat_ac_setting,
+                        heat_quantity,
+                        v_min_heating_input,
+                        P_rac_fan_rtd_H,
+                        V_hs_vent_d_t,
+                        V_hs_supply_d_t,
+                        V_hs_dsgn_H,
+                        region,
+                    )
+                case _:
+                    _raise_invalid_heating_fan_input()
+        case _:
+            _raise_invalid_heating_fan_input()
+
 def _get_heating_electricity_type1_and_type3(heat_ac_setting, E_E_fan_H_d_t, q_hs_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, climate, V_hs_supply_d_t, cool_quantity, heat_quantity):
     return jjj_dc_a.calc_E_E_H_d_t_type1_and_type3(
         *_HeatingType1And3ElectricityInputs(
@@ -464,6 +530,67 @@ def _get_heating_electricity_type4(case_name, heat_ac_setting, house, climateFil
             heat_real_inner,
         )
     )
+def _select_heating_electricity(
+    case_name,
+    climateFile,
+    heat_ac_setting,
+    house,
+    climate,
+    heat_CRAC,
+    cool_CRAC,
+    heat_quantity,
+    cool_quantity,
+    heat_denchu_catalog,
+    heat_real_inner,
+    E_E_fan_H_d_t,
+    q_hs_H_d_t,
+    Theta_hs_out_d_t,
+    Theta_hs_in_d_t,
+    V_hs_supply_d_t,
+    P_rac_fan_rtd_H,
+    simu_R_H,
+):
+    if heat_ac_setting.type in [
+        計算モデル.ダクト式セントラル空調機,
+        計算モデル.RAC活用型全館空調_潜熱評価モデル,
+    ]:
+        return _get_heating_electricity_type1_and_type3(
+            heat_ac_setting,
+            E_E_fan_H_d_t,
+            q_hs_H_d_t,
+            Theta_hs_out_d_t,
+            Theta_hs_in_d_t,
+            climate,
+            V_hs_supply_d_t,
+            cool_quantity,
+            heat_quantity,
+        )
+    if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
+        return _get_heating_electricity_type2(
+            heat_ac_setting,
+            house,
+            climateFile,
+            E_E_fan_H_d_t,
+            q_hs_H_d_t,
+            heat_CRAC,
+            cool_CRAC,
+        )
+    if heat_ac_setting.type == 計算モデル.電中研モデル:
+        return _get_heating_electricity_type4(
+            case_name,
+            heat_ac_setting,
+            house,
+            climateFile,
+            E_E_fan_H_d_t,
+            q_hs_H_d_t,
+            V_hs_supply_d_t,
+            P_rac_fan_rtd_H,
+            simu_R_H,
+            heat_denchu_catalog,
+            heat_real_inner,
+        )
+    raise Exception("暖房方式が不正です。")
+
 def _build_heating_output_dataframe(E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, climate, V_hs_supply_d_t, V_hs_vent_d_t):
     _logger.NDdebug("E_UT_H_d_t", E_UT_H_d_t)
     df_output2 = pd.DataFrame(
@@ -872,83 +999,39 @@ def calc_main(
     q_hs_H_d_t, HCM = _get_heating_capacity_and_HCM(Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, climate, house.region)
 
     E_E_fan_H_d_t: Array8760
-    # NOTE: 潜熱評価モデルはベース式が異なるため 最低風量・最低電力 直接入力ロジック反映から除外する
-    if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
-        E_E_fan_H_d_t = _get_latent_heating_fan_power(heat_ac_setting, V_hs_vent_d_t, q_hs_H_d_t)
-
-    elif heat_ac_setting.type in [
-        計算モデル.ダクト式セントラル空調機,
-        計算モデル.RAC活用型全館空調_現行省エネ法RACモデル,
-        計算モデル.電中研モデル
-    ]:
-        print(heat_ac_setting.type)
-
-        # [F25-01] 最低風量・最低電力 直接入力
-        match v_min_heating_input.input_V_hs_min:
-            case 最低風量直接入力.入力しない:
-                E_E_fan_H_d_t = _get_standard_heating_fan_power(heat_ac_setting, heat_quantity, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t, house.region)
-
-            case 最低風量直接入力.入力する:
-                print(最低風量直接入力.入力する)
-
-                match v_min_heating_input.input_E_E_fan_min:
-                    case 最低電力直接入力.入力しない:
-                        E_E_fan_H_d_t = _get_minimum_volume_heating_fan_power(heat_ac_setting, heat_quantity, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t, house.region)
-
-                    case 最低電力直接入力.入力する:
-                        E_E_fan_H_d_t = _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating_input, P_rac_fan_rtd_H, V_hs_vent_d_t, V_hs_supply_d_t, V_hs_dsgn_H, house.region)
-                    case _:
-                        _raise_invalid_heating_fan_input()
-            case _:
-                _raise_invalid_heating_fan_input()
-    else:
-        _raise_invalid_heating_fan_input()
-
+    E_E_fan_H_d_t = _select_heating_fan_power(
+        heat_ac_setting,
+        heat_quantity,
+        v_min_heating_input,
+        P_rac_fan_rtd_H,
+        V_hs_vent_d_t,
+        V_hs_supply_d_t,
+        V_hs_dsgn_H,
+        q_hs_H_d_t,
+        house.region,
+    )
     E_E_H_d_t: np.ndarray
     """日付dの時刻tにおける1時間当たり 暖房時の消費電力量 [kWh/h]"""
-
-    if heat_ac_setting.type in [
-        計算モデル.ダクト式セントラル空調機,
-        計算モデル.RAC活用型全館空調_潜熱評価モデル
-    ]:
-        E_E_H_d_t = _get_heating_electricity_type1_and_type3(
-            heat_ac_setting,
-            E_E_fan_H_d_t,
-            q_hs_H_d_t,
-            Theta_hs_out_d_t,
-            Theta_hs_in_d_t,
-            climate,
-            V_hs_supply_d_t,
-            cool_quantity,
-            heat_quantity,
-        )
-    elif heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル:
-        E_E_H_d_t = _get_heating_electricity_type2(
-            heat_ac_setting,
-            house,
-            climateFile,
-            E_E_fan_H_d_t,
-            q_hs_H_d_t,
-            heat_CRAC,
-            cool_CRAC,
-        )
-    elif heat_ac_setting.type == 計算モデル.電中研モデル:
-        E_E_H_d_t = _get_heating_electricity_type4(
-            case_name,
-            heat_ac_setting,
-            house,
-            climateFile,
-            E_E_fan_H_d_t,
-            q_hs_H_d_t,
-            V_hs_supply_d_t,
-            P_rac_fan_rtd_H,
-            simu_R_H,
-            heat_denchu_catalog,
-            heat_real_inner,
-        )
-    else:
-        raise Exception("暖房方式が不正です。")
-
+    E_E_H_d_t = _select_heating_electricity(
+        case_name,
+        climateFile,
+        heat_ac_setting,
+        house,
+        climate,
+        heat_CRAC,
+        cool_CRAC,
+        heat_quantity,
+        cool_quantity,
+        heat_denchu_catalog,
+        heat_real_inner,
+        E_E_fan_H_d_t,
+        q_hs_H_d_t,
+        Theta_hs_out_d_t,
+        Theta_hs_in_d_t,
+        V_hs_supply_d_t,
+        P_rac_fan_rtd_H,
+        simu_R_H,
+    )
     df_output2 = _build_heating_output_dataframe(
         E_UT_H_d_t,
         Theta_hs_out_d_t,
