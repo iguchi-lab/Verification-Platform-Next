@@ -19,9 +19,7 @@ DENCHU_TEST_SOURCE = (
 EXPECTED_REVERSE_DEPENDENCIES = {
     "section3_1_e.py": {
         "jjjexperiment.common",
-        "jjjexperiment.constants",
         "jjjexperiment.inputs.options",
-        "jjjexperiment.logger",
         "jjjexperiment.underfloor_ac.inputs.common",
         "jjjexperiment.underfloor_ac.section3_1_e",
     },
