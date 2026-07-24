@@ -30,7 +30,7 @@ company_f = [
 ]
 
 import pytest
-from jjjexperiment.v_min_input.section4_2_a import _solve_cubic_system
+from jjjexperiment.v_min_input.fan_power import _solve_cubic_system
 
 class Test三乗方程式解法:
     """_solve_cubic_system関数のテスト"""

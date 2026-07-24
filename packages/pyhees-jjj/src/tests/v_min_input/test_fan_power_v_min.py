@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
-from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
+from jjjexperiment.v_min_input.fan_power import get_E_E_fan_d_t
 from jjjexperiment.inputs.options import ファン消費電力算定方法
 from pyhees.section4_2 import get_season_array_d_t
 
 
 class TestVMinInput送風機消費電力:
-    """最低風量・最低電力直接入力モデルの送風機消費電力テスト (jjjexperiment.v_min_input.section4_2_a)"""
+    """最低風量・最低電力直接入力モデルの送風機消費電力テスト (jjjexperiment.v_min_input.fan_power)"""
 
     def setup_method(self):
         self.P_fan_rtd = 100.0  # 定格電力 [W] (y2)

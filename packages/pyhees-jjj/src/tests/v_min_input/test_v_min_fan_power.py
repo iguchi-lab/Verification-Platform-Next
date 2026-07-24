@@ -1,5 +1,5 @@
 import numpy as np
-from jjjexperiment.v_min_input.section4_2_a import get_E_E_fan_d_t
+from jjjexperiment.v_min_input.fan_power import get_E_E_fan_d_t
 from jjjexperiment.inputs.options import ファン消費電力算定方法
 
 def test_get_E_E_fan_linear_method():
