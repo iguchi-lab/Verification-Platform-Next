@@ -53,10 +53,12 @@ from pyhees.section11_6 import \
     get_table_7
 
 # JJJ
-import jjjexperiment.constants as jjj_consts
+from pyhees.jjj_runtime import (
+    get_constant as _jjj_constant,
+    log_res,
+    計算モデル,
+)
 from pyhees.jjj_markers import jjj_cloned, jjj_mod
-from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
-from jjjexperiment.inputs.options import 計算モデル
 
 
 @jjj_cloned
@@ -802,7 +804,7 @@ def get_Theta_hs_out_d_t(VAV, Theta_req_d_t_i, V_dash_supply_d_t_i, L_star_H_d_t
     f3 = np.logical_and(C, np.sum(L_star_CS_d_t_i[:5], axis=0) > 0)
     f4 = np.logical_and(C, np.sum(L_star_CS_d_t_i[:5], axis=0) <= 0)
 
-    if (not VAV) and jjj_consts.change_heat_source_outlet_required_temperature != 2:
+    if (not VAV) and _jjj_constant("change_heat_source_outlet_required_temperature") != 2:
         # 暖房期および冷房期 (14-1)
         Theta_hs_out_d_t[f1] = np.sum(Theta_req_d_t_i[:5, f1] * V_dash_supply_d_t_i[:5, f1], axis=0) / \
                                        np.sum(V_dash_supply_d_t_i[:5, f1], axis=0)
@@ -906,7 +908,7 @@ def get_Theta_hs_out_max_H_d_t(Theta_star_hs_in_d_t, Q_hs_max_H_d_t, V_dash_supp
     c_p_air = get_c_p_air()
     rho_air = get_rho_air()
     return np.clip(Theta_star_hs_in_d_t + ((Q_hs_max_H_d_t * 10 ** 6) / \
-                                           (c_p_air * rho_air * np.sum(V_dash_supply_d_t_i[:5, :], axis=0))), None, jjj_consts.Theta_hs_out_max_H_d_t_limit)
+                                           (c_p_air * rho_air * np.sum(V_dash_supply_d_t_i[:5, :], axis=0))), None, _jjj_constant("Theta_hs_out_max_H_d_t_limit"))
 
 
 def get_Theta_hs_out_min_C_d_t(Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_supply_d_t_i):
@@ -924,7 +926,7 @@ def get_Theta_hs_out_min_C_d_t(Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, V_dash_sup
     c_p_air = get_c_p_air()
     rho_air = get_rho_air()
     return np.clip(Theta_star_hs_in_d_t - ((Q_hs_max_CS_d_t * 10 ** 6) / \
-                                           (c_p_air * rho_air * np.sum(V_dash_supply_d_t_i[:5, :], axis=0))), jjj_consts.Theta_hs_out_min_C_d_t_limit, None)
+                                           (c_p_air * rho_air * np.sum(V_dash_supply_d_t_i[:5, :], axis=0))), _jjj_constant("Theta_hs_out_min_C_d_t_limit"), None)
 
 
 def get_X_hs_out_min_C_d_t(X_star_hs_in_d_t, Q_hs_max_CL_d_t, V_dash_supply_d_t_i):
@@ -1130,7 +1132,7 @@ def get_C_df_H_d_t(Theta_ex_d_t, h_ex_d_t):
 
     """
     C_df_H_d_t = np.ones(24 * 365)
-    C_df_H_d_t[np.logical_and(Theta_ex_d_t < jjj_consts.defrost_temp_ductcentral, h_ex_d_t > jjj_consts.defrost_humid_ductcentral)] = jjj_consts.C_df_H_d_t_defrost_ductcentral
+    C_df_H_d_t[np.logical_and(Theta_ex_d_t < _jjj_constant("defrost_temp_ductcentral"), h_ex_d_t > _jjj_constant("defrost_humid_ductcentral"))] = _jjj_constant("C_df_H_d_t_defrost_ductcentral")
     return C_df_H_d_t
 
 
@@ -1385,37 +1387,37 @@ def get_V_dash_hs_supply_d_t_2023(Q_hat_hs_d_t, region, for_cooling):
 
     # 暖房期
     if for_cooling == True:
-      V_dash_hs_supply_d_t[H] = jjj_consts.airvolume_minimum_C
+      V_dash_hs_supply_d_t[H] = _jjj_constant("airvolume_minimum_C")
     else:
       V_dash_hs_supply_d_t[H]  \
         = np.clip(
-          (jjj_consts.airvolume_coeff_a4_H * Q_hat_hs_d_t_kw ** 4
-            + jjj_consts.airvolume_coeff_a3_H * Q_hat_hs_d_t_kw ** 3
-            + jjj_consts.airvolume_coeff_a2_H * Q_hat_hs_d_t_kw ** 2
-            + jjj_consts.airvolume_coeff_a1_H * Q_hat_hs_d_t_kw
-            + jjj_consts.airvolume_coeff_a0_H)[H],
-          jjj_consts.airvolume_minimum_H,
-          jjj_consts.airvolume_maximum_H)
+          (_jjj_constant("airvolume_coeff_a4_H") * Q_hat_hs_d_t_kw ** 4
+            + _jjj_constant("airvolume_coeff_a3_H") * Q_hat_hs_d_t_kw ** 3
+            + _jjj_constant("airvolume_coeff_a2_H") * Q_hat_hs_d_t_kw ** 2
+            + _jjj_constant("airvolume_coeff_a1_H") * Q_hat_hs_d_t_kw
+            + _jjj_constant("airvolume_coeff_a0_H"))[H],
+          _jjj_constant("airvolume_minimum_H"),
+          _jjj_constant("airvolume_maximum_H"))
 
     # 冷房期
     if for_cooling == True:
       V_dash_hs_supply_d_t[C]  \
         = np.clip(
-          (jjj_consts.airvolume_coeff_a4_C * Q_hat_hs_d_t_kw ** 4
-            + jjj_consts.airvolume_coeff_a3_C * Q_hat_hs_d_t_kw ** 3
-            + jjj_consts.airvolume_coeff_a2_C * Q_hat_hs_d_t_kw ** 2
-            + jjj_consts.airvolume_coeff_a1_C * Q_hat_hs_d_t_kw
-            + jjj_consts.airvolume_coeff_a0_C)[C],
-          jjj_consts.airvolume_minimum_C,
-          jjj_consts.airvolume_maximum_C)
+          (_jjj_constant("airvolume_coeff_a4_C") * Q_hat_hs_d_t_kw ** 4
+            + _jjj_constant("airvolume_coeff_a3_C") * Q_hat_hs_d_t_kw ** 3
+            + _jjj_constant("airvolume_coeff_a2_C") * Q_hat_hs_d_t_kw ** 2
+            + _jjj_constant("airvolume_coeff_a1_C") * Q_hat_hs_d_t_kw
+            + _jjj_constant("airvolume_coeff_a0_C"))[C],
+          _jjj_constant("airvolume_minimum_C"),
+          _jjj_constant("airvolume_maximum_C"))
     else:
-      V_dash_hs_supply_d_t[C] = jjj_consts.airvolume_minimum_H
+      V_dash_hs_supply_d_t[C] = _jjj_constant("airvolume_minimum_H")
 
     # 中間期
     if for_cooling == True:
-      V_dash_hs_supply_d_t[M] = jjj_consts.airvolume_minimum_C
+      V_dash_hs_supply_d_t[M] = _jjj_constant("airvolume_minimum_C")
     else:
-      V_dash_hs_supply_d_t[M] = jjj_consts.airvolume_minimum_H
+      V_dash_hs_supply_d_t[M] = _jjj_constant("airvolume_minimum_H")
 
     # WARNING: 少数点の扱いの問題で意図しない結果になる
     # assert min(V_dash_hs_supply_d_t) == constants.airvolume_minimum
@@ -2305,7 +2307,7 @@ l_duct_R_i = np.array([
 @jjj_mod
 def get_phi_i():
     """ """
-    phi_i = getattr(jjj_consts, 'phi_i', 0.49)
+    phi_i = _jjj_constant("phi_i")
     return np.array([phi_i] * 5)
 
 

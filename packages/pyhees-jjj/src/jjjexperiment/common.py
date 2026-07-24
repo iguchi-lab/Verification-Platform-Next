@@ -10,6 +10,8 @@ from pyhees.jjj_markers import (
     jjj_cloning as jjj_cloning,
     jjj_mod as jjj_mod,
 )
+from pyhees.jjj_runtime import set_underfloor_context_resolver
+
 
 # NOTE: どこからでも利用するのでカスタムファイルへ依存させない
 # 循環参照の原因になるため
@@ -60,3 +62,22 @@ def injector_context(injector: Injector) -> Iterator[None]:
         yield
     finally:
         _current_injector.reset(token)
+
+def _resolve_underfloor_context(new_ufac, new_ufac_df):
+    injector = get_current_injector()
+    if injector is None:
+        return new_ufac, new_ufac_df
+
+    from jjjexperiment.underfloor_ac.inputs.common import (
+        UnderfloorAc,
+        UfVarsDataFrame,
+    )
+
+    if new_ufac is None:
+        new_ufac = injector.get(UnderfloorAc)
+    if new_ufac_df is None:
+        new_ufac_df = injector.get(UfVarsDataFrame)
+    return new_ufac, new_ufac_df
+
+
+set_underfloor_context_resolver(_resolve_underfloor_context)

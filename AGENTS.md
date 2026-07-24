@@ -58,13 +58,15 @@ GitHub issue. Keep behavior-preserving refactoring separate from feature work,
 formula changes, upstream synchronization, and regression-baseline updates.
 
 Treat one user instruction as one design outcome tracked by one issue. For
-low-risk work, target 30-50 boundaries or roughly 800-1,500 changed lines per
-pull request, and group 8-15 boundaries with the same responsibility,
+low-risk work, target 50-80 boundaries or roughly 1,500-2,500 changed lines per
+pull request, and group 12-25 boundaries with the same responsibility,
 invariants, and targeted tests into one commit. Keep numerical, stateful, and
 order-sensitive work smaller.
 
 Run targeted tests and Ruff for every commit. Run the full repository, Phase 5,
-engine, and CI checks once per pull request, not after every commit.
+full Ruff, and CI checks once per pull request, not after every commit. Treat the
+GitHub Actions engine suite as authoritative for low-risk pull requests; repeat
+it locally only for high-risk numerical changes or CI failure diagnosis.
 
 Each refactoring pull request must state its scope, non-goals, preserved
 behavior, verification evidence, and relationship to the work package. Update

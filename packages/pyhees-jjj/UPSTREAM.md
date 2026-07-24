@@ -6,6 +6,7 @@
 - 建築研究所由来コード: `src/pyhees`
 - 検証用プラットフォーム独自コード: `src/jjjexperiment`
 - 独自変更マーカー: `src/pyhees/jjj_markers.py`（上流由来ではありません）
+- 上流接続アダプター: src/pyhees/jjj_runtime.py（上流由来ではありません）
 
 ## 現在の基準
 
@@ -23,7 +24,7 @@
 
 1. 新しい独自機能は `src/jjjexperiment` に実装します。
 2. `src/pyhees` から `jjjexperiment` への新しい依存は追加しません。
-3. 現在残っている逆依存は `tests/test_engine_boundary.py` の許可リストで固定し、段階的に削減します。
+3. `src/pyhees` から `jjjexperiment` への逆依存は0件を維持し、`tests/test_engine_boundary.py` の契約テストで再導入を防止します。
 4. リファクタリングと計算機能の追加・数式変更は別のPRにします。
 5. 挙動を維持するリファクタリングではPhase 5の基準CSVを更新しません。
 

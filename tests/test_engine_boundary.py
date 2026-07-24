@@ -16,26 +16,7 @@ DENCHU_TEST_SOURCE = (
 
 # Temporary migration allowlist. Removing an entry is encouraged; adding one is not.
 # Keep this exact so a dependency cannot be added or removed without an explicit review.
-EXPECTED_REVERSE_DEPENDENCIES = {
-    "section3_1_e.py": {
-        "jjjexperiment.common",
-        "jjjexperiment.inputs.options",
-        "jjjexperiment.underfloor_ac.inputs.common",
-    },
-    "section4_2.py": {
-        "jjjexperiment.constants",
-        "jjjexperiment.inputs.options",
-        "jjjexperiment.logger",
-    },
-    "section4_2_a.py": {
-        "jjjexperiment.constants",
-        "jjjexperiment.inputs.options",
-        "jjjexperiment.logger",
-    },
-    "section4_3.py": {
-        "jjjexperiment.constants",
-    },
-}
+EXPECTED_REVERSE_DEPENDENCIES: dict[str, set[str]] = {}
 
 # Temporary migration allowlist. Remove modules as their wildcard imports are made explicit.
 EXPECTED_MAIN_WILDCARD_IMPORTS: set[str] = set()

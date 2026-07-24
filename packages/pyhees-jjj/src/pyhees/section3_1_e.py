@@ -8,10 +8,12 @@ from functools import lru_cache
 
 # JJJ_EXPERIMENT ADD
 from pyhees.jjj_markers import jjj_cloned, jjj_mod
-# NOTE: pyhees->jjj 方向の依存はファイルスコープとしては可能な限り控える
-# インプットデータクラスとロジックを分離しているためデータクラスのみインポート可能
-from jjjexperiment.inputs.options import 床下空調ロジック
-from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFrame
+from pyhees.jjj_runtime import (
+    UnderfloorAc,
+    UfVarsDataFrame,
+    resolve_underfloor_context,
+    床下空調ロジック,
+)
 
 def _get_default_ground_surface_resistance():
     return 0.15
@@ -467,14 +469,11 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
     # ----- 助走計算 -----
 
     if new_ufac is None or new_ufac_df is None:
-      # 引数で渡されていないときスレッドにセットされていないかチェックする
-      from jjjexperiment.common import get_current_injector
-      thread_injector = get_current_injector()
-      if thread_injector is not None:
-        if new_ufac is None:
-          new_ufac = thread_injector.get(UnderfloorAc)
-        if new_ufac_df is None:
-          new_ufac_df = thread_injector.get(UfVarsDataFrame)
+      # 引数で渡されていないとき実行コンテキストにセットされていないかチェックする
+      new_ufac, new_ufac_df = resolve_underfloor_context(
+        new_ufac,
+        new_ufac_df,
+      )
 
     # 助走計算用床下温度
     if new_ufac is not None and new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
