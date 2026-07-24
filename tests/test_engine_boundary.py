@@ -28,7 +28,6 @@ EXPECTED_REVERSE_DEPENDENCIES = {
     "section4_2.py": {
         "jjjexperiment.common",
         "jjjexperiment.constants",
-        "jjjexperiment.inputs.di_container",
         "jjjexperiment.inputs.options",
         "jjjexperiment.logger",
     },
@@ -97,6 +96,25 @@ def test_pyhees_reverse_dependencies_match_migration_allowlist():
         "Do not add a reverse dependency. If an existing dependency was removed, "
         "reduce EXPECTED_REVERSE_DEPENDENCIES in the same refactoring PR.\n"
         f"expected={EXPECTED_REVERSE_DEPENDENCIES}\nactual={actual}"
+    )
+
+
+def test_pyhees_reverse_dependencies_use_explicit_imports():
+    wildcard_imports = set()
+    for path in sorted(PYHEES_SOURCE.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        wildcard_imports.update(
+            (path.relative_to(PYHEES_SOURCE).as_posix(), node.module)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            and node.module
+            and (node.module == "jjjexperiment" or node.module.startswith("jjjexperiment."))
+            and any(alias.name == "*" for alias in node.names)
+        )
+
+    assert not wildcard_imports, (
+        "pyhees reverse dependencies must name every JJJ dependency explicitly: "
+        f"{sorted(wildcard_imports)}"
     )
 
 

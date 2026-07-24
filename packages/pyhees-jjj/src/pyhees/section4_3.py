@@ -26,7 +26,7 @@ from pyhees.section11_1 import \
     calc_h_ex
 
 # JJJ_EXPERIMENT ADD
-from jjjexperiment.common import *
+from jjjexperiment.common import jjj_cloning, jjj_mod
 import jjjexperiment.constants as jjj_consts
 
 # ============================================================================

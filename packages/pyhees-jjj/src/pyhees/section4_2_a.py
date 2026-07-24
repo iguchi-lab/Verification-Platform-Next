@@ -43,7 +43,7 @@ import numpy as np
 from scipy import optimize
 
 # JJJ_EXPERIMENT ADD
-from jjjexperiment.common import *
+from jjjexperiment.common import jjj_cloned, jjj_mod
 import jjjexperiment.constants as jjj_consts
 from jjjexperiment.inputs.options import 計算モデル, ファン消費電力から換気分を引く
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res

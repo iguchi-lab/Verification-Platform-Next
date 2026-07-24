@@ -8,7 +8,7 @@ from functools import lru_cache
 
 # JJJ_EXPERIMENT ADD
 import jjjexperiment.constants as jjj_consts
-from jjjexperiment.common import *
+from jjjexperiment.common import jjj_cloned, jjj_mod
 from jjjexperiment.logger import log_res
 # NOTE: pyhees->jjj 方向の依存はファイルスコープとしては可能な限り控える
 # インプットデータクラスとロジックを分離しているためデータクラスのみインポート可能

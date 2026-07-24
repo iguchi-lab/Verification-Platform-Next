@@ -54,10 +54,10 @@ from pyhees.section11_6 import \
 
 # JJJ
 import jjjexperiment.constants as jjj_consts
-from jjjexperiment.common import *
+from jjjexperiment.common import jjj_cloned, jjj_mod
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
-from jjjexperiment.inputs.options import *
-from jjjexperiment.inputs.di_container import *
+from jjjexperiment.inputs.options import 計算モデル
+
 
 @jjj_cloned
 # 未処理負荷と機器の計算に必要な変数を取得
