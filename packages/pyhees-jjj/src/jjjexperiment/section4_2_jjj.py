@@ -274,6 +274,16 @@ class _NoCarryoverCalculationInputs(NamedTuple):
     load: object
     pre_branch: object
 
+class _CalculationOutputPhaseInputs(NamedTuple):
+    case_name: object
+    ac_setting: object
+    house: object
+    new_ufac: object
+    new_ufac_df: object
+    carryover_heat_dto: object
+    pre_branch: object
+    branch: object
+
 class _InitialHeatSourceOutputCallInputs(NamedTuple):
     Q: object
     A_A: object
@@ -4294,6 +4304,132 @@ def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
         None,
     )
 
+def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
+    preparation = inputs.pre_branch.preparation
+    pre_vav_state = inputs.pre_branch.pre_vav_state
+    capacity_state = inputs.branch.capacity_state
+    supply_state = inputs.branch.supply_state
+    df_output = pre_vav_state.df_output
+    df_output3 = preparation.df_output3
+
+    # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
+    _log_actual_temperature_state(
+        inputs.branch.Theta_HBR_d_t_i, inputs.branch.Theta_NR_d_t)
+
+    _export_carryover_diagnostics(_CarryoverDiagnosticExportInputs(
+        inputs.case_name, inputs.ac_setting, inputs.house,
+        inputs.carryover_heat_dto, preparation.df_carryover_output,
+        inputs.branch.carryovers))
+
+    """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
+    df_output = _record_balanced_load_outputs(
+        df_output,
+        inputs.branch.L_star_CS_d_t_i,
+        inputs.branch.L_star_H_d_t_i,
+    )
+    """ 最大暖冷房能力 """
+    df_output, df_output3 = _record_capacity_state_outputs(
+        _CapacityStateOutputInputs(
+            df_output, df_output3, capacity_state.L_star_CL_d_t,
+            capacity_state.L_star_CS_d_t, capacity_state.L_star_dash_CL_d_t,
+            capacity_state.L_star_dash_C_d_t, capacity_state.C_df_H_d_t,
+            capacity_state.Q_r_max_H_d_t, capacity_state.Q_r_max_C_d_t,
+            capacity_state.L_max_CL_d_t, capacity_state.L_dash_CL_d_t,
+            capacity_state.L_dash_C_d_t, capacity_state.q_r_max_C,
+            capacity_state.SHF_L_min_c, capacity_state.SHF_dash_d_t,
+            capacity_state.Q_hs_max_C_d_t, capacity_state.Q_hs_max_CL_d_t,
+            capacity_state.Q_hs_max_CS_d_t, capacity_state.Q_hs_max_H_d_t))
+
+    """ 熱源機の出口・吹出口 - 負荷バランス時 / 実際 """
+    df_output = _record_common_outlet_and_supply_outputs(
+        _CommonOutletSupplyOutputInputs(
+            df_output, inputs.branch.X_star_hs_in_d_t,
+            inputs.branch.Theta_star_hs_in_d_t,
+            inputs.branch.X_hs_out_min_C_d_t, inputs.branch.X_req_d_t_i,
+            inputs.branch.Theta_req_d_t_i, supply_state.X_hs_out_d_t,
+            supply_state.Theta_hs_out_min_C_d_t,
+            supply_state.Theta_hs_out_max_H_d_t,
+            supply_state.Theta_hs_out_d_t,
+            supply_state.V_supply_d_t_i_before, supply_state.V_supply_d_t_i,
+            supply_state.Theta_supply_d_t_i,
+            inputs.branch.Theta_HBR_d_t_i, inputs.branch.Theta_NR_d_t))
+    """ 吹出口 - 熱源機の出口 """
+    # (14)　熱源機の出口における空気温度
+    Theta_hs_out_d_t, df_output = \
+        _prepare_heat_source_outlet_temperature_output(
+            _HeatSourceOutletTemperatureOutputInputs(
+                df_output, inputs.ac_setting, inputs.house,
+                inputs.branch.Theta_req_d_t_i,
+                pre_vav_state.V_dash_supply_d_t_i,
+                inputs.branch.L_star_H_d_t_i,
+                inputs.branch.L_star_CS_d_t_i,
+                inputs.branch.Theta_NR_d_t,
+                supply_state.Theta_hs_out_max_H_d_t,
+                supply_state.Theta_hs_out_min_C_d_t))
+
+    """ 吹出口 - 吹出口 """
+    # (42)　暖冷房区画𝑖の吹き出し絶対湿度
+    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(
+        _SupplyHumidityOutputInputs(
+            df_output, preparation.X_star_HBR_d_t,
+            supply_state.X_hs_out_d_t, inputs.pre_branch.L_star_CL_d_t_i,
+            inputs.house.region))
+
+    """ 熱源機の入口 - 熱源機の風量の計算 """
+    # (35)　熱源機の風量のうちの全般換気分
+    V_hs_vent_d_t, df_output = \
+        _prepare_heat_source_ventilation_airflow_output(
+            df_output, preparation.V_vent_g_i,
+            inputs.ac_setting.general_ventilation)
+
+    # (34)　熱源機の風量
+    V_hs_supply_d_t, df_output = \
+        _prepare_heat_source_supply_airflow_output(
+            df_output, supply_state.V_supply_d_t_i)
+
+    """ 熱源機の入口 - 熱源機の入口 """
+    # (13)　熱源機の入口における絶対湿度
+    X_hs_in_d_t, df_output = _prepare_heat_source_inlet_humidity_output(
+        df_output, inputs.pre_branch.X_NR_d_t)
+
+    # (12)　熱源機の入口における空気温度
+    Theta_hs_in_d_t, df_output = \
+        _prepare_heat_source_inlet_temperature_output(
+            df_output, inputs.branch.Theta_NR_d_t)
+
+    """ まとめ - 実際の暖冷房負荷 """
+    (
+        L_dash_CL_d_t_i,
+        L_dash_CS_d_t_i,
+        L_dash_H_d_t_i,
+        df_output,
+    ) = _prepare_actual_load_state(_ActualLoadStateInputs(
+        df_output, inputs.carryover_heat_dto, supply_state.V_supply_d_t_i,
+        inputs.pre_branch.X_HBR_d_t_i, X_supply_d_t_i,
+        supply_state.Theta_supply_d_t_i, inputs.branch.Theta_HBR_d_t_i,
+        inputs.house.region))
+    """ まとめ - 未処理負荷 """
+    (
+        Q_UT_CL_d_t_i,
+        Q_UT_CS_d_t_i,
+        Q_UT_H_d_t_i,
+        df_output,
+    ) = _prepare_unprocessed_load_state(_UnprocessedLoadStateInputs(
+        df_output, inputs.pre_branch.L_star_CL_d_t_i, L_dash_CL_d_t_i,
+        inputs.branch.L_star_CS_d_t_i, L_dash_CS_d_t_i,
+        inputs.branch.L_star_H_d_t_i, L_dash_H_d_t_i))
+    """ まとめ - 一次エネルギー """
+    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(
+        _UnprocessedEnergyStateInputs(
+            df_output, inputs.ac_setting, Q_UT_CL_d_t_i,
+            Q_UT_CS_d_t_i, Q_UT_H_d_t_i, inputs.house.region))
+    return _export_and_build_calculation_result(_CalculationExportInputs(
+        inputs.case_name, inputs.ac_setting, inputs.house, inputs.new_ufac,
+        inputs.new_ufac_df, df_output3, preparation.df_output2, df_output,
+        E_UT_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t,
+        supply_state.X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t,
+        V_hs_vent_d_t))
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -4329,37 +4465,7 @@ def calc_Q_UT_A(
             climateFile,
             load,
         ))
-    preparation = pre_branch.preparation
-    V_hs_dsgn_H = preparation.V_hs_dsgn_H
-    V_hs_dsgn_C = preparation.V_hs_dsgn_C
-    df_output = pre_branch.pre_vav_state.df_output
-    df_output2 = preparation.df_output2
-    df_output3 = preparation.df_output3
-    df_carryover_output = preparation.df_carryover_output
-    climate = preparation.climate
-    Theta_ex_d_t = preparation.Theta_ex_d_t
-    h_ex_d_t = preparation.h_ex_d_t
-    A_HCZ_i = preparation.A_HCZ_i
-    A_NR = preparation.A_NR
-    V_vent_l_NR_d_t = preparation.V_vent_l_NR_d_t
-    V_vent_g_i = preparation.V_vent_g_i
-    U_prt = preparation.U_prt
-    A_prt_i = preparation.A_prt_i
-    l_duct_i = preparation.l_duct_i
-    X_star_HBR_d_t = preparation.X_star_HBR_d_t
-    Theta_star_HBR_d_t = preparation.Theta_star_HBR_d_t
-    Theta_sur_d_t_i = preparation.Theta_sur_d_t_i
-    Theta_in_d_t = pre_branch.Theta_in_d_t
-    A_s_ufac_i = pre_branch.pre_vav_state.A_s_ufac_i
-    Theta_uf_d_t = pre_branch.pre_vav_state.Theta_uf_d_t
-    V_dash_supply_d_t_i = pre_branch.pre_vav_state.V_dash_supply_d_t_i
-    X_star_NR_d_t = pre_branch.X_star_NR_d_t
-    Theta_star_NR_d_t = pre_branch.Theta_star_NR_d_t
-    r_A_NR_uf_1F_excl_bath = pre_branch.r_A_NR_uf_1F_excl_bath
-    X_NR_d_t = pre_branch.X_NR_d_t
-    X_HBR_d_t_i = pre_branch.X_HBR_d_t_i
-    L_star_CL_d_t_i = pre_branch.L_star_CL_d_t_i
-    Q_star_trs_prt_d_t_i = pre_branch.Q_star_trs_prt_d_t_i
+
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
     if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
@@ -4373,41 +4479,6 @@ def calc_Q_UT_A(
             load,
             pre_branch,
         ))
-        L_star_H_d_t_i = branch.L_star_H_d_t_i
-        L_star_CS_d_t_i = branch.L_star_CS_d_t_i
-        Q_hs_max_C_d_t = branch.capacity_state.Q_hs_max_C_d_t
-        Q_hs_max_CL_d_t = branch.capacity_state.Q_hs_max_CL_d_t
-        Q_hs_max_CS_d_t = branch.capacity_state.Q_hs_max_CS_d_t
-        Q_hs_max_H_d_t = branch.capacity_state.Q_hs_max_H_d_t
-        L_star_CL_d_t = branch.capacity_state.L_star_CL_d_t
-        L_star_CS_d_t = branch.capacity_state.L_star_CS_d_t
-        L_star_dash_CL_d_t = branch.capacity_state.L_star_dash_CL_d_t
-        L_star_dash_C_d_t = branch.capacity_state.L_star_dash_C_d_t
-        C_df_H_d_t = branch.capacity_state.C_df_H_d_t
-        Q_r_max_H_d_t = branch.capacity_state.Q_r_max_H_d_t
-        Q_r_max_C_d_t = branch.capacity_state.Q_r_max_C_d_t
-        L_max_CL_d_t = branch.capacity_state.L_max_CL_d_t
-        L_dash_CL_d_t = branch.capacity_state.L_dash_CL_d_t
-        L_dash_C_d_t = branch.capacity_state.L_dash_C_d_t
-        q_r_max_H = branch.capacity_state.q_r_max_H
-        q_r_max_C = branch.capacity_state.q_r_max_C
-        SHF_L_min_c = branch.capacity_state.SHF_L_min_c
-        SHF_dash_d_t = branch.capacity_state.SHF_dash_d_t
-        X_star_hs_in_d_t = branch.X_star_hs_in_d_t
-        Theta_star_hs_in_d_t = branch.Theta_star_hs_in_d_t
-        X_hs_out_min_C_d_t = branch.X_hs_out_min_C_d_t
-        X_req_d_t_i = branch.X_req_d_t_i
-        Theta_req_d_t_i = branch.Theta_req_d_t_i
-        X_hs_out_d_t = branch.supply_state.X_hs_out_d_t
-        Theta_hs_out_min_C_d_t = branch.supply_state.Theta_hs_out_min_C_d_t
-        Theta_hs_out_max_H_d_t = branch.supply_state.Theta_hs_out_max_H_d_t
-        Theta_hs_out_d_t = branch.supply_state.Theta_hs_out_d_t
-        V_supply_d_t_i_before = branch.supply_state.V_supply_d_t_i_before
-        V_supply_d_t_i = branch.supply_state.V_supply_d_t_i
-        Theta_supply_d_t_i = branch.supply_state.Theta_supply_d_t_i
-        Theta_HBR_d_t_i = branch.Theta_HBR_d_t_i
-        Theta_NR_d_t = branch.Theta_NR_d_t
-        carryovers = branch.carryovers
     else:  # 過剰熱繰越ナシ(一般的なパターン)
         branch = _run_no_carryover_calculation(_NoCarryoverCalculationInputs(
             ac_setting,
@@ -4421,134 +4492,14 @@ def calc_Q_UT_A(
             load,
             pre_branch,
         ))
-        L_star_H_d_t_i = branch.L_star_H_d_t_i
-        L_star_CS_d_t_i = branch.L_star_CS_d_t_i
-        Q_hs_max_C_d_t = branch.capacity_state.Q_hs_max_C_d_t
-        Q_hs_max_CL_d_t = branch.capacity_state.Q_hs_max_CL_d_t
-        Q_hs_max_CS_d_t = branch.capacity_state.Q_hs_max_CS_d_t
-        Q_hs_max_H_d_t = branch.capacity_state.Q_hs_max_H_d_t
-        L_star_CL_d_t = branch.capacity_state.L_star_CL_d_t
-        L_star_CS_d_t = branch.capacity_state.L_star_CS_d_t
-        L_star_dash_CL_d_t = branch.capacity_state.L_star_dash_CL_d_t
-        L_star_dash_C_d_t = branch.capacity_state.L_star_dash_C_d_t
-        C_df_H_d_t = branch.capacity_state.C_df_H_d_t
-        Q_r_max_H_d_t = branch.capacity_state.Q_r_max_H_d_t
-        Q_r_max_C_d_t = branch.capacity_state.Q_r_max_C_d_t
-        L_max_CL_d_t = branch.capacity_state.L_max_CL_d_t
-        L_dash_CL_d_t = branch.capacity_state.L_dash_CL_d_t
-        L_dash_C_d_t = branch.capacity_state.L_dash_C_d_t
-        q_r_max_H = branch.capacity_state.q_r_max_H
-        q_r_max_C = branch.capacity_state.q_r_max_C
-        SHF_L_min_c = branch.capacity_state.SHF_L_min_c
-        SHF_dash_d_t = branch.capacity_state.SHF_dash_d_t
-        X_star_hs_in_d_t = branch.X_star_hs_in_d_t
-        Theta_star_hs_in_d_t = branch.Theta_star_hs_in_d_t
-        X_hs_out_min_C_d_t = branch.X_hs_out_min_C_d_t
-        X_req_d_t_i = branch.X_req_d_t_i
-        Theta_req_d_t_i = branch.Theta_req_d_t_i
-        X_hs_out_d_t = branch.supply_state.X_hs_out_d_t
-        Theta_hs_out_min_C_d_t = branch.supply_state.Theta_hs_out_min_C_d_t
-        Theta_hs_out_max_H_d_t = branch.supply_state.Theta_hs_out_max_H_d_t
-        Theta_hs_out_d_t = branch.supply_state.Theta_hs_out_d_t
-        V_supply_d_t_i_before = branch.supply_state.V_supply_d_t_i_before
-        V_supply_d_t_i = branch.supply_state.V_supply_d_t_i
-        Theta_supply_d_t_i = branch.supply_state.Theta_supply_d_t_i
-        Theta_HBR_d_t_i = branch.Theta_HBR_d_t_i
-        Theta_NR_d_t = branch.Theta_NR_d_t
-    ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
-    # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
-    _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t)
-
-    _export_carryover_diagnostics(_CarryoverDiagnosticExportInputs(
-        case_name, ac_setting, house, carryover_heat_dto,
-        df_carryover_output, carryovers if "carryovers" in locals() else None))
-
-    """ 熱損失・熱取得を含む負荷バランス時の熱負荷 - 熱損失・熱取得を含む負荷バランス時(2) """
-    df_output = _record_balanced_load_outputs(
-        df_output,
-        L_star_CS_d_t_i,
-        L_star_H_d_t_i,
-    )
-    """ 最大暖冷房能力 """
-    df_output, df_output3 = _record_capacity_state_outputs(_CapacityStateOutputInputs(
-        df_output, df_output3, L_star_CL_d_t, L_star_CS_d_t,
-        L_star_dash_CL_d_t, L_star_dash_C_d_t, C_df_H_d_t,
-        Q_r_max_H_d_t, Q_r_max_C_d_t, L_max_CL_d_t,
-        L_dash_CL_d_t, L_dash_C_d_t, q_r_max_C, SHF_L_min_c,
-        SHF_dash_d_t, Q_hs_max_C_d_t, Q_hs_max_CL_d_t,
-        Q_hs_max_CS_d_t, Q_hs_max_H_d_t))
-
-    """ 熱源機の出口・吹出口 - 負荷バランス時 / 実際 """
-    df_output = _record_common_outlet_and_supply_outputs(_CommonOutletSupplyOutputInputs(
-        df_output, X_star_hs_in_d_t, Theta_star_hs_in_d_t,
-        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i,
-        X_hs_out_d_t, Theta_hs_out_min_C_d_t,
-        Theta_hs_out_max_H_d_t, Theta_hs_out_d_t,
-        V_supply_d_t_i_before, V_supply_d_t_i, Theta_supply_d_t_i,
-        Theta_HBR_d_t_i, Theta_NR_d_t))
-    """ 吹出口 - 熱源機の出口 """
-    # (14)　熱源機の出口における空気温度
-    Theta_hs_out_d_t, df_output = \
-        _prepare_heat_source_outlet_temperature_output(_HeatSourceOutletTemperatureOutputInputs(
-            df_output, ac_setting, house, Theta_req_d_t_i,
-            V_dash_supply_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
-            Theta_NR_d_t, Theta_hs_out_max_H_d_t,
-            Theta_hs_out_min_C_d_t))
-
-    """ 吹出口 - 吹出口 """
-    # (42)　暖冷房区画𝑖の吹き出し絶対湿度
-    X_supply_d_t_i, df_output = _prepare_supply_humidity_output(_SupplyHumidityOutputInputs(
-        df_output, X_star_HBR_d_t, X_hs_out_d_t,
-        L_star_CL_d_t_i, house.region))
-
-    """ 熱源機の入口 - 熱源機の風量の計算 """
-    # (35)　熱源機の風量のうちの全般換気分
-    V_hs_vent_d_t, df_output = \
-        _prepare_heat_source_ventilation_airflow_output(
-            df_output, V_vent_g_i, ac_setting.general_ventilation)
-
-    # (34)　熱源機の風量
-    V_hs_supply_d_t, df_output = \
-        _prepare_heat_source_supply_airflow_output(
-            df_output, V_supply_d_t_i)
-
-    """ 熱源機の入口 - 熱源機の入口 """
-    # (13)　熱源機の入口における絶対湿度
-    X_hs_in_d_t, df_output = _prepare_heat_source_inlet_humidity_output(
-        df_output, X_NR_d_t)
-
-    # (12)　熱源機の入口における空気温度
-    Theta_hs_in_d_t, df_output = \
-        _prepare_heat_source_inlet_temperature_output(
-            df_output, Theta_NR_d_t)
-
-    """ まとめ - 実際の暖冷房負荷 """
-    (
-        L_dash_CL_d_t_i,
-        L_dash_CS_d_t_i,
-        L_dash_H_d_t_i,
-        df_output,
-    ) = _prepare_actual_load_state(_ActualLoadStateInputs(
-        df_output, carryover_heat_dto, V_supply_d_t_i, X_HBR_d_t_i,
-        X_supply_d_t_i, Theta_supply_d_t_i, Theta_HBR_d_t_i,
-        house.region))
-    """ まとめ - 未処理負荷 """
-    (
-        Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i,
-        Q_UT_H_d_t_i,
-        df_output,
-    ) = _prepare_unprocessed_load_state(_UnprocessedLoadStateInputs(
-        df_output, L_star_CL_d_t_i, L_dash_CL_d_t_i,
-        L_star_CS_d_t_i, L_dash_CS_d_t_i,
-        L_star_H_d_t_i, L_dash_H_d_t_i))
-    """ まとめ - 一次エネルギー """
-    E_UT_d_t, df_output = _prepare_unprocessed_energy_state(_UnprocessedEnergyStateInputs(
-        df_output, ac_setting, Q_UT_CL_d_t_i,
-        Q_UT_CS_d_t_i, Q_UT_H_d_t_i, house.region))
-    return _export_and_build_calculation_result(_CalculationExportInputs(
-        case_name, ac_setting, house, new_ufac, new_ufac_df,
-        df_output3, df_output2, df_output, E_UT_d_t,
-        Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t,
-        X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t))
+    return _finalize_calculation_outputs(_CalculationOutputPhaseInputs(
+        case_name,
+        ac_setting,
+        house,
+        new_ufac,
+        new_ufac_df,
+        carryover_heat_dto,
+        pre_branch,
+        branch,
+    ))

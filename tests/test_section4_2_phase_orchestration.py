@@ -372,3 +372,150 @@ def test_run_carryover_calculation_preserves_8760_hour_order(monkeypatch):
     assert actual.capacity_state is capacity
     assert actual.supply_state is supply
     assert actual.carryovers is carryovers
+
+def test_finalize_calculation_outputs_preserves_common_output_order(monkeypatch):
+    events = []
+    preparation = SimpleNamespace(
+        df_output2="frame-2",
+        df_output3="frame-3",
+        df_carryover_output="carryover-frame",
+        X_star_HBR_d_t="balanced-room-humidity",
+        V_vent_g_i="general-airflow",
+    )
+    pre_branch = sut._CalculationPreBranchResult(
+        preparation,
+        SimpleNamespace(df_output="initial-frame", V_dash_supply_d_t_i="pre-vav-airflow"),
+        "indoor-temperature",
+        "balanced-non-room-humidity",
+        "balanced-non-room-temperature",
+        "underfloor-ratio",
+        "non-room-humidity",
+        "room-humidity",
+        "latent-load",
+        "partition-load",
+    )
+    capacity = sut._CapacityStateResult(*[f"capacity-{index}" for index in range(18)])
+    supply = sut._SupplyStateResult(*[f"supply-{index}" for index in range(7)])
+    branch = sut._CalculationBranchResult(
+        capacity,
+        supply,
+        "heating-load",
+        "sensible-load",
+        "inlet-humidity-balanced",
+        "inlet-temperature-balanced",
+        "minimum-humidity",
+        "required-humidity",
+        "required-temperature",
+        "room-temperature",
+        "non-room-temperature",
+        "carryovers",
+    )
+    replacements = (
+        ("_log_actual_temperature_state", "log", None),
+        ("_export_carryover_diagnostics", "carryover-export", None),
+        ("_record_balanced_load_outputs", "balanced-output", "balanced-frame"),
+        ("_record_capacity_state_outputs", "capacity-output", ("capacity-frame", "capacity-frame-3")),
+        ("_record_common_outlet_and_supply_outputs", "outlet-output", "outlet-frame"),
+        ("_prepare_heat_source_outlet_temperature_output", "outlet-temperature", ("outlet-temperature", "outlet-temperature-frame")),
+        ("_prepare_supply_humidity_output", "supply-humidity", ("supply-humidity", "supply-humidity-frame")),
+        ("_prepare_heat_source_ventilation_airflow_output", "ventilation-airflow", ("ventilation-airflow", "ventilation-frame")),
+        ("_prepare_heat_source_supply_airflow_output", "supply-airflow", ("supply-airflow", "supply-airflow-frame")),
+        ("_prepare_heat_source_inlet_humidity_output", "inlet-humidity", ("inlet-humidity", "inlet-humidity-frame")),
+        ("_prepare_heat_source_inlet_temperature_output", "inlet-temperature", ("inlet-temperature", "inlet-temperature-frame")),
+        ("_prepare_actual_load_state", "actual-load", ("actual-latent", "actual-sensible", "actual-heating", "actual-frame")),
+        ("_prepare_unprocessed_load_state", "unprocessed-load", ("unprocessed-latent", "unprocessed-sensible", "unprocessed-heating", "unprocessed-frame")),
+        ("_prepare_unprocessed_energy_state", "energy", ("energy", "energy-frame")),
+        ("_export_and_build_calculation_result", "export", "calculation-result"),
+    )
+    for attribute, name, result in replacements:
+        monkeypatch.setattr(sut, attribute, _fixed(events, name, result))
+
+    actual = sut._finalize_calculation_outputs(
+        sut._CalculationOutputPhaseInputs(
+            "case",
+            SimpleNamespace(general_ventilation=True),
+            SimpleNamespace(region=6),
+            "underfloor",
+            "underfloor-frame",
+            "carryover-setting",
+            pre_branch,
+            branch,
+        )
+    )
+
+    assert [name for name, _ in events] == [
+        "log",
+        "carryover-export",
+        "balanced-output",
+        "capacity-output",
+        "outlet-output",
+        "outlet-temperature",
+        "supply-humidity",
+        "ventilation-airflow",
+        "supply-airflow",
+        "inlet-humidity",
+        "inlet-temperature",
+        "actual-load",
+        "unprocessed-load",
+        "energy",
+        "export",
+    ]
+    export_inputs = events[-1][1][0]
+    assert export_inputs.df_output == "energy-frame"
+    assert export_inputs.df_output2 == "frame-2"
+    assert export_inputs.df_output3 == "capacity-frame-3"
+    assert actual == "calculation-result"
+
+
+def test_calc_q_ut_a_selects_branch_then_finalizes(monkeypatch):
+    pre_branch = object()
+    carryover_branch = object()
+    no_carryover_branch = object()
+    events = []
+    monkeypatch.setattr(
+        sut,
+        "_prepare_calculation_pre_branch_state",
+        _fixed(events, "prepare", pre_branch),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_run_carryover_calculation",
+        _fixed(events, "carryover", carryover_branch),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_run_no_carryover_calculation",
+        _fixed(events, "no-carryover", no_carryover_branch),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_finalize_calculation_outputs",
+        _fixed(events, "finalize", "result"),
+    )
+
+    common = [
+        "case",
+        "climate",
+        "house",
+        "setting",
+        "skin",
+        "heat-spec",
+        "cool-spec",
+        "underfloor",
+        "underfloor-frame",
+        "minimum-h",
+        "minimum-c",
+        "design-h",
+        "design-c",
+        "supply-cap",
+    ]
+    carryover = SimpleNamespace(carry_over_heat=sut.過剰熱量繰越計算.行う)
+    assert sut.calc_Q_UT_A(*common, carryover, "load") == "result"
+    assert [name for name, _ in events] == ["prepare", "carryover", "finalize"]
+    assert events[-1][1][0].branch is carryover_branch
+
+    events.clear()
+    no_carryover = SimpleNamespace(carry_over_heat=object())
+    assert sut.calc_Q_UT_A(*common, no_carryover, "load") == "result"
+    assert [name for name, _ in events] == ["prepare", "no-carryover", "finalize"]
+    assert events[-1][1][0].branch is no_carryover_branch
