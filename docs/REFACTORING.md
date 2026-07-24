@@ -128,6 +128,7 @@
 - [PR #112](https://github.com/iguchi-lab/Verification-Platform-Next/pull/112): `carryover_heat`の2境界と`underfloor_ac/inputs`の1境界に残るワイルドカード再公開を明示importへ置き換え、従来の公開名集合と定義元オブジェクトの同一性を契約テストで固定しました。
 - [PR #114](https://github.com/iguchi-lab/Verification-Platform-Next/pull/114): 空調共通設定、住宅・外皮、暖冷房吹出風量補正の37入力変換境界を、評価順、既定値、例外、公開APIを維持した責務別ヘルパーへ整理しました。
 - [PR #116](https://github.com/iguchi-lab/Verification-Platform-Next/pull/116): DIコンテナの14読み取り専用providerが使用するルート入力・暖冷房部分入力の選択を2アクセサーへ集約し、入力辞書の同一性と欠落時の挙動を契約テストで固定しました。
+- [PR #118](https://github.com/iguchi-lab/Verification-Platform-Next/pull/118): DIコンテナの入力間検証、床下状態更新、最低風量補正、繰越ログを4つの高リスク境界へ分離し、例外前後の状態と更新・ログ順を契約テストで固定しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
@@ -140,7 +141,6 @@
 3. `latent_load/section4_2_a.py`と`v_min_input/section4_2_a.py`が建研対応版か純粋な独自機能かを判定し、前者は`_jjj`命名、後者は責務名へ移行する。import元、再公開名、外部利用を固定し、必要なら旧名を互換shimとして残す。
 4. 6つの`pyhees`ファイルに残る`pyhees -> jjjexperiment`逆依存を、依存元と検証方法ごとに分けて削減する。建研由来ファイルへの変更になるため、一般的な低リスクPRより小さくし、上流との差分追跡を優先する。
 5. カレントディレクトリ、グローバル状態、暗黙のCSVファイル名などの副作用を境界へ集約する。グローバル更新、DataFrame/CSV出力、インプレース更新は分離し、単純なDataFrame列組み立てだけを低リスク群としてまとめる。
-6. `inputs/di_container.py`の`_validate_and_update_inputs`に残る入力間検証、インプレース更新、ログ出力を副作用の種類ごとに整理する。純粋型変換はPR #114、読み取り専用providerの入力選択はPR #116で完了済みとし、例外、更新順、ログ順、DI登録の挙動を変更しない。
 
 ## 1作業パッケージの進め方
 
