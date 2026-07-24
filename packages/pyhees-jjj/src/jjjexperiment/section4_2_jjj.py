@@ -252,6 +252,16 @@ class _CalculationBranchResult(NamedTuple):
     carryovers: object
 
 
+class _CarryoverCalculationPhaseInputs(NamedTuple):
+    ac_setting: object
+    house: object
+    skin: object
+    heat_CRAC: object
+    cool_CRAC: object
+    v_supply_cap_dto: object
+    load: object
+    pre_branch: object
+
 class _NoCarryoverCalculationInputs(NamedTuple):
     ac_setting: object
     house: object
@@ -4100,6 +4110,113 @@ def _prepare_calculation_pre_branch_state(inputs: _CalculationPreBranchInputs):
     )
 
 
+def _run_carryover_calculation(inputs: _CarryoverCalculationPhaseInputs):
+    preparation = inputs.pre_branch.preparation
+    pre_vav_state = inputs.pre_branch.pre_vav_state
+
+    # NOTE: 過剰熱繰越と併用しないオプションはインプットデータクラスの段階で強制オフしている
+
+    # 過剰熱繰越ループの配列・季節状態を初期化
+    carryover_hourly_state = _initialize_carryover_hourly_state(inputs.house.region)
+    L_star_CS_d_t_i = carryover_hourly_state.L_star_CS_d_t_i
+    L_star_H_d_t_i = carryover_hourly_state.L_star_H_d_t_i
+    Theta_star_hs_in_d_t = carryover_hourly_state.Theta_star_hs_in_d_t
+    Theta_HBR_d_t_i = carryover_hourly_state.Theta_HBR_d_t_i
+    Theta_NR_d_t = carryover_hourly_state.Theta_NR_d_t
+    carryovers = carryover_hourly_state.carryovers
+    H = carryover_hourly_state.H
+    C = carryover_hourly_state.C
+    M = carryover_hourly_state.M
+    for t in range(0, 24 * 365):
+        # TODO: 先頭時の扱いを考慮
+        isFirst = (t == 0)
+
+        carryover = _get_carryover_at_hour(_CarryoverAtHourInputs(
+            t, H, C, preparation.A_HCZ_i, Theta_HBR_d_t_i,
+            preparation.Theta_star_HBR_d_t))
+        carryovers[:, t] = carryover[:, 0]  # 確認用
+
+        (
+            L_star_H_d_t_i[:, t:t+1],
+            L_star_CS_d_t_i[:, t:t+1],
+        ) = _get_balanced_loads_at_hour(_BalancedLoadsAtHourInputs(
+            t, H, C, inputs.load, inputs.pre_branch.Q_star_trs_prt_d_t_i,
+            carryover))
+        capacity_state = _prepare_carryover_capacity_state(
+            _CarryoverCapacityStateInputs(
+                inputs.ac_setting, inputs.house, inputs.heat_CRAC,
+                inputs.cool_CRAC, inputs.load, preparation.Theta_ex_d_t,
+                preparation.h_ex_d_t, inputs.pre_branch.L_star_CL_d_t_i,
+                L_star_CS_d_t_i))
+
+        # (20), (19)　負荷バランス時の熱源機入口状態
+        X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
+            _prepare_carryover_heat_source_inlet_state(
+                _CarryoverHeatSourceInletStateInputs(
+                    t, isFirst, H, C, inputs.pre_branch.X_star_NR_d_t,
+                    inputs.pre_branch.Theta_star_NR_d_t, Theta_NR_d_t,
+                    Theta_star_hs_in_d_t))
+
+        X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
+            _prepare_carryover_outlet_requirements(
+                _CarryoverOutletRequirementInputs(
+                    inputs.house, X_star_hs_in_d_t,
+                    capacity_state.Q_hs_max_CL_d_t,
+                    pre_vav_state.V_dash_supply_d_t_i,
+                    preparation.X_star_HBR_d_t,
+                    inputs.pre_branch.L_star_CL_d_t_i,
+                    preparation.Theta_sur_d_t_i,
+                    preparation.Theta_star_HBR_d_t,
+                    L_star_H_d_t_i, L_star_CS_d_t_i,
+                    preparation.l_duct_i))
+
+        # NOTE: 過剰熱量繰越 未利用の場合では、式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
+        # Theta_NR_d_t = np.zeros(24 * 365)
+        # 過剰熱量繰越 利用時には、初期化せず再利用する
+
+        supply_state = _prepare_carryover_supply_state(_CarryoverSupplyInputs(
+            inputs.v_supply_cap_dto, inputs.ac_setting, inputs.house,
+            inputs.pre_branch.X_NR_d_t, X_req_d_t_i,
+            pre_vav_state.V_dash_supply_d_t_i, X_hs_out_min_C_d_t,
+            inputs.pre_branch.L_star_CL_d_t_i, Theta_star_hs_in_d_t,
+            capacity_state.Q_hs_max_CS_d_t, capacity_state.Q_hs_max_H_d_t,
+            Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
+            Theta_NR_d_t, preparation.Theta_sur_d_t_i,
+            preparation.l_duct_i, preparation.Theta_star_HBR_d_t,
+            preparation.V_vent_g_i, preparation.V_hs_dsgn_H,
+            preparation.V_hs_dsgn_C))
+
+        # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
+        # 0 の扱いは全てのメソッドで考慮されていること
+
+        Theta_HBR_d_t_i, Theta_NR_d_t = \
+            _update_carryover_actual_temperature_state(
+                _CarryoverActualTemperatureInputs(
+                    t, isFirst, H, C, M, preparation.Theta_star_HBR_d_t,
+                    supply_state.V_supply_d_t_i,
+                    supply_state.Theta_supply_d_t_i, preparation.U_prt,
+                    preparation.A_prt_i, inputs.skin.Q,
+                    preparation.A_HCZ_i, L_star_H_d_t_i,
+                    L_star_CS_d_t_i, Theta_HBR_d_t_i,
+                    inputs.pre_branch.Theta_star_NR_d_t, preparation.A_NR,
+                    preparation.V_vent_l_NR_d_t,
+                    pre_vav_state.V_dash_supply_d_t_i, Theta_NR_d_t))
+
+    return _CalculationBranchResult(
+        capacity_state,
+        supply_state,
+        L_star_H_d_t_i,
+        L_star_CS_d_t_i,
+        X_star_hs_in_d_t,
+        Theta_star_hs_in_d_t,
+        X_hs_out_min_C_d_t,
+        X_req_d_t_i,
+        Theta_req_d_t_i,
+        Theta_HBR_d_t_i,
+        Theta_NR_d_t,
+        carryovers,
+    )
+
 def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
     preparation = inputs.pre_branch.preparation
     pre_vav_state = inputs.pre_branch.pre_vav_state
@@ -4246,97 +4363,51 @@ def calc_Q_UT_A(
     # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
     # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
     if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-
-        # NOTE: 過剰熱繰越と併用しないオプションはインプットデータクラスの段階で強制オフしている
-
-        # 過剰熱繰越ループの配列・季節状態を初期化
-        carryover_hourly_state = _initialize_carryover_hourly_state(house.region)
-        L_star_CS_d_t_i = carryover_hourly_state.L_star_CS_d_t_i
-        L_star_H_d_t_i = carryover_hourly_state.L_star_H_d_t_i
-        Theta_star_hs_in_d_t = carryover_hourly_state.Theta_star_hs_in_d_t
-        Theta_HBR_d_t_i = carryover_hourly_state.Theta_HBR_d_t_i
-        Theta_NR_d_t = carryover_hourly_state.Theta_NR_d_t
-        carryovers = carryover_hourly_state.carryovers
-        H = carryover_hourly_state.H
-        C = carryover_hourly_state.C
-        M = carryover_hourly_state.M
-        for t in range(0, 24 * 365):
-            # TODO: 先頭時の扱いを考慮
-            isFirst = (t == 0)
-
-            carryover = _get_carryover_at_hour(_CarryoverAtHourInputs(
-                t, H, C, A_HCZ_i, Theta_HBR_d_t_i, Theta_star_HBR_d_t))
-            carryovers[:, t] = carryover[:, 0]  # 確認用
-
-            (
-                L_star_H_d_t_i[:, t:t+1],
-                L_star_CS_d_t_i[:, t:t+1],
-            ) = _get_balanced_loads_at_hour(_BalancedLoadsAtHourInputs(
-                t, H, C, load, Q_star_trs_prt_d_t_i, carryover))
-            capacity_state = _prepare_carryover_capacity_state(_CarryoverCapacityStateInputs(
-                ac_setting, house, heat_CRAC, cool_CRAC, load,
-                Theta_ex_d_t, h_ex_d_t, L_star_CL_d_t_i, L_star_CS_d_t_i))
-            Q_hs_max_C_d_t = capacity_state.Q_hs_max_C_d_t
-            Q_hs_max_CL_d_t = capacity_state.Q_hs_max_CL_d_t
-            Q_hs_max_CS_d_t = capacity_state.Q_hs_max_CS_d_t
-            Q_hs_max_H_d_t = capacity_state.Q_hs_max_H_d_t
-            L_star_CL_d_t = capacity_state.L_star_CL_d_t
-            L_star_CS_d_t = capacity_state.L_star_CS_d_t
-            L_star_dash_CL_d_t = capacity_state.L_star_dash_CL_d_t
-            L_star_dash_C_d_t = capacity_state.L_star_dash_C_d_t
-            C_df_H_d_t = capacity_state.C_df_H_d_t
-            Q_r_max_H_d_t = capacity_state.Q_r_max_H_d_t
-            Q_r_max_C_d_t = capacity_state.Q_r_max_C_d_t
-            L_max_CL_d_t = capacity_state.L_max_CL_d_t
-            L_dash_CL_d_t = capacity_state.L_dash_CL_d_t
-            L_dash_C_d_t = capacity_state.L_dash_C_d_t
-            q_r_max_H = capacity_state.q_r_max_H
-            q_r_max_C = capacity_state.q_r_max_C
-            SHF_L_min_c = capacity_state.SHF_L_min_c
-            SHF_dash_d_t = capacity_state.SHF_dash_d_t
-
-            # (20), (19)　負荷バランス時の熱源機入口状態
-            X_star_hs_in_d_t, Theta_star_hs_in_d_t = \
-                _prepare_carryover_heat_source_inlet_state(_CarryoverHeatSourceInletStateInputs(
-                    t, isFirst, H, C, X_star_NR_d_t, Theta_star_NR_d_t,
-                    Theta_NR_d_t, Theta_star_hs_in_d_t))
-
-            X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i = \
-                _prepare_carryover_outlet_requirements(_CarryoverOutletRequirementInputs(
-                    house, X_star_hs_in_d_t, Q_hs_max_CL_d_t,
-                    V_dash_supply_d_t_i, X_star_HBR_d_t, L_star_CL_d_t_i,
-                    Theta_sur_d_t_i, Theta_star_HBR_d_t, L_star_H_d_t_i,
-                    L_star_CS_d_t_i, l_duct_i))
-
-            # NOTE: 過剰熱量繰越 未利用の場合では、式(14)(46)(48)の条件に合わせてTheta_NR_d_tを初期化
-            # Theta_NR_d_t = np.zeros(24 * 365)
-            # 過剰熱量繰越 利用時には、初期化せず再利用する
-
-            supply_state = _prepare_carryover_supply_state(_CarryoverSupplyInputs(
-                v_supply_cap_dto, ac_setting, house, X_NR_d_t, X_req_d_t_i,
-                V_dash_supply_d_t_i, X_hs_out_min_C_d_t, L_star_CL_d_t_i,
-                Theta_star_hs_in_d_t, Q_hs_max_CS_d_t, Q_hs_max_H_d_t,
-                Theta_req_d_t_i, L_star_H_d_t_i, L_star_CS_d_t_i,
-                Theta_NR_d_t, Theta_sur_d_t_i, l_duct_i,
-                Theta_star_HBR_d_t, V_vent_g_i, V_hs_dsgn_H, V_hs_dsgn_C))
-            X_hs_out_d_t = supply_state.X_hs_out_d_t
-            Theta_hs_out_min_C_d_t = supply_state.Theta_hs_out_min_C_d_t
-            Theta_hs_out_max_H_d_t = supply_state.Theta_hs_out_max_H_d_t
-            Theta_hs_out_d_t = supply_state.Theta_hs_out_d_t
-            V_supply_d_t_i_before = supply_state.V_supply_d_t_i_before
-            V_supply_d_t_i = supply_state.V_supply_d_t_i
-            Theta_supply_d_t_i = supply_state.Theta_supply_d_t_i
-
-            # NOTE: t==0 でも最後までループを走ることに注意(途中で continue しない)
-            # 0 の扱いは全てのメソッドで考慮されていること
-
-            Theta_HBR_d_t_i, Theta_NR_d_t = \
-                _update_carryover_actual_temperature_state(_CarryoverActualTemperatureInputs(
-                    t, isFirst, H, C, M, Theta_star_HBR_d_t,
-                    V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i,
-                    skin.Q, A_HCZ_i, L_star_H_d_t_i, L_star_CS_d_t_i,
-                    Theta_HBR_d_t_i, Theta_star_NR_d_t, A_NR,
-                    V_vent_l_NR_d_t, V_dash_supply_d_t_i, Theta_NR_d_t))
+        branch = _run_carryover_calculation(_CarryoverCalculationPhaseInputs(
+            ac_setting,
+            house,
+            skin,
+            heat_CRAC,
+            cool_CRAC,
+            v_supply_cap_dto,
+            load,
+            pre_branch,
+        ))
+        L_star_H_d_t_i = branch.L_star_H_d_t_i
+        L_star_CS_d_t_i = branch.L_star_CS_d_t_i
+        Q_hs_max_C_d_t = branch.capacity_state.Q_hs_max_C_d_t
+        Q_hs_max_CL_d_t = branch.capacity_state.Q_hs_max_CL_d_t
+        Q_hs_max_CS_d_t = branch.capacity_state.Q_hs_max_CS_d_t
+        Q_hs_max_H_d_t = branch.capacity_state.Q_hs_max_H_d_t
+        L_star_CL_d_t = branch.capacity_state.L_star_CL_d_t
+        L_star_CS_d_t = branch.capacity_state.L_star_CS_d_t
+        L_star_dash_CL_d_t = branch.capacity_state.L_star_dash_CL_d_t
+        L_star_dash_C_d_t = branch.capacity_state.L_star_dash_C_d_t
+        C_df_H_d_t = branch.capacity_state.C_df_H_d_t
+        Q_r_max_H_d_t = branch.capacity_state.Q_r_max_H_d_t
+        Q_r_max_C_d_t = branch.capacity_state.Q_r_max_C_d_t
+        L_max_CL_d_t = branch.capacity_state.L_max_CL_d_t
+        L_dash_CL_d_t = branch.capacity_state.L_dash_CL_d_t
+        L_dash_C_d_t = branch.capacity_state.L_dash_C_d_t
+        q_r_max_H = branch.capacity_state.q_r_max_H
+        q_r_max_C = branch.capacity_state.q_r_max_C
+        SHF_L_min_c = branch.capacity_state.SHF_L_min_c
+        SHF_dash_d_t = branch.capacity_state.SHF_dash_d_t
+        X_star_hs_in_d_t = branch.X_star_hs_in_d_t
+        Theta_star_hs_in_d_t = branch.Theta_star_hs_in_d_t
+        X_hs_out_min_C_d_t = branch.X_hs_out_min_C_d_t
+        X_req_d_t_i = branch.X_req_d_t_i
+        Theta_req_d_t_i = branch.Theta_req_d_t_i
+        X_hs_out_d_t = branch.supply_state.X_hs_out_d_t
+        Theta_hs_out_min_C_d_t = branch.supply_state.Theta_hs_out_min_C_d_t
+        Theta_hs_out_max_H_d_t = branch.supply_state.Theta_hs_out_max_H_d_t
+        Theta_hs_out_d_t = branch.supply_state.Theta_hs_out_d_t
+        V_supply_d_t_i_before = branch.supply_state.V_supply_d_t_i_before
+        V_supply_d_t_i = branch.supply_state.V_supply_d_t_i
+        Theta_supply_d_t_i = branch.supply_state.Theta_supply_d_t_i
+        Theta_HBR_d_t_i = branch.Theta_HBR_d_t_i
+        Theta_NR_d_t = branch.Theta_NR_d_t
+        carryovers = branch.carryovers
     else:  # 過剰熱繰越ナシ(一般的なパターン)
         branch = _run_no_carryover_calculation(_NoCarryoverCalculationInputs(
             ac_setting,
@@ -4383,7 +4454,8 @@ def calc_Q_UT_A(
         V_supply_d_t_i = branch.supply_state.V_supply_d_t_i
         Theta_supply_d_t_i = branch.supply_state.Theta_supply_d_t_i
         Theta_HBR_d_t_i = branch.Theta_HBR_d_t_i
-        Theta_NR_d_t = branch.Theta_NR_d_t    ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
+        Theta_NR_d_t = branch.Theta_NR_d_t
+    ### 熱繰越 / 非熱繰越 の分岐が終了 -> 以降、共通の処理 ###
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
     _log_actual_temperature_state(Theta_HBR_d_t_i, Theta_NR_d_t)
