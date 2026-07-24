@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from ._parsing import parse_airflow_correction
+
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 @dataclass
@@ -42,18 +44,7 @@ class CRACSpecification:
 
         dualcompressor = data.get('type') == 2 and int(data.get('dualcompressor', 1)) == 2
 
-        input_C_af = {'input_mode': 2, 'dedicated_chamber': False, 'fixed_fin_direction': False, 'C_af_C': 1.0}
-        # 方式ごとに入力項目があるため、typeを見て取得する値を変えます。
-        # NOTE: 方式1はルームエアコンではないため入力がないはず
-        if data.get('type') in [2, 3, 4]:
-            suffix = str(data['type'])
-
-            input_C_af['input_mode'] = int(data.get(f'input_C_af_C{suffix}', 2))
-            if input_C_af['input_mode'] == 2:
-                input_C_af['C_af_C'] = float(data.get(f'C_af_C{suffix}', 1.0))
-
-            input_C_af['dedicated_chamber'] = int(data.get(f'dedicated_chamber{suffix}', 1)) == 2
-            input_C_af['fixed_fin_direction'] = int(data.get(f'fixed_fin_direction{suffix}', 1)) == 2
+        input_C_af = parse_airflow_correction(data, 'C')
 
         return cls(q_rtd=q_rtd, q_max=q_max, e_rtd=e_rtd,
                    dualcompressor=dualcompressor, input_C_af=input_C_af)
