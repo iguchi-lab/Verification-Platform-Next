@@ -59,6 +59,7 @@ _DEFAULT_CONSTANTS = {
     "defrost_humid_rac": 80,
     "defrost_temp_ductcentral": 5,
     "defrost_temp_rac": 5,
+    "phi_i": 0.49,
     "q_rtd_C_limit": 5600,
 }
 
@@ -80,6 +81,9 @@ def set_constant_provider(provider):
 
 def get_constant(name):
     return _constant_provider(name)
+
+def get_default_constant(name):
+    return _DEFAULT_CONSTANTS[name]
 
 
 def set_result_logger(logger):

@@ -467,6 +467,7 @@ def _set_C_A_fan_coeff(input: dict):
 
 def _register_pyhees_scalar_override_providers():
   import pyhees.section3_1_e as underfloor_temperature
+  from pyhees.jjj_runtime import get_default_constant, set_constant_provider
   import pyhees.section4_2_b as dc_spec
   import pyhees.section4_3_a as rac_spec
 
@@ -477,6 +478,7 @@ def _register_pyhees_scalar_override_providers():
     lambda: (C_V_fan_dsgn_H, C_V_fan_dsgn_C)
   )
   rac_spec._set_cooling_capacity_limit_provider(lambda: q_rtd_C_limit)
+  set_constant_provider(lambda name: globals().get(name, get_default_constant(name)))
 
 
 _register_pyhees_scalar_override_providers()
