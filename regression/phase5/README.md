@@ -3,8 +3,11 @@
 Phase 5は完了しています。このディレクトリは旧版からモノレポへ切り替えた時点の数値契約です。
 
 These fixtures freeze the legacy form-to-engine contract at form version
-`260715` and engine commit
-`0f91ba8381df1b4960557b92b39339385cc9009f`.
+`260715`. The current calculation-engine validation target is the
+BRI-EES-House/pyhees Ver.3.10 upstream commit
+`d5224c4a01def00a8421bcd2fcc0d4b4a5b88644`, integrated with the JJJ adapters.
+The unchanged fixtures also preserve compatibility with the original imported
+fork commit `0f91ba8381df1b4960557b92b39339385cc9009f`.
 
 Each case starts from every legacy form default, applies the small set of UI
 overrides recorded in `manifest.json`, and compares three artifacts:
