@@ -72,6 +72,14 @@ EXPECTED_UNDERFLOOR_SECTION_API = {
 }
 
 
+REMOVED_COMPATIBILITY_MODULES = (
+    "jjjexperiment.section4_2",
+    "jjjexperiment.section4_2_a",
+    "jjjexperiment.carryover_heat.section4_2",
+    "jjjexperiment.latent_load.section4_2_a",
+    "jjjexperiment.v_min_input.section4_2_a",
+)
+
 def _accessed_attributes(alias: str) -> set[str]:
     tree = ast.parse(
         JJJEXPERIMENT_MAIN.read_text(encoding="utf-8"),
@@ -97,12 +105,10 @@ def test_calc_q_ut_a_signature_contract():
     )
 
 
-def test_legacy_section4_2_import_aliases_jjj_module():
-    legacy = importlib.import_module("jjjexperiment.section4_2")
-    implementation = importlib.import_module("jjjexperiment.section4_2_jjj")
-
-    assert legacy is implementation
-    assert main.jjj_dc is implementation
+@pytest.mark.parametrize("module_name", REMOVED_COMPATIBILITY_MODULES)
+def test_removed_compatibility_modules_fail_immediately(module_name):
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module(module_name)
 
 
 def test_main_section4_2_a_api_contract():
@@ -208,14 +214,6 @@ def test_minimum_fan_calls_use_public_signature_context():
         "E_E_fan_logic", "P_fan_rtd", "V_hs_vent_d_t",
         "V_hs_supply_d_t", "V_hs_dsgn", "E_E_fan_min", "region",
         "for_cooling")
-
-
-def test_legacy_section4_2_a_import_aliases_jjj_module():
-    legacy = importlib.import_module("jjjexperiment.section4_2_a")
-    implementation = importlib.import_module("jjjexperiment.section4_2_a_jjj")
-
-    assert legacy is implementation
-    assert main.jjj_dc_a is implementation
 
 
 @pytest.mark.parametrize(
