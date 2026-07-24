@@ -4263,3 +4263,198 @@ def test_underfloor_outdoor_transfer_inputs_preserve_field_order():
         "V_dash_supply_d_t_i",
         "Q_hat_hs_d_t",
     )
+
+def test_prepare_calculation_state_preserves_pre_branch_order_and_context(monkeypatch):
+    events = []
+    frame_events = []
+    frames = []
+
+    def fixed(name, result):
+        def replacement(*args, **kwargs):
+            events.append((name, args, kwargs))
+            return result
+
+        return replacement
+
+    def make_frame(*args, **kwargs):
+        events.append(("DataFrame", args, kwargs))
+        frame = _FrameRecorder(frame_events)
+        frames.append(frame)
+        return frame
+
+    monkeypatch.setattr(
+        sut.pd,
+        "date_range",
+        fixed("date_range", "hourly-index"),
+    )
+    monkeypatch.setattr(sut.pd, "DataFrame", make_frame)
+    monkeypatch.setattr(
+        sut,
+        "_normalize_design_airflows",
+        fixed("normalize", ("design-h", "design-c")),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_prepare_climate_conditions",
+        fixed(
+            "climate",
+            sut._ClimateConditionsResult(
+                "climate-object", "theta-ex", "x-ex", "solar", "humidity"
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_prepare_dwelling_areas_and_water_heat",
+        fixed(
+            "dwelling",
+            sut._DwellingAreasAndWaterHeatResult(
+                "areas", "reference-areas", "non-room-area", "water-heat"
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        sut, "_prepare_occupancy_state", fixed("occupancy", "occupancy-state")
+    )
+    monkeypatch.setattr(sut.dc, "get_q_p_H", fixed("q_p_H", "human-h"))
+    monkeypatch.setattr(sut.dc, "get_q_p_CS", fixed("q_p_CS", "human-cs"))
+    monkeypatch.setattr(sut.dc, "get_q_p_CL", fixed("q_p_CL", "human-cl"))
+    monkeypatch.setattr(
+        sut,
+        "_prepare_internal_moisture_state",
+        fixed("moisture", "moisture-state"),
+    )
+    monkeypatch.setattr(
+        sut, "_prepare_internal_heat_state", fixed("heat", "heat-state")
+    )
+
+    def local_ventilation(frame):
+        events.append(("local-ventilation", (frame,), {}))
+        return "local-nr", "local-all", frame
+
+    monkeypatch.setattr(sut, "_prepare_local_ventilation_state", local_ventilation)
+    monkeypatch.setattr(
+        sut,
+        "_select_minimum_airflow_input",
+        fixed("minimum-input", "minimum-airflow"),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_prepare_general_ventilation_state",
+        fixed("general-ventilation", "general-airflow"),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_prepare_partition_state",
+        fixed("partition", ("partition-u", "partition-area")),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_prepare_duct_geometry_state",
+        fixed(
+            "duct",
+            ("sat-temperature", "duct-ex", "duct-in", "duct-total"),
+        ),
+    )
+
+    def balanced(inputs):
+        events.append(("balanced-room", (inputs,), {}))
+        return sut._BalancedRoomAndDuctStateResult(
+            "x-star-room",
+            "theta-star-room",
+            "theta-attic",
+            "theta-surroundings",
+            inputs.df_output,
+        )
+
+    monkeypatch.setattr(sut, "_prepare_balanced_room_and_duct_state", balanced)
+    monkeypatch.setattr(
+        sut,
+        "_prepare_initial_heat_source_output",
+        fixed("initial-output", ("q-hat", "q-hat-cs")),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_prepare_minimum_heat_source_airflow",
+        fixed("minimum-output", "minimum-output-airflow"),
+    )
+    monkeypatch.setattr(
+        sut,
+        "_prepare_rated_heat_source_capacity_state",
+        fixed("rated-capacity", ("rated-h", "rated-c")),
+    )
+
+    actual = sut._prepare_calculation_state(
+        sut._CalculationPreparationInputs(
+            "house",
+            "setting",
+            "skin",
+            "heat-spec",
+            "cool-spec",
+            "underfloor",
+            "minimum-h",
+            "minimum-c",
+            "input-design-h",
+            "input-design-c",
+            "climate.csv",
+        )
+    )
+
+    assert [event[0] for event in events] == [
+        "normalize",
+        "date_range",
+        "DataFrame",
+        "DataFrame",
+        "DataFrame",
+        "date_range",
+        "DataFrame",
+        "climate",
+        "dwelling",
+        "occupancy",
+        "q_p_H",
+        "q_p_CS",
+        "q_p_CL",
+        "moisture",
+        "heat",
+        "local-ventilation",
+        "minimum-input",
+        "general-ventilation",
+        "partition",
+        "duct",
+        "balanced-room",
+        "initial-output",
+        "minimum-output",
+        "rated-capacity",
+    ]
+    assert frame_events == [
+        ("setitem", 0, "q_p_H", ["human-h"]),
+        ("setitem", 0, "q_p_CS", ["human-cs"]),
+        ("setitem", 0, "q_p_CL", ["human-cl"]),
+    ]
+    assert actual == sut._CalculationPreparationResult(
+        "design-h",
+        "design-c",
+        frames[0],
+        frames[1],
+        frames[2],
+        frames[3],
+        "climate-object",
+        "theta-ex",
+        "humidity",
+        "areas",
+        "non-room-area",
+        "water-heat",
+        "local-nr",
+        "general-airflow",
+        "partition-u",
+        "partition-area",
+        "duct-total",
+        "x-star-room",
+        "theta-star-room",
+        "theta-surroundings",
+        "q-hat",
+        "q-hat-cs",
+        "minimum-output-airflow",
+        "rated-h",
+        "rated-c",
+    )
