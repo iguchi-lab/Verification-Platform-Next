@@ -30,7 +30,7 @@ pyhees-jjj
 
 UIから計算エンジンの内部モジュールを直接参照せず、公開された計算APIと結果モデルだけを使用します。
 
-計算エンジン内の目標依存方向は `jjjexperiment -> pyhees` の一方向です。現在は移行前から存在する `pyhees -> jjjexperiment` の逆依存が4ファイルに残っているため、テストの許可リストで固定し、リファクタリングの各PRで段階的に削減します。新しい逆依存は追加しません。
+計算エンジン内の依存方向は `jjjexperiment -> pyhees` の一方向です。PR #140で移行前から残っていた `pyhees -> jjjexperiment` の逆依存をすべて除去しました。Verification Platform固有の定数、共有Enum、ログ、実行コンテキストは、上流由来ではない `pyhees.jjj_runtime` 接続アダプターへ `jjjexperiment` 側から登録します。契約テストで逆依存0件を固定し、新しい逆依存は追加しません。
 
 ## 開発の正本
 
