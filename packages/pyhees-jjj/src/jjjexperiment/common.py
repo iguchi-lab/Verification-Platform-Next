@@ -5,6 +5,11 @@ from typing import Annotated, Iterator, Optional
 from injector import Injector
 import numpy as np
 from numpy.typing import NDArray
+from pyhees.jjj_markers import (
+    jjj_cloned as jjj_cloned,
+    jjj_cloning as jjj_cloning,
+    jjj_mod as jjj_mod,
+)
 
 # NOTE: どこからでも利用するのでカスタムファイルへ依存させない
 # 循環参照の原因になるため
@@ -26,22 +31,6 @@ class JJJ_HCM(Enum):
   H = 1  # 暖房期
   C = 2  # 冷房期
   M = 3  # 中間期
-
-# NOTE: オリジンが更新されたときに改変コードの追従対応の判断用にラベリングしている
-
-def jjj_cloning(func):
-  """ pyheesモジュール内の関数を jjjexperimentにより 複製改変したもの"""
-  return func
-
-def jjj_cloned(func):
-  """ pyheesモジュール内における jjjexperimentによる 複製改変されたもの"""
-  # NOTE: オリジナルには手を加えない
-  return func
-
-def jjj_mod(func):
-  """ pyheesモジュール内における jjjexperimentによる 改変された実装"""
-  # NOTE: オリジナルに手を加え 複製はしない
-  return func
 
 # ネストされた関数からの取得用
 # NOTE: injectの連鎖でも到達できない深いネストの時

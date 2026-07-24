@@ -54,7 +54,7 @@ from pyhees.section11_6 import \
 
 # JJJ
 import jjjexperiment.constants as jjj_consts
-from jjjexperiment.common import jjj_cloned, jjj_mod
+from pyhees.jjj_markers import jjj_cloned, jjj_mod
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
 from jjjexperiment.inputs.options import 計算モデル
 

@@ -136,6 +136,7 @@
 - [PR #128](https://github.com/iguchi-lab/Verification-Platform-Next/pull/128): `calc_main`の機器ログ・サービス生成から負荷取得/CSV選択・DI登録・zone集約・暖房設計風量まで約12の準備境界を、評価順、injector context範囲、公開API、数値結果を維持した内部コンテキストへ集約し、暖冷房方式分岐を変更対象から除外しました。
 - [PR #130](https://github.com/iguchi-lab/Verification-Platform-Next/pull/130): `section4_2_b.py`の暖冷房設計風量係数と`section4_3_a.py`の冷房定格能力上限をJJJ側から動的供給する内部providerへ依存性逆転し、既定値、直接代入、部分`set_constants`、数値結果を維持したまま逆依存を6ファイルから4ファイルへ削減しました。
 - [PR #132](https://github.com/iguchi-lab/Verification-Platform-Next/pull/132): 残る4つの`pyhees`逆依存ファイルで6つのワイルドカードimport境界を明示importへ置き換え、`section4_2.py`の未使用DIコンテナ逆依存を削除しました。建研由来の評価順、公開API、数値結果を維持し、JJJ拡張へのワイルドカードimport再導入をAST契約で防止しました。
+- [PR #134](https://github.com/iguchi-lab/Verification-Platform-Next/pull/134): 建研由来4モジュールの改変マーカーを`pyhees.jjj_markers`へ集約し、`jjjexperiment.common`から従来名を同じ関数オブジェクトとして再公開しました。マーカー依存を4モジュールから除去し、ファイル単位の逆依存許可リストを3件削減しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
@@ -144,7 +145,7 @@
 以下は最新`main`の再棚卸しに基づく候補であり、着手順ではありません。1つの設計上の成果と共通の検証方法をIssueへ記録して選びます。低リスク領域のPRは30〜50境界または800〜1,500行程度を目安とし、高リスク領域は件数より安全性を優先します。
 
 1. `section4_2_jjj.py`の`calc_Q_UT_A`と`main.py`の`calc_main`に残る長いオーケストレーションを整理する。`calc_Q_UT_A`の分岐前準備はPR #126、`calc_main`の負荷・暖房設計風量準備はPR #128でコンテキスト化済み。残る前時刻依存、8760時間ループ、床下第1・第2パス、季節分岐、暖冷房方式分岐は高リスクとして小さく扱い、同じ入力コンテキストを共有する抽出済みヘルパー群だけを安全にまとめる。
-2. 4つの`pyhees`ファイルに残る`pyhees -> jjjexperiment`逆依存を、依存元と検証方法ごとに分けて削減する。`section4_2_b.py`と`section4_3_a.py`の3スカラー依存はPR #130、残るワイルドカードimportと未使用DI依存はPR #132で除去済み。次は明示化された`common`デコレータ、`options.計算モデル`の提供方向を責務ごとに反転する。建研由来ファイルへの変更になるため、一般的な低リスクPRより小さくし、上流との差分追跡を優先する。
+2. 4つの`pyhees`ファイルに残る`pyhees -> jjjexperiment`逆依存を、依存元と検証方法ごとに分けて削減する。3スカラー依存はPR #130、ワイルドカードimportと未使用DI依存はPR #132、4モジュールの改変マーカー依存はPR #134で除去済み。次は明示化された`options.計算モデル`、constants、logger、`section3_1_e.py`の実行コンテキスト・床下空調依存を責務ごとに反転する。建研由来ファイルへの変更になるため、一般的な低リスクPRより小さくし、上流との差分追跡を優先する。
 3. カレントディレクトリ、グローバル状態、暗黙のCSVファイル名などの残存副作用を境界へ集約する。グローバル更新、DataFrame/CSV出力、インプレース更新は分離し、単純なDataFrame列組み立てだけを低リスク群としてまとめる。type4電中研モデルのDataFrame構築とCSV書き出しはPR #124で境界化済み。
 
 ## 1作業パッケージの進め方

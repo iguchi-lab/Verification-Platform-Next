@@ -5,6 +5,7 @@
 - 上流リポジトリ: `BRI-EES-House/pyhees`
 - 建築研究所由来コード: `src/pyhees`
 - 検証用プラットフォーム独自コード: `src/jjjexperiment`
+- 独自変更マーカー: `src/pyhees/jjj_markers.py`（上流由来ではありません）
 
 ## 現在の基準
 
