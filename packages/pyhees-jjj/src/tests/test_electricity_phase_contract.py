@@ -1,4 +1,6 @@
 import numpy as np
+import pytest
+from types import SimpleNamespace
 
 from jjjexperiment.inputs.options import 計算モデル
 import jjjexperiment.section4_2_a_jjj as sut
@@ -249,3 +251,129 @@ def test_type2_cooling_preserves_unit_conversion_argument_order_log_and_sum(monk
     assert events[0][1][6:] == (6800.0, 1.0, "climate.csv")
     assert events[1][1] == ("E_E_CRAC_C_d_t", rac)
     np.testing.assert_array_equal(actual, fan + rac)
+
+def _type4_args(season):
+    fan = np.arange(8760, dtype=float) / 1000
+    load = np.arange(8760, dtype=float) + 1000
+    supply = np.full(8760, 1200.0)
+    spec = SimpleNamespace(V_rac_inner=20.0, V_rac_outer=40.0)
+    real_inner = SimpleNamespace(
+        Theta_rac_real_inner=20.0,
+        RH_rac_real_inner=50.0,
+    )
+    return (
+        "case",
+        計算モデル.電中研モデル,
+        6,
+        "climate.csv",
+        fan,
+        load,
+        supply,
+        100.0,
+        f"simu-{season}",
+        spec,
+        real_inner,
+    )
+
+
+def test_type4_heating_preserves_dataframe_and_csv_contract(monkeypatch):
+    events = []
+    cop = np.full(8760, 2.0)
+    monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_v")
+    _record(monkeypatch, sut.denchu_2, "calc_COP_H_d_t", events, cop)
+    monkeypatch.setattr(
+        sut.pd.DataFrame,
+        "to_csv",
+        lambda self, path, encoding: events.append(
+            ("to_csv", self.copy(), path, encoding)
+        ),
+    )
+    args = _type4_args("H")
+
+    actual = sut.calc_E_E_H_d_t_type4(*args)
+
+    assert [event[0] for event in events] == ["calc_COP_H_d_t", "to_csv"]
+    frame, path, encoding = events[1][1:]
+    assert path == "case_v_denchu_H_output.csv"
+    assert encoding == "cp932"
+    assert len(frame.index) == 8760
+    assert frame.index[0].isoformat() == "2023-01-01T01:00:00"
+    assert frame.index[-1].isoformat() == "2024-01-01T00:00:00"
+    assert list(frame.columns) == [
+        "q_hs_H_d_t",
+        "COP_H_d_t",
+        "E_E_CRAC_H_d_t",
+        "E_E_fan_H_d_t",
+        "E_E_H_d_t",
+    ]
+    np.testing.assert_array_equal(frame["q_hs_H_d_t"], args[5])
+    np.testing.assert_array_equal(frame["COP_H_d_t"], cop)
+    np.testing.assert_array_equal(frame["E_E_CRAC_H_d_t"], args[5] / 2000)
+    np.testing.assert_array_equal(frame["E_E_fan_H_d_t"], args[4])
+    np.testing.assert_array_equal(frame["E_E_H_d_t"], args[5] / 2000 + args[4])
+    np.testing.assert_array_equal(actual, args[4] + args[5] / 2000)
+
+
+def test_type4_cooling_preserves_dataframe_csv_log_and_return_order(monkeypatch):
+    events = []
+    cop = np.full(8760, 4.0)
+    monkeypatch.setattr(sut.jjj_consts, "version_info", lambda: "_v")
+    _record(monkeypatch, sut.denchu_2, "calc_COP_C_d_t", events, cop)
+    monkeypatch.setattr(
+        sut.pd.DataFrame,
+        "to_csv",
+        lambda self, path, encoding: events.append(
+            ("to_csv", self.copy(), path, encoding)
+        ),
+    )
+    _record(monkeypatch, sut._logger, "NDdebug", events, None)
+    args = _type4_args("C")
+
+    actual = sut.calc_E_E_C_d_t_type4(*args)
+
+    assert [event[0] for event in events] == [
+        "calc_COP_C_d_t",
+        "to_csv",
+        "NDdebug",
+    ]
+    frame, path, encoding = events[1][1:]
+    assert path == "case_v_denchu_C_output.csv"
+    assert encoding == "cp932"
+    assert len(frame.index) == 8760
+    assert frame.index[0].isoformat() == "2023-01-01T01:00:00"
+    assert frame.index[-1].isoformat() == "2024-01-01T00:00:00"
+    assert list(frame.columns) == [
+        "q_hs_C_d_t",
+        "COP_C_d_t",
+        "E_E_CRAC_C_d_t",
+        "E_E_fan_C_d_t",
+        "E_E_C_d_t",
+    ]
+    np.testing.assert_array_equal(frame["q_hs_C_d_t"], args[5])
+    np.testing.assert_array_equal(frame["COP_C_d_t"], cop)
+    np.testing.assert_array_equal(frame["E_E_CRAC_C_d_t"], args[5] / 4000)
+    np.testing.assert_array_equal(frame["E_E_fan_C_d_t"], args[4])
+    np.testing.assert_array_equal(frame["E_E_C_d_t"], args[5] / 4000 + args[4])
+    np.testing.assert_array_equal(events[2][1][1], args[5] / 4000)
+    np.testing.assert_array_equal(actual, args[5] / 4000 + args[4])
+
+
+@pytest.mark.parametrize(
+    ("function_name", "cop_name", "season"),
+    [
+        ("calc_E_E_H_d_t_type4", "calc_COP_H_d_t", "H"),
+        ("calc_E_E_C_d_t_type4", "calc_COP_C_d_t", "C"),
+    ],
+)
+def test_type4_csv_errors_propagate(
+    monkeypatch, function_name, cop_name, season
+):
+    monkeypatch.setattr(sut.denchu_2, cop_name, lambda **kwargs: np.ones(8760))
+
+    def fail_to_csv(self, path, encoding):
+        raise OSError("write failed")
+
+    monkeypatch.setattr(sut.pd.DataFrame, "to_csv", fail_to_csv)
+
+    with pytest.raises(OSError, match="write failed"):
+        getattr(sut, function_name)(*_type4_args(season))
