@@ -1,37 +1,47 @@
 import numpy as np
 import pyhees.section3_1_e as algo
+import pyhees.section4_2 as dc
 # JJJ
-import jjjexperiment.constants as jjj_consts
 from jjjexperiment.common import jjj_cloning
 from jjjexperiment.logger import log_res
+from jjjexperiment.underfloor_ac.hourly_solver import (
+    GroundResponseState,
+    get_runup_floor_temperature,
+)
 
-# 新床下空調ロジック用の助走計算に使用する代表床下温度 [℃]
-THETA_UF_WARM = 27.69   # 冬・春・秋期の床下温度 [℃]
-THETA_UF_COOL = 25.62   # 夏期の床下温度 [℃]
+# Compatibility exports retained for the public engine contract. The new
+# Excel-aligned calculation does not use these seasonal representatives.
+THETA_UF_WARM = 27.69
+THETA_UF_COOL = 25.62
+
+def calc_sum_Theta_dash_g_surf_A_m_runup(
+    Theta_uf_const: float,
+    Theta_g_avg: float,
+) -> float:
+    """Return the legacy constant-temperature run-up response sum."""
+    state = GroundResponseState(theta_g_avg=Theta_g_avg)
+    response = np.zeros(10, dtype=float)
+    for _ in range(24 * 365):
+        response = state.response_terms()
+        state.commit(Theta_uf_const, response)
+    return float(np.sum(response))
 
 #260112 IGUCHI 新床下空調用固定値
 @jjj_cloning
-def get_Theta_uf_d_t_runup() -> np.ndarray:
-    """新床下空調ロジック用の助走計算床下温度 (℃) の時系列を返す
+def get_Theta_uf_d_t_runup(
+    underfloor_insulation: bool,
+    Theta_ex_d_t: np.ndarray,
+) -> np.ndarray:
+    """Return the Appendix E equation (13) run-up temperatures.
 
-    標準住戸の新床下空調ロジックにおける助走計算に用いる
-    床下温度の代表値を季節区分ごとに並べた定数配列。
-    合計 8760 時間 (= 24 × 365)。
-
-    Returns:
-        ndarray: shape (8760,) の床下温度時系列 [℃]
+    The July 2026 workbook uses the current weather year's exterior
+    temperatures, clipped to 20--27 degrees Celsius when the underfloor space
+    is inside the insulation boundary. Seasonal representative constants are
+    not part of that calculation.
     """
-    THETA_UF_WARM = 27.69   # 冬・春・秋期の床下温度 [℃]
-    THETA_UF_COOL = 25.62   # 夏期の床下温度 [℃]
-    N_HOURS_WARM_1 = 2664   # 第1期間（年始〜春）[h]
-    N_HOURS_COOL   = 3721   # 第2期間（夏）[h]
-    N_HOURS_WARM_2 = 2375   # 第3期間（秋〜年末）[h]
-    assert N_HOURS_WARM_1 + N_HOURS_COOL + N_HOURS_WARM_2 == 24 * 365
-    return np.array(
-        [THETA_UF_WARM] * N_HOURS_WARM_1
-        + [THETA_UF_COOL] * N_HOURS_COOL
-        + [THETA_UF_WARM] * N_HOURS_WARM_2,
-        dtype=float
+    return get_runup_floor_temperature(
+        underfloor_insulation,
+        Theta_ex_d_t,
     )
 
 
@@ -60,10 +70,8 @@ def _get_floor_area_and_supply(A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, 
     )
     return A_s_ufvnt, r_A_uf_i, V_dash_supply_flr1st_d_t
 
-def _get_floor_season_masks_and_loads(Theta_ex_d_t, Theta_in_H, Theta_in_C, r_A_uf_i, endi, L_star_H_d_t_i, L_star_CS_d_t_i):
-    H = Theta_ex_d_t < Theta_in_H
-    C = Theta_ex_d_t > Theta_in_C
-    M = np.logical_not(np.logical_or(H, C))
+def _get_floor_season_masks_and_loads(region, r_A_uf_i, endi, L_star_H_d_t_i, L_star_CS_d_t_i):
+    H, C, M = dc.get_season_array_d_t(region)
 
     L_star_H_flr1st_d_t = np.zeros(24 * 365)
     L_star_H_flr1st_d_t[H] = np.sum(
@@ -102,7 +110,7 @@ def _get_Theta_uf_d_t(H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t, Theta_
     return Theta_uf_d_t
 
 @log_res(['Theta_uf_d_t'])
-def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t):
+def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, Theta_ex_d_t, region):
     """定常状態での床下温度を求める
 
     Args:
@@ -136,7 +144,7 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
     # 当該住戸の暖冷房区画iの空気を供給する床下空間に接する床の面積 (m2) (7)
     A_s_ufvnt, r_A_uf_i, V_dash_supply_flr1st_d_t = _get_floor_area_and_supply(A_A, A_MR, A_OR, r_A_ufvnt, V_dash_supply_d_t_i, endi)
 
-    H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t = _get_floor_season_masks_and_loads(Theta_ex_d_t, Theta_in_H, Theta_in_C, r_A_uf_i, endi, L_star_H_d_t_i, L_star_CS_d_t_i)
+    H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t = _get_floor_season_masks_and_loads(region, r_A_uf_i, endi, L_star_H_d_t_i, L_star_CS_d_t_i)
 
     # upper2_H = U_s * A_s_ufvnt * ((Theta_in_H - Theta_ex_d_t[H]) * H_floor - Theta_in_H) * 3.6
     # upper2_C = U_s * A_s_ufvnt * ((Theta_in_C - Theta_ex_d_t[C]) * H_floor - Theta_in_C) * 3.6
@@ -144,40 +152,3 @@ def calc_Theta_uf_d_t_2023(L_star_H_d_t_i, L_star_CS_d_t_i, A_A, A_MR, A_OR, r_A
     Q1_H_d_t, Q1_C_d_t, Q2 = _get_floor_Q1_Q2(H, C, ro_air, c_p_air, V_dash_supply_flr1st_d_t, U_s, A_s_ufvnt)
 
     return _get_Theta_uf_d_t(H, C, M, L_star_H_flr1st_d_t, L_star_CS_flr1st_d_t, Theta_in_H, Theta_in_C, Q1_H_d_t, Q1_C_d_t, Q2, Theta_ex_d_t)
-
-
-def calc_sum_Theta_dash_g_surf_A_m_runup(Theta_uf_const: float, Theta_g_avg: float) -> float:
-    """定数床下温度で1年間の助走計算を行い、吸熱応答の項別成分の合計を返す
-
-    床下→地盤への熱損失計算に必要な sum_Theta_dash_g_surf_A_m を、
-    代表床下温度 (THETA_UF_WARM または THETA_UF_COOL) と地盤の不易層温度から算出する。
-    pyhees/section3_1_e.py の助走計算ループと同一の漸化式を使用する。
-
-    Args:
-        Theta_uf_const: 床下空間の代表温度（定数） [℃]。
-            暖房期には THETA_UF_WARM、冷房期には THETA_UF_COOL を使用する。
-        Theta_g_avg: 地盤の不易層温度 [℃]
-
-    Returns:
-        指数項mの吸熱応答の項別成分の合計 sum(Theta_dash_g_surf_A_m) [℃]
-    """
-    R_g = jjj_consts.R_g
-    Phi_A_0 = 0.025504994  # 吸熱応答係数の初項 (pyhees/section3_1_e.py と同値)
-    M = 10
-
-    phi_1_A_m = np.array([algo.get_phi_1_A_m(m) for m in range(1, M + 1)])
-    r_m = np.array([algo.get_r_m(m) for m in range(1, M + 1)])
-
-    Theta_uf_prev = 0.0
-    Theta_g_surf_prev = 0.0
-    Theta_dash_g_surf_A_m = np.zeros(M)
-
-    for _ in range(24 * 365):
-        q_g_prev = 1.0 / R_g * (Theta_uf_prev - Theta_g_surf_prev)
-        Theta_dash_g_surf_A_m = phi_1_A_m * q_g_prev + r_m * Theta_dash_g_surf_A_m
-        Theta_g_surf = ((Phi_A_0 / R_g) * Theta_uf_const + np.sum(Theta_dash_g_surf_A_m) + Theta_g_avg) \
-                       / (1.0 + (Phi_A_0 / R_g))
-        Theta_uf_prev = Theta_uf_const
-        Theta_g_surf_prev = Theta_g_surf
-
-    return float(np.sum(Theta_dash_g_surf_A_m))

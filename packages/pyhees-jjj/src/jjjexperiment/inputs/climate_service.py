@@ -33,7 +33,7 @@ class ClimateService:
         return Theta_ex_d_t
 
     def get_Theta_g_avg(self) -> float:
-        if (ufac := self._new_ufac) and ufac.Theta_g_avg is not None:
+        if (ufac := self._new_ufac) and ufac.explicit_constants:
             return self._new_ufac.Theta_g_avg
         else:
             return algo.get_Theta_g_avg(self.get_Theta_ex_d_t())
@@ -63,7 +63,7 @@ class ClimateService:
         Returns:
             phi: 基礎の線熱貫流率 [W/m*K]
         """
-        if (ufac := self._new_ufac) and ufac.phi is not None:
+        if (ufac := self._new_ufac) and ufac.explicit_constants:
             return self._new_ufac.phi
         else:
             return algo.get_phi(self.region, Q)
@@ -79,7 +79,7 @@ class ClimateService:
         Returns:
             U_s_vert: 暖冷房負荷計算時に想定した床の熱貫流率 [W/m2*K]
         """
-        if (ufac := self._new_ufac) and ufac.U_s_vert is not None:
+        if (ufac := self._new_ufac) and ufac.explicit_constants:
             return self._new_ufac.U_s_vert
         else:
             return algo.get_U_s_vert(self.region, Q)

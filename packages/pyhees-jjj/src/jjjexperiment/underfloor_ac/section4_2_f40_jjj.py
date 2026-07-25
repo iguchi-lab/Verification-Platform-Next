@@ -1,3 +1,5 @@
+import numpy as np
+
 import pyhees.section4_2 as dc
 # JJJ
 from jjjexperiment.common import JJJ_HCM, jjj_cloning
@@ -53,6 +55,88 @@ def _get_Q_hat_hs_C_40_2a(Q_hat_hs_CS, Q_hat_hs_CL):
 def _get_Q_hat_hs_M_40_3():
     return 0
 
+
+def calc_Q_hat_hs_H_signed_d_t(
+        Q,
+        A_A,
+        V_vent_l_d_t,
+        V_vent_g_i,
+        mu_H,
+        J_d_t,
+        q_gen_d_t,
+        n_p_d_t,
+        q_p_H,
+        Theta_ex_d_t,
+        region,
+    ):
+    """Return formula (40-1b) before its zero lower bound."""
+    H, _, _ = dc.get_season_array_d_t(region)
+    c_p_air, rho_air, Theta_set_H, _, _ = _get_formula_40_properties()
+    sum_V_vent_g_i = np.sum(V_vent_g_i[:5])
+    output_d_t = np.zeros(24 * 365)
+    envelope_d_t = (
+        (Q - 0.35 * 0.5 * 2.4) * A_A
+        + c_p_air
+        * rho_air
+        * (V_vent_l_d_t[H] + sum_V_vent_g_i)
+        / 3600
+    ) * (Theta_set_H - Theta_ex_d_t[H])
+    output_d_t[H] = (
+        envelope_d_t
+        - mu_H * A_A * J_d_t[H]
+        - q_gen_d_t[H]
+        - n_p_d_t[H] * q_p_H
+    ) * 3600 * 1e-6
+    return output_d_t
+
+def calc_Q_hat_hs_C_components_d_t(
+        Q,
+        A_A,
+        V_vent_l_d_t,
+        V_vent_g_i,
+        mu_C,
+        J_d_t,
+        q_gen_d_t,
+        n_p_d_t,
+        q_p_CS,
+        q_p_CL,
+        X_ex_d_t,
+        w_gen_d_t,
+        Theta_ex_d_t,
+        L_wtr,
+        region,
+    ):
+    """Return signed cooling sensible and latent components of formula (40)."""
+    _, C, _ = dc.get_season_array_d_t(region)
+    c_p_air, rho_air, _, Theta_set_C, X_set_C = _get_formula_40_properties()
+    sum_V_vent_g_i = np.sum(V_vent_g_i[:5])
+    Q_hat_hs_CS_d_t = np.zeros(24 * 365)
+    Q_hat_hs_CL_d_t = np.zeros(24 * 365)
+    Q_hat_hs_CS_d_t[C] = (
+        (
+            (Q - 0.35 * 0.5 * 2.4) * A_A
+            + c_p_air
+            * rho_air
+            * (V_vent_l_d_t[C] + sum_V_vent_g_i)
+            / 3600
+        )
+        * (Theta_ex_d_t[C] - Theta_set_C)
+        + mu_C * A_A * J_d_t[C]
+        + q_gen_d_t[C]
+        + n_p_d_t[C] * q_p_CS
+    ) * 3600 * 1e-6
+    Q_hat_hs_CL_d_t[C] = (
+        (
+            rho_air
+            * (V_vent_l_d_t[C] + sum_V_vent_g_i)
+            * (X_ex_d_t[C] - X_set_C)
+            * 1e3
+            + w_gen_d_t[C]
+        )
+        * L_wtr
+        + n_p_d_t[C] * q_p_CL * 3600
+    ) * 1e-6
+    return Q_hat_hs_CS_d_t, Q_hat_hs_CL_d_t
 
 def _raise_invalid_HCM_40():
     raise ValueError("Invalid season flag")

@@ -31,22 +31,23 @@ def test_get_floor_area_and_supply_preserves_first_floor_weighting(monkeypatch):
     np.testing.assert_array_equal(weighted_supply, np.array([3.5, 7.0, 10.5]))
 
 def test_get_floor_season_masks_and_loads_preserves_weighting_and_units():
-    theta = np.full(8760, 23.0)
-    theta[0] = 10.0
-    theta[1] = 30.0
+    heating_season, cooling_season, mid_season = floor_temperature.dc.get_season_array_d_t(6)
+    heating_index = np.flatnonzero(heating_season)[0]
+    cooling_index = np.flatnonzero(cooling_season)[0]
+    mid_index = np.flatnonzero(mid_season)[0]
     ratios = np.array([0.5, 0.25])
     heating_loads = np.zeros((2, 8760))
     cooling_loads = np.zeros((2, 8760))
-    heating_loads[:, 0] = (2.0, 4.0)
-    cooling_loads[:, 1] = (6.0, 8.0)
+    heating_loads[:, heating_index] = (2.0, 4.0)
+    cooling_loads[:, cooling_index] = (6.0, 8.0)
 
     H, C, M, heating, cooling = floor_temperature._get_floor_season_masks_and_loads(
-        theta, 20.0, 27.0, ratios, 2, heating_loads, cooling_loads
+        6, ratios, 2, heating_loads, cooling_loads
     )
 
-    assert H[0] and C[1] and M[2]
-    assert heating[0] == 2000.0
-    assert cooling[1] == 5000.0
+    assert H[heating_index] and C[cooling_index] and M[mid_index]
+    assert heating[heating_index] == 2000.0
+    assert cooling[cooling_index] == 5000.0
     assert heating.shape == cooling.shape == (8760,)
 
 def test_get_floor_Q1_Q2_preserves_seasonal_airflow_and_floor_conductance():
