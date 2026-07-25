@@ -1,0 +1,58 @@
+{
+  "workbook": {
+    "name": "第4章第2節ダクト式全館空調_床下13.xlsm",
+    "sha256": "10c01d73ab489ee387fa4ff5e42fa475cec162d0e3e2540c119cc1bae00d4e77",
+    "value_source": "cached OOXML values"
+  },
+  "input": {
+    "file": "excel_floor13_input.json",
+    "sha256": "cc9597c9b04b569f48938fbca5a007e6ec146d9962b9bed7cffa379877052661",
+    "region": 6,
+    "A_A": 120.08,
+    "A_MR": 29.81,
+    "A_OR": 51.34,
+    "A_env": 307.51,
+    "U_A": 0.87,
+    "Q": 2.6
+  },
+  "golden": {
+    "file": "excel_floor13_golden.npz",
+    "sha256": "945ec20691b545ff193b39233680cca34400cb83b1caf6151dd05920a821fa81",
+    "hours": 8760,
+    "series_count_including_season": 22
+  },
+  "annual_MJ_per_year": {
+    "heating": 43168.736537242876,
+    "cooling": 18972.628959846763,
+    "comparison_absolute_tolerance": 0.0005,
+    "excel_display_format": "0\"MJ\""
+  },
+  "season_counts": {
+    "heating": 4056,
+    "cooling": 2808,
+    "middle": 1896
+  },
+  "series": {
+    "q_hat_hs": {"sheet": "負荷計算", "column": "CG", "first_row": 5, "decimals": 1},
+    "v_dash_supply_1": {"sheet": "負荷計算", "column": "CI", "first_row": 5, "decimals": 0},
+    "v_dash_supply_2": {"sheet": "負荷計算", "column": "CJ", "first_row": 5, "decimals": 0},
+    "theta_star_nr": {"sheet": "負荷計算", "column": "CP", "first_row": 5, "decimals": 1},
+    "theta_hs_out": {"sheet": "負荷計算", "column": "FE", "first_row": 5, "decimals": 3},
+    "v_supply_1": {"sheet": "負荷計算", "column": "FF", "first_row": 5, "decimals": 0},
+    "v_supply_2": {"sheet": "負荷計算", "column": "FG", "first_row": 5, "decimals": 0},
+    "theta_supply_1": {"sheet": "負荷計算", "column": "FM", "first_row": 5, "decimals": 1},
+    "theta_supply_2": {"sheet": "負荷計算", "column": "FN", "first_row": 5, "decimals": 1},
+    "theta_hbr_1": {"sheet": "負荷計算", "column": "FT", "first_row": 5, "decimals": 1},
+    "theta_hbr_2": {"sheet": "負荷計算", "column": "FU", "first_row": 5, "decimals": 1},
+    "theta_nr": {"sheet": "負荷計算", "column": "FZ", "first_row": 5, "decimals": 1},
+    "l_star_cs_1": {"sheet": "負荷計算", "column": "DE", "first_row": 5, "decimals": 2},
+    "l_star_cs_2": {"sheet": "負荷計算", "column": "DF", "first_row": 5, "decimals": 2},
+    "l_star_h_1": {"sheet": "負荷計算", "column": "DL", "first_row": 5, "decimals": 2},
+    "l_star_h_2": {"sheet": "負荷計算", "column": "DM", "first_row": 5, "decimals": 2},
+    "heating_target": {"sheet": "床下計算④", "column": "G", "first_row": 6, "decimals": 2},
+    "cooling_target": {"sheet": "床下計算④", "column": "R", "first_row": 6, "decimals": 2},
+    "floor_transfer_temperature": {"sheet": "床下計算⑤", "column": "P", "first_row": 6, "decimals": 1},
+    "actual_floor_temperature": {"sheet": "床下温度", "column": "T", "first_row": 8774, "decimals": 1},
+    "ground_response": {"sheet": "床下温度", "column": "AG", "first_row": 8774, "decimals": 3}
+  }
+}
