@@ -14,6 +14,11 @@ Excel の数式、隣接セル、PDF、説明資料を照合した範囲では�
 反映すべきでない明白な Excel 異常は見つからなかった。Excel 本体での
 全再計算と保存済みキャッシュ値の一致だけは要確認である。
 
+7 変更点の数式、採用値、物理的妥当性、資料間不一致を一項目ずつ
+対話検証する台帳は
+[`underfloor_ac_seven_point_design_review.md`](underfloor_ac_seven_point_design_review.md)
+に分離する。
+
 ## 比較条件と資料
 
 資料の優先順位は次のとおり。
@@ -202,4 +207,4 @@ Excel の表示形式は `0"MJ"`。回帰試験ではさらに厳しい
 - 計算エンジン内部テスト: 520 passed、2 skipped、7 xfailed、5 xpassed
 - リポジトリ全体 Ruff と変更エンジンファイル Ruff
 
-GitHub Actions は PR 作成後に確認する。
+GitHub Actions は PR #152 の `schema-tests`、`engine-tests` とも成功した。
