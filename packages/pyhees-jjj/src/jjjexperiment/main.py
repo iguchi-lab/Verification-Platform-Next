@@ -1,4 +1,5 @@
 import json
+from contextlib import nullcontext
 from typing import NamedTuple
 import numpy as np
 from injector import Injector, inject
@@ -18,6 +19,10 @@ import pyhees.section4_2_b as dc_spec
 """ オーバーライドロジック """
 
 import jjjexperiment.section4_2_jjj as jjj_dc
+from jjjexperiment.section4_2_jjj import (
+    AnnualGroundFeedbackContext,
+    _annual_ground_feedback_scope,
+)
 import jjjexperiment.section4_2_a_jjj as jjj_dc_a
 
 """ 独自ロジック """
@@ -355,11 +360,18 @@ def _bind_heating_design_airflows(injector, heat_ac_setting, heat_quantity, heat
     injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
     return V_hs_dsgn_H, V_hs_dsgn_C
 
-def _run_heating_calc_Q_UT_A(injector, heat_ac_setting):
+def _run_heating_calc_Q_UT_A(
+        injector, heat_ac_setting, ground_context=None):
     injector.binder.bind(jjj_dc.ActiveAcSetting, to=heat_ac_setting)
-    E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t = (
-        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
+    scope = (
+        _annual_ground_feedback_scope(ground_context)
+        if ground_context is not None
+        else nullcontext()
     )
+    with scope:
+        E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, _, _, V_hs_supply_d_t, V_hs_vent_d_t = (
+            injector.call_with_injection(jjj_dc.calc_Q_UT_A)
+        )
     _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
     _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
     return E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t
@@ -699,10 +711,17 @@ def _get_cooling_fan_model(cool_ac_setting, V_hs_dsgn_C, cool_denchu_catalog, co
         P_rac_fan_rtd_C = V_hs_dsgn_C * cool_ac_setting.f_SFP
     _logger.info(f"P_rac_fan_rtd_C [W]: {P_rac_fan_rtd_C}")
     return P_rac_fan_rtd_C, simu_R_C
-def _run_cooling_calc_Q_UT_A(injector, cool_ac_setting, region):
-    E_UT_C_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = (
-        injector.call_with_injection(jjj_dc.calc_Q_UT_A)
+def _run_cooling_calc_Q_UT_A(
+        injector, cool_ac_setting, region, ground_context=None):
+    scope = (
+        _annual_ground_feedback_scope(ground_context)
+        if ground_context is not None
+        else nullcontext()
     )
+    with scope:
+        E_UT_C_d_t, Theta_hs_out_d_t, Theta_hs_in_d_t, X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t, V_hs_vent_d_t = (
+            injector.call_with_injection(jjj_dc.calc_Q_UT_A)
+        )
     _logger.NDdebug("V_hs_supply_d_t", V_hs_supply_d_t)
     _logger.NDdebug("V_hs_vent_d_t", V_hs_vent_d_t)
     q_hs_CS_d_t, q_hs_CL_d_t = dc_a.get_q_hs_C_d_t(
@@ -1120,13 +1139,22 @@ def _prepare_main_load_state(inputs: _MainLoadPreparationInputs):
 
 
 def _run_heating_phase(inputs: _HeatingPhaseInputs):
+    ground_context = (
+        inputs.injector.get(AnnualGroundFeedbackContext)
+        if hasattr(inputs.injector, "get")
+        else None
+    )
     (
         E_UT_H_d_t,
         Theta_hs_out_d_t,
         Theta_hs_in_d_t,
         V_hs_supply_d_t,
         V_hs_vent_d_t,
-    ) = _run_heating_calc_Q_UT_A(inputs.injector, inputs.heat_ac_setting)
+    ) = _run_heating_calc_Q_UT_A(
+        inputs.injector,
+        inputs.heat_ac_setting,
+        ground_context,
+    )
     P_rac_fan_rtd_H, simu_R_H = _get_heating_fan_model(
         inputs.heat_ac_setting,
         inputs.V_hs_dsgn_H,
@@ -1141,6 +1169,15 @@ def _run_heating_phase(inputs: _HeatingPhaseInputs):
         inputs.climate,
         inputs.house.region,
     )
+    if (
+            ground_context is not None
+            and ground_context.Heating_active_d_t is not None
+        ):
+        q_hs_H_d_t = np.where(
+            ground_context.Heating_active_d_t,
+            q_hs_H_d_t,
+            0.0,
+        )
     E_E_fan_H_d_t = _select_heating_fan_power(
         inputs.heat_ac_setting,
         inputs.heat_quantity,
@@ -1220,6 +1257,11 @@ def _run_cooling_phase(inputs: _CoolingPhaseInputs):
         inputs.injector,
         inputs.cool_ac_setting,
         inputs.house.region,
+        (
+            inputs.injector.get(AnnualGroundFeedbackContext)
+            if hasattr(inputs.injector, "get")
+            else None
+        ),
     )
     E_E_fan_C_d_t = _select_cooling_fan_power(
         inputs.cool_ac_setting,
@@ -1302,6 +1344,25 @@ def calc_main(
             heat_CRAC=heat_CRAC,
             cool_CRAC=cool_CRAC,
         )
+    )
+    V_hs_dsgn_C_for_ground = float(
+        cool_ac_setting.V_hs_dsgn
+        if cool_ac_setting.V_hs_dsgn > 0
+        else _get_V_hs_dsgn_C(
+            cool_ac_setting.type,
+            preparation.cool_quantity.V_fan_rtd,
+            cool_CRAC.q_rtd,
+        )
+    )
+    annual_ground_feedback_context = AnnualGroundFeedbackContext(
+        heat_ac_setting=heat_ac_setting,
+        cool_ac_setting=cool_ac_setting,
+        V_hs_dsgn_H=float(preparation.V_hs_dsgn_H),
+        V_hs_dsgn_C=V_hs_dsgn_C_for_ground,
+    )
+    injector.binder.bind(
+        AnnualGroundFeedbackContext,
+        to=annual_ground_feedback_context,
     )
     heating = _run_heating_phase(
         _HeatingPhaseInputs(

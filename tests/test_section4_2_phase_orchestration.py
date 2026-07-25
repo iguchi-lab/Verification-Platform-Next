@@ -18,7 +18,7 @@ def test_prepare_calculation_pre_branch_state_preserves_phase_order(monkeypatch)
     preparation = SimpleNamespace(
         df_output="initial-frame",
         df_output2="frame-2",
-        climate="climate",
+        climate=SimpleNamespace(get_U_s_vert=lambda _q: "floor-u"),
         A_HCZ_i="areas",
         V_hs_dsgn_H="design-h",
         V_hs_dsgn_C="design-c",
@@ -27,6 +27,9 @@ def test_prepare_calculation_pre_branch_state_preserves_phase_order(monkeypatch)
         Q_hs_rtd_C="rated-c",
         Q_hat_hs_d_t="output",
         Q_hat_hs_CS_d_t="sensible-output",
+        Q_hat_hs_H_signed_d_t="signed-heating-output",
+        Q_hat_hs_CS_signed_d_t="signed-sensible-output",
+        Q_hat_hs_CL_signed_d_t="signed-latent-output",
         V_vent_g_i="general-airflow",
         Theta_ex_d_t="outdoor-temperature",
         X_star_HBR_d_t="balanced-room-humidity",
@@ -44,6 +47,10 @@ def test_prepare_calculation_pre_branch_state_preserves_phase_order(monkeypatch)
         "supply-ratio",
         "hourly-supply-ratio",
         "supply-airflow",
+        "before-ground-output",
+        "base-output",
+        "base-sensible-output",
+        "floor-heat-transfer",
         "pre-vav-frame",
     )
     monkeypatch.setattr(
@@ -122,7 +129,7 @@ def test_run_no_carryover_calculation_preserves_phase_order_and_result(monkeypat
     preparation = SimpleNamespace(
         Theta_star_HBR_d_t="balanced-room-temperature",
         Theta_ex_d_t="outdoor-temperature",
-        climate="climate",
+        climate=SimpleNamespace(get_U_s_vert=lambda _q: "floor-u"),
         h_ex_d_t="outdoor-humidity",
         Theta_sur_d_t_i="duct-temperature",
         l_duct_i="duct-length",
@@ -188,7 +195,7 @@ def test_run_no_carryover_calculation_preserves_phase_order_and_result(monkeypat
         sut._NoCarryoverCalculationInputs(
             "setting",
             SimpleNamespace(region=6),
-            "skin",
+            SimpleNamespace(Q=2.7),
             "heat-spec",
             "cool-spec",
             "underfloor",

@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import NamedTuple, NewType
 import numpy as np
 import pandas as pd
@@ -47,11 +49,18 @@ from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeat
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 新床下空調
 import jjjexperiment.underfloor_ac.section4_2_jjj as jjj_ufac_dc
-from jjjexperiment.underfloor_ac.section3_1_e_jjj import (
-    calc_Theta_uf_d_t_2023,
-    calc_sum_Theta_dash_g_surf_A_m_runup,
-    THETA_UF_WARM,
-    THETA_UF_COOL,
+from jjjexperiment.underfloor_ac.section3_1_e_jjj import calc_Theta_uf_d_t_2023
+
+from jjjexperiment.underfloor_ac.hourly_solver import (
+    SequentialGroundModeInputs,
+    calculate_ground_response_history,
+    get_runup_floor_temperature,
+    run_up_ground_response,
+    solve_shared_ground_sequential,
+)
+from jjjexperiment.underfloor_ac.section4_2_f40_jjj import (
+    calc_Q_hat_hs_C_components_d_t,
+    calc_Q_hat_hs_H_signed_d_t,
 )
 from jjjexperiment.underfloor_ac.section4_2_f52_jjj import get_Theta_star_NR
 from jjjexperiment.underfloor_ac.section4_2_f46_f48_jjj import get_Theta_HBR_i, get_Theta_NR
@@ -60,6 +69,40 @@ from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc, UfVarsDataFr
 from jjjexperiment.v_min_input.logic import rescale_V_vent_g_i
 from jjjexperiment.v_min_input.inputs.heating import InputMinVolumeInput as HeatMinVolumeInput
 from jjjexperiment.v_min_input.inputs.cooling import InputMinVolumeInput as CoolMinVolumeInput
+
+@dataclass
+class AnnualGroundFeedbackContext:
+    """Annual actual-floor history shared by heating and cooling calculations."""
+
+    heat_ac_setting: HeatingAcSetting
+    cool_ac_setting: CoolingAcSetting
+    V_hs_dsgn_H: float
+    V_hs_dsgn_C: float
+    Theta_uf_feedback_d_t: np.ndarray | None = None
+    V_dash_supply_H_d_t_i: np.ndarray | None = None
+    V_dash_supply_C_d_t_i: np.ndarray | None = None
+    Theta_hs_out_H_d_t: np.ndarray | None = None
+    Theta_hs_out_C_d_t: np.ndarray | None = None
+    Theta_supply_H_d_t: np.ndarray | None = None
+    Theta_supply_C_d_t: np.ndarray | None = None
+    Heating_active_d_t: np.ndarray | None = None
+    Cooling_active_d_t: np.ndarray | None = None
+
+
+_annual_ground_feedback_context: ContextVar[
+    AnnualGroundFeedbackContext | None
+] = ContextVar("annual_ground_feedback_context", default=None)
+
+
+@contextmanager
+def _annual_ground_feedback_scope(context: AnnualGroundFeedbackContext):
+    """Bind one annual ground context without changing the public API."""
+    token = _annual_ground_feedback_context.set(context)
+    try:
+        yield
+    finally:
+        _annual_ground_feedback_context.reset(token)
+
 
 @dataclass
 class Load_DTI:
@@ -151,6 +194,9 @@ class _CalculationPreparationResult(NamedTuple):
     Theta_sur_d_t_i: object
     Q_hat_hs_d_t: object
     Q_hat_hs_CS_d_t: object
+    Q_hat_hs_H_signed_d_t: object
+    Q_hat_hs_CS_signed_d_t: object
+    Q_hat_hs_CL_signed_d_t: object
     V_hs_min: object
     Q_hs_rtd_H: object
     Q_hs_rtd_C: object
@@ -168,6 +214,10 @@ class _PreVavAirflowStateResult(NamedTuple):
     r_supply_des_i: object
     r_supply_des_d_t_i: object
     V_dash_supply_d_t_i: object
+    Q_hat_hs_before_ground_d_t: object
+    Q_hat_hs_base_d_t: object
+    Q_hat_hs_CS_base_d_t: object
+    U_s_input: object
     df_output: object
 
 class _CarryoverHourlyStateResult(NamedTuple):
@@ -223,6 +273,10 @@ class _CalculationPreBranchInputs(NamedTuple):
     V_hs_dsgn_C: object
     climateFile: object
     load: object
+    Theta_uf_ground_feedback_d_t: object = None
+    V_dash_supply_override_d_t_i: object = None
+    Theta_hs_out_override_d_t: object = None
+    Theta_underfloor_supply_override_d_t: object = None
 
 
 class _CalculationPreBranchResult(NamedTuple):
@@ -231,11 +285,14 @@ class _CalculationPreBranchResult(NamedTuple):
     Theta_in_d_t: object
     X_star_NR_d_t: object
     Theta_star_NR_d_t: object
-    r_A_NR_uf_1F_excl_bath: object
+    r_A_NR_uf_1F: object
     X_NR_d_t: object
     X_HBR_d_t_i: object
     L_star_CL_d_t_i: object
     Q_star_trs_prt_d_t_i: object
+    Theta_uf_ground_feedback_d_t: object = None
+    Theta_hs_out_override_d_t: object = None
+    Theta_underfloor_supply_override_d_t: object = None
 
 
 class _CalculationBranchResult(NamedTuple):
@@ -340,6 +397,9 @@ class _PreVavAirflowInputs(NamedTuple):
     Q_hs_rtd_C: object
     Q_hat_hs_d_t: object
     Q_hat_hs_CS_d_t: object
+    Q_hat_hs_H_signed_d_t: object
+    Q_hat_hs_CS_signed_d_t: object
+    Q_hat_hs_CL_signed_d_t: object
     V_vent_g_i: object
     Theta_in_d_t: object
     Theta_ex_d_t: object
@@ -347,6 +407,7 @@ class _PreVavAirflowInputs(NamedTuple):
     Theta_g_avg: object
     sum_Theta_dash_g_surf_A_m: object
     should_adjust: object
+    V_dash_supply_override_d_t_i: object
 
 
 class _BalancedNonRoomTemperatureInputs(NamedTuple):
@@ -385,6 +446,7 @@ class _NoCarryoverOutletRequirementInputs(NamedTuple):
     l_duct_i: object
     Theta_ex_d_t: object
     Theta_in_d_t: object
+    Theta_uf_ground_feedback_d_t: object
 
 
 class _NoCarryoverSupplyInputs(NamedTuple):
@@ -413,6 +475,9 @@ class _NoCarryoverSupplyInputs(NamedTuple):
     V_hs_dsgn_H: object
     V_hs_dsgn_C: object
     Theta_ex_d_t: object
+    Theta_uf_ground_feedback_d_t: object
+    Theta_hs_out_override_d_t: object
+    Theta_underfloor_supply_override_d_t: object
 
 
 class _NoCarryoverActualTemperatureInputs(NamedTuple):
@@ -429,11 +494,12 @@ class _NoCarryoverActualTemperatureInputs(NamedTuple):
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
     Theta_uf_d_t: object
+    Theta_uf_NR_d_t: object
     Theta_star_NR_d_t: object
     A_NR: object
     V_vent_l_NR_d_t: object
     V_dash_supply_d_t_i: object
-    r_A_NR_uf_1F_excl_bath: object
+    r_A_NR_uf_1F: object
 
 
 class _CarryoverOutletRequirementInputs(NamedTuple):
@@ -667,6 +733,8 @@ class _UnderfloorOutdoorTransferInputs(NamedTuple):
     Theta_ex_d_t: object
     V_dash_supply_d_t_i: object
     Q_hat_hs_d_t: object
+    Q_hat_hs_H_signed_d_t: object
+    Q_hat_hs_CS_signed_d_t: object
 
 
 
@@ -693,11 +761,15 @@ class _SupplyAirflowBeforeVavInputs(NamedTuple):
 
 
 class _RoomToUnderfloorTransferInputs(NamedTuple):
+    ac_setting: object
     new_ufac: object
     house: object
+    skin: object
+    climate: object
     Theta_ex_d_t: object
     Theta_in_d_t: object
     Q_hat_hs_d_t: object
+    Q_hat_hs_CS_signed_d_t: object
 
 
 class _UnderfloorGroundTransferInputs(NamedTuple):
@@ -870,6 +942,7 @@ class _ExpectedUnderfloorTemperatureInputs(NamedTuple):
     r_A_ufvnt: object
     V_dash_supply_d_t_i: object
     Theta_ex_d_t: object
+    region: object
 
 
 class _NewUnderfloorRequestedTemperatureInputs(NamedTuple):
@@ -885,9 +958,11 @@ class _NewUnderfloorRequestedTemperatureInputs(NamedTuple):
     Theta_in_d_t: object
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
+    Theta_uf_ground_feedback_d_t: object
 
 
 class _NewUnderfloorSupplyTemperatureInputs(NamedTuple):
+    ac_setting: object
     house: object
     skin: object
     load: object
@@ -897,17 +972,20 @@ class _NewUnderfloorSupplyTemperatureInputs(NamedTuple):
     Theta_hs_out_d_t: object
     Theta_ex_d_t: object
     V_dash_supply_d_t_i: object
+    Theta_uf_ground_feedback_d_t: object
+    Theta_underfloor_supply_override_d_t: object
 
 
 
 class _NewUnderfloorBalancedLoadInputs(NamedTuple):
     house: object
-    new_ufac: object
     new_ufac_df: object
     load: object
     A_s_ufac_i: object
     Theta_star_HBR_d_t: object
     Theta_ex_d_t: object
+    Q_star_trs_prt_d_t_i: object
+    U_s_floor_load: object
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
 
@@ -955,7 +1033,7 @@ class _UnderfloorActualNonRoomTemperatureInputs(NamedTuple):
     A_prt_i: object
     Q: object
     Theta_uf: object
-    r_A_NR_1F_excl_bath: object
+    r_A_NR_1F: object
 
 
 class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
@@ -971,7 +1049,7 @@ class _ActualNonRoomTemperaturesWithoutCarryoverInputs(NamedTuple):
     U_prt: object
     A_prt_i: object
     Theta_uf_d_t: object
-    r_A_NR_uf_1F_excl_bath: object
+    r_A_NR_uf_1F: object
 
 
 class _BalancedNonRoomTemperatureCallInputs(NamedTuple):
@@ -987,7 +1065,7 @@ class _BalancedNonRoomTemperatureCallInputs(NamedTuple):
     Theta_NR: object
     Theta_uf: object
     HCM: object
-    r_A_NR_1F_excl_bath: object
+    r_A_NR_1F: object
 
 
 class _NewBalancedNonRoomTemperatureInputs(NamedTuple):
@@ -1078,6 +1156,7 @@ class _NoCarryoverBalancedLoadInputs(NamedTuple):
     Theta_star_HBR_d_t: object
     Theta_ex_d_t: object
     Q_star_trs_prt_d_t_i: object
+    U_s_floor_load: object
 
 
 class _NoCarryoverCapacityStateInputs(NamedTuple):
@@ -1384,8 +1463,10 @@ def _get_rated_heat_source_capacities(inputs: _RatedHeatSourceCapacitiesInputs):
 
 def _prepare_underfloor_ground_response(
         ac_setting: ActiveAcSetting,
+        underfloor_insulation: bool,
         Theta_ex_d_t: np.ndarray,
-    ) -> tuple[np.ndarray, float, float, float]:
+        Theta_uf_ground_feedback_d_t: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, float, float, float | np.ndarray]:
     match ac_setting:
         case HeatingAcSetting():
             Theta_in_d_t = uf.get_Theta_in_d_t('H')
@@ -1394,22 +1475,35 @@ def _prepare_underfloor_ground_response(
         case _:
             raise ValueError
 
-    # 吸熱応答係数の初項
     Phi_A_0 = 0.025504994
-    # 地盤の不易層温度と助走計算による吸熱応答成分の合計 (床下→地盤 熱損失計算用)
-    # Theta_ex_d_t に依存するが ループ内では変わらないため事前に計算する
     Theta_g_avg = algo.get_Theta_g_avg(Theta_ex_d_t)
-    match ac_setting:
-        # 260112 IGUCHI 指定温度での助走暫定値を使用
-        case HeatingAcSetting():
-            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_WARM, Theta_g_avg)  # 11.2224
-        case CoolingAcSetting():
-            sum_Theta_dash_g_surf_A_m = calc_sum_Theta_dash_g_surf_A_m_runup(THETA_UF_COOL, Theta_g_avg)  # 9.15940
-        case _:
-            raise ValueError
+    Theta_uf_runup_d_t = get_runup_floor_temperature(
+        underfloor_insulation,
+        Theta_ex_d_t,
+    )
+    ground_state = run_up_ground_response(
+        Theta_uf_runup_d_t,
+        Theta_g_avg,
+        jjj_consts.R_g,
+    )
+    if Theta_uf_ground_feedback_d_t is None:
+        sum_Theta_dash_g_surf_A_m = float(
+            np.sum(ground_state.response_terms())
+        )
+    else:
+        sum_Theta_dash_g_surf_A_m = calculate_ground_response_history(
+            Theta_uf_ground_feedback_d_t,
+            Theta_ex_d_t,
+            underfloor_insulation,
+            r_g=jjj_consts.R_g,
+        )
 
-    return _UnderfloorGroundResponseResult(Theta_in_d_t, Phi_A_0, Theta_g_avg, sum_Theta_dash_g_surf_A_m)
-
+    return _UnderfloorGroundResponseResult(
+        Theta_in_d_t,
+        Phi_A_0,
+        Theta_g_avg,
+        sum_Theta_dash_g_surf_A_m,
+    )
 
 def _get_heat_source_supply_airflow_before_vav(inputs: _HeatSourceSupplyAirflowBeforeVavInputs):
     """Calculate formula (36) without changing its branch priority."""
@@ -1490,29 +1584,39 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
 
 def _adjust_heat_source_output_for_room_to_underfloor_transfer(inputs: _RoomToUnderfloorTransferInputs):
     """Apply the first formula (40)-2nd transfer without changing mutation."""
-    new_ufac = inputs.new_ufac
+    ac_setting = inputs.ac_setting
     house = inputs.house
+    skin = inputs.skin
+    climate = inputs.climate
     Theta_ex_d_t = inputs.Theta_ex_d_t
     Theta_in_d_t = inputs.Theta_in_d_t
     Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
+    Q_hat_hs_CS_signed_d_t = inputs.Q_hat_hs_CS_signed_d_t
     # (40)-2nd 床下空調時 熱源機の風量を計算するための熱源機の出力 補正
     # 1. 床下 -> 居室全体 (目標方向の熱移動)
     #260112 IGUCHI 床の熱貫流率は、入力値を使う！
-    U_s_input = new_ufac.U_s_vert  # 床板(床チャンバー上面)の熱貫流率 [W/(m2・K)]
+    U_s_input = algo.get_U_s()
+    U_s_floor_load = climate.get_U_s_vert(skin.Q)
     A_s_ufac_i, r_A_s_ufac = jjj_ufac_dc.get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
     #260112 IGUCHI デバッグ用
     #print("Q_hat_hs_d_t[0]: ", Q_hat_hs_d_t[0])
     assert A_s_ufac_i.ndim == 2
-    delta_L_room2uf_d_t_i  \
-        = np.hstack([
-            jjj_ufac_dc.calc_delta_L_room2uf_i(
-                new_ufac.U_s_floor_ins,
-                A_s_ufac_i,
-                np.abs(Theta_ex_d_t[t] - Theta_in_d_t[t])
-            ) for t in range(24*365)  # 各要素が shape(12,1)
-        ])
-    assert delta_L_room2uf_d_t_i.ndim == 2
-    Q_hat_hs_d_t -= np.sum(delta_L_room2uf_d_t_i, axis=0)
+    delta_L_room2uf_d_t_i = (
+        U_s_floor_load
+        * A_s_ufac_i[:2]
+        * (Theta_in_d_t - Theta_ex_d_t)
+        * 0.7
+        * 3.6
+        / 1000
+    )
+    delta_L_room2uf_d_t = np.sum(delta_L_room2uf_d_t_i, axis=0)
+    match ac_setting:
+        case HeatingAcSetting():
+            Q_hat_hs_d_t -= delta_L_room2uf_d_t
+        case CoolingAcSetting():
+            Q_hat_hs_d_t = Q_hat_hs_CS_signed_d_t + delta_L_room2uf_d_t
+        case _:
+            raise ValueError
     #260112 IGUCHI デバッグ用
     #print("Q_hat_hs_d_t[0] 床下分を引く: ", Q_hat_hs_d_t[0])
 
@@ -1523,24 +1627,23 @@ def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(inputs: _Under
     ac_setting = inputs.ac_setting
     house = inputs.house
     skin = inputs.skin
-    load = inputs.load
-    new_ufac = inputs.new_ufac
     climate = inputs.climate
     A_s_ufac_i = inputs.A_s_ufac_i
-    r_A_s_ufac = inputs.r_A_s_ufac
     U_s_input = inputs.U_s_input
     Theta_in_d_t = inputs.Theta_in_d_t
     Theta_ex_d_t = inputs.Theta_ex_d_t
     V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
     Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
-    # 2. 床下 -> 外気 (逃げ方向)
-    # 一階負荷 暖冷房
+    Q_hat_hs_H_signed_d_t = inputs.Q_hat_hs_H_signed_d_t
+    Q_hat_hs_CS_signed_d_t = inputs.Q_hat_hs_CS_signed_d_t
+    # Excel床下13は、式(40)の0下限前の全館出力を
+    # 床下空調対象面積46.37/居室面積81.15で按分する。
+    floor_area_ratio = np.sum(A_s_ufac_i[:2]) / (house.A_MR + house.A_OR)
     match ac_setting:
         case HeatingAcSetting():
-            L_d_t_flr1st = 1 * r_A_s_ufac * np.sum(load.L_H_d_t_i, axis=0)
+            L_d_t_flr1st = floor_area_ratio * Q_hat_hs_H_signed_d_t
         case CoolingAcSetting():
-            L_d_t_flr1st = -1 * r_A_s_ufac * np.sum(load.L_CS_d_t_i, axis=0)
-            # NOTE[井口_250501]: 一階冷房負荷は顕熱のみ
+            L_d_t_flr1st = floor_area_ratio * Q_hat_hs_CS_signed_d_t
         case _:
             raise ValueError
 
@@ -1552,9 +1655,9 @@ def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(inputs: _Under
         = np.array([
             jjj_ufac_dc.calc_Theta_uf(_get_q_hs_rtd_H(ac_setting, house), _get_q_hs_rtd_C(ac_setting, house),
                 L_d_t_flr1st[t],
-                np.sum(A_s_ufac_i),
+                np.sum(A_s_ufac_i[:2]),
                 U_s_input,
-                new_ufac.U_s_floor_ins,
+                climate.get_U_s_vert(skin.Q),
                 Theta_in_d_t[t], Theta_ex_d_t[t],
                 V_dash_supply_flr1st_d_t[t]
             ) for t in range(24*365)
@@ -1576,7 +1679,13 @@ def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(inputs: _Under
     delta_L_uf2outdoor_d_t  \
         = delta_L_uf2outdoor_d_t(phi, L_uf, (Theta_uf_d_t - Theta_ex_d_t))
     assert np.shape(delta_L_uf2outdoor_d_t) == (24 * 365,)
-    Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
+    match ac_setting:
+        case HeatingAcSetting():
+            Q_hat_hs_d_t += delta_L_uf2outdoor_d_t
+        case CoolingAcSetting():
+            Q_hat_hs_d_t -= delta_L_uf2outdoor_d_t
+        case _:
+            raise ValueError
 
     #260112 IGUCHI デバッグ用
     #print("delta_L_uf2outdoor_d_t[0] 床下⇒外壁: ", delta_L_uf2outdoor_d_t[0])
@@ -2257,10 +2366,11 @@ def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTe
     Theta_in_d_t = inputs.Theta_in_d_t
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_uf_ground_feedback_d_t = inputs.Theta_uf_ground_feedback_d_t
     # 期待される床下温度を事前に計算(本計算は後で行う)
     Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(*_ExpectedUnderfloorTemperatureInputs(
         L_star_H_d_t_i, L_star_CS_d_t_i, house.A_A, house.A_MR,
-        house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t))
+        house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t, house.region))
     # 新床下空調-1st: θuf_supply を逆算(二分探索)
     _, _, Theta_uf_supply_d_t = algo.calc_Theta(
         region=house.region,
@@ -2273,12 +2383,13 @@ def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTe
         Theta_sa_d_t=Theta_uf_d_t_2023,
         Theta_ex_d_t=Theta_ex_d_t,
         V_sa_d_t_A=np.sum(V_dash_supply_d_t_i[:2, :], axis=0),
-        H_OR_C="",
+        H_OR_C="H" if isinstance(ac_setting, HeatingAcSetting) else "C",
         L_dash_H_R_d_t_i=load.L_dash_H_R_d_t_i,
         L_dash_CS_R_d_t_i=load.L_dash_CS_R_d_t_i,
         calc_backwards=True,  # 従来の θuf 用計算式を借りて θuf_supply計算する
         new_ufac=new_ufac,
         new_ufac_df=new_ufac_df,
+        Theta_uf_ground_feedback_d_t=Theta_uf_ground_feedback_d_t,
     )
 
     # 対象居室 i=1,2(1階居室)の損失分を補正する
@@ -2312,6 +2423,7 @@ def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTe
 
 def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperatureInputs):
     """Apply the new-underfloor second pass and retain its diagnostic outputs."""
+    ac_setting = inputs.ac_setting
     house = inputs.house
     skin = inputs.skin
     load = inputs.load
@@ -2321,6 +2433,10 @@ def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperat
     Theta_hs_out_d_t = inputs.Theta_hs_out_d_t
     Theta_ex_d_t = inputs.Theta_ex_d_t
     V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
+    Theta_uf_ground_feedback_d_t = inputs.Theta_uf_ground_feedback_d_t
+    Theta_underfloor_supply_override_d_t = (
+        inputs.Theta_underfloor_supply_override_d_t
+    )
     # 新床下空調-2nd: θuf の本計算
     Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
         region=house.region,
@@ -2333,18 +2449,34 @@ def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperat
         Theta_sa_d_t=Theta_hs_out_d_t,
         Theta_ex_d_t=Theta_ex_d_t,
         V_sa_d_t_A=np.sum(V_dash_supply_d_t_i[:2, :], axis=0),
-        H_OR_C="",
+        H_OR_C="H" if isinstance(ac_setting, HeatingAcSetting) else "C",
         L_dash_H_R_d_t_i=load.L_dash_H_R_d_t_i,
         L_dash_CS_R_d_t_i=load.L_dash_CS_R_d_t_i,
         calc_backwards=False,  # ここでは θuf の従来計算のみ
         new_ufac=new_ufac,
         new_ufac_df=new_ufac_df,
+        Theta_uf_ground_feedback_d_t=Theta_uf_ground_feedback_d_t,
     )
 
     # 床下・床上の熱貫流分だけ 目標床下温度からわずかな中和がある
+    Theta_underfloor_supply_d_t = Theta_uf_d_t
+    if Theta_underfloor_supply_override_d_t is not None:
+        Theta_underfloor_supply_d_t = np.asarray(
+            Theta_underfloor_supply_override_d_t,
+            dtype=float,
+        ).copy()
+        if Theta_underfloor_supply_d_t.shape != (24 * 365,):
+            raise ValueError(
+                "Theta_underfloor_supply_override_d_t must have shape (8760,)"
+            )
+    if Theta_uf_ground_feedback_d_t is not None:
+        Theta_uf_d_t = np.asarray(
+            Theta_uf_ground_feedback_d_t,
+            dtype=float,
+        ).copy()
     Theta_supply_d_t_i = np.vstack([
         # NOTE: i=1,2(1階居室)は床下を通して出口温度が中和されたものになる
-        np.tile(Theta_uf_d_t, (2, 1)),
+        np.tile(Theta_underfloor_supply_d_t, (2, 1)),
         # CHECK: i=3,4,5(2階居室)は床下通さないので中和がなく高温なのは問題ないか
         Theta_supply_d_t_i[2:, :],
     ])
@@ -2353,6 +2485,11 @@ def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperat
     new_ufac_df.update_df({
         "Theta_hs_out_d_t": Theta_hs_out_d_t,
         "Theta_uf_d_t": Theta_uf_d_t,
+        "Theta_uf_ground_feedback_d_t": (
+            Theta_uf_d_t
+            if Theta_uf_ground_feedback_d_t is None
+            else Theta_uf_ground_feedback_d_t
+        ),
         "Theta_supply_d_t_1": Theta_supply_d_t_i[0],
         "Theta_supply_d_t_2": Theta_supply_d_t_i[1],
         "Theta_supply_d_t_3": Theta_supply_d_t_i[2],
@@ -2363,37 +2500,45 @@ def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperat
 
 
 def _adjust_new_underfloor_balanced_loads(inputs: _NewUnderfloorBalancedLoadInputs):
-    """Apply the new-underfloor corrections to formulas (8) and (9)."""
+    """Apply Excel floor13 formulas (8) and (9) to zones 1 and 2."""
     house = inputs.house
-    new_ufac = inputs.new_ufac
     new_ufac_df = inputs.new_ufac_df
     load = inputs.load
     A_s_ufac_i = inputs.A_s_ufac_i
     Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
     Theta_ex_d_t = inputs.Theta_ex_d_t
+    Q_star_trs_prt_d_t_i = inputs.Q_star_trs_prt_d_t_i
+    U_s_floor_load = inputs.U_s_floor_load
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
-    # 部屋→床下への熱移動分が戻ってくるため負荷控除する
+
     delta_L_uf2room_d_t_i = np.hstack([
         jjj_ufac_dc.calc_delta_L_room2uf_i(
-            new_ufac.U_s_floor_ins,
+            U_s_floor_load,
             A_s_ufac_i,
-            np.abs(Theta_star_HBR_d_t[t] - Theta_ex_d_t[t]),
+            Theta_star_HBR_d_t[t] - Theta_ex_d_t[t],
         ) for t in range(24 * 365)
     ])
-    H, C, M = dc.get_season_array_d_t(house.region)
-
-    # (9)-補正
-    Cf = np.logical_and(C, load.L_CS_d_t_i[:5, :] > 0)
-    assert Cf.shape == (5, 24 * 365)
-    L_star_CS_d_t_i[Cf] -= delta_L_uf2room_d_t_i[:5, :][Cf]
-
-    # (8)-補正
+    H, C, _ = dc.get_season_array_d_t(house.region)
     Hf = np.logical_and(H, load.L_H_d_t_i[:5, :] > 0)
-    assert Hf.shape == (5, 24 * 365)
-    L_star_H_d_t_i[Hf] -= delta_L_uf2room_d_t_i[:5, :][Hf]
+    Cf = np.logical_and(C, load.L_CS_d_t_i[:5, :] > 0)
+    assert Hf.shape == Cf.shape == (5, 24 * 365)
 
-    # 床下空調 新ロジック 調査用出力ファイル
+    L_star_H_d_t_i.fill(0.0)
+    L_star_CS_d_t_i.fill(0.0)
+    L_star_H_d_t_i[Hf] = np.maximum(
+        load.L_H_d_t_i[:5, :][Hf]
+        + Q_star_trs_prt_d_t_i[Hf]
+        - delta_L_uf2room_d_t_i[:5, :][Hf],
+        0.0,
+    )
+    L_star_CS_d_t_i[Cf] = np.maximum(
+        load.L_CS_d_t_i[:5, :][Cf]
+        - Q_star_trs_prt_d_t_i[Cf]
+        - delta_L_uf2room_d_t_i[:5, :][Cf],
+        0.0,
+    )
+
     new_ufac_df.update_df({
         "L_H_d_t_1": load.L_H_d_t_i[0],
         "L_H_d_t_2": load.L_H_d_t_i[1],
@@ -2479,7 +2624,7 @@ def _get_actual_non_room_temperatures_without_carryover(inputs: _ActualNonRoomTe
     U_prt = inputs.U_prt
     A_prt_i = inputs.A_prt_i
     Theta_uf_d_t = inputs.Theta_uf_d_t
-    r_A_NR_uf_1F_excl_bath = inputs.r_A_NR_uf_1F_excl_bath
+    r_A_NR_uf_1F = inputs.r_A_NR_uf_1F
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         return np.array([
             get_Theta_NR(*_UnderfloorActualNonRoomTemperatureInputs(
@@ -2494,7 +2639,7 @@ def _get_actual_non_room_temperatures_without_carryover(inputs: _ActualNonRoomTe
                 A_prt_i.reshape(-1, 1),
                 skin.Q,
                 Theta_uf_d_t[t],
-                r_A_NR_uf_1F_excl_bath,
+                r_A_NR_uf_1F,
             )) for t in range(24 * 365)
         ])
 
@@ -2506,7 +2651,6 @@ def _get_actual_non_room_temperatures_without_carryover(inputs: _ActualNonRoomTe
 
 def _get_new_balanced_non_room_temperature(inputs: _NewBalancedNonRoomTemperatureInputs):
     """Calculate formula (52) for the new underfloor-air-conditioning path."""
-    house = inputs.house
     skin = inputs.skin
     climate = inputs.climate
     load = inputs.load
@@ -2525,7 +2669,7 @@ def _get_new_balanced_non_room_temperature(inputs: _NewBalancedNonRoomTemperatur
     assert A_prt_i.shape == (5,)
     A_prt_A = np.sum(A_prt_i)
     HCM = np.array(climate.get_HCM_d_t())
-    r_A_NR_uf_1F_excl_bath = jjj_ufac_dc.get_r_A_NR_uf_1F_excl_bath()
+    r_A_NR_uf_1F = jjj_ufac_dc.get_r_A_NR_uf_1F()
 
     # デバッグ用 250501 IGUCHI
     # print("Theta_in_d_t[4848]", Theta_in_d_t[4848])
@@ -2554,12 +2698,12 @@ def _get_new_balanced_non_room_temperature(inputs: _NewBalancedNonRoomTemperatur
         Theta_in_d_t,
         Theta_uf_d_t,
         HCM,
-        r_A_NR_uf_1F_excl_bath,
+        r_A_NR_uf_1F,
     ))
     # print("Theta_star_HBR[0]: ", Theta_star_HBR_d_t[0])
     # print("Theta_NR[0]: ", Theta_in_d_t[0])
     # print("Theta_uf[0]: ", Theta_uf_d_t[0])
-    return Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath
+    return Theta_star_NR_d_t, r_A_NR_uf_1F
 
 def _get_actual_non_room_humidity(df_output, X_star_NR_d_t):
     """Calculate formula (49) and record its output column."""
@@ -2835,8 +2979,45 @@ def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
         L_wtr,
         house.region,
     ))
+    Q_hat_hs_H_signed_d_t = calc_Q_hat_hs_H_signed_d_t(
+        skin.Q,
+        house.A_A,
+        V_vent_l_d_t,
+        V_vent_g_i,
+        skin.mu_H,
+        J_d_t,
+        q_gen_d_t,
+        n_p_d_t,
+        q_p_H,
+        Theta_ex_d_t,
+        house.region,
+    )
+    Q_hat_hs_CS_signed_d_t, Q_hat_hs_CL_signed_d_t = \
+        calc_Q_hat_hs_C_components_d_t(
+            skin.Q,
+            house.A_A,
+            V_vent_l_d_t,
+            V_vent_g_i,
+            skin.mu_C,
+            J_d_t,
+            q_gen_d_t,
+            n_p_d_t,
+            q_p_CS,
+            q_p_CL,
+            X_ex_d_t,
+            w_gen_d_t,
+            Theta_ex_d_t,
+            L_wtr,
+            house.region,
+        )
     df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
-    return Q_hat_hs_d_t, Q_hat_hs_CS_d_t
+    return (
+        Q_hat_hs_d_t,
+        Q_hat_hs_CS_d_t,
+        Q_hat_hs_H_signed_d_t,
+        Q_hat_hs_CS_signed_d_t,
+        Q_hat_hs_CL_signed_d_t,
+    )
 
 def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
     """Calculate formula (39) and preserve its direct output write."""
@@ -2863,10 +3044,20 @@ def _prepare_rated_heat_source_capacity_state(inputs: _RatedHeatSourceCapacitySt
     df_output3['Q_hs_rtd_H'] = [Q_hs_rtd_H]
     return Q_hs_rtd_H, Q_hs_rtd_C
 
-def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
+def _prepare_underfloor_adjustment_state(
+        ac_setting,
+        skin,
+        new_ufac,
+        Theta_ex_d_t,
+        Theta_uf_ground_feedback_d_t=None,
+    ):
     """Prepare ground response and whether heat-source output needs adjustment."""
     ground_response = _prepare_underfloor_ground_response(
-        ac_setting, Theta_ex_d_t)
+        ac_setting,
+        skin.underfloor_insulation,
+        Theta_ex_d_t,
+        Theta_uf_ground_feedback_d_t,
+    )
     Theta_in_d_t = ground_response.Theta_in_d_t
     Phi_A_0 = ground_response.Phi_A_0
     Theta_g_avg = ground_response.Theta_g_avg
@@ -2879,7 +3070,6 @@ def _prepare_underfloor_adjustment_state(ac_setting, new_ufac, Theta_ex_d_t):
         sum_Theta_dash_g_surf_A_m,
         should_adjust,
     )
-
 
 def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
     """Prepare pre-VAV airflow, including the optional underfloor recalculation."""
@@ -2899,6 +3089,13 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
     Q_hs_rtd_C = inputs.Q_hs_rtd_C
     Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
     Q_hat_hs_CS_d_t = inputs.Q_hat_hs_CS_d_t
+    Q_hat_hs_H_signed_d_t = inputs.Q_hat_hs_H_signed_d_t
+    Q_hat_hs_CS_signed_d_t = inputs.Q_hat_hs_CS_signed_d_t
+    Q_hat_hs_CL_signed_d_t = inputs.Q_hat_hs_CL_signed_d_t
+    Q_hat_hs_base_d_t = Q_hat_hs_d_t.copy()
+    Q_hat_hs_CS_base_d_t = Q_hat_hs_CS_d_t.copy()
+    Q_hat_hs_before_ground_d_t = Q_hat_hs_d_t.copy()
+    U_s_input = None
     V_vent_g_i = inputs.V_vent_g_i
     Theta_in_d_t = inputs.Theta_in_d_t
     Theta_ex_d_t = inputs.Theta_ex_d_t
@@ -2937,11 +3134,15 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
             break
 
         room_transfer = _adjust_heat_source_output_for_room_to_underfloor_transfer(_RoomToUnderfloorTransferInputs(
+            ac_setting,
             new_ufac,
             house,
+            skin,
+            climate,
             Theta_ex_d_t,
             Theta_in_d_t,
             Q_hat_hs_d_t,
+            Q_hat_hs_CS_signed_d_t,
         ))
         Q_hat_hs_d_t = room_transfer.Q_hat_hs_d_t
         U_s_input = room_transfer.U_s_input
@@ -2962,7 +3163,10 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
                 Theta_ex_d_t,
                 V_dash_supply_d_t_i,
                 Q_hat_hs_d_t,
+                Q_hat_hs_H_signed_d_t,
+                Q_hat_hs_CS_signed_d_t,
             ))
+        Q_hat_hs_before_ground_d_t = Q_hat_hs_d_t.copy()
         Q_hat_hs_d_t = \
             _adjust_heat_source_output_for_underfloor_to_ground_transfer(_UnderfloorGroundTransferInputs(
                 ac_setting,
@@ -2974,9 +3178,33 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
                 Theta_g_avg,
                 Q_hat_hs_d_t,
             ))
+        match ac_setting:
+            case HeatingAcSetting():
+                Q_hat_hs_d_t = np.clip(Q_hat_hs_d_t, 0, None)
+            case CoolingAcSetting():
+                Q_hat_hs_d_t = (
+                    np.clip(Q_hat_hs_d_t, 0, None)
+                    + np.clip(Q_hat_hs_CL_signed_d_t, 0, None)
+                )
+            case _:
+                raise ValueError
         # 補正完了した Q^hs を使って V'supply を再計算する
         should_adjust = False
 
+    if inputs.V_dash_supply_override_d_t_i is not None:
+        V_dash_supply_d_t_i = np.asarray(
+            inputs.V_dash_supply_override_d_t_i,
+            dtype=float,
+        ).copy()
+        if V_dash_supply_d_t_i.shape != (5, 24 * 365):
+            raise ValueError(
+                "V_dash_supply_override_d_t_i must have shape (5, 8760)"
+            )
+
+    # Formula (40) mutates the original array while applying the three
+    # underfloor transfers. Refresh the diagnostic column after the
+    # adjustment so that it records the value actually used for airflow.
+    df_output['Q_hat_hs_d_t'] = Q_hat_hs_d_t
     df_output2['r_supply_des_i'] = r_supply_des_i
     df_output = df_output.assign(
         r_supply_des_d_t_1=r_supply_des_d_t_i[0],
@@ -2998,6 +3226,10 @@ def _prepare_pre_vav_airflow_state(inputs: _PreVavAirflowInputs):
         r_supply_des_i,
         r_supply_des_d_t_i,
         V_dash_supply_d_t_i,
+        Q_hat_hs_before_ground_d_t,
+        Q_hat_hs_base_d_t,
+        Q_hat_hs_CS_base_d_t,
+        U_s_input,
         df_output,
     )
 
@@ -3039,9 +3271,9 @@ def _prepare_balanced_non_room_temperature(inputs: _BalancedNonRoomTemperatureIn
     Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
     Theta_in_d_t = inputs.Theta_in_d_t
     Theta_uf_d_t = inputs.Theta_uf_d_t
-    r_A_NR_uf_1F_excl_bath = None
+    r_A_NR_uf_1F = None
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
-        Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
+        Theta_star_NR_d_t, r_A_NR_uf_1F = \
             _get_new_balanced_non_room_temperature(_NewBalancedNonRoomTemperatureInputs(
                 house,
                 skin,
@@ -3070,7 +3302,7 @@ def _prepare_balanced_non_room_temperature(inputs: _BalancedNonRoomTemperatureIn
             house.region,
         )
     df_output['Theta_star_NR_d_t'] = Theta_star_NR_d_t
-    return Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath
+    return Theta_star_NR_d_t, r_A_NR_uf_1F
 
 def _prepare_actual_humidity_state(
         df_output, X_star_NR_d_t, X_star_HBR_d_t):
@@ -3133,9 +3365,9 @@ def _prepare_no_carryover_balanced_loads(inputs: _NoCarryoverBalancedLoadInputs)
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
         L_star_H_d_t_i, L_star_CS_d_t_i = \
             _adjust_new_underfloor_balanced_loads(_NewUnderfloorBalancedLoadInputs(
-                house, new_ufac, new_ufac_df, load, A_s_ufac_i,
-                Theta_star_HBR_d_t, Theta_ex_d_t,
-                L_star_H_d_t_i, L_star_CS_d_t_i))
+                house, new_ufac_df, load, A_s_ufac_i,
+                Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i,
+                inputs.U_s_floor_load, L_star_H_d_t_i, L_star_CS_d_t_i))
     return L_star_H_d_t_i, L_star_CS_d_t_i
 
 def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs):
@@ -3247,6 +3479,7 @@ def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirem
     Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_uf_ground_feedback_d_t = inputs.Theta_uf_ground_feedback_d_t
     l_duct_i = inputs.l_duct_i
     Theta_ex_d_t = inputs.Theta_ex_d_t
     Theta_in_d_t = inputs.Theta_in_d_t
@@ -3262,7 +3495,8 @@ def _prepare_no_carryover_outlet_requirements(inputs: _NoCarryoverOutletRequirem
         Theta_req_d_t_i = _get_new_underfloor_requested_temperatures(_NewUnderfloorRequestedTemperatureInputs(
             ac_setting, house, skin, load, new_ufac, new_ufac_df,
             Theta_req_d_t_i, Theta_ex_d_t, V_dash_supply_d_t_i,
-            Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i))
+            Theta_in_d_t, L_star_H_d_t_i, L_star_CS_d_t_i,
+            Theta_uf_ground_feedback_d_t))
 
     return X_hs_out_min_C_d_t, X_req_d_t_i, Theta_req_d_t_i
 
@@ -3286,6 +3520,11 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     Q_hs_max_H_d_t = inputs.Q_hs_max_H_d_t
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
+    Theta_uf_ground_feedback_d_t = inputs.Theta_uf_ground_feedback_d_t
+    Theta_hs_out_override_d_t = inputs.Theta_hs_out_override_d_t
+    Theta_underfloor_supply_override_d_t = (
+        inputs.Theta_underfloor_supply_override_d_t
+    )
     Theta_sur_d_t_i = inputs.Theta_sur_d_t_i
     l_duct_i = inputs.l_duct_i
     Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
@@ -3304,6 +3543,15 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     Theta_hs_out_min_C_d_t = outlet_temperatures.Theta_hs_out_min_C_d_t
     Theta_hs_out_max_H_d_t = outlet_temperatures.Theta_hs_out_max_H_d_t
     Theta_hs_out_d_t = outlet_temperatures.Theta_hs_out_d_t
+    if Theta_hs_out_override_d_t is not None:
+        Theta_hs_out_d_t = np.asarray(
+            Theta_hs_out_override_d_t,
+            dtype=float,
+        ).copy()
+        if Theta_hs_out_d_t.shape != (24 * 365,):
+            raise ValueError(
+                "Theta_hs_out_override_d_t must have shape (8760,)"
+            )
     capped_airflows = _get_capped_supply_airflows(_CappedSupplyAirflowInputs(
         v_supply_cap_dto, ac_setting, house, L_star_H_d_t_i,
         L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t,
@@ -3317,10 +3565,26 @@ def _prepare_no_carryover_supply_state(inputs: _NoCarryoverSupplyInputs):
     _log_supply_temperatures(Theta_supply_d_t_i)
 
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
+        Theta_underfloor_room_supply_override_d_t = (
+            Theta_underfloor_supply_override_d_t
+        )
+        if Theta_underfloor_supply_override_d_t is not None:
+            total_load_d_t = np.sum(
+                L_star_H_d_t_i
+                if isinstance(ac_setting, HeatingAcSetting)
+                else L_star_CS_d_t_i,
+                axis=0,
+            )
+            Theta_underfloor_room_supply_override_d_t = np.where(
+                total_load_d_t > 0,
+                Theta_underfloor_supply_override_d_t,
+                20.0 if isinstance(ac_setting, HeatingAcSetting) else 27.0,
+            )
         Theta_supply_d_t_i = _get_new_underfloor_supply_temperatures(_NewUnderfloorSupplyTemperatureInputs(
-            house, skin, load, new_ufac, new_ufac_df,
+            ac_setting, house, skin, load, new_ufac, new_ufac_df,
             Theta_supply_d_t_i, Theta_hs_out_d_t, Theta_ex_d_t,
-            V_dash_supply_d_t_i))
+            V_dash_supply_d_t_i, Theta_uf_ground_feedback_d_t,
+            Theta_underfloor_room_supply_override_d_t))
 
     _log_supply_temperatures(Theta_supply_d_t_i)
     return _SupplyStateResult(
@@ -3623,11 +3887,12 @@ def _prepare_no_carryover_actual_temperature_state(inputs: _NoCarryoverActualTem
     L_star_H_d_t_i = inputs.L_star_H_d_t_i
     L_star_CS_d_t_i = inputs.L_star_CS_d_t_i
     Theta_uf_d_t = inputs.Theta_uf_d_t
+    Theta_uf_NR_d_t = inputs.Theta_uf_NR_d_t
     Theta_star_NR_d_t = inputs.Theta_star_NR_d_t
     A_NR = inputs.A_NR
     V_vent_l_NR_d_t = inputs.V_vent_l_NR_d_t
     V_dash_supply_d_t_i = inputs.V_dash_supply_d_t_i
-    r_A_NR_uf_1F_excl_bath = inputs.r_A_NR_uf_1F_excl_bath
+    r_A_NR_uf_1F = inputs.r_A_NR_uf_1F
     Theta_HBR_d_t_i = _get_actual_room_temperatures_without_carryover(_ActualRoomTemperaturesWithoutCarryoverInputs(
         house, skin, new_ufac, climate, Theta_star_HBR_d_t,
         V_supply_d_t_i, Theta_supply_d_t_i, U_prt, A_prt_i, A_HCZ_i,
@@ -3638,9 +3903,9 @@ def _prepare_no_carryover_actual_temperature_state(inputs: _NoCarryoverActualTem
         skin, new_ufac, Theta_star_NR_d_t, Theta_star_HBR_d_t,
         Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t,
         V_dash_supply_d_t_i, V_supply_d_t_i, U_prt, A_prt_i,
-        Theta_uf_d_t
+        Theta_uf_NR_d_t
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None,
-        r_A_NR_uf_1F_excl_bath
+        r_A_NR_uf_1F
         if new_ufac.new_ufac_flg == 床下空調ロジック.変更する else None))
     return Theta_HBR_d_t_i, Theta_NR_d_t
 
@@ -3973,7 +4238,13 @@ def _prepare_calculation_state(inputs: _CalculationPreparationInputs):
     df_output = balanced_room_state.df_output
 
     # (40)-1st 熱源機の風量を計算するための熱源機の出力
-    Q_hat_hs_d_t, Q_hat_hs_CS_d_t = _prepare_initial_heat_source_output(
+    (
+        Q_hat_hs_d_t,
+        Q_hat_hs_CS_d_t,
+        Q_hat_hs_H_signed_d_t,
+        Q_hat_hs_CS_signed_d_t,
+        Q_hat_hs_CL_signed_d_t,
+    ) = _prepare_initial_heat_source_output(
         _InitialHeatSourceOutputInputs(
             df_output,
             house,
@@ -4026,6 +4297,9 @@ def _prepare_calculation_state(inputs: _CalculationPreparationInputs):
         Theta_sur_d_t_i,
         Q_hat_hs_d_t,
         Q_hat_hs_CS_d_t,
+        Q_hat_hs_H_signed_d_t,
+        Q_hat_hs_CS_signed_d_t,
+        Q_hat_hs_CL_signed_d_t,
         V_hs_min,
         Q_hs_rtd_H,
         Q_hs_rtd_C,
@@ -4052,7 +4326,12 @@ def _prepare_calculation_pre_branch_state(inputs: _CalculationPreBranchInputs):
         sum_Theta_dash_g_surf_A_m,
         should_be_adjusted_Q_hat_hs_d_t,
     ) = _prepare_underfloor_adjustment_state(
-        inputs.ac_setting, inputs.new_ufac, preparation.Theta_ex_d_t)
+        inputs.ac_setting,
+        inputs.skin,
+        inputs.new_ufac,
+        preparation.Theta_ex_d_t,
+        inputs.Theta_uf_ground_feedback_d_t,
+    )
 
     pre_vav_state = _prepare_pre_vav_airflow_state(_PreVavAirflowInputs(
         preparation.df_output,
@@ -4071,6 +4350,9 @@ def _prepare_calculation_pre_branch_state(inputs: _CalculationPreBranchInputs):
         preparation.Q_hs_rtd_C,
         preparation.Q_hat_hs_d_t,
         preparation.Q_hat_hs_CS_d_t,
+        preparation.Q_hat_hs_H_signed_d_t,
+        preparation.Q_hat_hs_CS_signed_d_t,
+        preparation.Q_hat_hs_CL_signed_d_t,
         preparation.V_vent_g_i,
         Theta_in_d_t,
         preparation.Theta_ex_d_t,
@@ -4078,6 +4360,7 @@ def _prepare_calculation_pre_branch_state(inputs: _CalculationPreBranchInputs):
         Theta_g_avg,
         sum_Theta_dash_g_surf_A_m,
         should_be_adjusted_Q_hat_hs_d_t,
+        inputs.V_dash_supply_override_d_t_i,
     ))
 
     # (53)　負荷バランス時の非居室の絶対湿度
@@ -4086,7 +4369,7 @@ def _prepare_calculation_pre_branch_state(inputs: _CalculationPreBranchInputs):
         preparation.X_star_HBR_d_t, preparation.L_wtr,
         preparation.V_vent_l_NR_d_t, pre_vav_state.V_dash_supply_d_t_i))
     # (52)　負荷バランス時の非居室の室温
-    Theta_star_NR_d_t, r_A_NR_uf_1F_excl_bath = \
+    Theta_star_NR_d_t, r_A_NR_uf_1F = \
         _prepare_balanced_non_room_temperature(_BalancedNonRoomTemperatureInputs(
             pre_vav_state.df_output, inputs.new_ufac, inputs.house, inputs.skin,
             preparation.climate, inputs.load, preparation.A_NR,
@@ -4113,11 +4396,14 @@ def _prepare_calculation_pre_branch_state(inputs: _CalculationPreBranchInputs):
         Theta_in_d_t,
         X_star_NR_d_t,
         Theta_star_NR_d_t,
-        r_A_NR_uf_1F_excl_bath,
+        r_A_NR_uf_1F,
         X_NR_d_t,
         X_HBR_d_t_i,
         L_star_CL_d_t_i,
         Q_star_trs_prt_d_t_i,
+        inputs.Theta_uf_ground_feedback_d_t,
+        inputs.Theta_hs_out_override_d_t,
+        inputs.Theta_underfloor_supply_override_d_t,
     )
 
 
@@ -4239,7 +4525,8 @@ def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
         _NoCarryoverBalancedLoadInputs(
             inputs.house, inputs.new_ufac, inputs.new_ufac_df, inputs.load,
             pre_vav_state.A_s_ufac_i, preparation.Theta_star_HBR_d_t,
-            preparation.Theta_ex_d_t, inputs.pre_branch.Q_star_trs_prt_d_t_i))
+            preparation.Theta_ex_d_t, inputs.pre_branch.Q_star_trs_prt_d_t_i,
+            preparation.climate.get_U_s_vert(inputs.skin.Q)))
     capacity_state = _prepare_no_carryover_capacity_state(
         _NoCarryoverCapacityStateInputs(
             inputs.ac_setting, inputs.house, inputs.heat_CRAC, inputs.cool_CRAC,
@@ -4264,7 +4551,8 @@ def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
                 preparation.Theta_sur_d_t_i,
                 preparation.Theta_star_HBR_d_t,
                 L_star_H_d_t_i, L_star_CS_d_t_i, preparation.l_duct_i,
-                preparation.Theta_ex_d_t, inputs.pre_branch.Theta_in_d_t))
+                preparation.Theta_ex_d_t, inputs.pre_branch.Theta_in_d_t,
+                inputs.pre_branch.Theta_uf_ground_feedback_d_t))
     supply_state = _prepare_no_carryover_supply_state(_NoCarryoverSupplyInputs(
         inputs.v_supply_cap_dto, inputs.ac_setting, inputs.house, inputs.skin,
         inputs.load, inputs.new_ufac, inputs.new_ufac_df,
@@ -4275,7 +4563,10 @@ def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
         L_star_H_d_t_i, L_star_CS_d_t_i, preparation.Theta_sur_d_t_i,
         preparation.l_duct_i, preparation.Theta_star_HBR_d_t,
         preparation.V_vent_g_i, preparation.V_hs_dsgn_H,
-        preparation.V_hs_dsgn_C, preparation.Theta_ex_d_t))
+        preparation.V_hs_dsgn_C, preparation.Theta_ex_d_t,
+        inputs.pre_branch.Theta_uf_ground_feedback_d_t,
+        inputs.pre_branch.Theta_hs_out_override_d_t,
+        inputs.pre_branch.Theta_underfloor_supply_override_d_t))
     # (46), (48)　実際の居室・非居室の室温
     Theta_HBR_d_t_i, Theta_NR_d_t = \
         _prepare_no_carryover_actual_temperature_state(
@@ -4284,11 +4575,22 @@ def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
                 preparation.Theta_star_HBR_d_t, supply_state.V_supply_d_t_i,
                 supply_state.Theta_supply_d_t_i, preparation.U_prt,
                 preparation.A_prt_i, preparation.A_HCZ_i, L_star_H_d_t_i,
-                L_star_CS_d_t_i, pre_vav_state.Theta_uf_d_t,
+                L_star_CS_d_t_i, (
+                    inputs.pre_branch.Theta_underfloor_supply_override_d_t
+                    if inputs.pre_branch.Theta_underfloor_supply_override_d_t
+                    is not None
+                    else (
+                        inputs.pre_branch.Theta_uf_ground_feedback_d_t
+                        if inputs.pre_branch.Theta_uf_ground_feedback_d_t
+                        is not None
+                        else pre_vav_state.Theta_uf_d_t
+                    )
+                ),
+                supply_state.Theta_supply_d_t_i[0],
                 inputs.pre_branch.Theta_star_NR_d_t, preparation.A_NR,
                 preparation.V_vent_l_NR_d_t,
                 pre_vav_state.V_dash_supply_d_t_i,
-                inputs.pre_branch.r_A_NR_uf_1F_excl_bath))
+                inputs.pre_branch.r_A_NR_uf_1F))
 
     return _CalculationBranchResult(
         capacity_state,
@@ -4367,6 +4669,9 @@ def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
                 inputs.branch.Theta_NR_d_t,
                 supply_state.Theta_hs_out_max_H_d_t,
                 supply_state.Theta_hs_out_min_C_d_t))
+    if inputs.pre_branch.Theta_hs_out_override_d_t is not None:
+        Theta_hs_out_d_t = supply_state.Theta_hs_out_d_t
+        df_output["Theta_hs_out_d_t"] = Theta_hs_out_d_t
 
     """ 吹出口 - 吹出口 """
     # (42)　暖冷房区画𝑖の吹き出し絶対湿度
@@ -4431,6 +4736,201 @@ def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
         supply_state.X_hs_out_d_t, X_hs_in_d_t, V_hs_supply_d_t,
         V_hs_vent_d_t))
 
+def _as_annual_array(value) -> np.ndarray:
+    if value is None:
+        return np.zeros(24 * 365, dtype=float)
+    return np.broadcast_to(
+        np.asarray(value, dtype=float),
+        (24 * 365,),
+    ).copy()
+
+
+def _build_sequential_ground_inputs(
+        ac_setting: ActiveAcSetting,
+        house: HouseInfo,
+        skin: OuterSkin,
+        load: Load_DTI,
+        pre_branch: _CalculationPreBranchResult,
+        branch: _CalculationBranchResult,
+    ) -> SequentialGroundModeInputs | None:
+    pre_vav = pre_branch.pre_vav_state
+    if pre_vav.A_s_ufac_i is None:
+        return None
+
+    preparation = pre_branch.preparation
+    capacity = branch.capacity_state
+    a_s_ufac_i = np.asarray(pre_vav.A_s_ufac_i, dtype=float)
+    v_hs_dsgn = (
+        preparation.V_hs_dsgn_H
+        if isinstance(ac_setting, HeatingAcSetting)
+        else preparation.V_hs_dsgn_C
+    )
+    q_hs_rtd = (
+        preparation.Q_hs_rtd_H
+        if isinstance(ac_setting, HeatingAcSetting)
+        else preparation.Q_hs_rtd_C
+    )
+    return SequentialGroundModeInputs(
+        is_heating=isinstance(ac_setting, HeatingAcSetting),
+        use_load_dependent_cooling_capacity=(
+            capacity.L_star_CS_d_t is not None
+        ),
+        vav=ac_setting.VAV,
+        heat_source_cav=skin.hs_CAV,
+        q_hat_before_ground_d_t=(
+            pre_vav.Q_hat_hs_before_ground_d_t.copy()
+        ),
+        q_hat_base_d_t=pre_vav.Q_hat_hs_base_d_t.copy(),
+        q_hat_cs_base_d_t=pre_vav.Q_hat_hs_CS_base_d_t.copy(),
+        q_hat_cl_signed_d_t=preparation.Q_hat_hs_CL_signed_d_t.copy(),
+        theta_uf_preliminary_d_t=pre_vav.Theta_uf_d_t.copy(),
+        theta_ex_d_t=preparation.Theta_ex_d_t.copy(),
+        theta_star_hbr_d_t=preparation.Theta_star_HBR_d_t.copy(),
+        theta_sur_d_t_i=preparation.Theta_sur_d_t_i.copy(),
+        r_supply_des_d_t_i=np.tile(
+            dc.get_r_supply_des_i(preparation.A_HCZ_i)[:, np.newaxis],
+            (1, 24 * 365),
+        ),
+        v_dash_supply_d_t_i=pre_vav.V_dash_supply_d_t_i.copy(),
+        theta_hs_out_d_t=np.zeros(24 * 365, dtype=float),
+        v_vent_g_i=preparation.V_vent_g_i.copy(),
+        v_hs_min=float(preparation.V_hs_min),
+        v_hs_dsgn=float(v_hs_dsgn),
+        q_hs_rtd=float(q_hs_rtd),
+        q_hs_max_h_d_t=_as_annual_array(capacity.Q_hs_max_H_d_t),
+        q_hs_max_c_d_t=_as_annual_array(capacity.Q_hs_max_C_d_t),
+        q_hs_max_cs_d_t=_as_annual_array(capacity.Q_hs_max_CS_d_t),
+        l_h_d_t_i=load.L_H_d_t_i.copy(),
+        l_cs_d_t_i=load.L_CS_d_t_i.copy(),
+        l_cl_d_t_i=load.L_CL_d_t_i.copy(),
+        l_dash_h_r_d_t_i=load.L_dash_H_R_d_t_i.copy(),
+        l_dash_cs_r_d_t_i=load.L_dash_CS_R_d_t_i.copy(),
+        v_vent_l_nr_d_t=preparation.V_vent_l_NR_d_t.copy(),
+        l_h_nr_d_t_a=np.sum(load.L_H_d_t_i[5:, :], axis=0),
+        l_cs_nr_d_t_a=np.sum(load.L_CS_d_t_i[5:, :], axis=0),
+        a_hcz_i=preparation.A_HCZ_i.copy(),
+        a_prt_i=preparation.A_prt_i.copy(),
+        a_s_ufac_i=a_s_ufac_i.copy(),
+        a_nr=float(preparation.A_NR),
+        a_prt_a=float(np.sum(preparation.A_prt_i)),
+        a_s_ufac_a=float(np.sum(a_s_ufac_i)),
+        a_s_ufac_hcz_1f=float(np.sum(a_s_ufac_i[:2])),
+        u_prt=float(preparation.U_prt),
+        u_s_load=float(preparation.climate.get_U_s_vert(skin.Q)),
+        u_s_supply=float(algo.get_U_s()),
+        q=float(skin.Q),
+        phi=float(preparation.climate.get_phi(skin.Q)),
+        l_uf=float(algo.get_L_uf(np.sum(a_s_ufac_i))),
+        r_g=float(jjj_consts.R_g),
+        phi_a_0=0.025504994,
+        theta_g_avg=float(algo.get_Theta_g_avg(preparation.Theta_ex_d_t)),
+        r_a_nr_uf_1f=float(pre_branch.r_A_NR_uf_1F),
+        l_duct_i=preparation.l_duct_i.copy(),
+        hcm=np.asarray(preparation.climate.get_HCM_d_t()),
+    )
+
+
+def _calc_Q_UT_A_once(
+        case_name: CaseName,
+        climateFile: ClimateFile,
+        house: HouseInfo,
+        ac_setting: ActiveAcSetting,
+        skin: OuterSkin,
+        heat_CRAC: HeatCRACSpec,
+        cool_CRAC: CoolCRACSpec,
+        new_ufac: UnderfloorAc,
+        new_ufac_df: UfVarsDataFrame,
+        v_min_heat_input: HeatMinVolumeInput,
+        v_min_cool_input: CoolMinVolumeInput,
+        V_hs_dsgn_H: VHS_DSGN_H,
+        V_hs_dsgn_C: VHS_DSGN_C,
+        v_supply_cap_dto: VSupplyCapDto,
+        carryover_heat_dto: CarryoverHeatDto,
+        load: Load_DTI,
+        Theta_uf_ground_feedback_d_t: np.ndarray | None = None,
+        V_dash_supply_override_d_t_i: np.ndarray | None = None,
+        Theta_hs_out_override_d_t: np.ndarray | None = None,
+        Theta_underfloor_supply_override_d_t: np.ndarray | None = None,
+        export_outputs: bool = True,
+    ):
+    pre_branch = _prepare_calculation_pre_branch_state(
+        _CalculationPreBranchInputs(
+            house,
+            ac_setting,
+            skin,
+            heat_CRAC,
+            cool_CRAC,
+            new_ufac,
+            v_min_heat_input,
+            v_min_cool_input,
+            V_hs_dsgn_H,
+            V_hs_dsgn_C,
+            climateFile,
+            load,
+            Theta_uf_ground_feedback_d_t,
+            V_dash_supply_override_d_t_i,
+            Theta_hs_out_override_d_t,
+            Theta_underfloor_supply_override_d_t,
+        )
+    )
+
+    if getattr(carryover_heat_dto.carry_over_heat, "value", None) == 2:
+        branch = _run_carryover_calculation(
+            _CarryoverCalculationPhaseInputs(
+                ac_setting,
+                house,
+                skin,
+                heat_CRAC,
+                cool_CRAC,
+                v_supply_cap_dto,
+                load,
+                pre_branch,
+            )
+        )
+    else:
+        branch = _run_no_carryover_calculation(
+            _NoCarryoverCalculationInputs(
+                ac_setting,
+                house,
+                skin,
+                heat_CRAC,
+                cool_CRAC,
+                new_ufac,
+                new_ufac_df,
+                v_supply_cap_dto,
+                load,
+                pre_branch,
+            )
+        )
+
+    sequential_inputs = None
+    if getattr(getattr(new_ufac, "new_ufac_flg", None), "value", None) == 2:
+        sequential_inputs = _build_sequential_ground_inputs(
+            ac_setting,
+            house,
+            skin,
+            load,
+            pre_branch,
+            branch,
+        )
+    if not export_outputs:
+        return None, sequential_inputs
+
+    result = _finalize_calculation_outputs(
+        _CalculationOutputPhaseInputs(
+            case_name,
+            ac_setting,
+            house,
+            new_ufac,
+            new_ufac_df,
+            carryover_heat_dto,
+            pre_branch,
+            branch,
+        )
+    )
+    return result, sequential_inputs
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -4448,59 +4948,115 @@ def calc_Q_UT_A(
         V_hs_dsgn_C: VHS_DSGN_C,
         v_supply_cap_dto: VSupplyCapDto,
         carryover_heat_dto: CarryoverHeatDto,
-        load: Load_DTI):
-    """未処理負荷と機器の計算に必要な変数を取得"""
+        load: Load_DTI,
+    ):
+    """Calculate one mode using a shared chronological annual ground state."""
+    args = dict(
+        case_name=case_name,
+        climateFile=climateFile,
+        house=house,
+        ac_setting=ac_setting,
+        skin=skin,
+        heat_CRAC=heat_CRAC,
+        cool_CRAC=cool_CRAC,
+        new_ufac=new_ufac,
+        new_ufac_df=new_ufac_df,
+        v_min_heat_input=v_min_heat_input,
+        v_min_cool_input=v_min_cool_input,
+        V_hs_dsgn_H=V_hs_dsgn_H,
+        V_hs_dsgn_C=V_hs_dsgn_C,
+        v_supply_cap_dto=v_supply_cap_dto,
+        carryover_heat_dto=carryover_heat_dto,
+        load=load,
+    )
+    if getattr(getattr(new_ufac, "new_ufac_flg", None), "value", None) != 2:
+        result, _ = _calc_Q_UT_A_once(**args)
+        return result
 
-    pre_branch = _prepare_calculation_pre_branch_state(
-        _CalculationPreBranchInputs(
-            house,
-            ac_setting,
-            skin,
-            heat_CRAC,
-            cool_CRAC,
-            new_ufac,
-            v_min_heat_input,
-            v_min_cool_input,
-            V_hs_dsgn_H,
-            V_hs_dsgn_C,
-            climateFile,
-            load,
-        ))
+    annual_ground_feedback_context = _annual_ground_feedback_context.get()
+    if annual_ground_feedback_context is None:
+        raise RuntimeError(
+            "The new underfloor calculation requires an "
+            "AnnualGroundFeedbackContext shared by heating and cooling."
+        )
 
-    # NOTE: 熱繰越を行うverと行わないverで 同じ処理を異なるループの粒度で二重実装が必要です
-    # 実装量/計算量 の多い仕様の場合には 過剰熱繰越ナシ(一般的なパターン) のみ実装として、オプション併用を拒否する仕様も検討しましょう
-    if carryover_heat_dto.carry_over_heat == 過剰熱量繰越計算.行う:
-        branch = _run_carryover_calculation(_CarryoverCalculationPhaseInputs(
-            ac_setting,
-            house,
-            skin,
-            heat_CRAC,
-            cool_CRAC,
-            v_supply_cap_dto,
-            load,
-            pre_branch,
-        ))
-    else:  # 過剰熱繰越ナシ(一般的なパターン)
-        branch = _run_no_carryover_calculation(_NoCarryoverCalculationInputs(
-            ac_setting,
-            house,
-            skin,
-            heat_CRAC,
-            cool_CRAC,
-            new_ufac,
-            new_ufac_df,
-            v_supply_cap_dto,
-            load,
-            pre_branch,
-        ))
+    context = annual_ground_feedback_context
+    if context.Theta_uf_feedback_d_t is None:
+        common_args = {
+            key: value
+            for key, value in args.items()
+            if key not in {
+                "ac_setting",
+                "V_hs_dsgn_H",
+                "V_hs_dsgn_C",
+                "new_ufac_df",
+            }
+        }
+        _, heating_inputs = _calc_Q_UT_A_once(
+            **common_args,
+            ac_setting=context.heat_ac_setting,
+            V_hs_dsgn_H=context.V_hs_dsgn_H,
+            V_hs_dsgn_C=0.0,
+            new_ufac_df=UfVarsDataFrame(),
+            export_outputs=False,
+        )
+        _, cooling_inputs = _calc_Q_UT_A_once(
+            **common_args,
+            ac_setting=context.cool_ac_setting,
+            V_hs_dsgn_H=0.0,
+            V_hs_dsgn_C=context.V_hs_dsgn_C,
+            new_ufac_df=UfVarsDataFrame(),
+            export_outputs=False,
+        )
+        if heating_inputs is None or cooling_inputs is None:
+            raise RuntimeError("Sequential underfloor inputs were not prepared")
+        heating_mask, cooling_mask, _ = dc.get_season_array_d_t(house.region)
+        feedback, response = solve_shared_ground_sequential(
+            heating_inputs,
+            cooling_inputs,
+            heating_mask,
+            cooling_mask,
+            skin.underfloor_insulation,
+        )
+        context.Theta_uf_feedback_d_t = feedback
+        context.V_dash_supply_H_d_t_i = (
+            heating_inputs.v_dash_supply_d_t_i.copy()
+        )
+        context.V_dash_supply_C_d_t_i = (
+            cooling_inputs.v_dash_supply_d_t_i.copy()
+        )
+        context.Theta_hs_out_H_d_t = heating_inputs.theta_hs_out_d_t.copy()
+        context.Theta_hs_out_C_d_t = cooling_inputs.theta_hs_out_d_t.copy()
+        assert heating_inputs.theta_supply_d_t is not None
+        assert cooling_inputs.theta_supply_d_t is not None
+        context.Theta_supply_H_d_t = heating_inputs.theta_supply_d_t.copy()
+        context.Theta_supply_C_d_t = cooling_inputs.theta_supply_d_t.copy()
+        assert heating_inputs.active_load_d_t is not None
+        assert cooling_inputs.active_load_d_t is not None
+        context.Heating_active_d_t = heating_inputs.active_load_d_t.copy()
+        context.Cooling_active_d_t = cooling_inputs.active_load_d_t.copy()
+        _logger.info(
+            "Calculated shared chronological underfloor ground response: "
+            f"hours={len(response)}"
+        )
 
-    return _finalize_calculation_outputs(_CalculationOutputPhaseInputs(
-        case_name,
-        ac_setting,
-        house,
-        new_ufac,
-        new_ufac_df,
-        carryover_heat_dto,
-        pre_branch,
-        branch,
-    ))
+    result, _ = _calc_Q_UT_A_once(
+        **args,
+        Theta_uf_ground_feedback_d_t=context.Theta_uf_feedback_d_t,
+        V_dash_supply_override_d_t_i=(
+            context.V_dash_supply_H_d_t_i
+            if isinstance(ac_setting, HeatingAcSetting)
+            else context.V_dash_supply_C_d_t_i
+        ),
+        Theta_hs_out_override_d_t=(
+            context.Theta_hs_out_H_d_t
+            if isinstance(ac_setting, HeatingAcSetting)
+            else context.Theta_hs_out_C_d_t
+        ),
+        Theta_underfloor_supply_override_d_t=(
+            context.Theta_supply_H_d_t
+            if isinstance(ac_setting, HeatingAcSetting)
+            else context.Theta_supply_C_d_t
+        ),
+    )
+    return result

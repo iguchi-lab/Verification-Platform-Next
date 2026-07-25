@@ -188,22 +188,23 @@ def test_rated_heat_source_capacities_reject_unknown_model():
 
 
 @pytest.mark.parametrize(
-    ("setting_type", "season", "representative_temperature", "runup_result"),
+    ("setting_type", "season"),
     (
-        (sut.HeatingAcSetting, "H", sut.THETA_UF_WARM, 11.2224),
-        (sut.CoolingAcSetting, "CS", sut.THETA_UF_COOL, 9.15940),
+        (sut.HeatingAcSetting, "H"),
+        (sut.CoolingAcSetting, "CS"),
     ),
 )
 def test_prepare_underfloor_ground_response_preserves_order_and_season(
     monkeypatch,
     setting_type,
     season,
-    representative_temperature,
-    runup_result,
 ):
     calls = []
     theta_ex = object()
     theta_in = object()
+    theta_runup = object()
+    response_terms = np.array([11.2224])
+    ground_state = SimpleNamespace(response_terms=lambda: response_terms)
 
     monkeypatch.setattr(
         sut.uf,
@@ -217,28 +218,41 @@ def test_prepare_underfloor_ground_response_preserves_order_and_season(
     )
     monkeypatch.setattr(
         sut,
-        "calc_sum_Theta_dash_g_surf_A_m_runup",
-        lambda temperature, average: calls.append(
-            ("runup", temperature, average)
-        ) or runup_result,
+        "get_runup_floor_temperature",
+        lambda insulation, exterior: calls.append(
+            ("runup", insulation, exterior)
+        ) or theta_runup,
+    )
+    monkeypatch.setattr(
+        sut,
+        "run_up_ground_response",
+        lambda runup, average, resistance: calls.append(
+            ("response", runup, average, resistance)
+        ) or ground_state,
     )
 
     result = sut._prepare_underfloor_ground_response(
         _setting(setting_type),
+        True,
         theta_ex,
     )
 
-    assert result == (theta_in, 0.025504994, 15.5, runup_result)
+    assert result == (theta_in, 0.025504994, 15.5, 11.2224)
     assert calls == [
         ("indoor", season),
         ("ground", theta_ex),
-        ("runup", representative_temperature, 15.5),
+        ("runup", True, theta_ex),
+        ("response", theta_runup, 15.5, sut.jjj_consts.R_g),
     ]
 
 
 def test_prepare_underfloor_ground_response_rejects_unknown_setting():
     with pytest.raises(ValueError):
-        sut._prepare_underfloor_ground_response(object(), object())
+        sut._prepare_underfloor_ground_response(
+            object(),
+            True,
+            np.zeros(24 * 365),
+        )
 
 @pytest.mark.parametrize(
     ("carryover", "expected"),
@@ -915,31 +929,27 @@ def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
         "get_A_s_ufac_i",
         lambda *args: calls.append(("area", args)) or (area, 0.4),
     )
-    monkeypatch.setattr(
-        sut.jjj_ufac_dc,
-        "calc_delta_L_room2uf_i",
-        lambda insulation, values, delta: calls.append(
-            ("transfer", insulation, values, delta)
-        ) or np.full((12, 1), delta),
-    )
+    monkeypatch.setattr(sut.algo, "get_U_s", lambda: 0.7)
 
     result = sut._adjust_heat_source_output_for_room_to_underfloor_transfer(sut._RoomToUnderfloorTransferInputs(
+        _setting(sut.HeatingAcSetting),
         SimpleNamespace(U_s_vert=0.7, U_s_floor_ins=0.3),
         SimpleNamespace(A_A=120.0, A_MR=30.0, A_OR=50.0),
+        SimpleNamespace(Q=2.7),
+        SimpleNamespace(get_U_s_vert=lambda _: 0.3),
         theta_out,
         theta_in,
         output,
+        np.zeros(24 * 365),
     ))
 
     assert result[0] is output
-    np.testing.assert_array_equal(output, np.full(24 * 365, 76.0))
+    np.testing.assert_allclose(output, np.full(24 * 365, 100.004536))
     assert result[1] == 0.7
     assert result[2] is area
     assert result[3] == 0.4
     assert calls[0] == ("area", (120.0, 30.0, 50.0))
-    assert len(calls) == 1 + 24 * 365
-    assert calls[1][1:] == (0.3, area, 2.0)
-    assert calls[-1][1:] == (0.3, area, 2.0)
+    assert len(calls) == 1
 
 def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
     setting = _setting(sut.HeatingAcSetting)
@@ -971,7 +981,10 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
         SimpleNamespace(Q=2.7),
         SimpleNamespace(L_H_d_t_i=np.ones((12, 24 * 365))),
         SimpleNamespace(U_s_floor_ins=0.3),
-        SimpleNamespace(get_phi=lambda q: q + 0.5),
+        SimpleNamespace(
+            get_phi=lambda q: q + 0.5,
+            get_U_s_vert=lambda _: 0.3,
+        ),
         area,
         0.4,
         0.7,
@@ -979,6 +992,8 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
         theta_out,
         supply,
         output,
+        np.full(24 * 365, 32.0),
+        np.zeros(24 * 365),
     ))
 
     assert result[0] is output
@@ -989,7 +1004,7 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
     assert theta_calls[0][:2] == (1.0, None)
     np.testing.assert_allclose(
         theta_calls[0][2:],
-        (4.8, 12.0, 0.7, 0.3, 20.0, 10.0, 5.0),
+        (0.8, 2.0, 0.7, 0.3, 20.0, 10.0, 5.0),
     )
     assert theta_calls[-1] == theta_calls[0]
 
@@ -1721,7 +1736,7 @@ def test_new_underfloor_requested_temperatures_preserve_reverse_solve_and_limits
     result = sut._get_new_underfloor_requested_temperatures(sut._NewUnderfloorRequestedTemperatureInputs(
         _setting(setting_type), house, skin, load, new_ufac, frame,
         theta_req, theta_ex, airflows, np.array([limit]),
-        l_star_h, l_star_cs
+        l_star_h, l_star_cs, None
     ))
 
     np.testing.assert_array_equal(result[0], np.full(8760, expected_first))
@@ -1733,9 +1748,10 @@ def test_new_underfloor_requested_temperatures_preserve_reverse_solve_and_limits
     expected_args = events[0][1]
     assert expected_args[0] is l_star_h
     assert expected_args[1] is l_star_cs
+    assert expected_args[-1] == 6
     assert sut._ExpectedUnderfloorTemperatureInputs._fields == (
         "L_star_H_d_t_i", "L_star_CS_d_t_i", "A_A", "A_MR", "A_OR",
-        "r_A_ufvnt", "V_dash_supply_d_t_i", "Theta_ex_d_t")
+        "r_A_ufvnt", "V_dash_supply_d_t_i", "Theta_ex_d_t", "region")
     reverse_kwargs = events[1][1]
     assert reverse_kwargs["calc_backwards"] is True
     assert reverse_kwargs["Theta_sa_d_t"] is theta_uf_2023
@@ -1775,8 +1791,8 @@ def test_new_underfloor_supply_temperatures_preserve_forward_solve_and_outputs(
     monkeypatch.setattr(sut.algo, "calc_Theta", calc_theta)
 
     result = sut._get_new_underfloor_supply_temperatures(sut._NewUnderfloorSupplyTemperatureInputs(
-        house, skin, load, new_ufac, frame,
-        theta_supply, theta_hs_out, theta_ex, airflows
+        _setting(sut.HeatingAcSetting), house, skin, load, new_ufac, frame,
+        theta_supply, theta_hs_out, theta_ex, airflows, None, None
     ))
 
     np.testing.assert_array_equal(result[0], theta_uf)
@@ -1807,8 +1823,8 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
     cooling[1] = True
     load_h = np.zeros((5, hours))
     load_cs = np.zeros((5, hours))
-    load_h[1, 2] = 1.0
-    load_cs[0, 1] = 1.0
+    load_h[1, 2] = 5.0
+    load_cs[0, 1] = 5.0
     load = SimpleNamespace(
         L_H_d_t_i=load_h,
         L_CS_d_t_i=load_cs,
@@ -1819,7 +1835,8 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
     theta_room = np.arange(float(hours))
     theta_ex = np.zeros(hours)
     area = object()
-    new_ufac = SimpleNamespace(U_s_floor_ins=0.8)
+    q_partition = np.zeros((5, hours))
+    u_s_floor_load = 0.8
 
     class FrameRecorder:
         def update_df(self, values):
@@ -1837,8 +1854,9 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
     )
 
     result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(sut._NewUnderfloorBalancedLoadInputs(
-        SimpleNamespace(region=6), new_ufac, FrameRecorder(), load, area,
-        theta_room, theta_ex, l_star_h, l_star_cs
+        SimpleNamespace(region=6), FrameRecorder(), load, area,
+        theta_room, theta_ex, q_partition, u_s_floor_load,
+        l_star_h, l_star_cs
     ))
 
     assert result_h is l_star_h
@@ -1846,10 +1864,10 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
     assert len(calc_calls) == hours
     assert calc_calls[0] == (0.8, area, 0.0)
     assert calc_calls[-1] == (0.8, area, float(hours - 1))
-    assert result_cs[0, 1] == 18.0
-    assert result_h[1, 2] == 8.0
-    assert np.count_nonzero(result_cs != 20.0) == 1
-    assert np.count_nonzero(result_h != 10.0) == 1
+    assert result_cs[0, 1] == 3.0
+    assert result_h[1, 2] == 3.0
+    assert np.count_nonzero(result_cs) == 1
+    assert np.count_nonzero(result_h) == 1
     assert len(updates) == 1
     assert tuple(updates[0]) == (
         "L_H_d_t_1", "L_H_d_t_2", "L_H_d_t_3", "L_H_d_t_4", "L_H_d_t_5",
@@ -2009,11 +2027,11 @@ def test_actual_non_room_temperatures_without_carryover_preserve_new_hour_order(
     np.testing.assert_array_equal(first["Theta_HBR_i"], theta_hbr[:, 0:1])
     np.testing.assert_array_equal(last["Theta_HBR_i"], theta_hbr[:, -1:])
     np.testing.assert_array_equal(first["A_prt_i"], area_partition.reshape(-1, 1))
-    assert first["r_A_NR_1F_excl_bath"] is r_area
+    assert first["r_A_NR_1F"] is r_area
     assert sut._UnderfloorActualNonRoomTemperatureInputs._fields == (
         "Theta_star_NR", "Theta_star_HBR", "Theta_HBR_i", "A_NR",
         "V_vent_l_NR", "V_dash_supply_i", "V_supply_i", "U_prt",
-        "A_prt_i", "Q", "Theta_uf", "r_A_NR_1F_excl_bath")
+        "A_prt_i", "Q", "Theta_uf", "r_A_NR_1F")
 
 
 def test_actual_non_room_temperatures_without_carryover_preserve_legacy_formula(
@@ -2080,7 +2098,7 @@ def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
     monkeypatch.setattr(sut.np, "vectorize", vectorize)
     monkeypatch.setattr(
         sut.jjj_ufac_dc,
-        "get_r_A_NR_uf_1F_excl_bath",
+        "get_r_A_NR_uf_1F",
         lambda: calls.append(("area_ratio",)) or r_area,
     )
 
@@ -2115,12 +2133,12 @@ def test_new_balanced_non_room_temperature_preserves_formula_52_inputs(
     assert kwargs["Theta_NR"] is theta_in
     assert kwargs["Theta_uf"] is theta_uf
     np.testing.assert_array_equal(kwargs["HCM"], hcm)
-    assert kwargs["r_A_NR_1F_excl_bath"] is r_area
+    assert kwargs["r_A_NR_1F"] is r_area
     assert sut._BalancedNonRoomTemperatureCallInputs._fields == (
         "Theta_star_HBR", "Q", "A_NR", "V_vent_l_NR",
         "V_dash_supply_A", "U_prt", "A_prt_A", "L_H_NR_A",
         "L_CS_NR_A", "Theta_NR", "Theta_uf", "HCM",
-        "r_A_NR_1F_excl_bath")
+        "r_A_NR_1F")
 
 
 def test_actual_non_room_humidity_preserves_formula_49_and_output_order(
@@ -2565,12 +2583,24 @@ def test_prepare_balanced_room_and_duct_state_preserves_formula_order(monkeypatc
 def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monkeypatch):
     events = []
     values = (object(), object())
+    signed_h, signed_cs, signed_cl = object(), object(), object()
     frame = _FrameRecorder(events)
 
     monkeypatch.setattr(
         sut.dc,
         "calc_Q_hat_hs_d_t",
         lambda *args: events.append(("formula", args)) or values,
+    )
+    monkeypatch.setattr(
+        sut,
+        "calc_Q_hat_hs_H_signed_d_t",
+        lambda *args: events.append(("signed_h", args)) or signed_h,
+    )
+    monkeypatch.setattr(
+        sut,
+        "calc_Q_hat_hs_C_components_d_t",
+        lambda *args: events.append(("signed_c", args))
+        or (signed_cs, signed_cl),
     )
     house = SimpleNamespace(A_A=120.0, region=6)
     skin = SimpleNamespace(Q=2.4, mu_H=0.08, mu_C=0.05)
@@ -2582,8 +2612,10 @@ def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monke
         *inputs,
     ))
 
-    assert result == values
-    assert [event[0] for event in events] == ["formula", "setitem"]
+    assert result == (*values, signed_h, signed_cs, signed_cl)
+    assert [event[0] for event in events] == [
+        "formula", "signed_h", "signed_c", "setitem"
+    ]
     assert events[0][1] == (
         2.4,
         120.0,
@@ -2594,8 +2626,8 @@ def test_prepare_initial_heat_source_output_preserves_formula_40_arguments(monke
         *inputs[2:],
         6,
     )
-    assert events[1][2] == "Q_hat_hs_d_t"
-    assert events[1][3] is values[0]
+    assert events[3][2] == "Q_hat_hs_d_t"
+    assert events[3][3] is values[0]
     assert sut._InitialHeatSourceOutputCallInputs._fields == (
         "Q", "A_A", "V_vent_l_d_t", "V_vent_g_i", "mu_H", "mu_C",
         "J_d_t", "q_gen_d_t", "n_p_d_t", "q_p_H", "q_p_CS", "q_p_CL",
@@ -2664,12 +2696,16 @@ def test_prepare_underfloor_adjustment_state_preserves_ground_response_and_flag(
         lambda *args: events.append(("ground", args)) or ground,
     )
 
+    skin = SimpleNamespace(underfloor_insulation=True)
+    new_ufac = SimpleNamespace(new_ufac_flg=flag)
     result = sut._prepare_underfloor_adjustment_state(
-        setting, SimpleNamespace(new_ufac_flg=flag), theta_ex)
+        setting, skin, new_ufac, theta_ex, None)
 
     assert result[:4] == ground
     assert result[4] is enabled
-    assert events == [("ground", (setting, theta_ex))]
+    assert events == [
+        ("ground", (setting, True, theta_ex, None))
+    ]
 
 @pytest.mark.parametrize("should_adjust", (False, True))
 def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
@@ -2686,7 +2722,10 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     r_static = tuple(object() for _ in range(5))
     r_hourly = tuple(object() for _ in range(5))
     v_supply = tuple(object() for _ in range(5))
-    q_initial, q_room, q_outdoor, q_ground = [object() for _ in range(4)]
+    q_initial, q_room, q_outdoor, q_ground = [
+        np.full(24 * 365, value, dtype=float)
+        for value in range(4)
+    ]
     u_s, a_s, r_a, theta_uf = [object() for _ in range(4)]
 
     monkeypatch.setattr(
@@ -2719,26 +2758,40 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     )
 
     context = [object() for _ in range(18)]
-    q_sensible = object()
+    context[0] = _setting(sut.HeatingAcSetting)
+    q_sensible = np.full(24 * 365, 4.0)
+    signed_h = np.full(24 * 365, 5.0)
+    signed_cs = np.full(24 * 365, 6.0)
+    signed_cl = np.full(24 * 365, 7.0)
     result = sut._prepare_pre_vav_airflow_state(sut._PreVavAirflowInputs(
         df_output,
         Output2(),
         *context[:12],
         q_initial,
         q_sensible,
+        signed_h,
+        signed_cs,
+        signed_cl,
         *context[12:],
         should_adjust,
+        None,
     ))
 
     expected_names = ["heat_airflow", "setitem", "supply_airflow"]
     if should_adjust:
         expected_names += ["room", "outdoor", "ground", "heat_airflow", "setitem", "supply_airflow"]
-    expected_names += ["output2", "assign", "assign"]
+    expected_names += ["setitem", "output2", "assign", "assign"]
     assert [event[0] for event in events] == expected_names
     assert result[0] is (a_s if should_adjust else None)
     assert result[1] is (theta_uf if should_adjust else None)
     assert result[2:5] == (r_static, r_hourly, v_supply)
-    assert result[5].generation == 2
+    np.testing.assert_array_equal(
+        result[5], q_outdoor if should_adjust else q_initial
+    )
+    assert result[6] is not q_initial
+    assert result[7] is not q_sensible
+    assert result[8] is (u_s if should_adjust else None)
+    assert result[9].generation == 2
     assert events[-3] == ("output2", "r_supply_des_i", r_static)
     assert tuple(name for name, _ in events[-2][2]) == tuple(
         f"r_supply_des_d_t_{i}" for i in range(1, 6))
@@ -2747,7 +2800,10 @@ def test_prepare_pre_vav_airflow_state_preserves_optional_recalculation(
     heat_calls = [event for event in events if event[0] == "heat_airflow"]
     assert heat_calls[0][1][0].Q_hat_hs_d_t is q_initial
     if should_adjust:
-        assert heat_calls[1][1][0].Q_hat_hs_d_t is q_ground
+        np.testing.assert_array_equal(
+            heat_calls[1][1][0].Q_hat_hs_d_t,
+            q_ground,
+        )
 
 def test_prepare_balanced_non_room_humidity_preserves_formula_53_arguments(monkeypatch):
     events = []
@@ -2906,7 +2962,7 @@ def test_prepare_no_carryover_balanced_loads_preserves_formula_and_adjustment_or
         lambda *a: events.append(("adjust", a)) or (adjusted_h, adjusted_c))
 
     result = sut._prepare_no_carryover_balanced_loads(sut._NoCarryoverBalancedLoadInputs(
-        house, new_ufac, inputs[0], load, *inputs[1:]))
+        house, new_ufac, inputs[0], load, *inputs[1:], object()))
 
     assert result == ((adjusted_h, adjusted_c) if enabled else (heating, sensible_c))
     assert [e[0] for e in events] == (["cool", "heat", "adjust"] if enabled else ["cool", "heat"])
@@ -2980,7 +3036,8 @@ def test_prepare_no_carryover_outlet_requirements_preserves_first_pass(
 
     result = sut._prepare_no_carryover_outlet_requirements(
         sut._NoCarryoverOutletRequirementInputs(
-            context[0], house, skin, context[1], new_ufac, *context[2:]))
+            context[0], house, skin, context[1], new_ufac,
+            *context[2:], None))
 
     assert result[:2] == (x_min, x_req)
     assert [event[0] for event in events] == (
@@ -3030,7 +3087,7 @@ def test_prepare_no_carryover_supply_state_preserves_second_pass(
     result = sut._prepare_no_carryover_supply_state(
         sut._NoCarryoverSupplyInputs(
             context[0], context[1], house, skin, context[2], new_ufac,
-            context[3], *context[4:22]))
+            context[3], *context[4:22], None, None, None))
 
     expected = ["humidity", "zeros", "temperatures", "airflows", "supply"]
     expected += ["debug"] * 5
@@ -3223,13 +3280,13 @@ def test_prepare_no_carryover_actual_temperature_state_preserves_formula_order(
 
     result = sut._prepare_no_carryover_actual_temperature_state(sut._NoCarryoverActualTemperatureInputs(
         inputs[0], inputs[1], new_ufac, *inputs[2:11], theta_uf,
-        *inputs[11:], non_room_ratio))
+        theta_uf, *inputs[11:], non_room_ratio))
 
     assert result == (room, non_room)
     assert [event[0] for event in events] == ["room", "non_room"]
     assert events[0][1][0].Theta_uf_d_t is (theta_uf if enabled else None)
     assert events[1][1][0].Theta_uf_d_t is (theta_uf if enabled else None)
-    assert events[1][1][0].r_A_NR_uf_1F_excl_bath is (non_room_ratio if enabled else None)
+    assert events[1][1][0].r_A_NR_uf_1F is (non_room_ratio if enabled else None)
 
 
 def test_log_actual_temperature_state_preserves_diagnostic_order(monkeypatch):
@@ -3771,7 +3828,7 @@ def test_balanced_room_and_duct_state_result_preserves_tuple_contract():
 
 
 def test_pre_vav_airflow_state_result_preserves_tuple_contract():
-    values = tuple(object() for _ in range(6))
+    values = tuple(object() for _ in range(10))
     result = sut._PreVavAirflowStateResult(*values)
 
     assert isinstance(result, tuple)
@@ -3782,6 +3839,10 @@ def test_pre_vav_airflow_state_result_preserves_tuple_contract():
         "r_supply_des_i",
         "r_supply_des_d_t_i",
         "V_dash_supply_d_t_i",
+        "Q_hat_hs_before_ground_d_t",
+        "Q_hat_hs_base_d_t",
+        "Q_hat_hs_CS_base_d_t",
+        "U_s_input",
         "df_output",
     )
 
@@ -3875,7 +3936,7 @@ def test_initial_heat_source_output_inputs_preserve_field_order():
 
 
 def test_pre_vav_airflow_inputs_preserve_field_order():
-    values = tuple(object() for _ in range(23))
+    values = tuple(object() for _ in range(27))
     inputs = sut._PreVavAirflowInputs(*values)
 
     assert tuple(inputs) == values
@@ -3896,6 +3957,9 @@ def test_pre_vav_airflow_inputs_preserve_field_order():
         "Q_hs_rtd_C",
         "Q_hat_hs_d_t",
         "Q_hat_hs_CS_d_t",
+        "Q_hat_hs_H_signed_d_t",
+        "Q_hat_hs_CS_signed_d_t",
+        "Q_hat_hs_CL_signed_d_t",
         "V_vent_g_i",
         "Theta_in_d_t",
         "Theta_ex_d_t",
@@ -3903,6 +3967,7 @@ def test_pre_vav_airflow_inputs_preserve_field_order():
         "Theta_g_avg",
         "sum_Theta_dash_g_surf_A_m",
         "should_adjust",
+        "V_dash_supply_override_d_t_i",
     )
 
 
@@ -3930,7 +3995,7 @@ def test_balanced_non_room_temperature_inputs_preserve_field_order():
 
 
 def test_no_carryover_outlet_requirement_inputs_preserve_field_order():
-    values = tuple(object() for _ in range(18))
+    values = tuple(object() for _ in range(19))
     inputs = sut._NoCarryoverOutletRequirementInputs(*values)
 
     assert tuple(inputs) == values
@@ -3953,11 +4018,12 @@ def test_no_carryover_outlet_requirement_inputs_preserve_field_order():
         "l_duct_i",
         "Theta_ex_d_t",
         "Theta_in_d_t",
+        "Theta_uf_ground_feedback_d_t",
     )
 
 
 def test_no_carryover_supply_inputs_preserve_field_order():
-    values = tuple(object() for _ in range(25))
+    values = tuple(object() for _ in range(28))
     inputs = sut._NoCarryoverSupplyInputs(*values)
 
     assert tuple(inputs) == values
@@ -3987,11 +4053,14 @@ def test_no_carryover_supply_inputs_preserve_field_order():
         "V_hs_dsgn_H",
         "V_hs_dsgn_C",
         "Theta_ex_d_t",
+        "Theta_uf_ground_feedback_d_t",
+        "Theta_hs_out_override_d_t",
+        "Theta_underfloor_supply_override_d_t",
     )
 
 
 def test_no_carryover_actual_temperature_inputs_preserve_field_order():
-    values = tuple(object() for _ in range(18))
+    values = tuple(object() for _ in range(19))
     inputs = sut._NoCarryoverActualTemperatureInputs(*values)
 
     assert tuple(inputs) == values
@@ -4009,11 +4078,12 @@ def test_no_carryover_actual_temperature_inputs_preserve_field_order():
         "L_star_H_d_t_i",
         "L_star_CS_d_t_i",
         "Theta_uf_d_t",
+        "Theta_uf_NR_d_t",
         "Theta_star_NR_d_t",
         "A_NR",
         "V_vent_l_NR_d_t",
         "V_dash_supply_d_t_i",
-        "r_A_NR_uf_1F_excl_bath",
+        "r_A_NR_uf_1F",
     )
 
 
@@ -4244,7 +4314,7 @@ def test_actual_non_room_temperature_hour_inputs_preserve_field_order():
 
 
 def test_underfloor_outdoor_transfer_inputs_preserve_field_order():
-    values = tuple(object() for _ in range(13))
+    values = tuple(object() for _ in range(15))
     inputs = sut._UnderfloorOutdoorTransferInputs(*values)
 
     assert tuple(inputs) == values
@@ -4262,6 +4332,8 @@ def test_underfloor_outdoor_transfer_inputs_preserve_field_order():
         "Theta_ex_d_t",
         "V_dash_supply_d_t_i",
         "Q_hat_hs_d_t",
+        "Q_hat_hs_H_signed_d_t",
+        "Q_hat_hs_CS_signed_d_t",
     )
 
 def test_prepare_calculation_state_preserves_pre_branch_order_and_context(monkeypatch):
@@ -4371,7 +4443,16 @@ def test_prepare_calculation_state_preserves_pre_branch_order_and_context(monkey
     monkeypatch.setattr(
         sut,
         "_prepare_initial_heat_source_output",
-        fixed("initial-output", ("q-hat", "q-hat-cs")),
+        fixed(
+            "initial-output",
+            (
+                "q-hat",
+                "q-hat-cs",
+                "q-hat-h-signed",
+                "q-hat-cs-signed",
+                "q-hat-cl-signed",
+            ),
+        ),
     )
     monkeypatch.setattr(
         sut,
@@ -4454,6 +4535,9 @@ def test_prepare_calculation_state_preserves_pre_branch_order_and_context(monkey
         "theta-surroundings",
         "q-hat",
         "q-hat-cs",
+        "q-hat-h-signed",
+        "q-hat-cs-signed",
+        "q-hat-cl-signed",
         "minimum-output-airflow",
         "rated-h",
         "rated-c",
