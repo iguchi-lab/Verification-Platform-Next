@@ -24,6 +24,8 @@ class UnderfloorAc:
     # 現在はただの定数としてユーザー入力させていない
     U_s_floor_ins: float = 0.41
     """床断熱の熱貫流率 [W/(m2・K)]"""
+    explicit_constants: bool = False
+    """True when optional user-entered underfloor constants are used."""
 
     @classmethod
     def from_dict(cls, data: dict) -> 'UnderfloorAc':
@@ -35,6 +37,7 @@ class UnderfloorAc:
             if new_ufac_flg == 床下空調ロジック.変更する:
                 # 実行条件: 明示的な上書き宣言が必要
                 if 'input_ufac_consts' in data and int(data['input_ufac_consts']) == 2:
+                    kwargs['explicit_constants'] = True
                     kwargs['Theta_g_avg'] = float(data['Theta_g_avg'])
                     kwargs['U_s_vert'] = float(data['U_s_vert'])
                     kwargs['phi'] = float(data['phi'])

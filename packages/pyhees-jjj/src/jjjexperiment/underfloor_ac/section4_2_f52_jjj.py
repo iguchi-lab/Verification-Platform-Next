@@ -9,12 +9,12 @@ def _get_formula_52_properties():
     return c_p_air, rho_air, U_s
 
 
-def _get_A_NR_1F_52(A_NR, r_A_NR_1F_excl_bath):
-    return A_NR * r_A_NR_1F_excl_bath
+def _get_A_NR_1F_52(A_NR, r_A_NR_1F):
+    return A_NR * r_A_NR_1F
 
 
-def _get_k1_52(Q, A_NR_1F, c_p_air, rho_air, V_vent_l_NR, V_dash_supply_A, U_prt, A_prt_A):
-    return (Q - 0.35 * 0.5 * 2.4) * A_NR_1F \
+def _get_k1_52(Q, A_NR, c_p_air, rho_air, V_vent_l_NR, V_dash_supply_A, U_prt, A_prt_A):
+    return (Q - 0.35 * 0.5 * 2.4) * A_NR \
         + c_p_air * rho_air * V_vent_l_NR / 3600 \
         + c_p_air * rho_air * V_dash_supply_A / 3600 \
         + U_prt * A_prt_A
@@ -50,7 +50,7 @@ def get_Theta_star_NR(
         Theta_NR: float,
         Theta_uf: float,
         HCM: JJJ_HCM,  # regionの代替
-        r_A_NR_1F_excl_bath: float  # 非居室の1F(浴室除く)面積比 [-]
+        r_A_NR_1F: float  # 非居室の1F床下面積比（浴室を含む） [-]
     ) -> float:
     """(52-1)(52-2)(52-3)
     Args:
@@ -74,15 +74,13 @@ def get_Theta_star_NR(
     # vectorize可能
     c_p_air, rho_air, U_s = _get_formula_52_properties()
 
-    #260112 非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
-    A_NR_1F = _get_A_NR_1F_52(A_NR, r_A_NR_1F_excl_bath)
+    # 表E.6に従い、浴室を含む1F非居室床下面積19.04 m2を使う
+    A_NR_1F = _get_A_NR_1F_52(A_NR, r_A_NR_1F)
 
-    # CHECK: k1 の Q 項に A_NR_1F を使っている。
-    # k1 は非居室全体の熱コンダクタンス（外皮・換気・間仕切り）を表すため、
-    # 本来 Q * A_NR（全非居室面積）が正しい可能性がある。
-    k1 = _get_k1_52(Q, A_NR_1F, c_p_air, rho_air, V_vent_l_NR, V_dash_supply_A, U_prt, A_prt_A)
+    # 外皮・換気・間仕切りは非居室全体、床下貫流だけは1F面積を使う。
+    k1 = _get_k1_52(Q, A_NR, c_p_air, rho_air, V_vent_l_NR, V_dash_supply_A, U_prt, A_prt_A)
 
-    #260112 式のミスを修正、非居室の床下から貫流する部分の面積は1F（浴室除く）のみ、40.4%分
+    # 床下からの貫流には1F非居室床下面積だけを使う
     #[OLD] k2 = U_s * A_NR * np.abs(Theta_uf - Theta_NR)
     k2 = _get_k2_52(U_s, A_NR_1F)
 

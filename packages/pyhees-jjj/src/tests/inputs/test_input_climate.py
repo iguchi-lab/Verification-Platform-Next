@@ -3,6 +3,8 @@ import pytest
 from typing import List
 
 from jjjexperiment.common import JJJ_HCM
+from jjjexperiment.inputs.climate_service import ClimateService
+from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc
 
 @pytest.mark.usefixtures('climate_entity')
 class Test_Input_Climate:
@@ -59,3 +61,36 @@ class Test_Input_Climate:
         # Assert
         assert Theta_g_avg is not None
         assert Theta_g_avg == pytest.approx(15.68, rel=1e-2)
+
+def test_underfloor_constants_are_derived_when_not_explicit():
+    climate = ClimateService(6, UnderfloorAc(explicit_constants=False))
+    q = 2.647962191872085
+
+    assert climate.get_Theta_g_avg() == pytest.approx(
+        15.686130136986295,
+        abs=1e-12,
+    )
+    assert climate.get_U_s_vert(q) == pytest.approx(
+        0.5422264459110593,
+        abs=1e-12,
+    )
+    assert climate.get_phi(q) == pytest.approx(
+        0.845957617838108,
+        abs=1e-12,
+    )
+
+
+def test_explicit_underfloor_constants_are_preserved():
+    climate = ClimateService(
+        6,
+        UnderfloorAc(
+            Theta_g_avg=14.1,
+            U_s_vert=0.63,
+            phi=0.91,
+            explicit_constants=True,
+        ),
+    )
+
+    assert climate.get_Theta_g_avg() == 14.1
+    assert climate.get_U_s_vert(2.6) == 0.63
+    assert climate.get_phi(2.6) == 0.91
