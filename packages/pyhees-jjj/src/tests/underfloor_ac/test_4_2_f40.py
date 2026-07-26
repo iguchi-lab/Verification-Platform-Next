@@ -16,7 +16,6 @@ from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc
 import jjjexperiment.constants as jjj_consts
 from test_utils.utils import load_input_yaml
 
-@pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
 class Test_床下空調時_式40:
 
     def test_既存関数の計算(self, Q_hat_hs_d_t):
@@ -94,7 +93,8 @@ class Test_床下空調時_式40:
                 L_H_d_t_flr1st[t], A_s_ufvnt, U_s_vert, new_ufac.U_s_floor_ins, Theta_in_d_t[t], Theta_ex_d_t[t], V_dash_supply_flr1st)
 
         # Assert
-        assert Theta_uf == pytest.approx(23.20, abs=1e-2)  # 23.20 -> 27.69
+        # 床下14で採用した床断熱U値と式(40-4)の現在値。
+        assert Theta_uf == pytest.approx(31.6683, abs=1e-4)
 
 
     def test_床下空調用の床面積(self):
@@ -120,7 +120,6 @@ class Test_床下空調時_式40:
         injector = create_injector_from_json(load_input_yaml(yaml_fullpath))
 
         house = injector.get(HouseInfo)
-        skin = injector.get(OuterSkin)
         new_ufac = injector.get(UnderfloorAc)
 
         climate = ClimateService(house.region, new_ufac)
@@ -129,15 +128,9 @@ class Test_床下空調時_式40:
 
         # Arrange - 当該住戸の空気を供給する床下空間に接する床の面積の合計 [m2]
         A_s_ufac_i, _ = get_A_s_ufac_i(house.A_A, house.A_MR, house.A_OR)
-        A_s_ufac_A = np.sum(A_s_ufac_i)
         assert np.shape(A_s_ufac_i) == (12, 1)
 
-        # Arrange - 暖冷房負荷計算時に想定した床の熱貫流率 [W/m2*K]
-        U_s_vert = climate.get_U_s_vert(skin.Q)
-
         # Act
-        # NOTE: ここでは意図した空調ではなく漏れなので 通常の0.7となる
-        H_floor = 0.7  # 床の温度差係数(-)
         t = 0
         assert Theta_in_d_t[t] > Theta_ex_d_t[t], "暖房期の前提"
 
@@ -147,7 +140,8 @@ class Test_床下空調時_式40:
 
         # Assert
         assert np.shape(delta_L_uf2room) == (12, 1)
-        assert np.sum(delta_L_uf2room) == pytest.approx(6.37, abs=1e-2)  # 6.37 -> 1.18
+        # 負荷計算時の床断熱 U=0.41 を用いて控除する熱量。
+        assert np.sum(delta_L_uf2room) == pytest.approx(1.17592, abs=1e-5)
 
 
     def test_床下から外気への熱損失(self):
