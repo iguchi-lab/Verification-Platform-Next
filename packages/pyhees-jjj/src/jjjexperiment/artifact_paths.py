@@ -16,6 +16,10 @@ def input_json_path(case_name: str) -> str:
     return artifact_prefix(case_name) + "_input.json"
 
 
+def metadata_json_path(case_name: str) -> str:
+    return artifact_prefix(case_name) + "_manifest.json"
+
+
 def main_output_csv_path(
     case_name: str,
     output_number: MainOutputNumber,

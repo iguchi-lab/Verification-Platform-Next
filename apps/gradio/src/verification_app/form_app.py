@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import gradio as gr
+from jjjexperiment.release import DISPLAY_VERSION
 from verification_core import FieldDefinition, FieldKind
 
 from .form_model import FormField, FormModel, load_form_model
@@ -23,10 +24,10 @@ def build_app(
     calculation_service = service or _default_service()
 
     with gr.Blocks(
-        title="Verification Platform Next",
+        title=f"Verification Platform Next {DISPLAY_VERSION}",
         fill_width=True,
     ) as demo:
-        gr.Markdown("# Verification Platform Next")
+        gr.Markdown(f"# Verification Platform Next {DISPLAY_VERSION}")
         gr.Markdown(f"共通入力スキーマから生成した {len(form.fields)} 項目の計算フォームです。")
 
         components: dict[str, Any] = {}

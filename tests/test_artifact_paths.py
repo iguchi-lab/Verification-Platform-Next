@@ -7,6 +7,7 @@ import jjjexperiment.artifact_paths as sut
     ("builder", "expected"),
     (
         (lambda: sut.input_json_path("case"), "casev-test_input.json"),
+        (lambda: sut.metadata_json_path("case"), "casev-test_manifest.json"),
         (lambda: sut.main_output_csv_path("case", 1), "casev-test_output1.csv"),
         (lambda: sut.main_output_csv_path("case", 2), "casev-test_output2.csv"),
         (

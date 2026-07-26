@@ -16,6 +16,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     component_types = Counter(component["type"] for component in config["components"])
 
     assert gradio.__version__.startswith("6.")
+    assert config["title"] == "Verification Platform Next ver.1.0.0"
     assert component_types["accordion"] == 18
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 52

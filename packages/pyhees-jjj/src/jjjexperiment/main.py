@@ -52,6 +52,7 @@ from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQu
 import jjjexperiment.constants as jjj_consts
 import jjjexperiment.artifact_paths as artifact_paths
 import jjjexperiment.common as jjj_common
+from jjjexperiment.release import write_artifact_manifest
 from jjjexperiment.result import ResultSummary, SutValues
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
 import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
@@ -260,7 +261,9 @@ def calc(input_data: dict, test_mode=False):
 
     injector = jjj_ipt_di.create_injector_from_json(input_data, test_mode)
     # NOTE: 引数全てを型解決できるようにする必要があった
-    return injector.call_with_injection(calc_main)
+    result = injector.call_with_injection(calc_main)
+    write_artifact_manifest(artifact_paths.metadata_json_path(case_name), input_data)
+    return result
 
 def _log_equipment_specs(cool_CRAC, heat_CRAC):
     print("q_rtd_C, q_rtd_H, q_max_C, q_max_H, e_rtd_C, e_rtd_H")
