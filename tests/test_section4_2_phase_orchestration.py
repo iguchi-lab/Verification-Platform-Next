@@ -436,6 +436,7 @@ def test_finalize_calculation_outputs_preserves_common_output_order(monkeypatch)
     )
     for attribute, name, result in replacements:
         monkeypatch.setattr(sut, attribute, _fixed(events, name, result))
+    monkeypatch.setattr(sut, "_consolidate_output_frame", lambda frame: frame)
 
     actual = sut._finalize_calculation_outputs(
         sut._CalculationOutputPhaseInputs(

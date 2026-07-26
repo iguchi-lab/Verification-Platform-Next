@@ -83,9 +83,11 @@ class LimitedLoggerAdapter(logging.LoggerAdapter):
     @classmethod
     def _write_arr_info(cls, label: str, arr: np.ndarray):
         if cls._isTest:
+            nonzero = arr[np.nonzero(arr)]
+            nonzero_average = np.average(nonzero) if nonzero.size else 0.0
             cls._logger.debug(f"{label}[MAX]  : {max(arr)}")
             cls._logger.debug(f"{label}[ZEROS]: {arr.size - np.count_nonzero(arr)}")
-            cls._logger.debug(f"{label}[AVG.] : {np.average(arr[np.nonzero(arr)])}")
+            cls._logger.debug(f"{label}[AVG.] : {nonzero_average}")
 
 
 # ロギング用デコレータ

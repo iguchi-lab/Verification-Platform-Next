@@ -145,12 +145,13 @@
 - [PR #146](https://github.com/iguchi-lab/Verification-Platform-Next/pull/146): 入力JSON、main出力、電中研定数・結果、季節別詳細、繰越、床下の17成果物名と17利用境界を`jjjexperiment.artifact_paths`へ集約し、相対名、version評価順、H/C分岐、encoding、書込順を維持しました。
 - [PR #148](https://github.com/iguchi-lab/Verification-Platform-Next/pull/148): 計算時のcwd排他をプロセス共有化し、global更新、chdir、公開調整役、8760時間ループの監査済み境界をAST契約で固定しました。参照0件の`main.py`未使用import 6名も削除し、通常の構造リファクタリングの安定点を定義しました。
 - [PR #150](https://github.com/iguchi-lab/Verification-Platform-Next/pull/150): 建築研究所公式`pyhees`のVer.3.10相当コミットを、既存の3ファイルの独自差分と逆依存0件を維持して取り込みました。丸め、温水床暖房、給湯効率、空気集熱器の公式変更を契約テストで固定し、Phase 5基準CSVが変更不要であることを確認しました。
+- [PR #153](https://github.com/iguchi-lab/Verification-Platform-Next/pull/153): 床下計算を床下14仕様へ整合し、7つの確定仕様、負荷の室対応、床下熱損失控除、面積・熱貫流率の使い分け、非反復2パス計算、Excel異常レビューを文書と回帰試験で固定しました。
 
 この一覧は完了した設計判断を把握するためのものです。次の作業は必ず最新の`main`とGitHub上のIssue・PRを確認して決めます。
 
 ## 現在の安定点
 
-2026-07-24時点で、通常の挙動維持リファクタリングは一旦停止します。`calc_main`は104行、`calc_Q_UT_A`は72行のフェーズ調整役となり、`pyhees -> jjjexperiment`逆依存は0件、Next刷新前の互換shimは削除済み、計算成果物名は正本化済みです。global更新、製品コードの`chdir`、公開調整役へのインプレース処理再流入、8760時間ループの配置はPR #148の契約テストで固定します。建築研究所公式`pyhees`はPR #150でVer.3.10相当へ更新済みであり、この上流更新後も通常の構造リファクタリング停止を継続します。
+2026-07-26の`ver.1.0.0`時点で、通常の挙動維持リファクタリングは一旦停止します。`calc_main`は104行、`calc_Q_UT_A`は72行のフェーズ調整役となり、`pyhees -> jjjexperiment`逆依存は0件、Next刷新前の互換shimは削除済み、計算成果物名は正本化済みです。global更新、製品コードの`chdir`、公開調整役へのインプレース処理再流入、8760時間ループの配置はPR #148の契約テストで固定します。建築研究所公式`pyhees`はPR #150でVer.3.10相当へ更新済み、床下計算はPR #153で床下14仕様へ整合済みです。この安定点以降も通常の構造リファクタリング停止を継続します。
 
 次の境界は、構造上さらに分解できないのではなく、変更リスクが改善効果を上回るため凍結します。
 

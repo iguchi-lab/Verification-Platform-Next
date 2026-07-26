@@ -58,12 +58,18 @@ def test_new_underfloor_and_carryover_fail_instead_of_falling_back():
 # 将来的には、建研さまロジックのカスタマイズによる
 # 引数・返り値のいくつもの追加を解消するため
 
-class Test_DIコンテナ:
+def test_injector_provides_exportable_underfloor_dataframe(tmp_path):
+    """DIコンテナは床下診断用DataFrameを実行ごとに提供する。"""
+    di = Injector(JJJExperimentModule(_underfloor_inputs()))
+    df_holder = di.get(UfVarsDataFrame)
+    df_holder.update_df({"x": [1, 2, 3], "y": [2, 3, 4]})
 
-    @pytest.mark.skip(reason="本ロジックとは無関係のため")
-    def test_Injector(self):
-        """ DIコンテナの挙動テスト """
-        di = Injector(JJJExperimentModule())
-        df_holder = di.get(UfVarsDataFrame)
-        df_holder.update_df({'x':[1,2,3], 'y':[2,3,4]})
-        df_holder.export_to_csv("di_test.csv")
+    output = tmp_path / "di_test.csv"
+    df_holder.export_to_csv(str(output), encoding="utf-8")
+
+    assert output.read_text(encoding="utf-8").splitlines() == [
+        "x,y",
+        "1,2",
+        "2,3",
+        "3,4",
+    ]

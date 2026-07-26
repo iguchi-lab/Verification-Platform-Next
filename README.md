@@ -4,7 +4,8 @@
 
 ## 現在の状態
 
-移行 Phase 1〜5 が完了し、このモノレポを開発の正本として使用できる状態です。
+正式版`ver.1.0.0`です。移行 Phase 1〜5 が完了し、このモノレポを
+開発・リリースの正本として使用できる状態です。
 
 - 共通入力スキーマの型を `verification-core` に追加
 - 現行222項目をバージョン付きJSON台帳へ移行（基本45・暖房84・冷房91・換気2）
@@ -28,6 +29,7 @@
 - Gradioアプリの計算エンジン依存をモノレポ内のローカルパスへ切替
 - 旧フォームの代表2ケースについて、入力JSON・年間集計・8760時間CSVの固定回帰基準を追加
 - ローカル、Colab、GitHub Actions/Codex Cloudで共通の回帰コマンドを利用可能に変更
+- 計算成果物へ製品版、ソースコミット、上流pyhees、入力SHA-256のマニフェストを追加
 
 今後の `jjjexperiment` 修正は `packages/pyhees-jjj` で行い、入力契約と数値回帰を同じPull Requestで確認します。
 
@@ -111,6 +113,9 @@ docker run --rm -p 8080:8080 verification-platform-next
 - [アーキテクチャ](docs/ARCHITECTURE.md)
 - [段階的移行計画](docs/MIGRATION.md)
 - [リファクタリング方針と引き継ぎ](docs/REFACTORING.md)
+- [リリースと成果物の版管理](docs/RELEASING.md)
+- [変更履歴](CHANGELOG.md)
+- [床下空調計算の7つの変更点](docs/underfloor_ac_seven_changes.md)
 - [計算エンジン](packages/pyhees-jjj/README.md)
 
 ## 移行元

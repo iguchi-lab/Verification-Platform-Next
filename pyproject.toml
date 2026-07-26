@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "verification-platform-next"
-version = "0.1.0"
+version = "1.0.0"
 description = "Monorepo for the Verification Platform engine, schema, and UI"
 authors = ["iguchi-lab"]
 package-mode = false
@@ -22,4 +22,9 @@ markers = ["phase5: full legacy CSV regression tests"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend-exclude = ["packages/pyhees-jjj"]
+extend-exclude = [
+    "packages/pyhees-jjj",
+    ".codex-work",
+    ".tmp-*",
+    "tmp",
+]

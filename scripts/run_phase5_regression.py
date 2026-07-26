@@ -13,7 +13,6 @@ import os
 import shutil
 import sys
 import tempfile
-import warnings
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any, Iterable
@@ -75,8 +74,7 @@ def _run_engine(case: dict[str, Any], workdir: Path, *, legacy: bool) -> dict[st
     previous_cwd = Path.cwd()
     try:
         os.chdir(case_workdir)
-        with warnings.catch_warnings(), redirect_stdout(output), redirect_stderr(output):
-            warnings.filterwarnings("ignore", message="DataFrame is highly fragmented.*")
+        with redirect_stdout(output), redirect_stderr(output):
             calc(input_data)
     except Exception as error:
         raise RuntimeError(

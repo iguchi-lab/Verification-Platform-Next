@@ -24,6 +24,8 @@ Excelの数式、隣接セル、PDF、説明資料を照合し、床下13の式2
 対話検証し、全項目を確定した台帳は
 [`underfloor_ac_seven_point_design_review.md`](underfloor_ac_seven_point_design_review.md)
 に分離する。
+対外説明には、数式と変更理由を読みやすく再構成した
+[`underfloor_ac_seven_changes.md`](underfloor_ac_seven_changes.md)を使用する。
 
 ## 比較条件と資料
 

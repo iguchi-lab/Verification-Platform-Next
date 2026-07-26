@@ -1,9 +1,7 @@
 import numpy as np
-import pytest
 
 import pyhees.section3_1 as ld
 # JJJ
-import jjjexperiment.constants as jjj_consts
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 
 def test_負荷バランス時の負荷_暖房_式8():
@@ -38,8 +36,20 @@ def test_負荷バランス時の負荷_暖房_式8():
         "L_star_H_iの計算がおかしい"
 
 
-@pytest.mark.skip(reason="計算例が未提供のため")
 def test_負荷バランス時の負荷_冷房_式9():
-    """(9) 過剰熱量繰越を考慮した 熱損失を含む負荷バランス時の冷房負荷
-    """
-    pass
+    """(9) 冷房負荷に間仕切り熱取得を加え、繰越熱量を控除する。"""
+    L_CS_i = np.array([5.0, 2.0, 0.5, 0.2, 0.1]).reshape(-1, 1)
+    Q_star_trs_prt_i = np.array([0.6, 0.4, 0.3, 0.2, 0.1]).reshape(-1, 1)
+    carryover = np.array([0.5, 0.7, 1.0, 0.1, 0.3]).reshape(-1, 1)
+
+    result = jjj_carryover_heat.get_L_star_CS_i_2024(
+        True,
+        L_CS_i,
+        Q_star_trs_prt_i,
+        carryover,
+    )
+
+    np.testing.assert_allclose(
+        result,
+        np.array([5.1, 1.7, 0.0, 0.3, 0.0]).reshape(-1, 1),
+    )

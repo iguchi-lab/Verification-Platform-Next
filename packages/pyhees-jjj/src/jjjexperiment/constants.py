@@ -14,13 +14,11 @@ from jjjexperiment.inputs.options import (
   過剰熱量繰越計算,
   全般換気機能,
 )
+from jjjexperiment.release import ARTIFACT_VERSION
 
 def version_info() -> str:
-  """ 最終編集日(プッシュ日)をバージョン管理に使用します
-  """
-  # NOTE: GitHub Actions 経由でプッシュされた日で上書きしています
-  # 本ファイル名に変更があれば 設定更新すること
-  return '_20260413'
+  """Return the stable product version suffix used by output artifacts."""
+  return ARTIFACT_VERSION
 
 Theta_hs_out_max_H_d_t_limit: float = 45
 """最大暖房出力時の熱源機の出口における空気温度の最大値の上限値"""

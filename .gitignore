@@ -8,3 +8,6 @@ build/
 *.egg-info/
 .env
 outputs/
+*_output*.csv
+*_input.json
+*_manifest.json

@@ -12,7 +12,13 @@ from jjjexperiment.inputs.environment_service import EnvironmentService
 import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 from jjjexperiment.underfloor_ac.section4_2_f40_jjj import calc_Q_hat_hs
 
-from test_utils.utils import load_input_yaml
+pytest_plugins = ["test_utils.utils"]
+
+
+def _load_input_yaml(path):
+    from test_utils.utils import load_input_yaml
+
+    return load_input_yaml(path)
 
 @pytest.fixture(scope='class')
 def climate_entity(request) -> ClimateService:
@@ -20,7 +26,7 @@ def climate_entity(request) -> ClimateService:
     yaml_filename = request.cls.yaml_filename  # クラスのメンバー名
     current_dir = os.path.dirname(__file__)
     yaml_path = os.path.join(current_dir, yaml_filename)
-    injector = create_injector_from_json(load_input_yaml(yaml_path))
+    injector = create_injector_from_json(_load_input_yaml(yaml_path))
 
     house_info = injector.get(HouseInfo)
     new_ufac = injector.get(jjj_ufac_ipt.UnderfloorAc)
@@ -33,7 +39,7 @@ def environment_entity(request) -> EnvironmentService:
     yaml_filename = request.cls.yaml_filename  # クラスのメンバー名
     current_dir = os.path.dirname(__file__)
     yaml_path = os.path.join(current_dir, yaml_filename)
-    injector = create_injector_from_json(load_input_yaml(yaml_path))
+    injector = create_injector_from_json(_load_input_yaml(yaml_path))
 
     house = injector.get(HouseInfo)
     skin = injector.get(OuterSkin)
@@ -43,7 +49,7 @@ def environment_entity(request) -> EnvironmentService:
 def Q_hat_hs_d_t():
     """(40) 熱源機の風量を計算するための熱源機の出力"""
     yaml_fullpath = os.path.join(os.path.dirname(__file__), 'inputs/test_input.yaml')
-    injector = create_injector_from_json(load_input_yaml(yaml_fullpath))
+    injector = create_injector_from_json(_load_input_yaml(yaml_fullpath))
 
     house = injector.get(HouseInfo)
     skin = injector.get(OuterSkin)

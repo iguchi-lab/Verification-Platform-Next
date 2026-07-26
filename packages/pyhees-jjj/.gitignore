@@ -1,6 +1,7 @@
 # JJJ specific
 *_output*.csv
 *_input.json
+*_manifest.json
 *.log
 
 # Python artifacts
