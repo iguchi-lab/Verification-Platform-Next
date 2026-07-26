@@ -80,3 +80,40 @@ def test_service_preserves_successful_calculation_when_graphs_fail(tmp_path: Pat
     assert result.graph_status.startswith("❌ グラフ生成エラー")
     assert "KeyError: 'missing graph column'" in result.log
     assert result.graphs == ()
+
+
+def test_service_can_return_files_before_generating_graphs(tmp_path: Path) -> None:
+    graph_calls: list[str] = []
+
+    def calculate(input_data: dict[str, object]) -> None:
+        prefix = f"{input_data['case_name']}v1"
+        Path(f"{prefix}.csv").write_text("result", encoding="utf-8")
+
+    def build_graphs(
+        input_data: dict[str, object], output_dir: Path, version: str
+    ) -> tuple[str, ...]:
+        graph_calls.append(str(input_data["case_name"]))
+        return ("heating", "cooling")
+
+    service = CalculationService(
+        calculate,
+        lambda: "v1",
+        workdir=tmp_path,
+        build_graphs=build_graphs,
+    )
+
+    calculation = service.run(
+        {"case_name__0": "deferred"},
+        include_graphs=False,
+    )
+
+    assert calculation.succeeded
+    assert calculation.files
+    assert calculation.graphs == ()
+    assert graph_calls == []
+
+    completed = service.generate_graphs(calculation)
+
+    assert graph_calls == ["deferred"]
+    assert completed.graph_status == "✅ 2件のグラフを生成しました。"
+    assert completed.graphs == ("heating", "cooling")

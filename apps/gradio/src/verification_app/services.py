@@ -5,7 +5,7 @@ import os
 import threading
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -42,7 +42,12 @@ class CalculationService:
         self._workdir = workdir
         self._build_graphs = build_graphs
 
-    def run(self, values: Mapping[str, Any]) -> CalculationResult:
+    def run(
+        self,
+        values: Mapping[str, Any],
+        *,
+        include_graphs: bool = True,
+    ) -> CalculationResult:
         input_data: dict[str, Any] | None = None
         output = io.StringIO()
         try:
@@ -57,29 +62,16 @@ class CalculationService:
                 finally:
                     os.chdir(previous_cwd)
             files = self._result_files(input_data)
-            graphs: tuple[Any, ...] = ()
-            graph_status = "グラフ生成は設定されていません。"
-            if self._build_graphs is not None:
-                try:
-                    graphs = self._build_graphs(
-                        input_data,
-                        (self._workdir or Path.cwd()).resolve(),
-                        self._version_info(),
-                    )
-                    graph_status = f"✅ {len(graphs)}件のグラフを生成しました。"
-                except Exception:
-                    graph_status = "❌ グラフ生成エラー（計算結果CSVは正常に作成されています）"
-                    output.write("\n===== グラフ生成エラー =====\n")
-                    output.write(traceback.format_exc())
-            return CalculationResult(
+            result = CalculationResult(
                 succeeded=True,
                 status="✅ 計算が完了しました。",
                 input_data=input_data,
                 log=output.getvalue(),
                 files=files,
-                graph_status=graph_status,
-                graphs=graphs,
+                graph_status="計算完了後にグラフを表示します。",
+                graphs=(),
             )
+            return self.generate_graphs(result) if include_graphs else result
         except Exception:
             log = output.getvalue() + traceback.format_exc()
             return CalculationResult(
@@ -89,6 +81,31 @@ class CalculationService:
                 log=log,
                 files=(),
                 graph_status="計算完了後にグラフを表示します。",
+                graphs=(),
+            )
+
+    def generate_graphs(self, result: CalculationResult) -> CalculationResult:
+        if not result.succeeded or result.input_data is None:
+            return result
+        if self._build_graphs is None:
+            return replace(result, graph_status="グラフ生成は設定されていません。")
+        try:
+            graphs = self._build_graphs(
+                result.input_data,
+                (self._workdir or Path.cwd()).resolve(),
+                self._version_info(),
+            )
+            return replace(
+                result,
+                graph_status=f"✅ {len(graphs)}件のグラフを生成しました。",
+                graphs=graphs,
+            )
+        except Exception:
+            log = result.log + "\n===== グラフ生成エラー =====\n" + traceback.format_exc()
+            return replace(
+                result,
+                log=log,
+                graph_status="❌ グラフ生成エラー（計算結果CSVは正常に作成されています）",
                 graphs=(),
             )
 

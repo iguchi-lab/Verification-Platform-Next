@@ -54,6 +54,7 @@ def build_app(
 
         run = gr.Button("▶ 計算を実行", variant="primary", size="lg")
         status = gr.Markdown("**状態: 未実行**")
+        result_state = gr.State()
         with gr.Tabs():
             with gr.Tab("計算入力"):
                 preview = gr.JSON(label="計算に使用した input_data")
@@ -77,12 +78,32 @@ def build_app(
 
         def calculate(*raw_values: Any) -> tuple[Any, ...]:
             values = form.values_from_sequence(raw_values)
-            return _result_outputs(calculation_service.run(values))
+            result = calculation_service.run(values, include_graphs=False)
+            return _calculation_outputs(result)
 
-        run.click(
+        def generate_graphs(result: CalculationResult | None) -> tuple[Any, ...]:
+            if result is None:
+                return _graph_outputs(None)
+            return _graph_outputs(calculation_service.generate_graphs(result))
+
+        calculation_started = run.click(
+            _calculation_started_outputs,
+            outputs=[status, preview, log, graph_status, *graphs, files],
+            queue=False,
+            api_visibility="private",
+        )
+        calculation_finished = calculation_started.then(
             calculate,
             inputs=ordered_components,
-            outputs=[status, preview, log, graph_status, *graphs, files],
+            outputs=[result_state, status, preview, log, graph_status, files],
+            concurrency_limit=1,
+            concurrency_id="calculation",
+            show_progress="full",
+        )
+        calculation_finished.then(
+            generate_graphs,
+            inputs=result_state,
+            outputs=[graph_status, log, *graphs],
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -146,16 +167,46 @@ def _chunks(values: tuple[FormField, ...], size: int) -> Iterable[tuple[FormFiel
         yield chunk
 
 
-def _result_outputs(result: CalculationResult) -> tuple[Any, ...]:
-    graphs = tuple(result.graphs[: len(GRAPH_LABELS)])
-    graphs += (None,) * (len(GRAPH_LABELS) - len(graphs))
+def _calculation_started_outputs() -> tuple[Any, ...]:
     return (
+        "⏳ 計算を実行しています。",
+        None,
+        "",
+        "計算完了後にグラフを生成します。",
+        *((None,) * len(GRAPH_LABELS)),
+        [],
+    )
+
+
+def _calculation_outputs(result: CalculationResult) -> tuple[Any, ...]:
+    graph_status = (
+        "⏳ 計算結果と出力ファイルを表示しました。グラフを生成しています。"
+        if result.succeeded
+        else result.graph_status
+    )
+    return (
+        result,
         result.status,
         result.input_data,
         result.log,
-        result.graph_status,
-        *graphs,
+        graph_status,
         list(result.files),
+    )
+
+
+def _graph_outputs(result: CalculationResult | None) -> tuple[Any, ...]:
+    if result is None:
+        return (
+            "グラフ生成対象の計算結果がありません。",
+            "",
+            *((None,) * len(GRAPH_LABELS)),
+        )
+    graphs = tuple(result.graphs[: len(GRAPH_LABELS)])
+    graphs += (None,) * (len(GRAPH_LABELS) - len(graphs))
+    return (
+        result.graph_status,
+        result.log,
+        *graphs,
     )
 
 
