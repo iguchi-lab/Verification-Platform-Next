@@ -21,7 +21,7 @@ Excelの数式、隣接セル、PDF、説明資料を照合し、床下13の式2
 残っておらず、全再計算後の保存値をGoldenへ固定した。
 
 7 変更点の数式、採用値、物理的妥当性、資料間不一致を一項目ずつ
-対話検証する台帳は
+対話検証し、全項目を確定した台帳は
 [`underfloor_ac_seven_point_design_review.md`](underfloor_ac_seven_point_design_review.md)
 に分離する。
 
@@ -114,7 +114,7 @@ Excel床下14では、`床下定数!E19:E21`に65.41、46.37、19.04 m²を保�
 目標温度の床貫流係数`床下計算④!F6:F8765`には46.37 m²、床下全体の
 室側・地盤側係数`床下計算④!I6:K8765`には65.41 m²を使う。コードも同じ
 境界を使用する。非居室への床貫流が式 (52)/(48)を含む全体系で重複しない
-ことは、別の検証項目A-07として確認する。
+ことは、検証項目A-07で確認済みである。
 
 床の熱貫流率は、付録 E の記号を厳密に区別する。元の温熱シミュレーションで
 断熱床から外部へ逃げる熱を控除する式 (8)/(9)には、3-1-43ページの式 (4)で
@@ -158,6 +158,21 @@ Qから求める`U_s,vert=0.5422264459110593 W/(m² K)`を使う。一方、
 | 室への実供給温度 | `負荷計算!FM5:FN8764` | 4-2 式 (46) |
 | 実居室・非居室温度 | `負荷計算!FT5:FU8764`, `FZ5:FZ8764` | 4-2 式 (46)/(48) |
 | 年間暖房・冷房 | `インプット!G3:G4` | `SUM(負荷計算!HP/HQ)` |
+
+## コードと試験の対応
+
+| 責務 | 実装・試験 |
+| --- | --- |
+| 8760時間逐次処理、Pass 1/2、地盤状態 | [`hourly_solver.py`](../packages/pyhees-jjj/src/jjjexperiment/underfloor_ac/hourly_solver.py) |
+| 式 (8)/(9)、床損失・外気・地盤補正 | [`section4_2_jjj.py`](../packages/pyhees-jjj/src/jjjexperiment/underfloor_ac/section4_2_jjj.py) |
+| 式 (52) の非居室負荷バランス温度 | [`section4_2_f52_jjj.py`](../packages/pyhees-jjj/src/jjjexperiment/underfloor_ac/section4_2_f52_jjj.py) |
+| 式 (46)/(48) の実居室・非居室温度 | [`section4_2_f46_f48_jjj.py`](../packages/pyhees-jjj/src/jjjexperiment/underfloor_ac/section4_2_f46_f48_jjj.py) |
+| 入力変換と2種類の床熱貫流率 | [`section4_2_jjj.py`](../packages/pyhees-jjj/src/jjjexperiment/section4_2_jjj.py)、[`common.py`](../packages/pyhees-jjj/src/jjjexperiment/underfloor_ac/inputs/common.py) |
+| 22系列×8760時間Golden比較 | [`test_excel_floor14_golden.py`](../packages/pyhees-jjj/src/tests/underfloor_ac/test_excel_floor14_golden.py) |
+| 式 (8)/(9) の符号回帰 | [`test_4_2_f8.py`](../packages/pyhees-jjj/src/tests/underfloor_ac/test_4_2_f8.py) |
+
+この表により、Excelセル、PDF式番号、設計判断、コード、回帰試験を相互に
+追跡できる。建研由来の式番号と変数名は、追跡性を保つため変更していない。
 
 ## 代表時刻比較
 
@@ -227,7 +242,7 @@ Excel の表示形式は `0"MJ"`。回帰試験ではさらに厳しい
 - 内部浮動小数には上表の微小差が残るが、Excel 表示桁の不一致は 0 件。
 - Excel床下14はMicrosoft Excelで全再計算・保存後にGoldenを再抽出した。
 - 非床下経路は今回の数値正本の対象外で、既存回帰試験で非変更を確認する。
-- Phase 5 の基準値は、数値影響と代表 CSV を確認するまで更新しない。
+- Phase 5 の基準値は更新せず、既存の代表 CSV に対して回帰確認する。
 
 ## Excel 異常候補
 
@@ -236,7 +251,7 @@ Excel の表示形式は `0"MJ"`。回帰試験ではさらに厳しい
 | 確認済み | `床下計算①!E6#` | 床下13の固定面積比は説明資料4枚目と負荷の出自に不整合 | 床下14で12室時刻別負荷比へ修正済み |
 | 確認済み | `床下計算③!G6:H8765` | 床下13の`-delta_L_floor`は冷房熱収支と逆向き | 床下14の17,520セルを`+delta_L_floor`へ修正済み |
 | 確認済み | `負荷計算!AA3582`, `AE6078`, `AD6385` | 数値に見える文字列が`SUM`から除外され、時刻6073で単独不連続を発生 | 数値型へ修正。12室負荷範囲の数値文字列は0件 |
-| 要確認 | なし | 床下14の全再計算、数式連続性、主要系列の表示桁を確認済み | 次の設計論点は別台帳で一項目ずつ検証 |
+| 確認完了 | 全設計論点 | 床下14の全再計算、数式連続性、主要系列の表示桁、A-01～A-08を確認済み | 追加要確認なし |
 | Excel 修正推奨 | なし | 確認済み3項目は床下14へ反映済み | なし |
 
 説明資料 15 枚目の「t-1 で代用」は Excel 異常ではなく、廃止された
