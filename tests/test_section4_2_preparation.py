@@ -951,6 +951,48 @@ def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
     assert calls[0] == ("area", (120.0, 30.0, 50.0))
     assert len(calls) == 1
 
+def test_first_floor_load_ratio_uses_all_twelve_reference_zones():
+    heating = np.array([
+        [5.957166109, 0.0],
+        [2.492570330, 0.0],
+        [1.538117909, 0.0],
+        [1.473408175, 0.0],
+        [1.899000840, 0.0],
+        [0.517248064, 0.0],
+        [0.179072097, 0.0],
+        [0.358029708, 0.0],
+        [1.476782336, 0.0],
+        [1.075627711, 0.0],
+        [1.156551516, 0.0],
+        [0.410858239, 0.0],
+    ])
+    load = SimpleNamespace(
+        L_H_d_t_i=heating,
+        L_CS_d_t_i=heating * 2.0,
+    )
+
+    heating_ratio = sut._get_first_floor_load_ratio_d_t(
+        _setting(sut.HeatingAcSetting),
+        load,
+    )
+    cooling_ratio = sut._get_first_floor_load_ratio_d_t(
+        _setting(sut.CoolingAcSetting),
+        load,
+    )
+
+    first_floor = [0, 1, 5, 6, 7, 8]
+    expected = np.array([
+        np.sum(heating[first_floor, 0]) / np.sum(heating[:, 0]),
+        0.0,
+    ])
+    np.testing.assert_array_equal(heating_ratio, expected)
+    np.testing.assert_array_equal(cooling_ratio, expected)
+    assert heating_ratio[0] == pytest.approx(
+        0.592457758124723,
+        abs=5e-10,
+    )
+
+
 def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
     setting = _setting(sut.HeatingAcSetting)
     area = np.ones((12, 1))
@@ -1004,7 +1046,7 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
     assert theta_calls[0][:2] == (1.0, None)
     np.testing.assert_allclose(
         theta_calls[0][2:],
-        (0.8, 2.0, 0.7, 0.3, 20.0, 10.0, 5.0),
+        (16.0, 2.0, 0.7, 0.3, 20.0, 10.0, 5.0),
     )
     assert theta_calls[-1] == theta_calls[0]
 
