@@ -4647,6 +4647,11 @@ def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
         None,
     )
 
+def _consolidate_output_frame(df_output):
+    """Consolidate pandas blocks without changing values or column order."""
+    return df_output.copy()
+
+
 def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
     preparation = inputs.pre_branch.preparation
     pre_vav_state = inputs.pre_branch.pre_vav_state
@@ -4655,7 +4660,7 @@ def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
     # Hundreds of columns are accumulated before this final output phase.
     # Consolidate their blocks once so the remaining ordered assignments do
     # not emit one pandas fragmentation warning per added column.
-    df_output = pre_vav_state.df_output.copy()
+    df_output = _consolidate_output_frame(pre_vav_state.df_output)
     df_output3 = preparation.df_output3
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
@@ -4762,7 +4767,7 @@ def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
     # order. Consolidate the blocks before adding the final reporting columns so
     # pandas does not emit fragmentation warnings; values and column order remain
     # unchanged.
-    df_output = df_output.copy()
+    df_output = _consolidate_output_frame(df_output)
 
     """ まとめ - 未処理負荷 """
     (
