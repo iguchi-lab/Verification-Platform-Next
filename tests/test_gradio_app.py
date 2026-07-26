@@ -25,8 +25,19 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert component_types["plot"] == 5
     assert component_types["gallery"] == 0
 
-    calculation, heating_visibility, cooling_visibility = config["dependencies"]
+    (
+        calculation_started,
+        calculation,
+        graph_generation,
+        heating_visibility,
+        cooling_visibility,
+    ) = config["dependencies"]
+    assert calculation_started["queue"] is False
+    assert len(calculation_started["inputs"]) == 0
+    assert len(calculation_started["outputs"]) == 10
     assert len(calculation["inputs"]) == 221
-    assert len(calculation["outputs"]) == 10
+    assert len(calculation["outputs"]) == 6
+    assert len(graph_generation["inputs"]) == 1
+    assert len(graph_generation["outputs"]) == 7
     assert len(heating_visibility["outputs"]) == 72
     assert len(cooling_visibility["outputs"]) == 79
