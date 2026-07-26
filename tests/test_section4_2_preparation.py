@@ -1025,11 +1025,11 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
         SimpleNamespace(U_s_floor_ins=0.3),
         SimpleNamespace(
             get_phi=lambda q: q + 0.5,
-            get_U_s_vert=lambda _: 0.3,
+            get_U_s_vert=lambda _: 0.5422264459110593,
         ),
         area,
         0.4,
-        0.7,
+        2.223,
         theta_in,
         theta_out,
         supply,
@@ -1046,7 +1046,15 @@ def test_underfloor_to_outdoor_transfer_preserves_heating_order(monkeypatch):
     assert theta_calls[0][:2] == (1.0, None)
     np.testing.assert_allclose(
         theta_calls[0][2:],
-        (16.0, 2.0, 0.7, 0.3, 20.0, 10.0, 5.0),
+        (
+            16.0,
+            2.0,
+            2.223,
+            0.5422264459110593,
+            20.0,
+            10.0,
+            5.0,
+        ),
     )
     assert theta_calls[-1] == theta_calls[0]
 
