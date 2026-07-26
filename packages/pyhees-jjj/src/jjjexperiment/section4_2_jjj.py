@@ -4652,7 +4652,10 @@ def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
     pre_vav_state = inputs.pre_branch.pre_vav_state
     capacity_state = inputs.branch.capacity_state
     supply_state = inputs.branch.supply_state
-    df_output = pre_vav_state.df_output
+    # Hundreds of columns are accumulated before this final output phase.
+    # Consolidate their blocks once so the remaining ordered assignments do
+    # not emit one pandas fragmentation warning per added column.
+    df_output = pre_vav_state.df_output.copy()
     df_output3 = preparation.df_output3
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
@@ -4754,6 +4757,13 @@ def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
         inputs.pre_branch.X_HBR_d_t_i, X_supply_d_t_i,
         supply_state.Theta_supply_d_t_i, inputs.branch.Theta_HBR_d_t_i,
         inputs.house.region))
+
+    # Column-by-column construction above intentionally follows the calculation
+    # order. Consolidate the blocks before adding the final reporting columns so
+    # pandas does not emit fragmentation warnings; values and column order remain
+    # unchanged.
+    df_output = df_output.copy()
+
     """ まとめ - 未処理負荷 """
     (
         Q_UT_CL_d_t_i,

@@ -167,8 +167,8 @@ def calc_reibai_phase_T_H(q: float, P: float, spec: H_CatalogSpec)-> typing.Tupl
 
     return T_evp, T_cnd  # 冷媒 蒸発/凝縮 温度[℃]
 
-def _solve_mtx(A: np.matrix, Y: np.matrix) -> typing.Tuple[float, float]:
-    mtx_ans = np.linalg.inv(A) * Y  # shape(2, 1)
+def _solve_mtx(A: np.ndarray, Y: np.ndarray) -> typing.Tuple[float, float]:
+    mtx_ans = np.linalg.solve(A, Y)  # shape(2, 1)
     return (mtx_ans[0, 0], mtx_ans[1, 0])
 
 def calc_R_and_Pc_C(spec: C_CatalogSpec) -> typing.Tuple[float, float, float, float]:
@@ -186,7 +186,8 @@ def calc_R_and_Pc_C(spec: C_CatalogSpec) -> typing.Tuple[float, float, float, fl
     def R_minrtd_C(spec: C_CatalogSpec) -> typing.Tuple[float, float]:
         A1, B1, Y1 = coeffs_for_simultaneous_C('min_C', spec.q_rac_min, 0.001*spec.P_rac_min, spec)
         A2, B2, Y2 = coeffs_for_simultaneous_C('rtd_C', spec.q_rac_rtd, 0.001*spec.P_rac_rtd, spec)
-        mtx_A, mtx_Y = np.matrix([[A1, B1], [A2, B2]]), np.matrix([[Y1], [Y2]])
+        mtx_A = np.array([[A1, B1], [A2, B2]])
+        mtx_Y = np.array([[Y1], [Y2]])
         R_minrtd_dash, Pc = _solve_mtx(mtx_A, mtx_Y)
         R_minrtd = 1 / R_minrtd_dash  # NOTE: 最小・定格時のR同一
         return R_minrtd, Pc
@@ -229,7 +230,8 @@ def calc_R_and_Pc_H(spec: H_CatalogSpec) -> typing.Tuple[float, float, float, fl
     def R_minrtd_H(spec: H_CatalogSpec) -> typing.Tuple[float, float]:
         A1, B1, Y1 = coeffs_for_simultaneous_H('min_H', spec.q_rac_min, 0.001*spec.P_rac_min, spec)
         A2, B2, Y2 = coeffs_for_simultaneous_H('rtd_H', spec.q_rac_rtd, 0.001*spec.P_rac_rtd, spec)
-        mtx_A, mtx_Y = np.matrix([[A1, B1], [A2, B2]]), np.matrix([[Y1], [Y2]])
+        mtx_A = np.array([[A1, B1], [A2, B2]])
+        mtx_Y = np.array([[Y1], [Y2]])
         R_minrtd_dash, Pc = _solve_mtx(mtx_A, mtx_Y)
         R_minrtd = 1 / R_minrtd_dash  # NOTE: 最小・定格時のR同一
         return R_minrtd, Pc

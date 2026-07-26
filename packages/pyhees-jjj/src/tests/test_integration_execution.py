@@ -19,8 +19,6 @@ from test_utils.utils import (
     deep_update,
 )
 
-pytest_plugins = ["test_utils.utils"]
-
 class Test統合テスト_デフォルト入力時:
 
     with open(INPUT_SAMPLE_TYPE1_PATH, 'r') as f:
