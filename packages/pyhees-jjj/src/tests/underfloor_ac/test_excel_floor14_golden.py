@@ -16,9 +16,9 @@ from pyhees.section11_1 import load_climate
 
 
 FIXTURE_DIR = Path(__file__).with_name("fixtures")
-MANIFEST_PATH = FIXTURE_DIR / "excel_floor13_golden_manifest.json"
-GOLDEN_PATH = FIXTURE_DIR / "excel_floor13_golden.npz"
-INPUT_PATH = FIXTURE_DIR / "excel_floor13_input.json"
+MANIFEST_PATH = FIXTURE_DIR / "excel_floor14_golden_manifest.json"
+GOLDEN_PATH = FIXTURE_DIR / "excel_floor14_golden.npz"
+INPUT_PATH = FIXTURE_DIR / "excel_floor14_input.json"
 
 OUTPUT5_SERIES = {
     "q_hat_hs": "Q_hat_hs_d_t",
@@ -101,7 +101,7 @@ def test_ground_response_matches_all_8760_excel_cached_values():
     )
 
 
-def test_excel_floor13_golden_outputs(tmp_path, monkeypatch):
+def test_excel_floor14_golden_outputs(tmp_path, monkeypatch):
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     inputs = json.loads(INPUT_PATH.read_text(encoding="utf-8"))
     monkeypatch.chdir(tmp_path)

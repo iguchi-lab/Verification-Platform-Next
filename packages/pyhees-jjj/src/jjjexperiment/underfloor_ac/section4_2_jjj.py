@@ -143,6 +143,30 @@ def calc_delta_L_room2uf_i(
     return delta_L_uf2room  # TODO: i=1~5でトリムするか検討
 
 
+def calc_L_star_H_with_underfloor(
+        L_H_i,
+        Q_trs_prt_i,
+        delta_L_floor_i,
+    ):
+    """Return formula (8) after removing the original insulated-floor loss."""
+    return np.maximum(L_H_i + Q_trs_prt_i - delta_L_floor_i, 0.0)
+
+
+def calc_L_star_CS_with_underfloor(
+        L_CS_i,
+        Q_trs_prt_i,
+        delta_L_floor_i,
+    ):
+    """Return the physically signed cooling form of formula (9).
+
+    ``Q_trs_prt_i`` and ``delta_L_floor_i`` are signed heat flows from the
+    room toward the non-room and outdoor sides, respectively.  Cooling load
+    is a positive heat-gain magnitude, so the partition term is subtracted
+    and the removed insulated-floor term is added.
+    """
+    return np.maximum(L_CS_i - Q_trs_prt_i + delta_L_floor_i, 0.0)
+
+
 def calc_delta_L_uf2outdoor(
         phi: float,
         L_uf: float,

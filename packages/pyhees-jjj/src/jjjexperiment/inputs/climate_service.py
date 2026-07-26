@@ -68,9 +68,6 @@ class ClimateService:
         else:
             return algo.get_phi(self.region, Q)
 
-    # NOTE: algo.get_U_s() =定数 と使い分ける
-    # こちらはユーザー入力
-    # TODO: テストコードでは使用できているが実装コードでは利用できていない
     def get_U_s_vert(self, Q: float) -> float:
         """
         暖冷房負荷計算時に想定した床の熱貫流率 [W/m2*K]
@@ -79,10 +76,11 @@ class ClimateService:
         Returns:
             U_s_vert: 暖冷房負荷計算時に想定した床の熱貫流率 [W/m2*K]
         """
-        if (ufac := self._new_ufac) and ufac.explicit_constants:
-            return self._new_ufac.U_s_vert
-        else:
-            return algo.get_U_s_vert(self.region, Q)
+        # 付録Eの U_s,vert は、元の負荷計算で想定した断熱床の値であり、
+        # Qから式(4)で求める。入力項目 U_s_vert は歴史的な名称だが、
+        # 実際には床下から室への貫流に使う U_s=2.223 を表しているため、
+        # ここへ流用してはならない。
+        return algo.get_U_s_vert(self.region, Q)
 
     def get_h_ex_d_t(self) -> Array8760:
         """

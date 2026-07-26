@@ -1,4 +1,4 @@
-"""Extract the reviewable underfloor Excel golden series from floor13.
+"""Extract the reviewable underfloor Excel golden series from floor14.
 
 The source workbook is intentionally not committed.  This script reads cached
 OOXML values without opening Excel and writes the compact numeric fixture used
@@ -23,7 +23,7 @@ PKG_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 NS = {"m": MAIN_NS, "r": REL_NS}
 CELL_RE = re.compile(r"([A-Z]+)(\d+)")
 EXPECTED_SHA256 = (
-    "10c01d73ab489ee387fa4ff5e42fa475cec162d0e3e2540c119cc1bae00d4e77"
+    "e36bc62f5ce46c358e957e85fe9a01f264f0693952840851fab79a1c0e0d385c"
 )
 
 SERIES = {

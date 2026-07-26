@@ -3,7 +3,6 @@ import pytest
 import numpy as np
 
 import pyhees.section3_1_d as uf
-import pyhees.section3_2 as gihi
 import pyhees.section4_1 as HC
 import pyhees.section4_2 as dc
 # JJJ
@@ -17,12 +16,99 @@ from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.environment_service import EnvironmentService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
 
-from jjjexperiment.underfloor_ac.section4_2_jjj import get_A_s_ufac_i, calc_delta_L_room2uf_i
+from jjjexperiment.underfloor_ac.section4_2_jjj import (
+    calc_L_star_CS_with_underfloor,
+    calc_L_star_H_with_underfloor,
+    calc_delta_L_room2uf_i,
+    get_A_s_ufac_i,
+)
 
 from test_utils.utils import load_input_yaml
 
 # デバッグ用ロガー
-from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res
+from jjjexperiment.logger import LimitedLoggerAdapter as _logger
+
+
+def test_formula_8_9_use_physical_heat_flow_signs():
+    """The presentation's signs remove the original insulated-floor path."""
+    heating = calc_L_star_H_with_underfloor(
+        np.array([5.0]),
+        np.array([1.0]),
+        np.array([2.0]),
+    )
+    cooling = calc_L_star_CS_with_underfloor(
+        np.array([5.0]),
+        np.array([-1.0]),
+        np.array([-2.0]),
+    )
+
+    np.testing.assert_array_equal(heating, np.array([4.0]))
+    np.testing.assert_array_equal(cooling, np.array([4.0]))
+
+
+def test_january_first_one_oclock_matches_twelve_room_reference_loads():
+    """Keep the mixed whole-house simulation loads used by floor allocation."""
+    yaml_fullpath = os.path.join(os.path.dirname(__file__), "test_input.yaml")
+    injector = create_injector_from_json(load_input_yaml(yaml_fullpath))
+    house = injector.get(HouseInfo)
+    skin = injector.get(OuterSkin)
+    environment = EnvironmentService(house, skin)
+    spec_MR, spec_OR = HC.get_virtual_heating_devices(
+        house.region,
+        None,
+        None,
+    )
+    mode_MR, mode_OR = HC.calc_heating_mode(
+        house.region,
+        H_MR=spec_MR,
+        H_OR=spec_OR,
+    )
+
+    actual, _, _ = HC.calc_heating_load(
+        region=house.region,
+        sol_region=house.sol_region,
+        A_A=house.A_A,
+        A_MR=house.A_MR,
+        A_OR=house.A_OR,
+        Q=environment.get_Q(),
+        mu_H=environment.get_mu_H(),
+        mu_C=environment.get_mu_C(),
+        NV_MR=0,
+        NV_OR=0,
+        TS=skin.TS,
+        r_A_ufvnt=None,
+        HEX=None,
+        underfloor_insulation=True,
+        mode_H="住戸全体を連続的に暖房する方式",
+        mode_C="住戸全体を連続的に冷房する方式",
+        spec_MR=spec_MR,
+        spec_OR=spec_OR,
+        mode_MR=mode_MR,
+        mode_OR=mode_OR,
+        SHC=skin.SHC,
+    )
+
+    expected = np.array([
+        5.957166109,
+        2.492570330,
+        1.538117909,
+        1.473408175,
+        1.899000840,
+        0.517248064,
+        0.179072097,
+        0.358029708,
+        1.476782336,
+        1.075627711,
+        1.156551516,
+        0.410858239,
+    ])
+    np.testing.assert_allclose(
+        actual[:, 0],
+        expected,
+        rtol=0.0,
+        atol=5e-10,
+    )
+
 
 @pytest.mark.xfail(reason="260323_井口先生よりロジック修正中のため")
 class Test_床下空調時_式8補正:

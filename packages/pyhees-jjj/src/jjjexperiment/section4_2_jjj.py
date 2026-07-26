@@ -1622,11 +1622,45 @@ def _adjust_heat_source_output_for_room_to_underfloor_transfer(inputs: _RoomToUn
 
     return _RoomToUnderfloorTransferResult(Q_hat_hs_d_t, U_s_input, A_s_ufac_i, r_A_s_ufac)
 
+
+_FIRST_FLOOR_LOAD_ZONE_INDICES = np.array([0, 1, 5, 6, 7, 8])
+
+
+def _get_first_floor_load_ratio_d_t(ac_setting, load):
+    """Return the 1F share of the twelve-zone whole-house reference load.
+
+    The ducted system supplies conditioned zones 1--5.  Formula (40), however,
+    allocates the whole-house heat-source output using reference loads from a
+    separate simulation in which all twelve rooms are held at their setpoint.
+    The first-floor rooms are zones 1, 2, 6, 7, 8 and 9.
+    """
+    match ac_setting:
+        case HeatingAcSetting():
+            load_d_t_i = np.asarray(load.L_H_d_t_i, dtype=float)
+        case CoolingAcSetting():
+            load_d_t_i = np.asarray(load.L_CS_d_t_i, dtype=float)
+        case _:
+            raise ValueError
+
+    first_floor_load_d_t = np.sum(
+        load_d_t_i[_FIRST_FLOOR_LOAD_ZONE_INDICES, :],
+        axis=0,
+    )
+    whole_house_load_d_t = np.sum(load_d_t_i, axis=0)
+    return np.divide(
+        first_floor_load_d_t,
+        whole_house_load_d_t,
+        out=np.zeros_like(whole_house_load_d_t),
+        where=whole_house_load_d_t > 0,
+    )
+
+
 def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(inputs: _UnderfloorOutdoorTransferInputs):
     """Apply the outdoor part of formula (40)-2nd in its original order."""
     ac_setting = inputs.ac_setting
     house = inputs.house
     skin = inputs.skin
+    load = inputs.load
     climate = inputs.climate
     A_s_ufac_i = inputs.A_s_ufac_i
     U_s_input = inputs.U_s_input
@@ -1636,14 +1670,22 @@ def _adjust_heat_source_output_for_underfloor_to_outdoor_transfer(inputs: _Under
     Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
     Q_hat_hs_H_signed_d_t = inputs.Q_hat_hs_H_signed_d_t
     Q_hat_hs_CS_signed_d_t = inputs.Q_hat_hs_CS_signed_d_t
-    # Excel床下13は、式(40)の0下限前の全館出力を
-    # 床下空調対象面積46.37/居室面積81.15で按分する。
-    floor_area_ratio = np.sum(A_s_ufac_i[:2]) / (house.A_MR + house.A_OR)
+    # 空調対象ゾーンは1～5だが、式(40)の階別按分には、全室を設定温度とした
+    # 温熱シミュレーションの12区画負荷を使う。1階は1,2,6,7,8,9、
+    # 2階は3,4,5,10,11,12であり、説明資料の「負荷按分」に対応する。
+    first_floor_load_ratio_d_t = _get_first_floor_load_ratio_d_t(
+        ac_setting,
+        load,
+    )
     match ac_setting:
         case HeatingAcSetting():
-            L_d_t_flr1st = floor_area_ratio * Q_hat_hs_H_signed_d_t
+            L_d_t_flr1st = (
+                first_floor_load_ratio_d_t * Q_hat_hs_H_signed_d_t
+            )
         case CoolingAcSetting():
-            L_d_t_flr1st = floor_area_ratio * Q_hat_hs_CS_signed_d_t
+            L_d_t_flr1st = (
+                first_floor_load_ratio_d_t * Q_hat_hs_CS_signed_d_t
+            )
         case _:
             raise ValueError
 
@@ -2526,17 +2568,15 @@ def _adjust_new_underfloor_balanced_loads(inputs: _NewUnderfloorBalancedLoadInpu
 
     L_star_H_d_t_i.fill(0.0)
     L_star_CS_d_t_i.fill(0.0)
-    L_star_H_d_t_i[Hf] = np.maximum(
-        load.L_H_d_t_i[:5, :][Hf]
-        + Q_star_trs_prt_d_t_i[Hf]
-        - delta_L_uf2room_d_t_i[:5, :][Hf],
-        0.0,
+    L_star_H_d_t_i[Hf] = jjj_ufac_dc.calc_L_star_H_with_underfloor(
+        load.L_H_d_t_i[:5, :][Hf],
+        Q_star_trs_prt_d_t_i[Hf],
+        delta_L_uf2room_d_t_i[:5, :][Hf],
     )
-    L_star_CS_d_t_i[Cf] = np.maximum(
-        load.L_CS_d_t_i[:5, :][Cf]
-        - Q_star_trs_prt_d_t_i[Cf]
-        - delta_L_uf2room_d_t_i[:5, :][Cf],
-        0.0,
+    L_star_CS_d_t_i[Cf] = jjj_ufac_dc.calc_L_star_CS_with_underfloor(
+        load.L_CS_d_t_i[:5, :][Cf],
+        Q_star_trs_prt_d_t_i[Cf],
+        delta_L_uf2room_d_t_i[:5, :][Cf],
     )
 
     new_ufac_df.update_df({

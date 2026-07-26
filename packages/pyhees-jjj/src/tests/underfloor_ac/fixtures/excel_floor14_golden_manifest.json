@@ -1,12 +1,12 @@
 {
   "workbook": {
-    "name": "第4章第2節ダクト式全館空調_床下13.xlsm",
-    "sha256": "10c01d73ab489ee387fa4ff5e42fa475cec162d0e3e2540c119cc1bae00d4e77",
+    "name": "第4章第2節ダクト式全館空調_床下14.xlsm",
+    "sha256": "e36bc62f5ce46c358e957e85fe9a01f264f0693952840851fab79a1c0e0d385c",
     "value_source": "cached OOXML values"
   },
   "input": {
-    "file": "excel_floor13_input.json",
-    "sha256": "cc9597c9b04b569f48938fbca5a007e6ec146d9962b9bed7cffa379877052661",
+    "file": "excel_floor14_input.json",
+    "sha256": "7383405ab3cab6b958a98cefd7199fd7101518e3b9659f96251a39cd8721bee9",
     "region": 6,
     "A_A": 120.08,
     "A_MR": 29.81,
@@ -16,14 +16,14 @@
     "Q": 2.6
   },
   "golden": {
-    "file": "excel_floor13_golden.npz",
-    "sha256": "945ec20691b545ff193b39233680cca34400cb83b1caf6151dd05920a821fa81",
+    "file": "excel_floor14_golden.npz",
+    "sha256": "4faf6e9c806a8b7418fec0264d586623f569bb16fa88bdc3b13c4e38c8d2c5a3",
     "hours": 8760,
     "series_count_including_season": 22
   },
   "annual_MJ_per_year": {
-    "heating": 43168.736537242876,
-    "cooling": 18972.628959846763,
+    "heating": 43035.606930629809,
+    "cooling": 18278.196871579697,
     "comparison_absolute_tolerance": 0.0005,
     "excel_display_format": "0\"MJ\""
   },
