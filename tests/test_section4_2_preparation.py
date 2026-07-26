@@ -1914,7 +1914,7 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
     assert len(calc_calls) == hours
     assert calc_calls[0] == (0.8, area, 0.0)
     assert calc_calls[-1] == (0.8, area, float(hours - 1))
-    assert result_cs[0, 1] == 3.0
+    assert result_cs[0, 1] == 7.0
     assert result_h[1, 2] == 3.0
     assert np.count_nonzero(result_cs) == 1
     assert np.count_nonzero(result_h) == 1

@@ -16,12 +16,34 @@ from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.environment_service import EnvironmentService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
 
-from jjjexperiment.underfloor_ac.section4_2_jjj import get_A_s_ufac_i, calc_delta_L_room2uf_i
+from jjjexperiment.underfloor_ac.section4_2_jjj import (
+    calc_L_star_CS_with_underfloor,
+    calc_L_star_H_with_underfloor,
+    calc_delta_L_room2uf_i,
+    get_A_s_ufac_i,
+)
 
 from test_utils.utils import load_input_yaml
 
 # デバッグ用ロガー
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger
+
+
+def test_formula_8_9_use_physical_heat_flow_signs():
+    """The presentation's signs remove the original insulated-floor path."""
+    heating = calc_L_star_H_with_underfloor(
+        np.array([5.0]),
+        np.array([1.0]),
+        np.array([2.0]),
+    )
+    cooling = calc_L_star_CS_with_underfloor(
+        np.array([5.0]),
+        np.array([-1.0]),
+        np.array([-2.0]),
+    )
+
+    np.testing.assert_array_equal(heating, np.array([4.0]))
+    np.testing.assert_array_equal(cooling, np.array([4.0]))
 
 
 def test_january_first_one_oclock_matches_twelve_room_reference_loads():

@@ -2568,17 +2568,15 @@ def _adjust_new_underfloor_balanced_loads(inputs: _NewUnderfloorBalancedLoadInpu
 
     L_star_H_d_t_i.fill(0.0)
     L_star_CS_d_t_i.fill(0.0)
-    L_star_H_d_t_i[Hf] = np.maximum(
-        load.L_H_d_t_i[:5, :][Hf]
-        + Q_star_trs_prt_d_t_i[Hf]
-        - delta_L_uf2room_d_t_i[:5, :][Hf],
-        0.0,
+    L_star_H_d_t_i[Hf] = jjj_ufac_dc.calc_L_star_H_with_underfloor(
+        load.L_H_d_t_i[:5, :][Hf],
+        Q_star_trs_prt_d_t_i[Hf],
+        delta_L_uf2room_d_t_i[:5, :][Hf],
     )
-    L_star_CS_d_t_i[Cf] = np.maximum(
-        load.L_CS_d_t_i[:5, :][Cf]
-        - Q_star_trs_prt_d_t_i[Cf]
-        - delta_L_uf2room_d_t_i[:5, :][Cf],
-        0.0,
+    L_star_CS_d_t_i[Cf] = jjj_ufac_dc.calc_L_star_CS_with_underfloor(
+        load.L_CS_d_t_i[:5, :][Cf],
+        Q_star_trs_prt_d_t_i[Cf],
+        delta_L_uf2room_d_t_i[:5, :][Cf],
     )
 
     new_ufac_df.update_df({

@@ -492,19 +492,17 @@ def _mode_floor_temperature(
     )[:5, 0]
     if inputs.is_heating:
         active = inputs.l_h_d_t_i[:5, hour] > 0
-        l_star_h_i[active] = np.maximum(
-            inputs.l_h_d_t_i[:5, hour][active]
-            + q_partition_i[active]
-            - floor_transfer_i[active],
-            0.0,
+        l_star_h_i[active] = floor_formulas.calc_L_star_H_with_underfloor(
+            inputs.l_h_d_t_i[:5, hour][active],
+            q_partition_i[active],
+            floor_transfer_i[active],
         )
     else:
         active = inputs.l_cs_d_t_i[:5, hour] > 0
-        l_star_cs_i[active] = np.maximum(
-            inputs.l_cs_d_t_i[:5, hour][active]
-            - q_partition_i[active]
-            - floor_transfer_i[active],
-            0.0,
+        l_star_cs_i[active] = floor_formulas.calc_L_star_CS_with_underfloor(
+            inputs.l_cs_d_t_i[:5, hour][active],
+            q_partition_i[active],
+            floor_transfer_i[active],
         )
 
     contact = np.array([appendix_e.get_r_A_uf_i(i) for i in (1, 2)])
