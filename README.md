@@ -115,6 +115,7 @@ docker run --rm -p 8080:8080 verification-platform-next
 - [リファクタリング方針と引き継ぎ](docs/REFACTORING.md)
 - [リリースと成果物の版管理](docs/RELEASING.md)
 - [変更履歴](CHANGELOG.md)
+- [床下関連設定の入力ガイド](docs/underfloor_ac_input_guide.md)
 - [床下空調計算の7つの変更点](docs/underfloor_ac_seven_changes.md)
 - [計算エンジン](packages/pyhees-jjj/README.md)
 

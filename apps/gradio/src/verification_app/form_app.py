@@ -16,6 +16,12 @@ from .form_model import FormField, FormModel, load_form_model
 from .graphs import GRAPH_LABELS
 from .services import CalculationResult, CalculationService
 
+_UNDERFLOOR_INPUT_GUIDE_URL = (
+    "https://github.com/iguchi-lab/Verification-Platform-Next/"
+    "blob/main/docs/underfloor_ac_input_guide.md"
+)
+
+
 def build_app(
     service: CalculationService | None = None,
     model: FormModel | None = None,
@@ -38,6 +44,12 @@ def build_app(
                 open=section_index == 0,
                 key=f"section:{section_index}",
             ):
+                if section.name == "⑥ その他":
+                    gr.Markdown(
+                        "📘 床下関係の方式選択、推奨値、入力例は"
+                        f"[床下関連設定の入力ガイド]({_UNDERFLOOR_INPUT_GUIDE_URL})"
+                        "を参照してください。"
+                    )
                 for group_index, group in enumerate(section.groups):
                     gr.Markdown(f"### {group.name}")
                     for row_index, row_fields in enumerate(_chunks(group.fields, 3)):
