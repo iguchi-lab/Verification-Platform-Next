@@ -4,6 +4,7 @@ import pytest
 
 gradio = pytest.importorskip("gradio")
 
+from verification_app import form_app  # noqa: E402
 from verification_app.form_app import build_app  # noqa: E402
 from verification_app.services import CalculationService  # noqa: E402
 
@@ -41,3 +42,69 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(graph_generation["outputs"]) == 7
     assert len(heating_visibility["outputs"]) == 72
     assert len(cooling_visibility["outputs"]) == 79
+
+
+class _LaunchRecorder:
+    def __init__(self) -> None:
+        self.queue_options: dict[str, object] | None = None
+        self.launch_options: dict[str, object] | None = None
+
+    def queue(self, **options: object) -> "_LaunchRecorder":
+        self.queue_options = options
+        return self
+
+    def launch(self, **options: object) -> None:
+        self.launch_options = options
+
+
+def test_colab_launch_uses_publicly_reachable_server_and_debugging(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorder = _LaunchRecorder()
+    monkeypatch.setattr(form_app, "build_app", lambda: recorder)
+    monkeypatch.setenv("COLAB_RELEASE_TAG", "release")
+    for name in (
+        "GRADIO_SHARE",
+        "GRADIO_SERVER_NAME",
+        "GRADIO_SERVER_PORT",
+        "GRADIO_DEBUG",
+        "GRADIO_SHOW_ERROR",
+        "GRADIO_STATUS_UPDATE_RATE",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    form_app.main()
+
+    assert recorder.queue_options == {"status_update_rate": 1.0}
+    assert recorder.launch_options == {
+        "share": True,
+        "server_name": "0.0.0.0",
+        "server_port": 7860,
+        "debug": True,
+        "show_error": True,
+    }
+
+
+def test_launch_environment_overrides_are_respected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorder = _LaunchRecorder()
+    monkeypatch.setattr(form_app, "build_app", lambda: recorder)
+    monkeypatch.delenv("COLAB_RELEASE_TAG", raising=False)
+    monkeypatch.setenv("GRADIO_SHARE", "yes")
+    monkeypatch.setenv("GRADIO_SERVER_NAME", "localhost")
+    monkeypatch.setenv("GRADIO_SERVER_PORT", "7861")
+    monkeypatch.setenv("GRADIO_DEBUG", "on")
+    monkeypatch.setenv("GRADIO_SHOW_ERROR", "0")
+    monkeypatch.setenv("GRADIO_STATUS_UPDATE_RATE", "2.5")
+
+    form_app.main()
+
+    assert recorder.queue_options == {"status_update_rate": 2.5}
+    assert recorder.launch_options == {
+        "share": True,
+        "server_name": "localhost",
+        "server_port": 7861,
+        "debug": True,
+        "show_error": False,
+    }
