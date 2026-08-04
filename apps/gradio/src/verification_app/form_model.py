@@ -55,11 +55,35 @@ class FormModel:
         }
 
     def visibility(self, values: Mapping[str, Any]) -> dict[str, bool]:
-        return {field.key: field.is_enabled(values) for field in self.schema.fields}
+        fields_by_key = {field.key: field for field in self.schema.fields}
+        resolved: dict[str, bool] = {}
+        resolving: set[str] = set()
+
+        def is_visible(field: FieldDefinition) -> bool:
+            if field.key in resolved:
+                return resolved[field.key]
+            if field.key in resolving:
+                raise ValueError(f"Circular visibility dependency: {field.key}")
+            resolving.add(field.key)
+            condition = field.enabled_when
+            if condition is None:
+                visible = True
+            else:
+                control = fields_by_key.get(".".join(condition.path))
+                visible = (
+                    control is not None
+                    and is_visible(control)
+                    and condition.matches(values)
+                )
+            resolving.remove(field.key)
+            resolved[field.key] = visible
+            return visible
+
+        return {field.key: is_visible(field) for field in self.schema.fields}
 
 
 def load_form_model(
-    version: str = "260724",
+    version: str = "260804",
     values: Mapping[str, Any] | None = None,
 ) -> FormModel:
     schema = load_input_schema(version)

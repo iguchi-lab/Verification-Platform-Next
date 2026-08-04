@@ -9,7 +9,7 @@ _TYPE_CONTROLS = {
 }
 
 
-def load_input_schema(version: str = "260724") -> InputSchema:
+def load_input_schema(version: str = "260804") -> InputSchema:
     inventory = load_legacy_inventory(version)
     return InputSchema.from_fields(
         _field_definition(field, inventory)
@@ -30,6 +30,7 @@ def _field_definition(
         group=field.group,
         choices=field.choices,
         enabled_when=_enabled_condition(field.enabled_when, inventory),
+        description=field.description,
     )
 
 
@@ -41,8 +42,17 @@ def _enabled_condition(
         return None
     control_id = _TYPE_CONTROLS.get(condition.path)
     if control_id is None:
-        raise ValueError(
-            f"Unsupported legacy enabled condition path: {'.'.join(condition.path)}"
+        if len(condition.path) != 1:
+            raise ValueError(
+                "Unsupported legacy enabled condition path: "
+                f"{'.'.join(condition.path)}"
+            )
+        control_id = condition.path[0]
+        if not any(field.id == control_id for field in inventory.fields):
+            raise ValueError(f"Unknown enabled condition control: {control_id}")
+        return Condition(
+            path=(control_id,),
+            allowed_values=condition.allowed_values,
         )
     control = next(field for field in inventory.fields if field.id == control_id)
     try:

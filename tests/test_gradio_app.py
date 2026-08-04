@@ -30,6 +30,9 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         calculation_started,
         calculation,
         graph_generation,
+        ventilation_visibility,
+        new_underfloor_visibility,
+        underfloor_constants_visibility,
         heating_visibility,
         cooling_visibility,
     ) = config["dependencies"]
@@ -40,6 +43,9 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(calculation["outputs"]) == 6
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
+    assert len(ventilation_visibility["outputs"]) == 2
+    assert len(new_underfloor_visibility["outputs"]) == 5
+    assert len(underfloor_constants_visibility["outputs"]) == 3
     assert len(heating_visibility["outputs"]) == 72
     assert len(cooling_visibility["outputs"]) == 79
 

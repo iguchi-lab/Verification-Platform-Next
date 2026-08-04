@@ -22,6 +22,7 @@ class LegacyFieldDefinition:
     default: Any
     choices: tuple[Any, ...]
     enabled_when: Condition | None = None
+    description: str = ""
 
 
 @dataclass(frozen=True)
@@ -64,7 +65,14 @@ def _condition_from_dict(value: dict[str, Any] | None) -> Condition | None:
     )
 
 
-def load_legacy_inventory(version: str = "260724") -> LegacyInputInventory:
+def _field_override_from_dict(value: dict[str, Any]) -> dict[str, Any]:
+    override = dict(value)
+    if "enabled_when" in override:
+        override["enabled_when"] = _condition_from_dict(override["enabled_when"])
+    return override
+
+
+def load_legacy_inventory(version: str = "260804") -> LegacyInputInventory:
     file_name = f"input_fields_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:
@@ -73,7 +81,10 @@ def load_legacy_inventory(version: str = "260724") -> LegacyInputInventory:
     if "base_version" in payload:
         base = load_legacy_inventory(payload["base_version"])
         removed_ids = frozenset(payload.get("remove_field_ids", ()))
-        overrides = payload.get("field_overrides", {})
+        overrides = {
+            field_id: _field_override_from_dict(value)
+            for field_id, value in payload.get("field_overrides", {}).items()
+        }
         fields = tuple(
             replace(field, **overrides.get(field.id, {}))
             for field in base.fields
@@ -93,6 +104,7 @@ def load_legacy_inventory(version: str = "260724") -> LegacyInputInventory:
                 default=item["default"],
                 choices=tuple(item["choices"] or ()),
                 enabled_when=_condition_from_dict(item.get("enabled_when")),
+                description=item.get("description", ""),
             )
             for item in payload["fields"]
         )

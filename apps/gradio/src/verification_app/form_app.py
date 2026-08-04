@@ -16,9 +16,6 @@ from .form_model import FormField, FormModel, load_form_model
 from .graphs import GRAPH_LABELS
 from .services import CalculationResult, CalculationService
 
-_TYPE_CONTROLS = ("H_A_type__0", "C_A_type__0")
-
-
 def build_app(
     service: CalculationService | None = None,
     model: FormModel | None = None,
@@ -112,34 +109,60 @@ def build_app(
             show_progress="full",
         )
 
-        for control_key in _TYPE_CONTROLS:
-            dependent_fields = tuple(
-                field
-                for field in form.schema.fields
-                if field.enabled_when is not None and field.enabled_when.path == (control_key,)
+        conditional_fields = tuple(
+            field for field in form.schema.fields if field.enabled_when is not None
+        )
+        control_keys = tuple(dict.fromkeys(
+            field.enabled_when.path[0] for field in conditional_fields
+        ))
+        control_inputs = [components[key] for key in control_keys]
+
+        for control_key in control_keys:
+            affected_fields = _visibility_descendants(
+                form.schema.fields,
+                control_key,
             )
-            if not dependent_fields:
-                continue
 
             def update_visibility(
-                selected: Any,
-                *,
-                key: str = control_key,
-                fields: tuple[FieldDefinition, ...] = dependent_fields,
+                *selected: Any,
+                fields: tuple[FieldDefinition, ...] = affected_fields,
             ) -> tuple[Any, ...]:
                 values = form.schema.defaults()
-                values[key] = selected
+                values.update(zip(control_keys, selected, strict=True))
                 visibility = form.visibility(values)
-                return tuple(gr.Column(visible=visibility[field.key]) for field in fields)
+                return tuple(
+                    gr.Column(visible=visibility[field.key])
+                    for field in fields
+                )
 
             components[control_key].change(
                 update_visibility,
-                inputs=components[control_key],
-                outputs=[containers[field.key] for field in dependent_fields],
+                inputs=control_inputs,
+                outputs=[containers[field.key] for field in affected_fields],
                 queue=False,
                 api_visibility="private",
             )
     return demo
+
+
+def _visibility_descendants(
+    fields: tuple[FieldDefinition, ...],
+    control_key: str,
+) -> tuple[FieldDefinition, ...]:
+    controls = {control_key}
+    descendants: list[FieldDefinition] = []
+    while True:
+        added = tuple(
+            field
+            for field in fields
+            if field not in descendants
+            and field.enabled_when is not None
+            and field.enabled_when.path[0] in controls
+        )
+        if not added:
+            return tuple(descendants)
+        descendants.extend(added)
+        controls.update(field.key for field in added)
 
 
 def _input_component(field: FieldDefinition) -> Any:

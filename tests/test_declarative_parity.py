@@ -22,10 +22,14 @@ def test_every_boolean_and_select_alternative_matches_legacy() -> None:
         for candidate in _alternatives(field.kind, field.default, field.choices):
             values = default_ui_values(inventory)
             if field.enabled_when is not None:
-                control_id = _TYPE_FIELDS[field.enabled_when.path]
-                control = fields[control_id]
-                selected_type = int(field.enabled_when.allowed_values[0])
-                values[control_id] = control.choices[selected_type - 1]
+                control_id = _TYPE_FIELDS.get(field.enabled_when.path)
+                if control_id is None:
+                    (control_id,) = field.enabled_when.path
+                    values[control_id] = field.enabled_when.allowed_values[0]
+                else:
+                    control = fields[control_id]
+                    selected_type = int(field.enabled_when.allowed_values[0])
+                    values[control_id] = control.choices[selected_type - 1]
             values[field.id] = candidate
 
             assert build_input_data(values) == build_legacy_input_data(values), (

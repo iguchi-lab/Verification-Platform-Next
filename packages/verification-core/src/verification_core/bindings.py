@@ -108,7 +108,7 @@ def _binding_from_dict(item: Mapping[str, Any]) -> InputBinding:
     )
 
 
-def load_input_bindings(version: str = "260724") -> InputBindingCatalog:
+def load_input_bindings(version: str = "260804") -> InputBindingCatalog:
     file_name = f"input_bindings_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:
