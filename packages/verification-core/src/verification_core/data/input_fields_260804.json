@@ -1,0 +1,87 @@
+{
+  "version": "260804",
+  "base_version": "260724",
+  "field_count": 221,
+  "field_overrides": {
+    "underfloor_ventilation__0": {
+      "group": "床下換気（建研方式）",
+      "label": "床下空間を経由して外気を導入する換気方式を評価する",
+      "description": "建研付録D系の床下換気による負荷補正です。新床下空調とは別の計算です。"
+    },
+    "r_A_ufvnt__0": {
+      "group": "床下換気（建研方式）",
+      "label": "外気が経由する床下の面積割合 [%]",
+      "description": "床下換気を評価する場合だけ使用します。新床下空調の床下利用面積ではありません。",
+      "enabled_when": {
+        "path": ["underfloor_ventilation__0"],
+        "allowed_values": [true]
+      }
+    },
+    "underfloor_insulation__0": {
+      "group": "床下換気（建研方式）",
+      "label": "床下空間が断熱区画内にある",
+      "description": "床下換気の負荷計算に使用します。新床下空調では断熱区画内に固定されます。",
+      "enabled_when": {
+        "path": ["underfloor_ventilation__0"],
+        "allowed_values": [true]
+      }
+    },
+    "hs_CAV__0": {
+      "group": "全館空調の風量制御",
+      "label": "熱源機の全体風量を設計風量に固定する",
+      "description": "床下専用の設定ではありません。ダクト式セントラル空調機全体の風量制御に影響します。"
+    },
+    "change_underfloor_temperature__0": {
+      "group": "新床下空調（Verification Platform）",
+      "label": "新床下空調を使用する",
+      "description": "Excel床下14に合わせたPass 1・Pass 2・地盤逐時計算を使用します。床下利用面積は100%、床下断熱は断熱区画内に固定されます。"
+    },
+    "R_g__0": {
+      "group": "新床下空調（Verification Platform）",
+      "description": "地盤応答と床下から地盤への熱移動に使用します。定数上書きのチェックとは独立した入力です。",
+      "enabled_when": {
+        "path": ["change_underfloor_temperature__0"],
+        "allowed_values": [true]
+      }
+    },
+    "input_ufac_consts__0": {
+      "group": "新床下空調（Verification Platform）",
+      "label": "新床下空調の補助定数を手動設定する",
+      "description": "現在の逐次計算で手入力値が反映されるのは、基礎側面の線熱貫流率φです。",
+      "enabled_when": {
+        "path": ["change_underfloor_temperature__0"],
+        "allowed_values": [true]
+      }
+    },
+    "Theta_g_avg__0": {
+      "group": "新床下空調（Verification Platform）",
+      "label": "地盤内の不易層温度 [℃]（現行逐次計算では自動算定）",
+      "description": "入力値は互換性のため保持しています。現行の逐次ソルバーは外気温の年間平均を使用します。",
+      "enabled_when": {
+        "path": ["input_ufac_consts__0"],
+        "allowed_values": [true]
+      }
+    },
+    "U_s_vert__0": {
+      "group": "新床下空調（Verification Platform）",
+      "label": "床板の熱貫流率 [W/(m²・K)]（現行逐次計算では自動設定）",
+      "description": "入力値は互換性のため保持しています。負荷補正用は地域・Q値から算定し、床下から室への熱移動用は2.223を使用します。",
+      "enabled_when": {
+        "path": ["input_ufac_consts__0"],
+        "allowed_values": [true]
+      }
+    },
+    "phi__0": {
+      "group": "新床下空調（Verification Platform）",
+      "label": "基礎（床チャンバー側面）の線熱貫流率 φ [W/(m・K)]",
+      "description": "床下から外気への基礎側面熱損失に使用します。補助定数を手動設定する場合は、この値が計算へ反映されます。",
+      "enabled_when": {
+        "path": ["input_ufac_consts__0"],
+        "allowed_values": [true]
+      }
+    },
+    "carry_over_heat__0": {
+      "description": "新床下空調とは同時に使用できません。両方を有効にすると計算開始時にエラーになります。"
+    }
+  }
+}

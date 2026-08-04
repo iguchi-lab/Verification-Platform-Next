@@ -25,6 +25,43 @@ def test_form_model_updates_model_specific_visibility() -> None:
     assert model.visibility(values)["a4__0"]
 
 
+def test_form_model_updates_nested_underfloor_visibility() -> None:
+    model = load_form_model()
+    values = model.schema.defaults()
+
+    initial = model.visibility(values)
+    assert not initial["r_A_ufvnt__0"]
+    assert not initial["R_g__0"]
+    assert not initial["input_ufac_consts__0"]
+    assert not initial["Theta_g_avg__0"]
+    assert not initial["U_s_vert__0"]
+    assert not initial["phi__0"]
+
+    values["underfloor_ventilation__0"] = True
+    ventilation = model.visibility(values)
+    assert ventilation["r_A_ufvnt__0"]
+    assert ventilation["underfloor_insulation__0"]
+
+    values["change_underfloor_temperature__0"] = True
+    new_underfloor = model.visibility(values)
+    assert new_underfloor["R_g__0"]
+    assert new_underfloor["input_ufac_consts__0"]
+    assert not new_underfloor["Theta_g_avg__0"]
+
+    values["input_ufac_consts__0"] = True
+    constants = model.visibility(values)
+    assert constants["Theta_g_avg__0"]
+    assert constants["U_s_vert__0"]
+    assert constants["phi__0"]
+
+    values["change_underfloor_temperature__0"] = False
+    hidden_parent = model.visibility(values)
+    assert not hidden_parent["input_ufac_consts__0"]
+    assert not hidden_parent["Theta_g_avg__0"]
+    assert not hidden_parent["U_s_vert__0"]
+    assert not hidden_parent["phi__0"]
+
+
 def test_form_values_are_mapped_by_schema_order() -> None:
     model = load_form_model()
     values = tuple(field.definition.default for field in model.fields)

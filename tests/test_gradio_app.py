@@ -15,6 +15,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     demo = build_app(service=service)
     config = demo.get_config_file()
     component_types = Counter(component["type"] for component in config["components"])
+    markdown_values = tuple(
+        component["props"].get("value", "")
+        for component in config["components"]
+        if component["type"] == "markdown"
+    )
 
     assert gradio.__version__.startswith("6.")
     assert config["title"] == "Verification Platform Next ver.1.0.0"
@@ -25,11 +30,19 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert component_types["textbox"] == 4  # three text inputs and the log output
     assert component_types["plot"] == 5
     assert component_types["gallery"] == 0
+    assert any(
+        "床下関連設定の入力ガイド" in value
+        and "docs/underfloor_ac_input_guide.md" in value
+        for value in markdown_values
+    )
 
     (
         calculation_started,
         calculation,
         graph_generation,
+        ventilation_visibility,
+        new_underfloor_visibility,
+        underfloor_constants_visibility,
         heating_visibility,
         cooling_visibility,
     ) = config["dependencies"]
@@ -40,6 +53,9 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(calculation["outputs"]) == 6
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
+    assert len(ventilation_visibility["outputs"]) == 2
+    assert len(new_underfloor_visibility["outputs"]) == 5
+    assert len(underfloor_constants_visibility["outputs"]) == 3
     assert len(heating_visibility["outputs"]) == 72
     assert len(cooling_visibility["outputs"]) == 79
 
