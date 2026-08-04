@@ -1,0 +1,57 @@
+name: Bug report
+description: 再現可能な不具合または計算結果の相違を報告します
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        公開できない個人情報、APIキー、機密性のある入力データは添付しないでください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 発生した問題を簡潔に説明してください。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 使用した入力条件と操作手順を記載してください。
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する結果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の結果
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: バージョンまたはコミット
+      placeholder: ver.1.0.0 / commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 実行環境
+      description: OS、Python、ブラウザ、Colabなどを記載してください。
+  - type: textarea
+    id: references
+    attributes:
+      label: 根拠資料・補足
+      description: 計算差の場合は式番号、仕様書、比較結果を記載してください。
