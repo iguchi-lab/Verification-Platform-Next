@@ -226,14 +226,30 @@ def _default_service() -> CalculationService:
 
 
 def main() -> None:
-    share = os.environ.get("GRADIO_SHARE", "").lower() in {"1", "true", "yes"}
-    server_name = os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1")
+    running_in_colab = "COLAB_RELEASE_TAG" in os.environ
+    share = _environment_flag("GRADIO_SHARE", default=running_in_colab)
+    server_name = os.environ.get(
+        "GRADIO_SERVER_NAME",
+        "0.0.0.0" if running_in_colab else "127.0.0.1",
+    )
     server_port = int(os.environ.get("GRADIO_SERVER_PORT", "7860"))
-    build_app().queue().launch(
+    debug = _environment_flag("GRADIO_DEBUG", default=running_in_colab)
+    show_error = _environment_flag("GRADIO_SHOW_ERROR", default=True)
+    status_update_rate = float(os.environ.get("GRADIO_STATUS_UPDATE_RATE", "1"))
+    build_app().queue(status_update_rate=status_update_rate).launch(
         share=share,
         server_name=server_name,
         server_port=server_port,
+        debug=debug,
+        show_error=show_error,
     )
+
+
+def _environment_flag(name: str, *, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 if __name__ == "__main__":

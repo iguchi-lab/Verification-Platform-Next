@@ -31,3 +31,17 @@ def test_colab_notebook_links_to_the_main_branch_launcher() -> None:
         "Verification-Platform-Next/blob/main/notebooks/"
         "Verification_Platform_Next.ipynb"
     ) in introduction
+
+
+def test_colab_launcher_exposes_the_server_and_enables_diagnostics() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    notebook_path = repository_root / "notebooks" / "Verification_Platform_Next.ipynb"
+    notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+    launch_source = "".join(notebook["cells"][3]["source"])
+
+    assert "%env GRADIO_SHARE=1" in launch_source
+    assert "%env GRADIO_SERVER_NAME=0.0.0.0" in launch_source
+    assert "%env GRADIO_DEBUG=1" in launch_source
+    assert "%env GRADIO_STATUS_UPDATE_RATE=1" in launch_source
+    assert "import gradio; print('Gradio', gradio.__version__)" in launch_source
+    assert launch_source.rstrip().endswith("!verification-platform")
