@@ -48,6 +48,9 @@ class _LaunchRecorder:
     def __init__(self) -> None:
         self.queue_options: dict[str, object] | None = None
         self.launch_options: dict[str, object] | None = None
+        self.share_url = "https://healthy.gradio.live"
+        self.blocked = False
+        self.closed = False
 
     def queue(self, **options: object) -> "_LaunchRecorder":
         self.queue_options = options
@@ -56,12 +59,19 @@ class _LaunchRecorder:
     def launch(self, **options: object) -> None:
         self.launch_options = options
 
+    def block_thread(self) -> None:
+        self.blocked = True
+
+    def close(self) -> None:
+        self.closed = True
+
 
 def test_colab_launch_uses_publicly_reachable_server_and_debugging(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     recorder = _LaunchRecorder()
     monkeypatch.setattr(form_app, "build_app", lambda: recorder)
+    monkeypatch.setattr(form_app, "_share_url_is_healthy", lambda *_: True)
     monkeypatch.setenv("COLAB_RELEASE_TAG", "release")
     for name in (
         "GRADIO_SHARE",
@@ -80,9 +90,11 @@ def test_colab_launch_uses_publicly_reachable_server_and_debugging(
         "share": True,
         "server_name": "0.0.0.0",
         "server_port": 7860,
-        "debug": True,
+        "debug": False,
         "show_error": True,
+        "prevent_thread_lock": True,
     }
+    assert recorder.blocked
 
 
 def test_launch_environment_overrides_are_respected(
@@ -90,6 +102,7 @@ def test_launch_environment_overrides_are_respected(
 ) -> None:
     recorder = _LaunchRecorder()
     monkeypatch.setattr(form_app, "build_app", lambda: recorder)
+    monkeypatch.setattr(form_app, "_share_url_is_healthy", lambda *_: True)
     monkeypatch.delenv("COLAB_RELEASE_TAG", raising=False)
     monkeypatch.setenv("GRADIO_SHARE", "yes")
     monkeypatch.setenv("GRADIO_SERVER_NAME", "localhost")
@@ -105,6 +118,32 @@ def test_launch_environment_overrides_are_respected(
         "share": True,
         "server_name": "localhost",
         "server_port": 7861,
-        "debug": True,
+        "debug": False,
         "show_error": False,
+        "prevent_thread_lock": True,
     }
+    assert recorder.blocked
+
+
+def test_share_launch_retries_an_unhealthy_tunnel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorders = [_LaunchRecorder(), _LaunchRecorder()]
+    health_results = iter((False, True))
+    monkeypatch.setattr(form_app, "build_app", lambda: recorders.pop(0))
+    monkeypatch.setattr(
+        form_app,
+        "_share_url_is_healthy",
+        lambda *_: next(health_results),
+    )
+    monkeypatch.setattr(form_app.time, "sleep", lambda _: None)
+    monkeypatch.setenv("GRADIO_SHARE", "1")
+    monkeypatch.setenv("GRADIO_SHARE_MAX_ATTEMPTS", "2")
+
+    first, second = recorders
+    form_app.main()
+
+    assert first.closed
+    assert not first.blocked
+    assert second.blocked
+    assert not second.closed

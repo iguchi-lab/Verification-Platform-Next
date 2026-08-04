@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+import time
+from collections.abc import Iterable
 from itertools import islice
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
+from urllib.request import urlopen
 
 import gradio as gr
 from jjjexperiment.release import DISPLAY_VERSION
@@ -236,13 +239,50 @@ def main() -> None:
     debug = _environment_flag("GRADIO_DEBUG", default=running_in_colab)
     show_error = _environment_flag("GRADIO_SHOW_ERROR", default=True)
     status_update_rate = float(os.environ.get("GRADIO_STATUS_UPDATE_RATE", "1"))
-    build_app().queue(status_update_rate=status_update_rate).launch(
-        share=share,
-        server_name=server_name,
-        server_port=server_port,
-        debug=debug,
-        show_error=show_error,
+    launch_options = {
+        "share": share,
+        "server_name": server_name,
+        "server_port": server_port,
+        "debug": debug,
+        "show_error": show_error,
+    }
+    if not share:
+        build_app().queue(status_update_rate=status_update_rate).launch(
+            **launch_options,
+        )
+        return
+
+    max_attempts = int(os.environ.get("GRADIO_SHARE_MAX_ATTEMPTS", "3"))
+    health_timeout = float(os.environ.get("GRADIO_SHARE_HEALTH_TIMEOUT", "15"))
+    share_launch_options = {**launch_options, "debug": False}
+    for attempt in range(1, max_attempts + 1):
+        demo = build_app().queue(status_update_rate=status_update_rate)
+        demo.launch(**share_launch_options, prevent_thread_lock=True)
+        share_url = demo.share_url
+        if share_url and _share_url_is_healthy(share_url, health_timeout):
+            print(f"Gradio Share health check passed: {share_url}")
+            demo.block_thread()
+            return
+
+        print(
+            "Gradio Share health check failed; "
+            f"recreating tunnel ({attempt}/{max_attempts})."
+        )
+        demo.close()
+        if attempt < max_attempts:
+            time.sleep(1)
+
+    raise RuntimeError(
+        f"Gradio Share remained unavailable after {max_attempts} attempts."
     )
+
+
+def _share_url_is_healthy(share_url: str, timeout: float) -> bool:
+    try:
+        with urlopen(f"{share_url.rstrip('/')}/config", timeout=timeout) as response:
+            return response.status == 200
+    except (OSError, TimeoutError):
+        return False
 
 
 def _environment_flag(name: str, *, default: bool) -> bool:
