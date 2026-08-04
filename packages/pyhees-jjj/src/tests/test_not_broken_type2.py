@@ -450,9 +450,8 @@ class Test既存計算維持_入力値切替_方式2:
         assert result['TValue'].E_H == pytest.approx(39667.322879561434)
 
     def test_入力値入替_H3(self, expected_result_type2):
-        """ 以前のプログラムと同じ計算結果になる
-            全般換気機能 （あり or なし）
-            H_A_general_ventilation
+        """ 全般換気なしでは熱源機の換気下限を給気風量に含めない
+            H_A_general_ventilation (Issue #163)
         """
         inputs = copy.deepcopy(self._inputs)
         inputs["H_A"]["general_ventilation"] = 全般換気機能.なし.value  # デフォルトはあり
@@ -461,7 +460,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(41348.5747910848)
+        assert result['TValue'].E_H == pytest.approx(41355.78022134368)
 
     def test_入力値入替_H4(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -600,9 +599,8 @@ class Test既存計算維持_入力値切替_方式2:
         assert result['TValue'].E_C == pytest.approx(12132.12673911749)
 
     def test_入力値入替_R3(self, expected_result_type2):
-        """ 以前のプログラムと同じ計算結果になる
-            全般換気機能（あり or なし）
-            C_A_general_ventilation
+        """ 全般換気なしでは熱源機の換気下限を給気風量に含めない
+            C_A_general_ventilation (Issue #163)
         """
         inputs = copy.deepcopy(self._inputs)
         inputs["C_A"]["general_ventilation"] = 全般換気機能.なし.value  # デフォルトはあり
@@ -611,7 +609,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_H == pytest.approx(expected_result_type2.E_H)
         assert result['TValue'].E_C != expected_result_type2.E_C
-        assert result['TValue'].E_C == pytest.approx(14288.496130040254)
+        assert result['TValue'].E_C == pytest.approx(14283.437774290474)
 
     def test_入力値入替_R4(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる

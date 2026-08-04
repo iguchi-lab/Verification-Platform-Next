@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import jjjexperiment.section4_2_jjj as sut
+from jjjexperiment.inputs.options import ファン消費電力から換気分を引く
 
 
 def _setting(setting_type):
@@ -863,7 +864,7 @@ def test_supply_airflow_before_vav_preserves_vav_formula_order(monkeypatch):
     )
 
     result = sut._get_supply_airflow_before_vav(sut._SupplyAirflowBeforeVavInputs(
-        SimpleNamespace(VAV=True),
+        SimpleNamespace(VAV=True, general_ventilation=True),
         SimpleNamespace(region=6),
         SimpleNamespace(L_CS_d_t_i=sensible, L_H_d_t_i=heating),
         object(),
@@ -899,7 +900,7 @@ def test_supply_airflow_before_vav_preserves_standard_formula_order(monkeypatch)
     )
 
     result = sut._get_supply_airflow_before_vav(sut._SupplyAirflowBeforeVavInputs(
-        SimpleNamespace(VAV=False),
+        SimpleNamespace(VAV=False, general_ventilation=True),
         object(),
         object(),
         areas,
@@ -917,6 +918,87 @@ def test_supply_airflow_before_vav_preserves_standard_formula_order(monkeypatch)
         ("ratios", areas),
         ("supply", (ratios, heat_source_airflow, ventilation)),
     ]
+
+
+@pytest.mark.parametrize("minimum_airflow", (160.0, 420.0))
+def test_no_general_ventilation_uses_minimum_airflow_only_in_hvac_seasons(
+    monkeypatch,
+    minimum_airflow,
+):
+    setting = SimpleNamespace(VAV=False, general_ventilation=False)
+    house = SimpleNamespace(region=4)
+    areas = np.array([29.81, 16.56, 13.25, 10.76, 10.77])
+    standard_ventilation = np.array([60.0, 20.0, 40.0, 20.0, 20.0])
+    ventilation = standard_ventilation * minimum_airflow / np.sum(
+        standard_ventilation
+    )
+    heat_source_airflow = np.full(24 * 365, minimum_airflow)
+
+    pre_vav = sut._get_supply_airflow_before_vav(
+        sut._SupplyAirflowBeforeVavInputs(
+            setting,
+            house,
+            object(),
+            areas,
+            heat_source_airflow,
+            ventilation,
+        )
+    )
+
+    np.testing.assert_allclose(
+        np.sum(pre_vav.V_dash_supply_d_t_i, axis=0),
+        minimum_airflow,
+    )
+
+    monkeypatch.setattr(
+        sut.jjj_vsupcap,
+        "cap_V_supply_d_t_i",
+        lambda _dto, supply, *_args: supply,
+    )
+    annual = np.zeros(24 * 365)
+    by_room = np.zeros((5, 24 * 365))
+    capped = sut._get_capped_supply_airflows(
+        sut._CappedSupplyAirflowInputs(
+            object(),
+            setting,
+            house,
+            by_room,
+            by_room,
+            by_room,
+            np.zeros(5),
+            annual,
+            ventilation,
+            pre_vav.V_dash_supply_d_t_i,
+            annual,
+            2000.0,
+            2000.0,
+            False,
+        )
+    )
+    heat_source_supply = np.sum(capped.V_supply_d_t_i, axis=0)
+    heating, cooling, intermediate = sut.dc.get_season_array_d_t(house.region)
+
+    np.testing.assert_allclose(
+        heat_source_supply[heating | cooling],
+        minimum_airflow,
+    )
+    np.testing.assert_array_equal(heat_source_supply[intermediate], 0.0)
+
+    heat_source_ventilation = sut.dc.get_V_hs_vent_d_t(
+        ventilation,
+        setting.general_ventilation,
+    )
+    cooling_fan_power = sut.dc_a.get_E_E_fan_C_d_t(
+        200.0,
+        heat_source_ventilation,
+        heat_source_supply,
+        2000.0,
+        annual,
+        house.region,
+        0.144,
+        ファン消費電力から換気分を引く.換気分を引かない,
+    )
+    np.testing.assert_array_equal(cooling_fan_power[intermediate], 0.0)
 
 def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
     calls = []
@@ -1225,7 +1307,7 @@ def test_capped_supply_airflows_preserve_call_order_and_diagnostics(
 ):
     calls = []
     cap = object()
-    setting = SimpleNamespace(VAV=True)
+    setting = SimpleNamespace(VAV=True, general_ventilation=True)
     house = SimpleNamespace(region=6)
     inputs = [object() for _ in range(10)]
     before = object()

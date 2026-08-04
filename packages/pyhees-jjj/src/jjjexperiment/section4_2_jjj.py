@@ -1555,6 +1555,22 @@ def _get_heat_source_supply_airflow_before_vav(inputs: _HeatSourceSupplyAirflowB
     )
 
 
+def _get_heat_source_ventilation_airflow_by_zone(
+        V_vent_g_i, general_ventilation):
+    """Return the ventilation lower bound carried by the heat source.
+
+    ``V_vent_g_i`` remains available for the dwelling ventilation load and
+    formula (39).  When the heat source has no general-ventilation function,
+    however, it must not be reused as the zone lower bound in formulas (44)
+    and (43).
+    """
+    if general_ventilation is True:
+        return V_vent_g_i
+    if general_ventilation is False:
+        return np.zeros_like(V_vent_g_i)
+    raise ValueError(general_ventilation)
+
+
 def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
     """Calculate formulas (45) and (44) without changing their branch order."""
     ac_setting = inputs.ac_setting
@@ -1563,6 +1579,8 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
     A_HCZ_i = inputs.A_HCZ_i
     V_dash_hs_supply_d_t = inputs.V_dash_hs_supply_d_t
     V_vent_g_i = inputs.V_vent_g_i
+    V_hs_vent_g_i = _get_heat_source_ventilation_airflow_by_zone(
+        V_vent_g_i, ac_setting.general_ventilation)
     if ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
         # (45)　風量バランス
         r_supply_des_d_t_i = dc.get_r_supply_des_d_t_i_2023(house.region, load.L_CS_d_t_i, load.L_H_d_t_i)
@@ -1570,7 +1588,8 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
         # 出力用
         r_supply_des_i = r_supply_des_d_t_i[:, 0:1]
         # (44)　VAV 調整前の吹き出し風量
-        V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i_2023(r_supply_des_d_t_i, V_dash_hs_supply_d_t, V_vent_g_i)
+        V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i_2023(
+            r_supply_des_d_t_i, V_dash_hs_supply_d_t, V_hs_vent_g_i)
     else:
         # (45)　風量バランス
         r_supply_des_i = dc.get_r_supply_des_i(A_HCZ_i)
@@ -1578,7 +1597,8 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
         # 出力用
         r_supply_des_d_t_i = np.tile(r_supply_des_i, 24 * 365).reshape(5, 24 * 365)
         # (44)　VAV 調整前の吹き出し風量
-        V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i(r_supply_des_i, V_dash_hs_supply_d_t, V_vent_g_i)
+        V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i(
+            r_supply_des_i, V_dash_hs_supply_d_t, V_hs_vent_g_i)
 
     return _SupplyAirflowBeforeVavResult(r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i)
 
@@ -1842,12 +1862,14 @@ def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
     V_hs_dsgn_H = inputs.V_hs_dsgn_H
     V_hs_dsgn_C = inputs.V_hs_dsgn_C
     print_exec = inputs.print_exec
+    V_hs_vent_g_i = _get_heat_source_ventilation_airflow_by_zone(
+        V_vent_g_i, ac_setting.general_ventilation)
     # (43)　暖冷房区画𝑖の吹き出し風量
     V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
-                                                , V_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
+                                                , V_hs_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
     V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(*_SupplyAirflowCapCallInputs(
         v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i,
-        V_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec))
+        V_hs_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec))
 
     return _CappedSupplyAirflowsResult(
         V_supply_d_t_i_before,
@@ -4848,7 +4870,10 @@ def _build_sequential_ground_inputs(
         ),
         v_dash_supply_d_t_i=pre_vav.V_dash_supply_d_t_i.copy(),
         theta_hs_out_d_t=np.zeros(24 * 365, dtype=float),
-        v_vent_g_i=preparation.V_vent_g_i.copy(),
+        v_vent_g_i=_get_heat_source_ventilation_airflow_by_zone(
+            preparation.V_vent_g_i,
+            ac_setting.general_ventilation,
+        ).copy(),
         v_hs_min=float(preparation.V_hs_min),
         v_hs_dsgn=float(v_hs_dsgn),
         q_hs_rtd=float(q_hs_rtd),
