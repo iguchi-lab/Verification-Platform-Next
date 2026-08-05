@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "verification-platform-next"
-version = "1.0.0"
+version = "1.0.1"
 description = "Monorepo for the Verification Platform engine, schema, and UI"
 authors = ["iguchi-lab"]
 package-mode = false
