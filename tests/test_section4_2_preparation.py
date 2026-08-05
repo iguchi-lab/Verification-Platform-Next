@@ -1000,6 +1000,51 @@ def test_no_general_ventilation_uses_minimum_airflow_only_in_hvac_seasons(
     )
     np.testing.assert_array_equal(cooling_fan_power[intermediate], 0.0)
 
+
+def test_vav_without_general_ventilation_preserves_equipment_minimum_in_hvac_seasons():
+    region = 4
+    setting = SimpleNamespace(VAV=True, general_ventilation=False)
+    heating, cooling, intermediate = sut.dc.get_season_array_d_t(region)
+    ratios = np.array([0.30, 0.25, 0.20, 0.15, 0.10])[:, np.newaxis]
+    upper_total = np.full(24 * 365, 160.0)
+    upper_total[heating | cooling] = np.linspace(
+        160.0,
+        1000.0,
+        np.count_nonzero(heating | cooling),
+    )
+    upper = ratios * upper_total[np.newaxis, :]
+    supply = np.zeros_like(upper)
+    supply[:, heating | cooling] = ratios * 4.141815772
+
+    actual = sut._ensure_vav_equipment_minimum_airflow(
+        supply,
+        upper,
+        setting,
+        region,
+    )
+
+    np.testing.assert_allclose(
+        np.sum(actual[:, heating | cooling], axis=0),
+        160.0,
+    )
+    np.testing.assert_array_equal(actual[:, intermediate], 0.0)
+    assert np.all(actual <= upper + 1e-9)
+
+
+def test_vav_equipment_minimum_does_not_change_general_ventilation_route():
+    supply = np.full((5, 24 * 365), 3.0)
+    upper = np.full((5, 24 * 365), 20.0)
+
+    actual = sut._ensure_vav_equipment_minimum_airflow(
+        supply,
+        upper,
+        SimpleNamespace(VAV=True, general_ventilation=True),
+        6,
+    )
+
+    np.testing.assert_array_equal(actual, supply)
+
+
 def test_room_to_underfloor_transfer_preserves_in_place_adjustment(monkeypatch):
     calls = []
     area = np.arange(1.0, 13.0).reshape(12, 1)

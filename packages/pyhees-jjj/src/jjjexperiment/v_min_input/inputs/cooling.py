@@ -6,6 +6,10 @@ from jjjexperiment.inputs.options import (
     最低電力直接入力,
     最低風量直接入力,
 )
+from jjjexperiment.v_min_input.validation import (
+    require_nonnegative_finite,
+    require_positive_finite,
+)
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 @dataclass
@@ -33,7 +37,10 @@ class InputMinVolumeInput:
                 # 事前条件: 有効な入力値が存在する
                 if 'V_hs_min' not in data:
                     raise Exception('V_hs_min 最低風量の直接入力がありません.')
-                kwargs['V_hs_min'] = float(data['V_hs_min'])
+                kwargs['V_hs_min'] = require_positive_finite(
+                    data['V_hs_min'],
+                    '冷房 V_hs_min',
+                )
 
                 # NOTE: 最低電力直接入力は最低風量直接入力が有効なことが前提の仕様です
                 if 'input_E_E_fan_min' in data:
@@ -43,7 +50,10 @@ class InputMinVolumeInput:
                         # 事前条件: 有効な入力値が存在する
                         if 'E_E_fan_min' not in data:
                             raise Exception('E_E_fan_min 最低電力の直接入力がありません.')
-                        kwargs['E_E_fan_min'] = float(data['E_E_fan_min'])
+                        kwargs['E_E_fan_min'] = require_nonnegative_finite(
+                            data['E_E_fan_min'],
+                            '冷房 E_E_fan_min',
+                        )
                         # 事前条件: 電力算定方法の指定あり
                         if 'E_E_fan_logic' not in data:
                             raise Exception('E_E_fan_logic ファン消費電力算定方法の指定がありません.')

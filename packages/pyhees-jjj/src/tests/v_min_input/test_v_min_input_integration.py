@@ -24,11 +24,12 @@ class TestV最低風量入力結合:
         fixtures = {
             "H_A": {
                 "input_V_hs_min": 最低風量直接入力.入力する.value,
-                "V_hs_min": 1200,
+                # 各モデルの自動計算設計風量を下回る有効な最低風量。
+                "V_hs_min": 500,
             },
             "C_A": {
                 "input_V_hs_min": 最低風量直接入力.入力する.value,
-                "V_hs_min": 1200,
+                "V_hs_min": 500,
             }
         }
         inputs_copied = copy.deepcopy(inputs)

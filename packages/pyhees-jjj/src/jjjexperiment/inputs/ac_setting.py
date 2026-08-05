@@ -3,6 +3,7 @@ from typing import Optional
 # JJJ
 from ._parsing import parse_present_fields
 from .options import 全般換気機能, 機器仕様手動入力タイプ, 暖房方式, 冷房方式, 計算モデル, ファン消費電力から換気分を引く
+from jjjexperiment.v_min_input.validation import require_positive_finite
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 _EQUIPMENT_INPUT_FIELDS = (
@@ -53,7 +54,10 @@ def _parse_optional_design_fields(data: dict) -> dict:
     if 'input_f_SFP' in data and data['input_f_SFP'] == 2:
         kwargs['f_SFP'] = float(data['f_SFP'])
     if 'input_V_hs_dsgn' in data and int(data['input_V_hs_dsgn']) == 2:
-        kwargs['V_hs_dsgn'] = float(data['V_hs_dsgn'])
+        kwargs['V_hs_dsgn'] = require_positive_finite(
+            data['V_hs_dsgn'],
+            'V_hs_dsgn',
+        )
     return kwargs
 
 

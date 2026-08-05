@@ -59,11 +59,16 @@ import jjjexperiment.underfloor_ac.inputs as jjj_ufac_ipt
 
 # [F25-01] 最低風量の直接入力
 import jjjexperiment.v_min_input as jjj_V_min_input
+from jjjexperiment.v_min_input.validation import (
+    validate_minimum_airflow_relation,
+    validate_minimum_fan_power_relation,
+)
 
 
 class _MinimumFanElectricityInputs(NamedTuple):
     E_E_fan_logic: object
     P_fan_rtd: object
+    # 公開関数の既存引数名を維持する。渡す値は設備最低風量の配列。
     V_hs_vent_d_t: object
     V_hs_supply_d_t: object
     V_hs_dsgn: object
@@ -458,11 +463,21 @@ def _get_minimum_power_heating_fan(heat_ac_setting, heat_quantity, v_min_heating
         if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
         else heat_quantity.P_fan_rtd
     )
+    validate_minimum_fan_power_relation(
+        v_min_heating_input.E_E_fan_min,
+        P_fan_rtd,
+        "暖房",
+    )
+    V_hs_min_d_t = np.full_like(
+        V_hs_supply_d_t,
+        v_min_heating_input.V_hs_min,
+        dtype=float,
+    )
     from jjjexperiment.v_min_input.fan_power import get_E_E_fan_d_t
     return get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
         v_min_heating_input.E_E_fan_logic,
         P_fan_rtd,
-        V_hs_vent_d_t,
+        V_hs_min_d_t,
         V_hs_supply_d_t,
         V_hs_dsgn_H,
         v_min_heating_input.E_E_fan_min,
@@ -795,11 +810,21 @@ def _get_minimum_power_cooling_fan(cool_ac_setting, cool_quantity, v_min_cooling
         if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_現行省エネ法RACモデル
         else cool_quantity.P_fan_rtd
     )
+    validate_minimum_fan_power_relation(
+        v_min_cooling_input.E_E_fan_min,
+        P_fan_rtd,
+        "冷房",
+    )
+    V_hs_min_d_t = np.full_like(
+        V_hs_supply_d_t,
+        v_min_cooling_input.V_hs_min,
+        dtype=float,
+    )
     from jjjexperiment.v_min_input.fan_power import get_E_E_fan_d_t
     return get_E_E_fan_d_t(*_MinimumFanElectricityInputs(
         v_min_cooling_input.E_E_fan_logic,
         P_fan_rtd,
-        V_hs_vent_d_t,
+        V_hs_min_d_t,
         V_hs_supply_d_t,
         V_hs_dsgn_C,
         v_min_cooling_input.E_E_fan_min,
@@ -1142,6 +1167,17 @@ def _prepare_main_load_state(inputs: _MainLoadPreparationInputs):
 
 
 def _run_heating_phase(inputs: _HeatingPhaseInputs):
+    if (
+        inputs.heat_ac_setting.type
+        != 計算モデル.RAC活用型全館空調_潜熱評価モデル
+        and inputs.v_min_heating_input.input_V_hs_min
+        == 最低風量直接入力.入力する
+    ):
+        validate_minimum_airflow_relation(
+            inputs.v_min_heating_input.V_hs_min,
+            inputs.V_hs_dsgn_H,
+            "暖房",
+        )
     ground_context = (
         inputs.injector.get(AnnualGroundFeedbackContext)
         if hasattr(inputs.injector, "get")
@@ -1237,6 +1273,17 @@ def _run_cooling_phase(inputs: _CoolingPhaseInputs):
         inputs.cool_quantity,
         inputs.cool_CRAC,
     )
+    if (
+        inputs.cool_ac_setting.type
+        != 計算モデル.RAC活用型全館空調_潜熱評価モデル
+        and inputs.v_min_cooling_input.input_V_hs_min
+        == 最低風量直接入力.入力する
+    ):
+        validate_minimum_airflow_relation(
+            inputs.v_min_cooling_input.V_hs_min,
+            V_hs_dsgn_C,
+            "冷房",
+        )
     inputs.injector.binder.bind(jjj_dc.ActiveAcSetting, to=inputs.cool_ac_setting)
     P_rac_fan_rtd_C, simu_R_C = _get_cooling_fan_model(
         inputs.cool_ac_setting,
