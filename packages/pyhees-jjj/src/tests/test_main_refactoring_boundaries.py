@@ -332,17 +332,25 @@ def test_get_minimum_power_heating_fan_preserves_input_tuple(monkeypatch):
     monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
     monkeypatch.setattr(module, 'get_E_E_fan_d_t', lambda *args: events.append(('call', args)) or 'fan')
     setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル)
-    v_min = SimpleNamespace(E_E_fan_logic='logic', E_E_fan_min=0.2)
+    v_min = SimpleNamespace(
+        E_E_fan_logic='logic',
+        E_E_fan_min=0.2,
+        V_hs_min=50.0,
+    )
+    supply = np.full(4, 200.0)
 
     result = experiment_main._get_minimum_power_heating_fan(
-        setting, SimpleNamespace(P_fan_rtd=100.0), v_min, 200.0, 'vent', 'supply', 300.0, 6
+        setting, SimpleNamespace(P_fan_rtd=100.0), v_min, 200.0, 'vent', supply, 300.0, 6
     )
 
     assert result == 'fan'
-    assert events == [
-        ('print', experiment_main.最低電力直接入力.入力する),
-        ('call', ('logic', 100.0, 'vent', 'supply', 300.0, 0.2, 6, False)),
-    ]
+    assert events[0] == ('print', experiment_main.最低電力直接入力.入力する)
+    assert events[1][0] == 'call'
+    args = events[1][1]
+    assert args[:2] == ('logic', 100.0)
+    np.testing.assert_array_equal(args[2], np.full(4, 50.0))
+    assert args[3] is supply
+    assert args[4:] == (300.0, 0.2, 6, False)
 
 def test_raise_invalid_heating_fan_input_preserves_value_error():
     with pytest.raises(ValueError):
@@ -585,17 +593,25 @@ def test_get_minimum_power_cooling_fan_preserves_input_tuple(monkeypatch):
     monkeypatch.setattr('builtins.print', lambda value: events.append(('print', value)))
     monkeypatch.setattr(module, 'get_E_E_fan_d_t', lambda *args: events.append(('call', args)) or 'fan')
     setting = SimpleNamespace(type=experiment_main.計算モデル.電中研モデル)
-    v_min = SimpleNamespace(E_E_fan_logic='logic', E_E_fan_min=0.2)
+    v_min = SimpleNamespace(
+        E_E_fan_logic='logic',
+        E_E_fan_min=0.2,
+        V_hs_min=50.0,
+    )
+    supply = np.full(4, 200.0)
 
     result = experiment_main._get_minimum_power_cooling_fan(
-        setting, SimpleNamespace(P_fan_rtd=100.0), v_min, 200.0, 'vent', 'supply', 300.0, 6
+        setting, SimpleNamespace(P_fan_rtd=100.0), v_min, 200.0, 'vent', supply, 300.0, 6
     )
 
     assert result == 'fan'
-    assert events == [
-        ('print', experiment_main.最低電力直接入力.入力する),
-        ('call', ('logic', 100.0, 'vent', 'supply', 300.0, 0.2, 6, True)),
-    ]
+    assert events[0] == ('print', experiment_main.最低電力直接入力.入力する)
+    assert events[1][0] == 'call'
+    args = events[1][1]
+    assert args[:2] == ('logic', 100.0)
+    np.testing.assert_array_equal(args[2], np.full(4, 50.0))
+    assert args[3] is supply
+    assert args[4:] == (300.0, 0.2, 6, True)
 def test_raise_invalid_cooling_fan_input_preserves_value_error():
     with pytest.raises(ValueError):
         experiment_main._raise_invalid_cooling_fan_input()

@@ -356,8 +356,14 @@ def test_run_heating_phase_preserves_order_and_result_context(monkeypatch):
     )
     inputs = experiment_main._HeatingPhaseInputs(
         injector="injector", case_name="case", climateFile="climate.csv",
-        v_min_heating_input="minimum", house=SimpleNamespace(region=6),
-        heat_ac_setting="setting", heat_CRAC="heat-crac", cool_CRAC="cool-crac",
+        v_min_heating_input=SimpleNamespace(
+            input_V_hs_min=experiment_main.最低風量直接入力.入力しない,
+        ),
+        house=SimpleNamespace(region=6),
+        heat_ac_setting=SimpleNamespace(
+            type=experiment_main.計算モデル.ダクト式セントラル空調機,
+        ),
+        heat_CRAC="heat-crac", cool_CRAC="cool-crac",
         heat_denchu_catalog="catalog", heat_real_inner="inner", climate="climate",
         heat_quantity="heat-quantity", cool_quantity="cool-quantity",
         V_hs_dsgn_H="design",
@@ -421,8 +427,14 @@ def test_run_cooling_phase_preserves_bind_order_and_result_context(monkeypatch):
     monkeypatch.setattr("builtins.print", lambda *args: events.append(("print", args)))
     inputs = experiment_main._CoolingPhaseInputs(
         injector=injector, case_name="case", climateFile="climate.csv",
-        v_min_cooling_input="minimum", house=SimpleNamespace(region=6),
-        cool_ac_setting="setting", cool_CRAC="cool-crac",
+        v_min_cooling_input=SimpleNamespace(
+            input_V_hs_min=experiment_main.最低風量直接入力.入力しない,
+        ),
+        house=SimpleNamespace(region=6),
+        cool_ac_setting=SimpleNamespace(
+            type=experiment_main.計算モデル.ダクト式セントラル空調機,
+        ),
+        cool_CRAC="cool-crac",
         cool_denchu_catalog="catalog", cool_real_inner="inner", climate="climate",
         cool_quantity="cool-quantity",
     )

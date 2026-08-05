@@ -100,3 +100,45 @@ class TestVMinInput送風機消費電力_冷房:
         assert result[self.M][0] == pytest.approx(expected_result)
         # 暖房期はゼロ
         assert (result[self.H] == 0.0).all()
+
+    @pytest.mark.parametrize(
+        "logic",
+        (
+            ファン消費電力算定方法.直線近似法,
+            ファン消費電力算定方法.風量三乗近似法,
+        ),
+    )
+    def test_全般換気なし相当でも設備最低風量点は最低電力に一致する(self, logic):
+        minimum = 160.0
+        supply = np.zeros(8760)
+        supply[self.C] = minimum
+
+        result = get_E_E_fan_d_t(
+            logic,
+            300.0,
+            np.full(8760, minimum),
+            supply,
+            1500.0,
+            50.0,
+            self.region,
+            for_cooling=True,
+        )
+
+        np.testing.assert_allclose(result[self.C], 0.05)
+        np.testing.assert_array_equal(result[self.M], 0.0)
+
+
+def test_minimum_power_interpolation_rejects_minimum_equal_to_design():
+    annual = np.full(8760, 500.0)
+
+    with pytest.raises(ValueError, match="V_hs_dsgn 未満"):
+        get_E_E_fan_d_t(
+            ファン消費電力算定方法.直線近似法,
+            100.0,
+            annual,
+            annual,
+            500.0,
+            20.0,
+            6,
+            for_cooling=False,
+        )

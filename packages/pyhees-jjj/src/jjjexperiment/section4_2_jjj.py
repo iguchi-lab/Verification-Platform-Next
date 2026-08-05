@@ -1870,11 +1870,66 @@ def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
     V_supply_d_t_i = jjj_vsupcap.cap_V_supply_d_t_i(*_SupplyAirflowCapCallInputs(
         v_supply_cap_dto, V_supply_d_t_i_before, V_dash_supply_d_t_i,
         V_hs_vent_g_i, house.region, V_hs_dsgn_H, V_hs_dsgn_C, print_exec))
+    V_supply_d_t_i = _ensure_vav_equipment_minimum_airflow(
+        V_supply_d_t_i,
+        V_dash_supply_d_t_i,
+        ac_setting,
+        house.region,
+    )
 
     return _CappedSupplyAirflowsResult(
         V_supply_d_t_i_before,
         V_supply_d_t_i,
     )
+
+
+def _ensure_vav_equipment_minimum_airflow(
+    V_supply_d_t_i: np.ndarray,
+    V_dash_supply_d_t_i: np.ndarray,
+    ac_setting: ActiveAcSetting,
+    region: int,
+) -> np.ndarray:
+    """全般換気なしのVAV運転時も、暖冷房期の設備最低風量を保証する。
+
+    式 (43) の区画下限は全般換気量であり、設備最低風量とは別の量である。
+    全般換気機能がない場合、式 (43) に渡す換気量を0にするのは正しいが、
+    そのままではサーモOFF時や小負荷時に熱源機風量まで0付近へ低下する。
+
+    式 (36)、式 (44) を通った ``V_dash_supply_d_t_i`` の年間最小正値を
+    設備最低風量として取り出し、不足分を各区画の残余風量に比例配分する。
+    中間期は全般換気を搬送しないため0のままとする。
+    """
+    if not ac_setting.VAV or ac_setting.general_ventilation:
+        return V_supply_d_t_i
+
+    upper = np.asarray(V_dash_supply_d_t_i, dtype=float)
+    result = np.asarray(V_supply_d_t_i, dtype=float).copy()
+    upper_total = np.sum(upper, axis=0)
+    heating, cooling, _ = dc.get_season_array_d_t(region)
+    hvac = heating | cooling
+    positive = hvac & (upper_total > 0.0)
+    if not np.any(positive):
+        return result
+
+    equipment_minimum = float(np.min(upper_total[positive]))
+    result_total = np.sum(result, axis=0)
+    needs_minimum = positive & (result_total < equipment_minimum)
+    if not np.any(needs_minimum):
+        return result
+
+    headroom = np.maximum(upper[:, needs_minimum] - result[:, needs_minimum], 0.0)
+    headroom_total = np.sum(headroom, axis=0)
+    deficit = equipment_minimum - result_total[needs_minimum]
+    if np.any(headroom_total + 1e-9 < deficit):
+        raise ValueError(
+            "VAV給気風量の上限が設備最低風量を下回っています。"
+            "最低風量と設計風量の設定を確認してください。"
+        )
+
+    result[:, needs_minimum] += headroom * (
+        deficit / headroom_total
+    )[np.newaxis, :]
+    return result
 
 def _get_supply_air_temperatures(inputs: _SupplyAirTemperaturesInputs):
     """Calculate formula (41) without moving later underfloor corrections."""
@@ -4864,6 +4919,9 @@ def _build_sequential_ground_inputs(
         theta_ex_d_t=preparation.Theta_ex_d_t.copy(),
         theta_star_hbr_d_t=preparation.Theta_star_HBR_d_t.copy(),
         theta_sur_d_t_i=preparation.Theta_sur_d_t_i.copy(),
+        # Excel床下14との数値契約に従い、床下逐次計算は固定面積比を使う。
+        # 通常経路の負荷依存VAV配分を適用する変更は、Golden値を大きく変えるため
+        # 独立した仕様判断と数値レビューなしに混在させない。
         r_supply_des_d_t_i=np.tile(
             dc.get_r_supply_des_i(preparation.A_HCZ_i)[:, np.newaxis],
             (1, 24 * 365),
