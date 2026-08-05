@@ -1,0 +1,28 @@
+name: Feature request
+description: 機能、入力項目、文書などの改善を提案します
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい課題
+      description: 現在困っていることや利用場面を説明してください。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案内容
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 計算・互換性への影響
+      description: 入力形式、公開API、数値結果への影響が分かれば記載してください。
+  - type: textarea
+    id: references
+    attributes:
+      label: 根拠資料・補足

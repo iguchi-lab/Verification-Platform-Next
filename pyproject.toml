@@ -24,7 +24,6 @@ target-version = "py312"
 line-length = 100
 extend-exclude = [
     "packages/pyhees-jjj",
-    ".codex-work",
     ".tmp-*",
     "tmp",
 ]

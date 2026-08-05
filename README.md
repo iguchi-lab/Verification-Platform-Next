@@ -1,127 +1,118 @@
 # Verification Platform Next
 
-検証用プラットフォームの計算エンジン、共通入力スキーマ、Gradio UIを同一リポジトリで管理するモノレポです。
+[![CI](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/ci.yml/badge.svg)](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/ci.yml)
 
-## 現在の状態
+住宅の省エネルギー性能を検証するための計算エンジン、入力スキーマ、Gradio UIを
+まとめたPythonモノレポです。正式版は **ver.1.0.0** です。
 
-正式版`ver.1.0.0`です。移行 Phase 1〜5 が完了し、このモノレポを
-開発・リリースの正本として使用できる状態です。
+本リポジトリは、建築研究所が公開する住宅のエネルギー消費性能計算プログラム
+`pyhees`を基礎とし、検証用の入力画面、床下空調などの拡張計算、数値回帰試験を
+統合しています。建築研究所の公式配布物ではありません。
 
-- 共通入力スキーマの型を `verification-core` に追加
-- 現行222項目をバージョン付きJSON台帳へ移行（基本45・暖房84・冷房91・換気2）
-- UI入力から計算用 `input_data` への264代入を条件分岐・元行番号付きで台帳化
-- 222項目すべてが計算用入力に利用されることを契約テストで検証
-- JSON入力を実行できる最小Gradioアプリを追加
-- 現行計算エンジンを固定コミットで参照
-- スキーマ契約テストとGitHub Actionsを追加
-- 現行Gradioノートブックを移行元スナップショットとして保存
-- 制限付きAST互換ビルダーと型付き宣言的ビルダーを追加
-- 222項目の正規 `InputSchema` と表示条件を追加
-- デフォルト、全暖冷房方式、全boolean・select代替値で旧入力との完全一致を固定
-- 正規 `InputSchema` から222項目のGradioフォームを生成
-- 暖冷房方式に応じた表示切替を、入力値を維持したまま実装
-- 計算ログ、グラフ、ダウンロード収集をUI非依存サービスへ分離
-- 旧版と同じ暖房・冷房の時系列、負荷順、sCOPの5グラフを計算CSVから生成
-- Colab版をインストールと起動だけの薄いランチャーへ移行
-- Cloud Run向けDockerfile、サービス定義、GitHub Actionsデプロイを追加
-- 計算出力を実行環境ごとの作業ディレクトリへ隔離
-- `pyhees-jjj` を固定コミットまでの履歴付きで `packages/pyhees-jjj` へ統合
-- Gradioアプリの計算エンジン依存をモノレポ内のローカルパスへ切替
-- 旧フォームの代表2ケースについて、入力JSON・年間集計・8760時間CSVの固定回帰基準を追加
-- ローカル、Colab、GitHub Actions/Codex Cloudで共通の回帰コマンドを利用可能に変更
-- 計算成果物へ製品版、ソースコミット、上流pyhees、入力SHA-256のマニフェストを追加
+## 主な機能
 
-今後の `jjjexperiment` 修正は `packages/pyhees-jjj` で行い、入力契約と数値回帰を同じPull Requestで確認します。
+- 222項目の正規入力スキーマと方式別の表示・検証条件
+- JSON入力とGradio Web UI
+- ダクト式セントラル空調、ルームエアコン、床下空調などの計算
+- 暖冷房結果、8760時間系列、グラフ、計算ログの出力
+- 製品版、ソースコミット、上流`pyhees`、入力SHA-256を記録するマニフェスト
+- 旧版との代表ケース比較を行うPhase 5数値回帰
+- Google Colabおよび任意のCloud Runデプロイ
 
-## 複数PCとCodex Cloudでの作業
+## 動作環境
 
-このリポジトリを作業状態の正本とし、PCを切り替える前に作業ブランチをcommit・pushします。Codex Cloudでは、このGitHubリポジトリを接続した環境から同じブランチをチェックアウトして作業します。
+- Python 3.12.11以上、3.13未満
+- Windows、macOS、Linux、またはGoogle Colab
 
-Codex Cloud環境のセットアップスクリプトには、次を指定してください。
+## インストールと起動
 
 ```bash
-bash scripts/setup-codex-cloud.sh
+git clone https://github.com/iguchi-lab/Verification-Platform-Next.git
+cd Verification-Platform-Next
+python -m pip install --upgrade pip
+python -m pip install -e apps/gradio
+verification-platform
 ```
 
-Pythonは `3.12.11` 以上、`3.13` 未満を使用します。リポジトリ共通の作業手順と検証コマンドは `AGENTS.md` に記載しています。
-
-## ディレクトリ構成
-
-```text
-.
-├── apps/
-│   └── gradio/                 # Web UI
-├── packages/
-│   ├── verification-core/      # 入力スキーマ・共通契約
-│   └── pyhees-jjj/             # 履歴付きで統合した計算エンジン
-├── notebooks/
-│   ├── Verification_Platform_Next.ipynb # Colabランチャー
-│   └── legacy/                 # 現行動作版の移行元
-├── tests/                      # 契約・回帰テスト
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── MIGRATION.md
-│   └── REFACTORING.md
-└── pyproject.toml
-```
-
-## ローカル起動
-
-Python 3.12.11以上とPoetryを使用します。
+Poetryを使用する場合は次のとおりです。
 
 ```bash
 poetry install
 poetry run verification-platform
 ```
 
-正規スキーマから生成した222項目のフォームが起動します。Colabでは `notebooks/Verification_Platform_Next.ipynb` を使用してください。
+Colabでは
+[`notebooks/Verification_Platform_Next.ipynb`](notebooks/Verification_Platform_Next.ipynb)
+を開いてください。
 
-Phase 5 の数値回帰だけを実行する場合:
+## 検証
+
+リポジトリ全体の契約・回帰試験と静的検査を実行します。
 
 ```bash
-poetry run python scripts/run_phase5_regression.py
+python -m pytest -q
+ruff check .
+python scripts/run_phase5_regression.py
 ```
+
+計算エンジン内部の履歴試験は次のコマンドで実行します。
+
+```bash
+cd packages/pyhees-jjj
+python -m pytest src/tests -q -o addopts=""
+```
+
+数値基準は、差分の計算上・規格上の影響を確認せずに更新しないでください。
+
+## ディレクトリ構成
+
+```text
+apps/gradio/                 Gradio Web UIと実行サービス
+packages/verification-core/ 入力スキーマと共通契約
+packages/pyhees-jjj/         建研由来コードと検証用拡張計算
+notebooks/                   Google Colabランチャー
+regression/phase5/           代表ケースの固定数値基準
+tests/                       パッケージ横断の契約・回帰試験
+docs/                        設計、入力、計算仕様、リリース資料
+```
+
+## 計算成果物と版管理
+
+成果物名には製品版を付け、同じ接頭辞のマニフェストへソースコミット、上流
+`pyhees`版、床下仕様、入力SHA-256を記録します。詳細は
+[`docs/RELEASING.md`](docs/RELEASING.md)を参照してください。
+
+生成したJSON、CSV、ログはGitへ追加せず、`outputs/`などの作業用ディレクトリに
+保存してください。
 
 ## Cloud Runへの任意デプロイ
 
-Cloud RunはGradioアプリを公開する場合だけ使用する任意機能であり、複数PCやCodex Cloudで開発を継続するためには必要ありません。コンテナはCloud RunのHTTP契約に合わせて `0.0.0.0:8080` で起動し、計算出力を一時領域 `/tmp/verification-platform` に保存します。
+`.github/workflows/deploy-cloud-run.yml`は手動実行専用です。GitHub Actionsの
+variablesとsecretsへGoogle Cloudのプロジェクト、リージョン、Artifact Registry、
+Workload Identity Federationを設定して使用します。`main`へのpushでは自動
+デプロイされません。
 
-GitHubリポジトリに次を設定したうえで、`.github/workflows/deploy-cloud-run.yml` を手動実行すると、ビルド、Artifact Registryへのpush、Cloud Runへのデプロイを行います。`main` へのpushでは自動デプロイされません。
-
-GitHub Actions variables:
-
-- `GCP_PROJECT_ID`: Google CloudプロジェクトID
-- `GCP_REGION`: Cloud RunとArtifact Registryのリージョン（例: `asia-northeast1`）
-- `GCP_ARTIFACT_REPOSITORY`: Artifact Registryリポジトリ名
-
-GitHub Actions secrets:
-
-- `GCP_WORKLOAD_IDENTITY_PROVIDER`: Workload Identity Providerの完全名
-- `GCP_SERVICE_ACCOUNT`: デプロイ用サービスアカウントのメールアドレス
-
-ローカルでコンテナを確認する場合:
+ローカルでコンテナを確認する場合は次のとおりです。
 
 ```bash
 docker build -t verification-platform-next .
 docker run --rm -p 8080:8080 verification-platform-next
 ```
 
-`deploy/cloudrun.service.yaml` は同等のCloud Run設定を手動適用する際の基準です。`IMAGE_URI` を実際のイメージURIへ置換して使用します。
-
-## 設計資料
+## ドキュメント
 
 - [アーキテクチャ](docs/ARCHITECTURE.md)
-- [段階的移行計画](docs/MIGRATION.md)
-- [リファクタリング方針と引き継ぎ](docs/REFACTORING.md)
 - [リリースと成果物の版管理](docs/RELEASING.md)
 - [変更履歴](CHANGELOG.md)
 - [床下関連設定の入力ガイド](docs/underfloor_ac_input_guide.md)
 - [床下空調計算の7つの変更点](docs/underfloor_ac_seven_changes.md)
+- [Excelとの床下計算整合](docs/underfloor_ac_excel_alignment.md)
 - [計算エンジン](packages/pyhees-jjj/README.md)
+- [上流`pyhees`の追跡方針](packages/pyhees-jjj/UPSTREAM.md)
 
-## 移行元
+## コントリビューション
 
-- [Verification-Platform](https://github.com/iguchi-lab/Verification-Platform)
-- [pyhees-jjj](https://github.com/iguchi-lab/pyhees-jjj)
-
-旧リポジトリは移行時点の参照用として残します。今後の通常開発はこのリポジトリで行い、旧リポジトリは明示的な理由がない限り変更しません。
+不具合報告や改善提案はGitHub Issue、変更提案はPull Requestで受け付けます。
+計算式または数値結果を変更する場合は、根拠資料、影響する系列・年間値、実行した
+試験を明記してください。詳しくは[`CONTRIBUTING.md`](CONTRIBUTING.md)を参照して
+ください。

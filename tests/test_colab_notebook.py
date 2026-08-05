@@ -31,13 +31,32 @@ def test_colab_notebook_links_to_the_main_branch_launcher() -> None:
         "Verification-Platform-Next/blob/main/notebooks/"
         "Verification_Platform_Next.ipynb"
     ) in introduction
+    assert "ランタイム > すべてのセルを実行" in introduction
+    assert "Running on public URL" in introduction
+    assert "gradio.live" in introduction
+
+
+def test_colab_default_flow_contains_only_setup_and_launch() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    notebook_path = repository_root / "notebooks" / "Verification_Platform_Next.ipynb"
+    notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+    code_sources = [
+        "".join(cell["source"])
+        for cell in notebook["cells"]
+        if cell["cell_type"] == "code"
+    ]
+
+    assert len(code_sources) == 2
+    assert "%pip install -e apps/gradio" in code_sources[0]
+    assert code_sources[1].rstrip().endswith("!verification-platform")
+    assert all("run_phase5_regression.py" not in source for source in code_sources)
 
 
 def test_colab_launcher_exposes_the_server_and_enables_diagnostics() -> None:
     repository_root = Path(__file__).resolve().parents[1]
     notebook_path = repository_root / "notebooks" / "Verification_Platform_Next.ipynb"
     notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
-    launch_source = "".join(notebook["cells"][3]["source"])
+    launch_source = "".join(notebook["cells"][2]["source"])
 
     assert "%env GRADIO_SHARE=1" in launch_source
     assert "%env GRADIO_SERVER_NAME=0.0.0.0" in launch_source

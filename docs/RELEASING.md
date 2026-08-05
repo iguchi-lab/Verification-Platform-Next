@@ -56,8 +56,9 @@ cd packages/pyhees-jjj
 python -m pytest src/tests -q -o addopts=""
 ```
 
-計算エンジンまたは入力対応を変更した場合は、`docs/MIGRATION.md`に従い
-代表CSVも旧基準と比較します。`skip`、`xfail`、`xpass`、警告は件数だけで
+計算エンジンまたは入力対応を変更した場合は、
+[`regression/phase5/README.md`](../regression/phase5/README.md)に従い、
+代表CSVも固定基準と比較します。`skip`、`xfail`、`xpass`、警告は件数だけで
 成功扱いにせず、理由と意図をリリースPRへ記録します。
 
 GitHub Actionsがすべて成功した後、PRをマージし、マージコミットへ注釈付き
