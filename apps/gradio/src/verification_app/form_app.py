@@ -54,6 +54,17 @@ _INPUT_ORIGIN_CSS = """
   background: color-mix(in srgb, #f59e0b 7%, transparent);
   border-left-color: #f59e0b !important;
 }
+.input-section > button {
+  font-size: 1.375rem !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+}
+.input-group-heading h2 {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  line-height: 1.45 !important;
+  margin: 0.65rem 0 0.35rem !important;
+}
 """
 
 
@@ -105,6 +116,7 @@ def build_app(
                     field.key: field.visible for field in form.fields
                 }),
                 key=f"section:{section_index}",
+                elem_classes=["input-section"],
             ) as section_container:
                 section_containers[section.name] = section_container
                 if section.name == "⑥ その他":
@@ -114,7 +126,10 @@ def build_app(
                         "を参照してください。"
                     )
                 for group_index, group in enumerate(section.groups):
-                    gr.Markdown(f"## {group.name}")
+                    gr.Markdown(
+                        f"## {group.name}",
+                        elem_classes=["input-group-heading"],
+                    )
                     for row_index, row_fields in enumerate(_chunks(group.fields, 3)):
                         with gr.Row(key=f"row:{section_index}:{group_index}:{row_index}"):
                             for form_field in row_fields:
