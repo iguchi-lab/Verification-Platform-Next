@@ -74,6 +74,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert any(
         "建研Webにある入力" in value
         and "Verification Platformで追加・拡張した入力" in value
+        and ".input-section > button > span:not(.icon)" in value
         for value in html_values
     )
     assert origin_classes == {
