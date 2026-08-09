@@ -8,7 +8,7 @@ def test_form_model_preserves_schema_order_and_groups() -> None:
     model = load_form_model()
 
     assert len(model.fields) == 225
-    assert len(model.sections) == 18
+    assert len(model.sections) == 16
     assert model.keys == tuple(field.key for field in model.schema.fields)
     assert all(section.groups for section in model.sections)
     assert all(group.fields for section in model.sections for group in section.groups)
@@ -60,6 +60,8 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     visibility = model.visibility(values)
     assert all(visibility[field.key] for field in heating_group.fields)
     assert all(visibility[field.key] for field in cooling_group.fields)
+    assert not visibility["H_A_input__0"]
+    assert not visibility["C_A_input__0"]
 
 
 def test_form_model_updates_model_specific_visibility() -> None:

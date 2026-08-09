@@ -88,12 +88,25 @@ def build_app(
 
         components: dict[str, Any] = {}
         containers: dict[str, Any] = {}
+        section_containers: dict[str, Any] = {}
+        section_fields = {
+            section.name: tuple(
+                form_field.definition
+                for group in section.groups
+                for form_field in group.fields
+            )
+            for section in form.sections
+        }
         for section_index, section in enumerate(form.sections):
             with gr.Accordion(
                 section.name,
                 open=section_index == 0,
+                visible=_section_is_visible(section.name, section_fields, {
+                    field.key: field.visible for field in form.fields
+                }),
                 key=f"section:{section_index}",
-            ):
+            ) as section_container:
+                section_containers[section.name] = section_container
                 if section.name == "⑥ その他":
                     gr.Markdown(
                         "📘 床下関係の方式選択、推奨値、入力例は"
@@ -187,23 +200,46 @@ def build_app(
                 form.schema.fields,
                 control_key,
             )
+            affected_sections = tuple(
+                section_name
+                for section_name in section_containers
+                if _is_equipment_section(section_name)
+                and any(
+                    field.section == section_name for field in affected_fields
+                )
+            )
 
             def update_visibility(
                 *selected: Any,
                 fields: tuple[FieldDefinition, ...] = affected_fields,
+                sections: tuple[str, ...] = affected_sections,
             ) -> tuple[Any, ...]:
                 values = form.schema.defaults()
                 values.update(zip(control_keys, selected, strict=True))
                 visibility = form.visibility(values)
-                return tuple(
+                field_updates = tuple(
                     gr.Column(visible=visibility[field.key])
                     for field in fields
                 )
+                section_updates = tuple(
+                    gr.Accordion(
+                        visible=_section_is_visible(
+                            section_name,
+                            section_fields,
+                            visibility,
+                        )
+                    )
+                    for section_name in sections
+                )
+                return (*field_updates, *section_updates)
 
             components[control_key].change(
                 update_visibility,
                 inputs=control_inputs,
-                outputs=[containers[field.key] for field in affected_fields],
+                outputs=[
+                    *(containers[field.key] for field in affected_fields),
+                    *(section_containers[name] for name in affected_sections),
+                ],
                 queue=False,
                 api_visibility="private",
             )
@@ -228,6 +264,20 @@ def _visibility_descendants(
             return tuple(descendants)
         descendants.extend(added)
         controls.update(field.key for field in added)
+
+
+def _is_equipment_section(section_name: str) -> bool:
+    return section_name.startswith(("⑦-", "⑧-"))
+
+
+def _section_is_visible(
+    section_name: str,
+    section_fields: dict[str, tuple[FieldDefinition, ...]],
+    visibility: dict[str, bool],
+) -> bool:
+    if not _is_equipment_section(section_name):
+        return True
+    return any(visibility[field.key] for field in section_fields[section_name])
 
 
 def _input_component(field: FieldDefinition) -> Any:
