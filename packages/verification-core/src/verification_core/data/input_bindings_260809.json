@@ -1,8 +1,34 @@
 {
   "version": "260809",
   "base_version": "260804",
-  "binding_count": 268,
+  "binding_count": 270,
   "append_bindings": [
+    {
+      "line": 10005,
+      "target_path": ["H_A", "input_mode"],
+      "expression": "1 if H_A_input_mode == '入力しない' else 2",
+      "conditions": [
+        {
+          "kind": "if",
+          "expression": "input_data['H_A']['type'] == 2",
+          "line": 10004
+        }
+      ],
+      "source_ids": ["H_A_input_mode__0"]
+    },
+    {
+      "line": 10006,
+      "target_path": ["H_A", "mode"],
+      "expression": "1 if H_A_mode == 'い' else 2 if H_A_mode == 'ろ' else 3",
+      "conditions": [
+        {
+          "kind": "if",
+          "expression": "input_data['H_A']['type'] == 2",
+          "line": 10004
+        }
+      ],
+      "source_ids": ["H_A_mode__0"]
+    },
     {
       "line": 10001,
       "target_path": ["H_A", "correct_cooling_partition_heat_transfer"],

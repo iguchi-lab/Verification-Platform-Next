@@ -10,7 +10,7 @@ from urllib.request import urlopen
 
 import gradio as gr
 from jjjexperiment.release import DISPLAY_VERSION
-from verification_core import FieldDefinition, FieldKind
+from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
 from .form_model import FormField, FormModel, load_form_model
 from .graphs import GRAPH_LABELS
@@ -20,6 +20,41 @@ _UNDERFLOOR_INPUT_GUIDE_URL = (
     "https://github.com/iguchi-lab/Verification-Platform-Next/"
     "blob/main/docs/underfloor_ac_input_guide.md"
 )
+
+_INPUT_ORIGIN_CSS = """
+.input-origin-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0.25rem 0 1rem;
+}
+.input-origin-legend__item {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 600;
+  gap: 0.45rem;
+}
+.input-origin-legend__swatch {
+  border-radius: 999px;
+  display: inline-block;
+  height: 0.8rem;
+  width: 0.8rem;
+}
+.input-origin-legend__swatch--bri { background: #2563eb; }
+.input-origin-legend__swatch--vp { background: #f59e0b; }
+.input-origin-bri-web,
+.input-origin-verification-platform {
+  border-left-style: solid !important;
+  border-left-width: 4px !important;
+  border-radius: 0.4rem;
+  padding-left: 0.65rem !important;
+}
+.input-origin-bri-web { border-left-color: #2563eb !important; }
+.input-origin-verification-platform {
+  background: color-mix(in srgb, #f59e0b 7%, transparent);
+  border-left-color: #f59e0b !important;
+}
+"""
 
 
 def build_app(
@@ -35,6 +70,21 @@ def build_app(
     ) as demo:
         gr.Markdown(f"# Verification Platform Next {DISPLAY_VERSION}")
         gr.Markdown(f"共通入力スキーマから生成した {len(form.fields)} 項目の計算フォームです。")
+        gr.HTML(
+            f"<style>{_INPUT_ORIGIN_CSS}</style>"
+            '<div class="input-origin-legend">'
+            '<span class="input-origin-legend__item">'
+            '<span class="input-origin-legend__swatch '
+            'input-origin-legend__swatch--bri"></span>'
+            "建研Webにある入力"
+            "</span>"
+            '<span class="input-origin-legend__item">'
+            '<span class="input-origin-legend__swatch '
+            'input-origin-legend__swatch--vp"></span>'
+            "Verification Platformで追加・拡張した入力"
+            "</span>"
+            "</div>"
+        )
 
         components: dict[str, Any] = {}
         containers: dict[str, Any] = {}
@@ -59,6 +109,9 @@ def build_app(
                                     visible=form_field.visible,
                                     min_width=280,
                                     key=f"field-container:{form_field.key}",
+                                    elem_classes=[
+                                        _origin_css_class(form_field.definition.origin)
+                                    ],
                                 ) as container:
                                     component = _input_component(form_field.definition)
                                 components[form_field.key] = component
@@ -197,6 +250,10 @@ def _input_component(field: FieldDefinition) -> Any:
             **common,
         )
     raise ValueError(f"Unsupported field kind: {field.kind}")
+
+
+def _origin_css_class(origin: FieldOrigin) -> str:
+    return f"input-origin-{origin.value.replace('_', '-')}"
 
 
 def _chunks(values: tuple[FormField, ...], size: int) -> Iterable[tuple[FormField, ...]]:

@@ -42,6 +42,24 @@ def test_partial_values_use_inventory_defaults() -> None:
     assert data["case_name"] == "partial"
     assert data["H_A"]["type"] == 1
     assert data["C_A"]["type"] == 1
+    assert "input_mode" not in data["H_A"]
+    assert "mode" not in data["H_A"]
+
+
+def test_heating_and_cooling_efficiency_classes_are_built_independently() -> None:
+    data = build_input_data({
+        "H_A_type__0": "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+        "C_A_type__0": "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+        "H_A_input_mode__0": "入力する",
+        "H_A_mode__0": "い",
+        "C_A_input_mode__0": "入力する",
+        "C_A_mode__0": "は",
+    })
+
+    assert data["H_A"]["input_mode"] == 2
+    assert data["H_A"]["mode"] == 1
+    assert data["C_A"]["input_mode"] == 2
+    assert data["C_A"]["mode"] == 3
 
 
 def test_correction_options_default_off_and_enable_together_for_both_seasons() -> None:

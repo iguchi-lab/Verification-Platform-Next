@@ -21,7 +21,7 @@ class CRACSpecification:
 
     @classmethod
     def from_dict(cls, data: dict, A_A: float) -> 'CRACSpecification':
-        # エネルギー消費効率入力 冷房のみ
+        # 冷房側のエネルギー消費効率入力
         e_class = None
         if int(data.get('input_mode', 1)) == 2:
             mode = int(data.get('mode', 1))

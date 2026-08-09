@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 from importlib import resources
 from typing import Any
 
-from .schema import Condition, FieldKind
+from .schema import Condition, FieldKind, FieldOrigin
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +23,7 @@ class LegacyFieldDefinition:
     choices: tuple[Any, ...]
     enabled_when: Condition | None = None
     description: str = ""
+    origin: FieldOrigin = FieldOrigin.BRI_WEB
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ def _field_from_dict(item: dict[str, Any]) -> LegacyFieldDefinition:
         choices=tuple(item["choices"] or ()),
         enabled_when=_condition_from_dict(item.get("enabled_when")),
         description=item.get("description", ""),
+        origin=FieldOrigin(item.get("origin", FieldOrigin.BRI_WEB)),
     )
 
 
@@ -102,8 +104,43 @@ def load_legacy_inventory(version: str = "260809") -> LegacyInputInventory:
             field_id: _field_override_from_dict(value)
             for field_id, value in payload.get("field_overrides", {}).items()
         }
+        platform_sections = frozenset(
+            payload.get("verification_platform_sections", ())
+        )
+        platform_field_ids = frozenset(
+            payload.get("verification_platform_field_ids", ())
+        )
+        bri_web_field_ids = frozenset(payload.get("bri_web_field_ids", ()))
+        known_sections = frozenset(field.section for field in base.fields)
+        unknown_sections = platform_sections - known_sections
+        if unknown_sections:
+            raise ValueError(
+                "Unknown verification_platform_sections: "
+                f"{sorted(unknown_sections)}"
+            )
+        known_ids = frozenset(field.id for field in base.fields)
+        unknown_ids = (platform_field_ids | bri_web_field_ids) - known_ids
+        if unknown_ids:
+            raise ValueError(
+                "Unknown field origin IDs: "
+                f"{sorted(unknown_ids)}"
+            )
         fields = tuple(
-            replace(field, **overrides.get(field.id, {}))
+            replace(
+                field,
+                origin=(
+                    FieldOrigin.BRI_WEB
+                    if field.id in bri_web_field_ids
+                    else FieldOrigin.VERIFICATION_PLATFORM
+                    if (
+                        overrides.get(field.id, {}).get("section", field.section)
+                        in platform_sections
+                        or field.id in platform_field_ids
+                    )
+                    else field.origin
+                ),
+                **overrides.get(field.id, {}),
+            )
             for field in base.fields
             if field.id not in removed_ids
         )

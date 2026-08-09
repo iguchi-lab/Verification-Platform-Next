@@ -1,16 +1,65 @@
 import pytest
 
+from verification_core import FieldOrigin
 from verification_app.form_model import load_form_model
 
 
 def test_form_model_preserves_schema_order_and_groups() -> None:
     model = load_form_model()
 
-    assert len(model.fields) == 223
+    assert len(model.fields) == 225
     assert len(model.sections) == 18
     assert model.keys == tuple(field.key for field in model.schema.fields)
     assert all(section.groups for section in model.sections)
     assert all(group.fields for section in model.sections for group in section.groups)
+
+
+def test_form_model_preserves_input_origin() -> None:
+    model = load_form_model()
+    fields = {field.key: field for field in model.fields}
+
+    assert fields["A_A__0"].definition.origin is FieldOrigin.BRI_WEB
+    assert (
+        fields["change_underfloor_temperature__0"].definition.origin
+        is FieldOrigin.VERIFICATION_PLATFORM
+    )
+
+
+def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
+    model = load_form_model()
+    heating = next(section for section in model.sections if section.name.startswith("⑦-2"))
+    heating_group = next(
+        group
+        for group in heating.groups
+        if group.name == "エネルギー消費効率の入力"
+    )
+
+    assert tuple(field.key for field in heating_group.fields) == (
+        "H_A_input_mode__0",
+        "H_A_mode__0",
+    )
+    assert not any(field.visible for field in heating_group.fields)
+
+    cooling = next(section for section in model.sections if section.name.startswith("⑧-2"))
+    cooling_group = next(
+        group
+        for group in cooling.groups
+        if group.name == "エネルギー消費効率の入力"
+    )
+    assert tuple(field.key for field in cooling_group.fields) == (
+        "C_A_input_mode__0",
+        "C_A_mode__0",
+    )
+    assert not any(field.visible for field in cooling_group.fields)
+
+    values = model.schema.defaults()
+    heating_type = next(field for field in model.fields if field.key == "H_A_type__0")
+    cooling_type = next(field for field in model.fields if field.key == "C_A_type__0")
+    values["H_A_type__0"] = heating_type.definition.choices[1]
+    values["C_A_type__0"] = cooling_type.definition.choices[1]
+    visibility = model.visibility(values)
+    assert all(visibility[field.key] for field in heating_group.fields)
+    assert all(visibility[field.key] for field in cooling_group.fields)
 
 
 def test_form_model_updates_model_specific_visibility() -> None:
@@ -74,5 +123,5 @@ def test_form_values_are_mapped_by_schema_order() -> None:
 def test_form_value_count_is_validated() -> None:
     model = load_form_model()
 
-    with pytest.raises(ValueError, match="Expected 223 form values, found 1"):
+    with pytest.raises(ValueError, match="Expected 225 form values, found 1"):
         model.values_from_sequence(("only-one",))

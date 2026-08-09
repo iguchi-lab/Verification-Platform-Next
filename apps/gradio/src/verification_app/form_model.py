@@ -35,9 +35,13 @@ class FormModel:
 
     @property
     def fields(self) -> tuple[FormField, ...]:
-        return tuple(
-            field for section in self.sections for group in section.groups for field in group.fields
-        )
+        fields_by_key = {
+            field.key: field
+            for section in self.sections
+            for group in section.groups
+            for field in group.fields
+        }
+        return tuple(fields_by_key[field.key] for field in self.schema.fields)
 
     @property
     def keys(self) -> tuple[str, ...]:

@@ -20,12 +20,23 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         for component in config["components"]
         if component["type"] == "markdown"
     )
+    html_values = tuple(
+        component["props"].get("value", "")
+        for component in config["components"]
+        if component["type"] == "html"
+    )
+    origin_classes = Counter(
+        elem_class
+        for component in config["components"]
+        if component["type"] == "column"
+        for elem_class in component["props"].get("elem_classes", ())
+    )
 
     assert gradio.__version__.startswith("6.")
     assert config["title"] == "Verification Platform Next ver.1.0.1"
     assert component_types["accordion"] == 18
     assert component_types["number"] == 158
-    assert component_types["dropdown"] == 52
+    assert component_types["dropdown"] == 54
     assert component_types["checkbox"] == 10
     assert component_types["textbox"] == 4  # three text inputs and the log output
     assert component_types["plot"] == 5
@@ -35,6 +46,15 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         and "docs/underfloor_ac_input_guide.md" in value
         for value in markdown_values
     )
+    assert any(
+        "建研Webにある入力" in value
+        and "Verification Platformで追加・拡張した入力" in value
+        for value in html_values
+    )
+    assert origin_classes == {
+        "input-origin-bri-web": 47,
+        "input-origin-verification-platform": 178,
+    }
 
     (
         calculation_started,
@@ -49,14 +69,14 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
     assert len(calculation_started["outputs"]) == 10
-    assert len(calculation["inputs"]) == 223
+    assert len(calculation["inputs"]) == 225
     assert len(calculation["outputs"]) == 6
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
     assert len(ventilation_visibility["outputs"]) == 2
     assert len(new_underfloor_visibility["outputs"]) == 5
     assert len(underfloor_constants_visibility["outputs"]) == 3
-    assert len(heating_visibility["outputs"]) == 72
+    assert len(heating_visibility["outputs"]) == 74
     assert len(cooling_visibility["outputs"]) == 79
 
 

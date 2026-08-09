@@ -5,6 +5,14 @@
 
 ## Unreleased
 
+### Changed
+
+- ルームエアコン活用型のエネルギー消費効率区分を、建研Webと同じく暖房・冷房の
+  両カテゴリーに設け、それぞれの定格効率を独立して算定できるようにした。
+  暖房側入力を持たない旧JSONは、従来どおり冷房効率から暖房効率を換算する。
+- 現在の入力画面の配置は維持したまま、建研Webにある入力を青、
+  Verification Platformで追加・拡張した入力を橙で識別できるようにした。
+
 ### 文書
 
 - 建研本家の不具合候補、旧Verification Platform、Verification Platform Nextの
