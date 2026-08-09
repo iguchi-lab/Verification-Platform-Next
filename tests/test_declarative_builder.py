@@ -2,10 +2,10 @@ from itertools import product
 
 from verification_core import (
     build_input_data,
-    build_legacy_input_data,
     default_ui_values,
     load_legacy_inventory,
 )
+from verification_core._legacy_form_evaluator import build_legacy_input_data
 
 
 def test_default_output_matches_legacy_builder() -> None:

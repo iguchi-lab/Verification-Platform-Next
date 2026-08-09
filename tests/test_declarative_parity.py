@@ -3,10 +3,10 @@ from typing import Any
 from verification_core import (
     FieldKind,
     build_input_data,
-    build_legacy_input_data,
     default_ui_values,
     load_legacy_inventory,
 )
+from verification_core._legacy_form_evaluator import build_legacy_input_data
 
 _TYPE_FIELDS = {
     ("H_A", "type"): "H_A_type__0",

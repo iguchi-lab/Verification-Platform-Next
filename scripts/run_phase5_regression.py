@@ -76,11 +76,8 @@ def _selected_cases(
 
 
 def _build_case_input(case: dict[str, Any], *, legacy: bool) -> dict[str, Any]:
-    from verification_core import (
-        build_input_data,
-        build_legacy_input_data,
-        default_ui_values,
-    )
+    from verification_core import build_input_data, default_ui_values
+    from verification_core._legacy_form_evaluator import build_legacy_input_data
 
     values = default_ui_values()
     values.update(case["ui_overrides"])
