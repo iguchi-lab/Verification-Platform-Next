@@ -54,13 +54,16 @@ _INPUT_ORIGIN_CSS = """
   background: color-mix(in srgb, #f59e0b 7%, transparent);
   border-left-color: #f59e0b !important;
 }
+.input-section {
+  overflow-x: clip !important;
+}
 .input-section > button > span:not(.icon) {
-  font-size: 1.375rem !important;
+  font-size: 1.125rem !important;
   font-weight: 700 !important;
   line-height: 1.45 !important;
 }
 .input-group-heading h2 {
-  font-size: 1.125rem !important;
+  font-size: 1rem !important;
   font-weight: 600 !important;
   line-height: 1.45 !important;
   margin: 0.65rem 0 0.35rem !important;
