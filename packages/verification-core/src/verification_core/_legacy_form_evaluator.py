@@ -1,3 +1,10 @@
+"""Regression-only evaluator for the frozen pre-monorepo Python form.
+
+Product input generation must use :mod:`verification_core.declarative_builder`.
+This module remains private so Phase 5 can prove parity with the historical form
+without exposing the compatibility evaluator as a supported product API.
+"""
+
 from __future__ import annotations
 
 import ast
@@ -5,8 +12,6 @@ import re
 from collections import defaultdict
 from importlib import resources
 from typing import Any, Mapping
-
-from .legacy import LegacyInputInventory, load_legacy_inventory
 
 _ASSIGNMENT_RE = re.compile(
     r"^(\s*)([A-Za-z_]\w*)\s*=\s*(.*?)\s+#@param\s*(.*)$"
@@ -17,13 +22,6 @@ def load_legacy_form_source(version: str = "260715") -> str:
     file_name = f"form_{version}.py"
     source_file = resources.files("verification_core.data").joinpath(file_name)
     return source_file.read_text(encoding="utf-8")
-
-
-def default_ui_values(
-    inventory: LegacyInputInventory | None = None,
-) -> dict[str, Any]:
-    inventory = inventory or load_legacy_inventory()
-    return {item.id: item.default for item in inventory.fields}
 
 
 class _LegacyFormEvaluator:

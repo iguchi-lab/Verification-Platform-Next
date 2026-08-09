@@ -4,8 +4,8 @@ from collections import defaultdict
 from typing import Any, Mapping
 
 from .bindings import InputBinding, InputBindingCatalog, load_input_bindings
+from .defaults import default_ui_values
 from .legacy import load_legacy_inventory
-from .legacy_builder import default_ui_values
 from .predicates import BranchPredicate, Predicate, parse_binding_predicate
 
 _ConditionPart = tuple[str, int, str]

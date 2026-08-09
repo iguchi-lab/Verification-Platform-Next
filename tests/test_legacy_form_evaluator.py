@@ -1,11 +1,17 @@
 import pytest
 
-import verification_core.legacy_builder as legacy_builder
+import verification_core
+import verification_core._legacy_form_evaluator as legacy_form_evaluator
 from verification_core import (
-    build_legacy_input_data,
     default_ui_values,
     load_legacy_inventory,
 )
+from verification_core._legacy_form_evaluator import build_legacy_input_data
+
+
+def test_regression_evaluator_is_not_part_of_the_public_api() -> None:
+    assert not hasattr(verification_core, "build_legacy_input_data")
+    assert not hasattr(verification_core, "load_legacy_form_source")
 
 
 def test_default_inventory_builds_input_data() -> None:
@@ -69,7 +75,7 @@ def test_boolean_encoding_matches_existing_contract() -> None:
 
 def test_unsupported_syntax_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        legacy_builder,
+        legacy_form_evaluator,
         "load_legacy_form_source",
         lambda version: "import os\ninput_data = {}\n",
     )
