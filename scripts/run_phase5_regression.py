@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import gzip
 import io
@@ -20,10 +21,28 @@ from typing import Any, Iterable
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = REPOSITORY_ROOT / "regression" / "phase5" / "manifest.json"
 BASELINE_SUFFIXES = ("input.json", "output1.csv", "output2.csv")
+_OPT_IN_CORRECTION_KEYS = (
+    "correct_cooling_partition_heat_transfer",
+    "correct_no_general_ventilation_airflow",
+)
 
 
 class RegressionMismatch(AssertionError):
     """Raised when a generated artifact differs from its frozen baseline."""
+
+
+def _legacy_input_projection(input_data: dict[str, Any]) -> dict[str, Any]:
+    """Remove only default-OFF options that did not exist in the legacy form."""
+    projected = copy.deepcopy(input_data)
+    for season in ("H_A", "C_A"):
+        settings = projected.get(season, {})
+        for key in _OPT_IN_CORRECTION_KEYS:
+            value = settings.pop(key, 1)
+            if str(value) != "1":
+                raise RegressionMismatch(
+                    f"Phase 5 legacy projection requires {season}.{key}=OFF"
+                )
+    return projected
 
 
 def _load_manifest(path: Path) -> dict[str, Any]:
@@ -55,7 +74,7 @@ def _build_case_input(case: dict[str, Any], *, legacy: bool) -> dict[str, Any]:
     values.update(case["ui_overrides"])
     canonical_input = build_input_data(values)
     legacy_input = build_legacy_input_data(values)
-    if canonical_input != legacy_input:
+    if _legacy_input_projection(canonical_input) != legacy_input:
         raise RegressionMismatch(
             f"{case['id']}: canonical input no longer matches the legacy form builder"
         )
@@ -110,7 +129,9 @@ def _read_gzip_json(path: Path) -> Any:
 def _compare_json(case_id: str, actual: Path, expected: Path) -> None:
     actual_value = json.loads(actual.read_text(encoding="utf-8"))
     expected_value = _read_gzip_json(expected)
-    if actual_value != expected_value:
+    if _legacy_input_projection(actual_value) != _legacy_input_projection(
+        expected_value
+    ):
         raise RegressionMismatch(f"{case_id}: calculation input JSON changed")
 
 

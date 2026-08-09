@@ -872,6 +872,7 @@ class _BalancedLoadsAtHourInputs(NamedTuple):
     load: object
     Q_star_trs_prt_d_t_i: object
     carryover: object
+    correct_partition_heat_transfer: object
 
 
 class _ActualLoadsInputs(NamedTuple):
@@ -988,6 +989,7 @@ class _NewUnderfloorBalancedLoadInputs(NamedTuple):
     U_s_floor_load: object
     L_star_H_d_t_i: object
     L_star_CS_d_t_i: object
+    correct_partition_heat_transfer: object
 
 
 class _UnderfloorActualRoomTemperatureInputs(NamedTuple):
@@ -1148,6 +1150,7 @@ class _BalancedLoadStateInputs(NamedTuple):
 
 
 class _NoCarryoverBalancedLoadInputs(NamedTuple):
+    ac_setting: object
     house: object
     new_ufac: object
     new_ufac_df: object
@@ -1556,14 +1559,18 @@ def _get_heat_source_supply_airflow_before_vav(inputs: _HeatSourceSupplyAirflowB
 
 
 def _get_heat_source_ventilation_airflow_by_zone(
-        V_vent_g_i, general_ventilation):
+        V_vent_g_i,
+        general_ventilation,
+        correct_no_general_ventilation_airflow=False):
     """Return the ventilation lower bound carried by the heat source.
 
     ``V_vent_g_i`` remains available for the dwelling ventilation load and
-    formula (39).  When the heat source has no general-ventilation function,
-    however, it must not be reused as the zone lower bound in formulas (44)
-    and (43).
+    formula (39).  The default preserves the BRI lower bound.  The opt-in
+    correction removes that lower bound from formulas (44) and (43) when the
+    heat source has no general-ventilation function.
     """
+    if not correct_no_general_ventilation_airflow:
+        return V_vent_g_i
     if general_ventilation is True:
         return V_vent_g_i
     if general_ventilation is False:
@@ -1580,7 +1587,10 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
     V_dash_hs_supply_d_t = inputs.V_dash_hs_supply_d_t
     V_vent_g_i = inputs.V_vent_g_i
     V_hs_vent_g_i = _get_heat_source_ventilation_airflow_by_zone(
-        V_vent_g_i, ac_setting.general_ventilation)
+        V_vent_g_i,
+        ac_setting.general_ventilation,
+        getattr(ac_setting, "correct_no_general_ventilation_airflow", False),
+    )
     if ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
         # (45)　風量バランス
         r_supply_des_d_t_i = dc.get_r_supply_des_d_t_i_2023(house.region, load.L_CS_d_t_i, load.L_H_d_t_i)
@@ -1863,7 +1873,10 @@ def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
     V_hs_dsgn_C = inputs.V_hs_dsgn_C
     print_exec = inputs.print_exec
     V_hs_vent_g_i = _get_heat_source_ventilation_airflow_by_zone(
-        V_vent_g_i, ac_setting.general_ventilation)
+        V_vent_g_i,
+        ac_setting.general_ventilation,
+        getattr(ac_setting, "correct_no_general_ventilation_airflow", False),
+    )
     # (43)　暖冷房区画𝑖の吹き出し風量
     V_supply_d_t_i_before = dc.get_V_supply_d_t_i(L_star_H_d_t_i, L_star_CS_d_t_i, Theta_sur_d_t_i, l_duct_i, Theta_star_HBR_d_t
                                                 , V_hs_vent_g_i, V_dash_supply_d_t_i, ac_setting.VAV, house.region, Theta_hs_out_d_t)
@@ -1889,7 +1902,7 @@ def _ensure_vav_equipment_minimum_airflow(
     ac_setting: ActiveAcSetting,
     region: int,
 ) -> np.ndarray:
-    """全般換気なしのVAV運転時も、暖冷房期の設備最低風量を保証する。
+    """補正ON時、全般換気なしのVAV運転で設備最低風量を保証する。
 
     式 (43) の区画下限は全般換気量であり、設備最低風量とは別の量である。
     全般換気機能がない場合、式 (43) に渡す換気量を0にするのは正しいが、
@@ -1899,7 +1912,11 @@ def _ensure_vav_equipment_minimum_airflow(
     設備最低風量として取り出し、不足分を各区画の残余風量に比例配分する。
     中間期は全般換気を搬送しないため0のままとする。
     """
-    if not ac_setting.VAV or ac_setting.general_ventilation:
+    if (
+        not getattr(ac_setting, "correct_no_general_ventilation_airflow", False)
+        or not ac_setting.VAV
+        or ac_setting.general_ventilation
+    ):
         return V_supply_d_t_i
 
     upper = np.asarray(V_dash_supply_d_t_i, dtype=float)
@@ -2130,7 +2147,8 @@ def _get_balanced_loads_at_hour(inputs: _BalancedLoadsAtHourInputs):
         C[t],
         load.L_CS_d_t_i[:5, t:t+1],
         Q_star_trs_prt_d_t_i[:5, t:t+1],
-        carryover)
+        carryover,
+        inputs.correct_partition_heat_transfer)
 
     return L_star_H_i, L_star_CS_i
 
@@ -2654,6 +2672,7 @@ def _adjust_new_underfloor_balanced_loads(inputs: _NewUnderfloorBalancedLoadInpu
         load.L_CS_d_t_i[:5, :][Cf],
         Q_star_trs_prt_d_t_i[Cf],
         delta_L_uf2room_d_t_i[:5, :][Cf],
+        inputs.correct_partition_heat_transfer,
     )
 
     new_ufac_df.update_df({
@@ -3465,8 +3484,34 @@ def _initialize_carryover_hourly_state(region):
         M,
     )
 
+def _get_L_star_CS_d_t_i(
+        L_CS_d_t_i,
+        Q_star_trs_prt_d_t_i,
+        region,
+        correct_partition_heat_transfer=False):
+    """Calculate formula (9) in BRI-compatible or corrected mode."""
+    if not correct_partition_heat_transfer:
+        return dc.get_L_star_CS_d_t_i(
+            L_CS_d_t_i,
+            Q_star_trs_prt_d_t_i,
+            region,
+        )
+
+    _, cooling, _ = dc.get_season_array_d_t(region)
+    cooling_load = L_CS_d_t_i[:5]
+    active = np.logical_and(cooling, cooling_load > 0)
+    result = np.zeros((5, 24 * 365))
+    result[active] = np.clip(
+        cooling_load[active] - Q_star_trs_prt_d_t_i[active],
+        0,
+        None,
+    )
+    return result
+
+
 def _prepare_no_carryover_balanced_loads(inputs: _NoCarryoverBalancedLoadInputs):
     """Calculate formulas (9) and (8), including the new-underfloor adjustment."""
+    ac_setting = inputs.ac_setting
     house = inputs.house
     new_ufac = inputs.new_ufac
     new_ufac_df = inputs.new_ufac_df
@@ -3475,8 +3520,12 @@ def _prepare_no_carryover_balanced_loads(inputs: _NoCarryoverBalancedLoadInputs)
     Theta_star_HBR_d_t = inputs.Theta_star_HBR_d_t
     Theta_ex_d_t = inputs.Theta_ex_d_t
     Q_star_trs_prt_d_t_i = inputs.Q_star_trs_prt_d_t_i
-    L_star_CS_d_t_i = dc.get_L_star_CS_d_t_i(
-        load.L_CS_d_t_i, Q_star_trs_prt_d_t_i, house.region)
+    L_star_CS_d_t_i = _get_L_star_CS_d_t_i(
+        load.L_CS_d_t_i,
+        Q_star_trs_prt_d_t_i,
+        house.region,
+        getattr(ac_setting, "correct_cooling_partition_heat_transfer", False),
+    )
     L_star_H_d_t_i = dc.get_L_star_H_d_t_i(
         load.L_H_d_t_i, Q_star_trs_prt_d_t_i, house.region)
     if new_ufac.new_ufac_flg == 床下空調ロジック.変更する:
@@ -3484,7 +3533,12 @@ def _prepare_no_carryover_balanced_loads(inputs: _NoCarryoverBalancedLoadInputs)
             _adjust_new_underfloor_balanced_loads(_NewUnderfloorBalancedLoadInputs(
                 house, new_ufac_df, load, A_s_ufac_i,
                 Theta_star_HBR_d_t, Theta_ex_d_t, Q_star_trs_prt_d_t_i,
-                inputs.U_s_floor_load, L_star_H_d_t_i, L_star_CS_d_t_i))
+                inputs.U_s_floor_load, L_star_H_d_t_i, L_star_CS_d_t_i,
+                getattr(
+                    ac_setting,
+                    "correct_cooling_partition_heat_transfer",
+                    False,
+                )))
     return L_star_H_d_t_i, L_star_CS_d_t_i
 
 def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs):
@@ -4555,7 +4609,12 @@ def _run_carryover_calculation(inputs: _CarryoverCalculationPhaseInputs):
             L_star_CS_d_t_i[:, t:t+1],
         ) = _get_balanced_loads_at_hour(_BalancedLoadsAtHourInputs(
             t, H, C, inputs.load, inputs.pre_branch.Q_star_trs_prt_d_t_i,
-            carryover))
+            carryover,
+            getattr(
+                inputs.ac_setting,
+                "correct_cooling_partition_heat_transfer",
+                False,
+            )))
         capacity_state = _prepare_carryover_capacity_state(
             _CarryoverCapacityStateInputs(
                 inputs.ac_setting, inputs.house, inputs.heat_CRAC,
@@ -4640,7 +4699,8 @@ def _run_no_carryover_calculation(inputs: _NoCarryoverCalculationInputs):
     # (9), (8)　冷房顕熱・暖房の負荷バランス
     L_star_H_d_t_i, L_star_CS_d_t_i = _prepare_no_carryover_balanced_loads(
         _NoCarryoverBalancedLoadInputs(
-            inputs.house, inputs.new_ufac, inputs.new_ufac_df, inputs.load,
+            inputs.ac_setting, inputs.house, inputs.new_ufac,
+            inputs.new_ufac_df, inputs.load,
             pre_vav_state.A_s_ufac_i, preparation.Theta_star_HBR_d_t,
             preparation.Theta_ex_d_t, inputs.pre_branch.Q_star_trs_prt_d_t_i,
             preparation.climate.get_U_s_vert(inputs.skin.Q)))
@@ -4909,6 +4969,13 @@ def _build_sequential_ground_inputs(
         ),
         vav=ac_setting.VAV,
         heat_source_cav=skin.hs_CAV,
+        correct_cooling_partition_heat_transfer=(
+            getattr(
+                ac_setting,
+                "correct_cooling_partition_heat_transfer",
+                False,
+            )
+        ),
         q_hat_before_ground_d_t=(
             pre_vav.Q_hat_hs_before_ground_d_t.copy()
         ),
@@ -4931,6 +4998,11 @@ def _build_sequential_ground_inputs(
         v_vent_g_i=_get_heat_source_ventilation_airflow_by_zone(
             preparation.V_vent_g_i,
             ac_setting.general_ventilation,
+            getattr(
+                ac_setting,
+                "correct_no_general_ventilation_airflow",
+                False,
+            ),
         ).copy(),
         v_hs_min=float(preparation.V_hs_min),
         v_hs_dsgn=float(v_hs_dsgn),

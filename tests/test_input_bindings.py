@@ -12,7 +12,7 @@ def test_active_catalog_covers_every_ui_field() -> None:
     inventory = load_legacy_inventory()
     catalog = load_input_bindings()
 
-    assert len(catalog.bindings) == 264
+    assert len(catalog.bindings) == 268
     assert catalog.source_ids == frozenset(field.id for field in inventory.fields)
 
 
@@ -22,6 +22,33 @@ def test_removed_legacy_underfloor_binding_is_fixed_disabled() -> None:
 
     assert binding.source_ids == ()
     assert binding.evaluate(default_ui_values()) == "1"
+
+
+def test_correction_checkboxes_are_bound_to_both_seasons() -> None:
+    catalog = load_input_bindings()
+    values = default_ui_values()
+
+    partition = tuple(
+        binding for binding in catalog.bindings
+        if binding.source_ids == ("correct_cooling_partition_heat_transfer__0",)
+    )
+    airflow = tuple(
+        binding for binding in catalog.bindings
+        if binding.source_ids == ("correct_no_general_ventilation_airflow__0",)
+    )
+
+    assert {binding.target_path for binding in partition} == {
+        ("H_A", "correct_cooling_partition_heat_transfer"),
+        ("C_A", "correct_cooling_partition_heat_transfer"),
+    }
+    assert {binding.target_path for binding in airflow} == {
+        ("H_A", "correct_no_general_ventilation_airflow"),
+        ("C_A", "correct_no_general_ventilation_airflow"),
+    }
+    assert all(binding.evaluate(values) == 1 for binding in partition + airflow)
+    values["correct_cooling_partition_heat_transfer__0"] = True
+    values["correct_no_general_ventilation_airflow__0"] = True
+    assert all(binding.evaluate(values) == 2 for binding in partition + airflow)
 
 
 def test_heating_and_cooling_types_keep_all_conditional_mappings() -> None:

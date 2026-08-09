@@ -15,7 +15,7 @@ _TYPE_FIELDS = {
 
 
 def test_every_boolean_and_select_alternative_matches_legacy() -> None:
-    inventory = load_legacy_inventory()
+    inventory = load_legacy_inventory("260804")
     fields = {field.id: field for field in inventory.fields}
 
     for field in inventory.fields:
@@ -32,7 +32,7 @@ def test_every_boolean_and_select_alternative_matches_legacy() -> None:
                     values[control_id] = control.choices[selected_type - 1]
             values[field.id] = candidate
 
-            assert build_input_data(values) == build_legacy_input_data(values), (
+            assert build_input_data(values, version="260804") == build_legacy_input_data(values), (
                 field.id,
                 candidate,
             )

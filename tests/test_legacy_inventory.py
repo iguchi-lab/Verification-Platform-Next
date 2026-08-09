@@ -3,19 +3,19 @@ from collections import Counter
 from verification_core import FieldKind, load_legacy_inventory
 
 
-def test_260804_active_inventory_organizes_underfloor_fields() -> None:
+def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
     inventory = load_legacy_inventory()
 
-    assert inventory.version == "260804"
-    assert len(inventory.fields) == 221
+    assert inventory.version == "260809"
+    assert len(inventory.fields) == 223
     assert inventory.category_counts == {
-        "基本設定": 44,
+        "基本設定": 46,
         "暖房": 84,
         "冷房": 91,
         "換気": 2,
     }
     assert len(inventory.section_names) == 18
-    assert len({item.id for item in inventory.fields}) == 221
+    assert len({item.id for item in inventory.fields}) == 223
     assert "underfloor_air_conditioning_air_supply__0" not in {
         item.id for item in inventory.fields
     }
@@ -43,6 +43,23 @@ def test_260804_active_inventory_organizes_underfloor_fields() -> None:
     assert ground_resistance.enabled_when.path == (
         "change_underfloor_temperature__0",
     )
+
+    corrections = {
+        item.id: item for item in inventory.fields
+        if item.group == "建研本家との比較設定"
+    }
+    assert set(corrections) == {
+        "correct_cooling_partition_heat_transfer__0",
+        "correct_no_general_ventilation_airflow__0",
+    }
+    assert all(item.default is False for item in corrections.values())
+
+
+def test_260804_historical_inventory_remains_frozen() -> None:
+    inventory = load_legacy_inventory("260804")
+
+    assert inventory.version == "260804"
+    assert len(inventory.fields) == 221
 
 
 def test_260724_historical_inventory_remains_frozen() -> None:

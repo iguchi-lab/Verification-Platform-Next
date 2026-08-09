@@ -111,6 +111,7 @@ def get_L_star_CS_i_2024(
         L_CS_i: Array5x1,
         Q_star_trs_prt_i: Array5x1,
         carryover: Array5x1,
+        correct_partition_heat_transfer: bool = False,
     )-> Array5x1:
     """(9-1)(9-2)(9-3) -> 時点版, 過剰熱量を考慮
 
@@ -129,7 +130,12 @@ def get_L_star_CS_i_2024(
         return np.zeros((5, 1))
 
     # 繰越熱量は負荷低減に働く
-    L_star_CS_i = L_CS_i + Q_star_trs_prt_i - carryover
+    partition_term = (
+        -Q_star_trs_prt_i
+        if correct_partition_heat_transfer
+        else Q_star_trs_prt_i
+    )
+    L_star_CS_i = L_CS_i + partition_term - carryover
     L_star_CS_i = np.clip(L_star_CS_i, 0, None)
 
     # 事後条件:

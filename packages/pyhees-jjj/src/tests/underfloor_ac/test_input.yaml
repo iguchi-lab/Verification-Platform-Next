@@ -20,6 +20,7 @@ change_underfloor_temperature: 2  # 床下空調あり
 input_ufac_consts: 1  # 定数上書きしない
 H_A:
   type: 1
+  correct_cooling_partition_heat_transfer: 2
   input_V_hs_dsgn: 2 # ★
   V_hs_dsgn: 1500
   q_hs_rtd_H: 10000.0
@@ -27,6 +28,7 @@ H_A:
   input: 1
 C_A:
   type: 1
+  correct_cooling_partition_heat_transfer: 2
   input_V_hs_dsgn: 2 # ★
   V_hs_dsgn: 1500
   q_hs_rtd_C: 10000.0

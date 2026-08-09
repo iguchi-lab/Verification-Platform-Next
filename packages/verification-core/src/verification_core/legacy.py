@@ -72,7 +72,24 @@ def _field_override_from_dict(value: dict[str, Any]) -> dict[str, Any]:
     return override
 
 
-def load_legacy_inventory(version: str = "260804") -> LegacyInputInventory:
+def _field_from_dict(item: dict[str, Any]) -> LegacyFieldDefinition:
+    return LegacyFieldDefinition(
+        id=item["id"],
+        source_name=item["source_name"],
+        source_occurrence=int(item["source_occurrence"]),
+        label=item["label"],
+        section=item["section"],
+        group=item["group"],
+        category=item["category"],
+        kind=FieldKind(item["kind"]),
+        default=item["default"],
+        choices=tuple(item["choices"] or ()),
+        enabled_when=_condition_from_dict(item.get("enabled_when")),
+        description=item.get("description", ""),
+    )
+
+
+def load_legacy_inventory(version: str = "260809") -> LegacyInputInventory:
     file_name = f"input_fields_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:
@@ -90,24 +107,27 @@ def load_legacy_inventory(version: str = "260804") -> LegacyInputInventory:
             for field in base.fields
             if field.id not in removed_ids
         )
+        mutable_fields = list(fields)
+        for item in payload.get("append_fields", ()):
+            field = _field_from_dict(item)
+            insert_after = item.get("insert_after_field_id")
+            if insert_after is None:
+                mutable_fields.append(field)
+                continue
+            try:
+                index = next(
+                    index
+                    for index, existing in enumerate(mutable_fields)
+                    if existing.id == insert_after
+                )
+            except StopIteration as error:
+                raise ValueError(
+                    f"Unknown insert_after_field_id: {insert_after}"
+                ) from error
+            mutable_fields.insert(index + 1, field)
+        fields = tuple(mutable_fields)
     else:
-        fields = tuple(
-            LegacyFieldDefinition(
-                id=item["id"],
-                source_name=item["source_name"],
-                source_occurrence=int(item["source_occurrence"]),
-                label=item["label"],
-                section=item["section"],
-                group=item["group"],
-                category=item["category"],
-                kind=FieldKind(item["kind"]),
-                default=item["default"],
-                choices=tuple(item["choices"] or ()),
-                enabled_when=_condition_from_dict(item.get("enabled_when")),
-                description=item.get("description", ""),
-            )
-            for item in payload["fields"]
-        )
+        fields = tuple(_field_from_dict(item) for item in payload["fields"])
     inventory = LegacyInputInventory(version=payload["version"], fields=fields)
     inventory.validate(expected_count=int(payload["field_count"]))
     return inventory

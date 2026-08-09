@@ -237,6 +237,7 @@ class SequentialGroundModeInputs:
     use_load_dependent_cooling_capacity: bool
     vav: bool
     heat_source_cav: bool
+    correct_cooling_partition_heat_transfer: bool
     q_hat_before_ground_d_t: NDArray[np.float64]
     q_hat_base_d_t: NDArray[np.float64]
     q_hat_cs_base_d_t: NDArray[np.float64]
@@ -503,6 +504,7 @@ def _mode_floor_temperature(
             inputs.l_cs_d_t_i[:5, hour][active],
             q_partition_i[active],
             floor_transfer_i[active],
+            inputs.correct_cooling_partition_heat_transfer,
         )
 
     contact = np.array([appendix_e.get_r_A_uf_i(i) for i in (1, 2)])

@@ -19,6 +19,8 @@ def test_ac_setting_parses_all_common_input_fields():
         "input": "3",
         "VAV": "2",
         "general_ventilation": str(全般換気機能.なし.value),
+        "correct_cooling_partition_heat_transfer": "2",
+        "correct_no_general_ventilation_airflow": "2",
         "duct_insulation": "2",
         "subtract_ventilation_power": "2",
         "input_f_SFP": 2,
@@ -43,6 +45,8 @@ def test_ac_setting_parses_all_common_input_fields():
     assert actual.equipment_spec == 機器仕様手動入力タイプ.定格能力試験と中間能力試験の値を入力する.name
     assert actual.VAV is True
     assert actual.general_ventilation is False
+    assert actual.correct_cooling_partition_heat_transfer is True
+    assert actual.correct_no_general_ventilation_airflow is True
     assert actual.duct_insulation == "全て断熱区画内である"
     assert actual.subtract_ventilation_power is ファン消費電力から換気分を引く.換気分を引かない
     assert actual.f_SFP == 0.21
@@ -71,6 +75,8 @@ def test_ac_setting_preserves_defaults_and_gate_conversion_rules():
     assert actual.input_mode is 機器仕様手動入力タイプ.入力しない
     assert actual.VAV is False
     assert actual.general_ventilation is True
+    assert actual.correct_cooling_partition_heat_transfer is False
+    assert actual.correct_no_general_ventilation_airflow is False
     assert actual.f_SFP == pytest.approx(0.4 * 0.36)
     assert actual.V_hs_dsgn == 876.5
     assert actual.q_hs_rtd_input is None

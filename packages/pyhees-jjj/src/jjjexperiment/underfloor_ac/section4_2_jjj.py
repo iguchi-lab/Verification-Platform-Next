@@ -156,15 +156,21 @@ def calc_L_star_CS_with_underfloor(
         L_CS_i,
         Q_trs_prt_i,
         delta_L_floor_i,
+        correct_partition_heat_transfer=False,
     ):
-    """Return the physically signed cooling form of formula (9).
+    """Return formula (9) after removing the original insulated-floor gain.
 
     ``Q_trs_prt_i`` and ``delta_L_floor_i`` are signed heat flows from the
-    room toward the non-room and outdoor sides, respectively.  Cooling load
-    is a positive heat-gain magnitude, so the partition term is subtracted
-    and the removed insulated-floor term is added.
+    room toward the non-room and outdoor sides, respectively.  The BRI form
+    adds the partition term.  The opt-in corrected form subtracts it because
+    cooling load is represented as a positive heat-gain magnitude.
     """
-    return np.maximum(L_CS_i - Q_trs_prt_i + delta_L_floor_i, 0.0)
+    partition_term = (
+        -Q_trs_prt_i
+        if correct_partition_heat_transfer
+        else Q_trs_prt_i
+    )
+    return np.maximum(L_CS_i + partition_term + delta_L_floor_i, 0.0)
 
 
 def calc_delta_L_uf2outdoor(
