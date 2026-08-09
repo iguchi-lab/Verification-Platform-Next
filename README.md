@@ -92,6 +92,14 @@ variablesとsecretsへGoogle Cloudのプロジェクト、リージョン、Arti
 Workload Identity Federationを設定して使用します。`main`へのpushでは自動
 デプロイされません。
 
+既定のCloud Run構成は最大1インスタンスです。複数の利用者から計算要求があった場合は
+Gradioのキューで受け付け、1件ずつ順番に計算します。待機上限は5件、計算成果物の
+保持期間は24時間で、次の環境変数から変更できます。
+
+- `GRADIO_QUEUE_MAX_SIZE`: 待機可能件数。0以下は無制限
+- `VERIFICATION_RESULT_TTL_SECONDS`: 成果物保持秒数。0以下は自動削除なし
+- `VERIFICATION_OUTPUT_DIR`: 計算ID別ディレクトリを作る親ディレクトリ
+
 ローカルでコンテナを確認する場合は次のとおりです。
 
 ```bash
