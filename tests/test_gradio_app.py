@@ -20,6 +20,12 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         for component in config["components"]
         if component["type"] == "markdown"
     )
+    group_headings = tuple(
+        component
+        for component in config["components"]
+        if component["type"] == "markdown"
+        and component["props"].get("value", "").startswith("## ")
+    )
     html_values = tuple(
         component["props"].get("value", "")
         for component in config["components"]
@@ -60,6 +66,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
     assert "## 計算条件" in markdown_values
     assert not any(value.startswith("### ") for value in markdown_values)
+    assert group_headings
+    assert all(
+        "input-group-heading" in component["props"].get("elem_classes", ())
+        for component in group_headings
+    )
     assert any(
         "建研Webにある入力" in value
         and "Verification Platformで追加・拡張した入力" in value
@@ -73,6 +84,10 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert equipment_section("⑧-1")["props"]["visible"] is True
     assert "⑨ 熱交換型換気設備" in accordions
     assert "⑨ 熱交換型換気設備）" not in accordions
+    assert all(
+        "input-section" in component["props"].get("elem_classes", ())
+        for component in accordions.values()
+    )
     for prefix in ("⑦-2", "⑦-3", "⑦-4", "⑧-2", "⑧-3", "⑧-4"):
         assert equipment_section(prefix)["props"]["visible"] is False
 
