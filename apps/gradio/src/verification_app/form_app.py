@@ -332,7 +332,8 @@ def _chunks(values: tuple[FormField, ...], size: int) -> Iterable[tuple[FormFiel
 
 def _calculation_started_outputs() -> tuple[Any, ...]:
     return (
-        "⏳ 計算を実行しています。",
+        "⏳ 計算要求を受け付けました。先行計算がある場合は、順番に実行します。"
+        "画面を閉じずにお待ちください。",
         None,
         "",
         "計算完了後にグラフを生成します。",
@@ -380,11 +381,15 @@ def _default_service() -> CalculationService:
     from .graphs import build_result_graphs
 
     output_dir = Path(os.environ.get("VERIFICATION_OUTPUT_DIR", "outputs"))
+    result_ttl_seconds = float(
+        os.environ.get("VERIFICATION_RESULT_TTL_SECONDS", str(24 * 60 * 60))
+    )
     return CalculationService(
         jjjexperiment.main.calc,
         version_info,
         workdir=output_dir,
         build_graphs=build_result_graphs,
+        result_ttl_seconds=(result_ttl_seconds if result_ttl_seconds > 0 else None),
     )
 
 
@@ -399,6 +404,12 @@ def main() -> None:
     debug = _environment_flag("GRADIO_DEBUG", default=running_in_colab)
     show_error = _environment_flag("GRADIO_SHOW_ERROR", default=True)
     status_update_rate = float(os.environ.get("GRADIO_STATUS_UPDATE_RATE", "1"))
+    queue_max_size_value = int(os.environ.get("GRADIO_QUEUE_MAX_SIZE", "5"))
+    queue_options = {
+        "status_update_rate": status_update_rate,
+        "max_size": queue_max_size_value if queue_max_size_value > 0 else None,
+        "default_concurrency_limit": 1,
+    }
     launch_options = {
         "share": share,
         "server_name": server_name,
@@ -407,7 +418,7 @@ def main() -> None:
         "show_error": show_error,
     }
     if not share:
-        build_app().queue(status_update_rate=status_update_rate).launch(
+        build_app().queue(**queue_options).launch(
             **launch_options,
         )
         return
@@ -416,7 +427,7 @@ def main() -> None:
     health_timeout = float(os.environ.get("GRADIO_SHARE_HEALTH_TIMEOUT", "15"))
     share_launch_options = {**launch_options, "debug": False}
     for attempt in range(1, max_attempts + 1):
-        demo = build_app().queue(status_update_rate=status_update_rate)
+        demo = build_app().queue(**queue_options)
         demo.launch(**share_launch_options, prevent_thread_lock=True)
         share_url = demo.share_url
         if share_url and _share_url_is_healthy(share_url, health_timeout):

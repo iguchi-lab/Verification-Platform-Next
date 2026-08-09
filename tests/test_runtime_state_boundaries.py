@@ -1,6 +1,8 @@
 import ast
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event
 
 import verification_app.services as services
 
@@ -29,21 +31,23 @@ def test_calculation_services_share_process_cwd_lock(monkeypatch, tmp_path):
         calculate,
         lambda: "v1",
         workdir=tmp_path / "first",
+        run_id_factory=lambda: "first",
     )
     second = services.CalculationService(
         calculate,
         lambda: "v1",
         workdir=tmp_path / "second",
+        run_id_factory=lambda: "second",
     )
 
     assert first.run({}).succeeded
     assert second.run({}).succeeded
     assert events == [
         "lock-enter",
-        ("calculate", (tmp_path / "first").resolve()),
+        ("calculate", (tmp_path / "first" / "run-first").resolve()),
         "lock-exit",
         "lock-enter",
-        ("calculate", (tmp_path / "second").resolve()),
+        ("calculate", (tmp_path / "second" / "run-second").resolve()),
         "lock-exit",
     ]
 
@@ -52,13 +56,14 @@ def test_calculation_service_restores_cwd_after_failure(tmp_path):
     previous_cwd = Path.cwd()
 
     def calculate(input_data):
-        assert Path.cwd() == tmp_path.resolve()
+        assert Path.cwd() == (tmp_path / "run-failed").resolve()
         raise RuntimeError("calculation failed")
 
     service = services.CalculationService(
         calculate,
         lambda: "v1",
         workdir=tmp_path,
+        run_id_factory=lambda: "failed",
     )
 
     result = service.run({})
@@ -67,6 +72,53 @@ def test_calculation_service_restores_cwd_after_failure(tmp_path):
     assert "RuntimeError: calculation failed" in result.log
     assert Path.cwd() == previous_cwd
     assert Path(os.getcwd()) == previous_cwd
+
+
+def test_concurrent_calculation_requests_are_serialized(tmp_path):
+    first_entered = Event()
+    release_first = Event()
+    second_entered = Event()
+
+    def calculate(input_data):
+        if input_data["case_name"] == "first":
+            first_entered.set()
+            assert release_first.wait(timeout=5)
+        else:
+            second_entered.set()
+
+    run_ids = iter(("first", "second"))
+    service = services.CalculationService(
+        calculate,
+        lambda: "v1",
+        workdir=tmp_path,
+        run_id_factory=lambda: next(run_ids),
+    )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(
+            service.run,
+            {"case_name__0": "first"},
+            include_graphs=False,
+        )
+        assert first_entered.wait(timeout=5)
+        second = executor.submit(
+            service.run,
+            {"case_name__0": "second"},
+            include_graphs=False,
+        )
+        try:
+            assert not second_entered.wait(timeout=0.1)
+        finally:
+            release_first.set()
+
+        first_result = first.result(timeout=5)
+        second_result = second.result(timeout=5)
+
+    assert first_result.succeeded
+    assert second_result.succeeded
+    assert second_entered.is_set()
+    assert Path(first_result.artifact_dir or "").name == "run-first"
+    assert Path(second_result.artifact_dir or "").name == "run-second"
 
 
 _EXPECTED_GLOBAL_SETTERS = {

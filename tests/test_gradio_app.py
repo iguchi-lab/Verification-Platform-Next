@@ -123,6 +123,9 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     }
     assert heating_section_ids <= set(heating_visibility["outputs"])
     assert cooling_section_ids <= set(cooling_visibility["outputs"])
+    assert "先行計算がある場合は、順番に実行します" in (
+        form_app._calculation_started_outputs()[0]
+    )
 
 
 class _LaunchRecorder:
@@ -161,12 +164,17 @@ def test_colab_launch_uses_publicly_reachable_server_and_debugging(
         "GRADIO_DEBUG",
         "GRADIO_SHOW_ERROR",
         "GRADIO_STATUS_UPDATE_RATE",
+        "GRADIO_QUEUE_MAX_SIZE",
     ):
         monkeypatch.delenv(name, raising=False)
 
     form_app.main()
 
-    assert recorder.queue_options == {"status_update_rate": 1.0}
+    assert recorder.queue_options == {
+        "status_update_rate": 1.0,
+        "max_size": 5,
+        "default_concurrency_limit": 1,
+    }
     assert recorder.launch_options == {
         "share": True,
         "server_name": "0.0.0.0",
@@ -191,10 +199,15 @@ def test_launch_environment_overrides_are_respected(
     monkeypatch.setenv("GRADIO_DEBUG", "on")
     monkeypatch.setenv("GRADIO_SHOW_ERROR", "0")
     monkeypatch.setenv("GRADIO_STATUS_UPDATE_RATE", "2.5")
+    monkeypatch.setenv("GRADIO_QUEUE_MAX_SIZE", "9")
 
     form_app.main()
 
-    assert recorder.queue_options == {"status_update_rate": 2.5}
+    assert recorder.queue_options == {
+        "status_update_rate": 2.5,
+        "max_size": 9,
+        "default_concurrency_limit": 1,
+    }
     assert recorder.launch_options == {
         "share": True,
         "server_name": "localhost",
