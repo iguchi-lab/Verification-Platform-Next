@@ -53,3 +53,23 @@ def test_負荷バランス時の負荷_冷房_式9():
         result,
         np.array([5.1, 1.7, 0.0, 0.3, 0.0]).reshape(-1, 1),
     )
+
+
+def test_formula_9_carryover_uses_corrected_partition_sign_only_when_enabled():
+    load = np.full((5, 1), 5.0)
+    partition = np.full((5, 1), 1.0)
+    carryover = np.full((5, 1), 0.5)
+
+    bri = jjj_carryover_heat.get_L_star_CS_i_2024(
+        True, load, partition, carryover,
+    )
+    corrected = jjj_carryover_heat.get_L_star_CS_i_2024(
+        True,
+        load,
+        partition,
+        carryover,
+        correct_partition_heat_transfer=True,
+    )
+
+    np.testing.assert_array_equal(bri, np.full((5, 1), 5.5))
+    np.testing.assert_array_equal(corrected, np.full((5, 1), 3.5))

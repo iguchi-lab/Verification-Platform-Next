@@ -26,7 +26,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert component_types["accordion"] == 18
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 52
-    assert component_types["checkbox"] == 8
+    assert component_types["checkbox"] == 10
     assert component_types["textbox"] == 4  # three text inputs and the log output
     assert component_types["plot"] == 5
     assert component_types["gallery"] == 0
@@ -49,7 +49,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
     assert len(calculation_started["outputs"]) == 10
-    assert len(calculation["inputs"]) == 221
+    assert len(calculation["inputs"]) == 223
     assert len(calculation["outputs"]) == 6
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7

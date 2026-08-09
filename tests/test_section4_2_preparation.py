@@ -925,7 +925,11 @@ def test_no_general_ventilation_uses_minimum_airflow_only_in_hvac_seasons(
     monkeypatch,
     minimum_airflow,
 ):
-    setting = SimpleNamespace(VAV=False, general_ventilation=False)
+    setting = SimpleNamespace(
+        VAV=False,
+        general_ventilation=False,
+        correct_no_general_ventilation_airflow=True,
+    )
     house = SimpleNamespace(region=4)
     areas = np.array([29.81, 16.56, 13.25, 10.76, 10.77])
     standard_ventilation = np.array([60.0, 20.0, 40.0, 20.0, 20.0])
@@ -1003,7 +1007,11 @@ def test_no_general_ventilation_uses_minimum_airflow_only_in_hvac_seasons(
 
 def test_vav_without_general_ventilation_preserves_equipment_minimum_in_hvac_seasons():
     region = 4
-    setting = SimpleNamespace(VAV=True, general_ventilation=False)
+    setting = SimpleNamespace(
+        VAV=True,
+        general_ventilation=False,
+        correct_no_general_ventilation_airflow=True,
+    )
     heating, cooling, intermediate = sut.dc.get_season_array_d_t(region)
     ratios = np.array([0.30, 0.25, 0.20, 0.15, 0.10])[:, np.newaxis]
     upper_total = np.full(24 * 365, 160.0)
@@ -1029,6 +1037,91 @@ def test_vav_without_general_ventilation_preserves_equipment_minimum_in_hvac_sea
     )
     np.testing.assert_array_equal(actual[:, intermediate], 0.0)
     assert np.all(actual <= upper + 1e-9)
+
+
+def test_no_general_ventilation_defaults_to_bri_zone_lower_bounds():
+    ventilation = np.array([60.0, 32.6506, 40.0, 21.2150, 21.2348])
+
+    actual = sut._get_heat_source_ventilation_airflow_by_zone(
+        ventilation,
+        general_ventilation=False,
+    )
+    corrected = sut._get_heat_source_ventilation_airflow_by_zone(
+        ventilation,
+        general_ventilation=False,
+        correct_no_general_ventilation_airflow=True,
+    )
+
+    np.testing.assert_array_equal(actual, ventilation)
+    np.testing.assert_array_equal(corrected, np.zeros(5))
+
+
+def test_bri_compatible_airflow_reproduces_reported_175_point_100431():
+    areas = np.array([29.81, 16.56, 13.25, 10.76, 10.77])
+    ventilation = np.array([60.0, 20.0, 40.0, 20.0, 20.0])
+    heat_source_airflow = np.full(24 * 365, 160.0)
+    house = SimpleNamespace(region=6)
+
+    bri = sut._get_supply_airflow_before_vav(
+        sut._SupplyAirflowBeforeVavInputs(
+            SimpleNamespace(VAV=False, general_ventilation=False),
+            house,
+            object(),
+            areas,
+            heat_source_airflow,
+            ventilation,
+        )
+    )
+    corrected = sut._get_supply_airflow_before_vav(
+        sut._SupplyAirflowBeforeVavInputs(
+            SimpleNamespace(
+                VAV=False,
+                general_ventilation=False,
+                correct_no_general_ventilation_airflow=True,
+            ),
+            house,
+            object(),
+            areas,
+            heat_source_airflow,
+            ventilation,
+        )
+    )
+
+    np.testing.assert_allclose(
+        np.sum(bri.V_dash_supply_d_t_i, axis=0),
+        175.10043130006162,
+    )
+    np.testing.assert_allclose(
+        np.sum(corrected.V_dash_supply_d_t_i, axis=0),
+        160.0,
+    )
+
+
+def test_cooling_partition_sign_defaults_to_bri_and_can_be_corrected(monkeypatch):
+    annual = 24 * 365
+    cooling = np.ones(annual, dtype=bool)
+    monkeypatch.setattr(
+        sut.dc,
+        "get_season_array_d_t",
+        lambda _region: (
+            np.zeros(annual, dtype=bool),
+            cooling,
+            np.zeros(annual, dtype=bool),
+        ),
+    )
+    load = np.full((12, annual), 5.0)
+    partition = np.full((5, annual), 1.0)
+
+    bri = sut._get_L_star_CS_d_t_i(load, partition, 6)
+    corrected = sut._get_L_star_CS_d_t_i(
+        load,
+        partition,
+        6,
+        correct_partition_heat_transfer=True,
+    )
+
+    np.testing.assert_array_equal(bri, np.full((5, annual), 6.0))
+    np.testing.assert_array_equal(corrected, np.full((5, annual), 4.0))
 
 
 def test_vav_equipment_minimum_does_not_change_general_ventilation_route():
@@ -1729,6 +1822,7 @@ def test_balanced_loads_at_hour_preserve_formula_order_and_slices(monkeypatch):
         SimpleNamespace(L_H_d_t_i=heating, L_CS_d_t_i=cooling),
         transfer,
         carryover,
+        False,
     ))
 
     assert result == outputs
@@ -2033,7 +2127,7 @@ def test_new_underfloor_balanced_loads_preserve_seasonal_masks_and_outputs(
     result_h, result_cs = sut._adjust_new_underfloor_balanced_loads(sut._NewUnderfloorBalancedLoadInputs(
         SimpleNamespace(region=6), FrameRecorder(), load, area,
         theta_room, theta_ex, q_partition, u_s_floor_load,
-        l_star_h, l_star_cs
+        l_star_h, l_star_cs, False
     ))
 
     assert result_h is l_star_h
@@ -3138,8 +3232,9 @@ def test_prepare_no_carryover_balanced_loads_preserves_formula_and_adjustment_or
         sut, "_adjust_new_underfloor_balanced_loads",
         lambda *a: events.append(("adjust", a)) or (adjusted_h, adjusted_c))
 
+    setting = SimpleNamespace(correct_cooling_partition_heat_transfer=False)
     result = sut._prepare_no_carryover_balanced_loads(sut._NoCarryoverBalancedLoadInputs(
-        house, new_ufac, inputs[0], load, *inputs[1:], object()))
+        setting, house, new_ufac, inputs[0], load, *inputs[1:], object()))
 
     assert result == ((adjusted_h, adjusted_c) if enabled else (heating, sensible_c))
     assert [e[0] for e in events] == (["cool", "heat", "adjust"] if enabled else ["cool", "heat"])

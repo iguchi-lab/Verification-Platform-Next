@@ -442,11 +442,12 @@ class Test既存計算維持_入力値切替_方式1:
         assert result['TValue'].E_C == pytest.approx(15418.25608575497)
 
     def test_入力値入替_H3(self, expected_result_type1):
-        """ 全般換気なしでは熱源機の換気下限を給気風量に含めない
+        """ 補正ONかつ全般換気なしでは熱源機の換気下限を給気風量に含めない
             H_A_general_ventilation (Issue #163)
         """
         inputs = copy.deepcopy(self._inputs)
         inputs["H_A"]["general_ventilation"] = 全般換気機能.なし.value  # デフォルトはあり
+        inputs["H_A"]["correct_no_general_ventilation_airflow"] = 2
 
         result = calc(inputs, test_mode=True)
 
@@ -455,11 +456,12 @@ class Test既存計算維持_入力値切替_方式1:
         assert result['TValue'].E_H == pytest.approx(37365.01758273321)
 
     def test_入力値入替_R3(self, expected_result_type1):
-        """ 全般換気なしでは熱源機の換気下限を給気風量に含めない
+        """ 補正ONかつ全般換気なしでは熱源機の換気下限を給気風量に含めない
             C_A_general_ventilation (Issue #163)
         """
         inputs = copy.deepcopy(self._inputs)
         inputs["C_A"]["general_ventilation"] = 全般換気機能.なし.value  # デフォルトはあり
+        inputs["C_A"]["correct_no_general_ventilation_airflow"] = 2
 
         result = calc(inputs, test_mode=True)
 

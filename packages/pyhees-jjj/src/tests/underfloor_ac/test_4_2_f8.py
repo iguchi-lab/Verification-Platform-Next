@@ -40,10 +40,21 @@ def test_formula_8_9_use_physical_heat_flow_signs():
         np.array([5.0]),
         np.array([-1.0]),
         np.array([-2.0]),
+        correct_partition_heat_transfer=True,
     )
 
     np.testing.assert_array_equal(heating, np.array([4.0]))
     np.testing.assert_array_equal(cooling, np.array([4.0]))
+
+
+def test_formula_9_defaults_to_bri_compatible_partition_sign():
+    actual = calc_L_star_CS_with_underfloor(
+        np.array([5.0]),
+        np.array([1.0]),
+        np.array([2.0]),
+    )
+
+    np.testing.assert_array_equal(actual, np.array([8.0]))
 
 
 def test_january_first_one_oclock_matches_twelve_room_reference_loads():

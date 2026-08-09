@@ -107,6 +107,7 @@ docker run --rm -p 8080:8080 verification-platform-next
 - [床下関連設定の入力ガイド](docs/underfloor_ac_input_guide.md)
 - [床下空調計算の7つの変更点](docs/underfloor_ac_seven_changes.md)
 - [Excelとの床下計算整合](docs/underfloor_ac_excel_alignment.md)
+- [建研本家・旧Verification Platformとの計算差分](docs/calculation_differences.md)
 - [計算エンジン](packages/pyhees-jjj/README.md)
 - [上流`pyhees`の追跡方針](packages/pyhees-jjj/UPSTREAM.md)
 

@@ -1,0 +1,35 @@
+{
+  "version": "260809",
+  "base_version": "260804",
+  "binding_count": 268,
+  "append_bindings": [
+    {
+      "line": 10001,
+      "target_path": ["H_A", "correct_cooling_partition_heat_transfer"],
+      "expression": "2 if correct_cooling_partition_heat_transfer else 1",
+      "conditions": [],
+      "source_ids": ["correct_cooling_partition_heat_transfer__0"]
+    },
+    {
+      "line": 10002,
+      "target_path": ["C_A", "correct_cooling_partition_heat_transfer"],
+      "expression": "2 if correct_cooling_partition_heat_transfer else 1",
+      "conditions": [],
+      "source_ids": ["correct_cooling_partition_heat_transfer__0"]
+    },
+    {
+      "line": 10003,
+      "target_path": ["H_A", "correct_no_general_ventilation_airflow"],
+      "expression": "2 if correct_no_general_ventilation_airflow else 1",
+      "conditions": [],
+      "source_ids": ["correct_no_general_ventilation_airflow__0"]
+    },
+    {
+      "line": 10004,
+      "target_path": ["C_A", "correct_no_general_ventilation_airflow"],
+      "expression": "2 if correct_no_general_ventilation_airflow else 1",
+      "conditions": [],
+      "source_ids": ["correct_no_general_ventilation_airflow__0"]
+    }
+  ]
+}

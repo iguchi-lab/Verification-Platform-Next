@@ -196,6 +196,12 @@ def change_testmode_underfloor_new(inputs: dict):
     """
     fixtures = {
         "change_underfloor_temperature": 床下空調ロジック.変更する.value,
+        "H_A": {
+            "correct_cooling_partition_heat_transfer": 2,
+        },
+        "C_A": {
+            "correct_cooling_partition_heat_transfer": 2,
+        },
         "input_ufac_consts": 2,  # 変える
         "Theta_g_avg": 15.7,
         "U_s_vert": 2.223,  # 既存式の値が過少なので入力

@@ -35,6 +35,14 @@ def _parse_air_distribution_fields(data: dict) -> dict:
         kwargs['VAV'] = int(data['VAV']) == 2
     if 'general_ventilation' in data:
         kwargs['general_ventilation'] = int(data['general_ventilation']) == 全般換気機能.あり.value
+    if 'correct_cooling_partition_heat_transfer' in data:
+        kwargs['correct_cooling_partition_heat_transfer'] = (
+            int(data['correct_cooling_partition_heat_transfer']) == 2
+        )
+    if 'correct_no_general_ventilation_airflow' in data:
+        kwargs['correct_no_general_ventilation_airflow'] = (
+            int(data['correct_no_general_ventilation_airflow']) == 2
+        )
 
     if 'duct_insulation' in data:
         if data['duct_insulation'] == '全てもしくは一部が断熱区画外である' or int(data['duct_insulation']) == 1:
@@ -75,6 +83,11 @@ class AcSetting:
     general_ventilation: bool = True
     """全般換気"""
     # NOTE: enumもあるが現状はboolなので注意
+
+    correct_cooling_partition_heat_transfer: bool = False
+    """Use the physically corrected sign for cooling partition heat flow."""
+    correct_no_general_ventilation_airflow: bool = False
+    """Separate equipment minimum airflow from the ventilation lower bound."""
 
     duct_insulation: str = '全てもしくは一部が断熱区画外である'
 

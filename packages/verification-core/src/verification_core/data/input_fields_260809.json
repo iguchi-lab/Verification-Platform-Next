@@ -1,0 +1,37 @@
+{
+  "version": "260809",
+  "base_version": "260804",
+  "field_count": 223,
+  "append_fields": [
+    {
+      "id": "correct_cooling_partition_heat_transfer__0",
+      "source_name": "correct_cooling_partition_heat_transfer",
+      "source_occurrence": 0,
+      "label": "① 冷房時の間仕切熱移動を物理的な符号に補正する（OFF：建研式／ON：補正式）",
+      "section": "⑥ その他",
+      "group": "建研本家との比較設定",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null,
+      "insert_after_field_id": "phi__0",
+      "description": "OFFでは建研本家と同じ式(9)の符号、ONでは居室から非居室へ流出する熱を冷房負荷から差し引く物理式を使います。非床下、過剰熱量持越し、新床下の全経路に適用します。"
+    },
+    {
+      "id": "correct_no_general_ventilation_airflow__0",
+      "source_name": "correct_no_general_ventilation_airflow",
+      "source_occurrence": 0,
+      "label": "② 全般換気なし時の給気風量下限を補正する（OFF：建研式／ON：補正式）",
+      "section": "⑥ その他",
+      "group": "建研本家との比較設定",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": null,
+      "insert_after_field_id": "correct_cooling_partition_heat_transfer__0",
+      "description": "OFFでは建研本家と同じ区画別換気風量下限を残し、ONでは全般換気なしの場合にその下限をゼロとして、サーモOFF時の合計給気風量を設備最低風量へ合わせます。"
+    }
+  ]
+}
