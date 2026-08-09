@@ -31,10 +31,22 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         if component["type"] == "column"
         for elem_class in component["props"].get("elem_classes", ())
     )
+    accordions = {
+        component["props"]["label"]: component
+        for component in config["components"]
+        if component["type"] == "accordion"
+    }
+
+    def equipment_section(prefix: str) -> dict[str, object]:
+        return next(
+            component
+            for label, component in accordions.items()
+            if label.startswith(prefix)
+        )
 
     assert gradio.__version__.startswith("6.")
     assert config["title"] == "Verification Platform Next ver.1.0.1"
-    assert component_types["accordion"] == 18
+    assert component_types["accordion"] == 16
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 54
     assert component_types["checkbox"] == 10
@@ -55,6 +67,10 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         "input-origin-bri-web": 47,
         "input-origin-verification-platform": 178,
     }
+    assert equipment_section("⑦-1")["props"]["visible"] is True
+    assert equipment_section("⑧-1")["props"]["visible"] is True
+    for prefix in ("⑦-2", "⑦-3", "⑦-4", "⑧-2", "⑧-3", "⑧-4"):
+        assert equipment_section(prefix)["props"]["visible"] is False
 
     (
         calculation_started,
@@ -76,8 +92,16 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(ventilation_visibility["outputs"]) == 2
     assert len(new_underfloor_visibility["outputs"]) == 5
     assert len(underfloor_constants_visibility["outputs"]) == 3
-    assert len(heating_visibility["outputs"]) == 74
-    assert len(cooling_visibility["outputs"]) == 79
+    assert len(heating_visibility["outputs"]) == 78
+    assert len(cooling_visibility["outputs"]) == 83
+    heating_section_ids = {
+        equipment_section(prefix)["id"] for prefix in ("⑦-1", "⑦-2", "⑦-3", "⑦-4")
+    }
+    cooling_section_ids = {
+        equipment_section(prefix)["id"] for prefix in ("⑧-1", "⑧-2", "⑧-3", "⑧-4")
+    }
+    assert heating_section_ids <= set(heating_visibility["outputs"])
+    assert cooling_section_ids <= set(cooling_visibility["outputs"])
 
 
 class _LaunchRecorder:

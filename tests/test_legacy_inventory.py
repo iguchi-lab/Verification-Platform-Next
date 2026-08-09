@@ -14,7 +14,7 @@ def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
         "冷房": 91,
         "換気": 2,
     }
-    assert len(inventory.section_names) == 18
+    assert len(inventory.section_names) == 16
     assert len({item.id for item in inventory.fields}) == 225
     assert "underfloor_air_conditioning_air_supply__0" not in {
         item.id for item in inventory.fields
@@ -53,6 +53,34 @@ def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
         "correct_no_general_ventilation_airflow__0",
     }
     assert all(item.default is False for item in corrections.values())
+
+
+def test_260809_consolidates_related_general_sections() -> None:
+    inventory = load_legacy_inventory()
+    fields = {item.id: item for item in inventory.fields}
+
+    assert fields["case_name__0"].section == "①・② 計算条件・外部ファイル"
+    assert fields["case_name__0"].group == "計算条件"
+    for field_id in ("climateFile__0", "loadFile__0"):
+        assert fields[field_id].section == "①・② 計算条件・外部ファイル"
+        assert fields[field_id].group == "外部ファイル（任意）"
+
+    carry_over_ids = (
+        "carry_over_heat__0",
+        "c1_BR_R_1__0",
+        "c1_BR_R_2__0",
+        "c1_BR_R_3__0",
+        "c1_BR_R_4__0",
+        "c1_BR_R_5__0",
+        "c1_NR_R__0",
+    )
+    for field_id in carry_over_ids:
+        assert fields[field_id].section == "⑥ その他"
+        assert fields[field_id].group == "過剰熱量持越し"
+
+    assert "① 計算条件名" not in inventory.section_names
+    assert "② 外部ファイル名の入力（ある場合のみ）" not in inventory.section_names
+    assert "⑥-1. 過剰熱量持越し" not in inventory.section_names
 
 
 def test_260809_has_independent_heating_and_cooling_efficiency_classes() -> None:

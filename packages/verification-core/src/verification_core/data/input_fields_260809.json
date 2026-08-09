@@ -3,9 +3,7 @@
   "base_version": "260804",
   "field_count": 225,
   "verification_platform_sections": [
-    "② 外部ファイル名の入力（ある場合のみ）",
     "③ 計算時定数等",
-    "⑥-1. 過剰熱量持越し",
     "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
     "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
     "⑦-4 暖房 電力中央研究所のエアコンモデル",
@@ -15,6 +13,15 @@
   ],
   "verification_platform_field_ids": [
     "case_name__0",
+    "climateFile__0",
+    "loadFile__0",
+    "carry_over_heat__0",
+    "c1_BR_R_1__0",
+    "c1_BR_R_2__0",
+    "c1_BR_R_3__0",
+    "c1_BR_R_4__0",
+    "c1_BR_R_5__0",
+    "c1_NR_R__0",
     "hs_CAV__0",
     "change_underfloor_temperature__0",
     "R_g__0",
@@ -44,6 +51,46 @@
     "C_A_dualcompressor__0"
   ],
   "field_overrides": {
+    "case_name__0": {
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "計算条件"
+    },
+    "climateFile__0": {
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "外部ファイル（任意）"
+    },
+    "loadFile__0": {
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "外部ファイル（任意）"
+    },
+    "carry_over_heat__0": {
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し"
+    },
+    "c1_BR_R_1__0": {
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し"
+    },
+    "c1_BR_R_2__0": {
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し"
+    },
+    "c1_BR_R_3__0": {
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し"
+    },
+    "c1_BR_R_4__0": {
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し"
+    },
+    "c1_BR_R_5__0": {
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し"
+    },
+    "c1_NR_R__0": {
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し"
+    },
     "C_A_input_mode__0": {
       "description": "建研Webと同じ冷房側の性能区分です。冷房定格効率の算定に使用します。"
     },
