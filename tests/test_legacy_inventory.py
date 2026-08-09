@@ -81,6 +81,8 @@ def test_260809_consolidates_related_general_sections() -> None:
     assert "① 計算条件名" not in inventory.section_names
     assert "② 外部ファイル名の入力（ある場合のみ）" not in inventory.section_names
     assert "⑥-1. 過剰熱量持越し" not in inventory.section_names
+    assert "⑨ 熱交換型換気設備" in inventory.section_names
+    assert "⑨ 熱交換型換気設備）" not in inventory.section_names
 
 
 def test_260809_has_independent_heating_and_cooling_efficiency_classes() -> None:

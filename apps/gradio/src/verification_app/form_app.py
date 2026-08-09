@@ -114,7 +114,7 @@ def build_app(
                         "を参照してください。"
                     )
                 for group_index, group in enumerate(section.groups):
-                    gr.Markdown(f"### {group.name}")
+                    gr.Markdown(f"## {group.name}")
                     for row_index, row_fields in enumerate(_chunks(group.fields, 3)):
                         with gr.Row(key=f"row:{section_index}:{group_index}:{row_index}"):
                             for form_field in row_fields:
