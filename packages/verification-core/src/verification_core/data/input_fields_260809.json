@@ -63,6 +63,12 @@
       "section": "①・② 計算条件・外部ファイル",
       "group": "外部ファイル（任意）"
     },
+    "HEX_install__0": {
+      "section": "⑨ 熱交換型換気設備"
+    },
+    "etr_t__0": {
+      "section": "⑨ 熱交換型換気設備"
+    },
     "carry_over_heat__0": {
       "section": "⑥ その他",
       "group": "過剰熱量持越し"

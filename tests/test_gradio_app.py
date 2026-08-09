@@ -45,7 +45,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         )
 
     assert gradio.__version__.startswith("6.")
-    assert config["title"] == "Verification Platform Next ver.1.0.1"
+    assert config["title"] == "Verification Platform Next ver.1.0.2"
     assert component_types["accordion"] == 16
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 54
@@ -58,6 +58,8 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         and "docs/underfloor_ac_input_guide.md" in value
         for value in markdown_values
     )
+    assert "## 計算条件" in markdown_values
+    assert not any(value.startswith("### ") for value in markdown_values)
     assert any(
         "建研Webにある入力" in value
         and "Verification Platformで追加・拡張した入力" in value
@@ -69,6 +71,8 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     }
     assert equipment_section("⑦-1")["props"]["visible"] is True
     assert equipment_section("⑧-1")["props"]["visible"] is True
+    assert "⑨ 熱交換型換気設備" in accordions
+    assert "⑨ 熱交換型換気設備）" not in accordions
     for prefix in ("⑦-2", "⑦-3", "⑦-4", "⑧-2", "⑧-3", "⑧-4"):
         assert equipment_section(prefix)["props"]["visible"] is False
 

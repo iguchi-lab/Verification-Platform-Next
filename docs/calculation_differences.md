@@ -20,7 +20,7 @@ Verification Platform Nextは、建築研究所等の技術的協力のもと公
 | --- | --- |
 | 建研本家 | `BRI-EES-House/pyhees` Ver.3.10、commit `d5224c4a01def00a8421bcd2fcc0d4b4a5b88644` |
 | 旧Verification Platform | Next移行時の基準commit `0f91ba8381df1b4960557b92b39339385cc9009f` |
-| Verification Platform Next | ver.1.0.1を基準とする次期入力仕様 `260809` |
+| Verification Platform Next | ver.1.0.2、入力仕様 `260809` |
 
 建研本家の版は[`packages/pyhees-jjj/UPSTREAM.md`](../packages/pyhees-jjj/UPSTREAM.md)、
 Nextの製品版は[`jjjexperiment/release.py`](../packages/pyhees-jjj/src/jjjexperiment/release.py)
@@ -247,7 +247,7 @@ Nextでは、次の二つを別の物理量として扱う。
 | 全般換気なし・最低風量160/420 m3/h | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py#L923-L1001) |
 | VAVあり・全般換気なし | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py#L1004-L1031) |
 
-ver.1.0.1リリース時には、全体pytest、Phase 5、Excel床下14 Golden、
+ver.1.0.2リリース時には、全体pytest、Phase 5、Excel床下14 Golden、
 計算エンジン内部試験、RuffおよびGitHub Actionsの成功を確認している。
 
 ## 8. 今後の管理

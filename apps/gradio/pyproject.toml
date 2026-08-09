@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "verification-platform-app"
-version = "1.0.1"
+version = "1.0.2"
 description = "Gradio application for Verification Platform"
 authors = ["iguchi-lab"]
 packages = [{ include = "verification_app", from = "src" }]
