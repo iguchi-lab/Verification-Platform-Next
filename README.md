@@ -3,7 +3,7 @@
 [![CI](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/ci.yml/badge.svg)](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/ci.yml)
 
 住宅の省エネルギー性能を検証するための計算エンジン、入力スキーマ、Gradio UIを
-まとめたPythonモノレポです。正式版は **ver.1.0.2** です。
+まとめたPythonモノレポです。正式版は **ver.1.1.0** です。
 
 本リポジトリは、建築研究所が公開する住宅のエネルギー消費性能計算プログラム
 `pyhees`を基礎とし、検証用の入力画面、床下空調などの拡張計算、数値回帰試験を
