@@ -15,7 +15,7 @@ from .legacy_builder import (
     default_ui_values,
     load_legacy_form_source,
 )
-from .schema import Condition, FieldDefinition, FieldKind, InputSchema
+from .schema import Condition, FieldDefinition, FieldKind, FieldOrigin, InputSchema
 from .schema_loader import load_input_schema
 
 __all__ = [
@@ -23,6 +23,7 @@ __all__ = [
     "Condition",
     "FieldDefinition",
     "FieldKind",
+    "FieldOrigin",
     "InputBinding",
     "InputBindingCatalog",
     "InputSchema",

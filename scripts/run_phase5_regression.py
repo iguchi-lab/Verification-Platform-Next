@@ -25,6 +25,10 @@ _OPT_IN_CORRECTION_KEYS = (
     "correct_cooling_partition_heat_transfer",
     "correct_no_general_ventilation_airflow",
 )
+_LEGACY_MISSING_HEATING_EFFICIENCY_DEFAULTS = {
+    "input_mode": 1,
+    "mode": 3,
+}
 
 
 class RegressionMismatch(AssertionError):
@@ -32,7 +36,7 @@ class RegressionMismatch(AssertionError):
 
 
 def _legacy_input_projection(input_data: dict[str, Any]) -> dict[str, Any]:
-    """Remove only default-OFF options that did not exist in the legacy form."""
+    """Remove only default-valued options that did not exist in the legacy form."""
     projected = copy.deepcopy(input_data)
     for season in ("H_A", "C_A"):
         settings = projected.get(season, {})
@@ -42,6 +46,14 @@ def _legacy_input_projection(input_data: dict[str, Any]) -> dict[str, Any]:
                 raise RegressionMismatch(
                     f"Phase 5 legacy projection requires {season}.{key}=OFF"
                 )
+    heating = projected.get("H_A", {})
+    for key, expected in _LEGACY_MISSING_HEATING_EFFICIENCY_DEFAULTS.items():
+        value = heating.pop(key, expected)
+        if int(value) != expected:
+            raise RegressionMismatch(
+                "Phase 5 legacy projection requires "
+                f"H_A.{key}={expected}"
+            )
     return projected
 
 

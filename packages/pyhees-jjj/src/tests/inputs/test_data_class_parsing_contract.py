@@ -201,6 +201,60 @@ def test_heating_airflow_correction_uses_type_specific_keys(
     }
 
 
+def test_heating_efficiency_class_is_independent_from_cooling(monkeypatch):
+    import pyhees.section4_3_a as section4_3_a
+
+    received = []
+    monkeypatch.setattr(section4_3_a, "get_q_rtd_H", lambda _q_rtd_C: 1200.0)
+    monkeypatch.setattr(
+        section4_3_a,
+        "get_q_max_H",
+        lambda _q_rtd_H, _q_max_C: 2400.0,
+    )
+    monkeypatch.setattr(
+        section4_3_a,
+        "get_e_rtd_C",
+        lambda e_class, q_rtd_C: received.append((e_class, q_rtd_C)) or 4.0,
+    )
+    monkeypatch.setattr(section4_3_a, "get_e_rtd_H", lambda value: value + 1.0)
+
+    actual = HeatingCRACSpecification.from_dict(
+        {"type": 2, "input_mode": 2, "mode": 2},
+        1000.0,
+        2000.0,
+        9.0,
+    )
+
+    assert received == [("ろ", 1000.0)]
+    assert actual.e_rtd == 5.0
+
+
+def test_heating_efficiency_preserves_legacy_cooling_fallback(monkeypatch):
+    import pyhees.section4_3_a as section4_3_a
+
+    monkeypatch.setattr(section4_3_a, "get_q_rtd_H", lambda _q_rtd_C: 1200.0)
+    monkeypatch.setattr(
+        section4_3_a,
+        "get_q_max_H",
+        lambda _q_rtd_H, _q_max_C: 2400.0,
+    )
+    monkeypatch.setattr(
+        section4_3_a,
+        "get_e_rtd_C",
+        lambda *_: pytest.fail("legacy fallback must not recalculate cooling efficiency"),
+    )
+    monkeypatch.setattr(section4_3_a, "get_e_rtd_H", lambda value: value + 1.0)
+
+    actual = HeatingCRACSpecification.from_dict(
+        {"type": 2},
+        1000.0,
+        2000.0,
+        4.0,
+    )
+
+    assert actual.e_rtd == 5.0
+
+
 @pytest.mark.parametrize(
     ("specification_type", "suffix"),
     ((2, "2"), (3, "3"), (4, "4")),

@@ -31,6 +31,7 @@ def _field_definition(
         choices=field.choices,
         enabled_when=_enabled_condition(field.enabled_when, inventory),
         description=field.description,
+        origin=field.origin,
     )
 
 

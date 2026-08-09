@@ -1,8 +1,95 @@
 {
   "version": "260809",
   "base_version": "260804",
-  "field_count": 223,
+  "field_count": 225,
+  "verification_platform_sections": [
+    "② 外部ファイル名の入力（ある場合のみ）",
+    "③ 計算時定数等",
+    "⑥-1. 過剰熱量持越し",
+    "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+    "⑦-3 暖房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+    "⑦-4 暖房 電力中央研究所のエアコンモデル",
+    "⑧-2 冷房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+    "⑧-3 冷房 ルームエアコンディショナ活用型全館空調（潜熱評価モデル）",
+    "⑧-4 冷房 電力中央研究所のエアコンモデル"
+  ],
+  "verification_platform_field_ids": [
+    "case_name__0",
+    "hs_CAV__0",
+    "change_underfloor_temperature__0",
+    "R_g__0",
+    "input_ufac_consts__0",
+    "Theta_g_avg__0",
+    "U_s_vert__0",
+    "phi__0",
+    "H_A_type__0",
+    "H_A_subtract_ventilation_power__0",
+    "H_A_input_V_hs_min__0",
+    "H_A_V_hs_min__0",
+    "H_A_input_E_E_fan_min__0",
+    "H_A_E_E_fan_logic__0",
+    "H_A_E_E_fan_min__0",
+    "C_A_type__0",
+    "C_A_subtract_ventilation_power__0",
+    "C_A_input_V_hs_min__0",
+    "C_A_V_hs_min__0",
+    "C_A_input_E_E_fan_min__0",
+    "C_A_E_E_fan_logic__0",
+    "C_A_E_E_fan_min__0"
+  ],
+  "bri_web_field_ids": [
+    "C_A_input_mode__0",
+    "C_A_mode__0",
+    "H_A_dualcompressor__0",
+    "C_A_dualcompressor__0"
+  ],
+  "field_overrides": {
+    "C_A_input_mode__0": {
+      "description": "建研Webと同じ冷房側の性能区分です。冷房定格効率の算定に使用します。"
+    },
+    "C_A_mode__0": {
+      "description": "冷房用ルームエアコンディショナーのエネルギー消費効率区分を選択します。"
+    }
+  },
   "append_fields": [
+    {
+      "id": "H_A_input_mode__0",
+      "source_name": "H_A_input_mode",
+      "source_occurrence": 0,
+      "label": "エネルギー消費効率の入力（入力しない or 入力する）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "エネルギー消費効率の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "入力しない",
+      "choices": ["入力しない", "入力する"],
+      "enabled_when": {
+        "path": ["H_A", "type"],
+        "allowed_values": [2]
+      },
+      "insert_after_field_id": "H_A_C_af_H2__0",
+      "origin": "bri_web",
+      "description": "建研Webと同じ暖房側の性能区分です。暖房定格効率の算定に使用します。旧JSONにこの項目がない場合だけ、従来どおり冷房側の効率から換算します。"
+    },
+    {
+      "id": "H_A_mode__0",
+      "source_name": "H_A_mode",
+      "source_occurrence": 0,
+      "label": "エネルギー消費効率（い or ろ or は）（入力する場合のみ）",
+      "section": "⑦-2 暖房 ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
+      "group": "エネルギー消費効率の入力",
+      "category": "暖房",
+      "kind": "select",
+      "default": "は",
+      "choices": ["い", "ろ", "は"],
+      "enabled_when": {
+        "path": ["H_A", "type"],
+        "allowed_values": [2]
+      },
+      "insert_after_field_id": "H_A_input_mode__0",
+      "origin": "bri_web",
+      "description": "暖房用ルームエアコンディショナーのエネルギー消費効率区分を選択します。"
+    },
     {
       "id": "correct_cooling_partition_heat_transfer__0",
       "source_name": "correct_cooling_partition_heat_transfer",
@@ -16,6 +103,7 @@
       "choices": null,
       "enabled_when": null,
       "insert_after_field_id": "phi__0",
+      "origin": "verification_platform",
       "description": "OFFでは建研本家と同じ式(9)の符号、ONでは居室から非居室へ流出する熱を冷房負荷から差し引く物理式を使います。非床下、過剰熱量持越し、新床下の全経路に適用します。"
     },
     {
@@ -31,6 +119,7 @@
       "choices": null,
       "enabled_when": null,
       "insert_after_field_id": "correct_cooling_partition_heat_transfer__0",
+      "origin": "verification_platform",
       "description": "OFFでは建研本家と同じ区画別換気風量下限を残し、ONでは全般換気なしの場合にその下限をゼロとして、サーモOFF時の合計給気風量を設備最低風量へ合わせます。"
     }
   ]

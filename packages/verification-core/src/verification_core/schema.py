@@ -13,6 +13,11 @@ class FieldKind(StrEnum):
     SELECT = "select"
 
 
+class FieldOrigin(StrEnum):
+    BRI_WEB = "bri_web"
+    VERIFICATION_PLATFORM = "verification_platform"
+
+
 def _read_path(data: Mapping[str, Any], path: tuple[str, ...]) -> Any:
     current: Any = data
     for part in path:
@@ -42,6 +47,7 @@ class FieldDefinition:
     choices: tuple[Any, ...] = ()
     enabled_when: Condition | None = None
     description: str = ""
+    origin: FieldOrigin = FieldOrigin.BRI_WEB
 
     @property
     def key(self) -> str:

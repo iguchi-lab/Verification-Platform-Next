@@ -1,21 +1,21 @@
 from collections import Counter
 
-from verification_core import FieldKind, load_legacy_inventory
+from verification_core import FieldKind, FieldOrigin, load_legacy_inventory
 
 
 def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
     inventory = load_legacy_inventory()
 
     assert inventory.version == "260809"
-    assert len(inventory.fields) == 223
+    assert len(inventory.fields) == 225
     assert inventory.category_counts == {
         "基本設定": 46,
-        "暖房": 84,
+        "暖房": 86,
         "冷房": 91,
         "換気": 2,
     }
     assert len(inventory.section_names) == 18
-    assert len({item.id for item in inventory.fields}) == 223
+    assert len({item.id for item in inventory.fields}) == 225
     assert "underfloor_air_conditioning_air_supply__0" not in {
         item.id for item in inventory.fields
     }
@@ -53,6 +53,62 @@ def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
         "correct_no_general_ventilation_airflow__0",
     }
     assert all(item.default is False for item in corrections.values())
+
+
+def test_260809_has_independent_heating_and_cooling_efficiency_classes() -> None:
+    inventory = load_legacy_inventory()
+    fields = {
+        item.id: item
+        for item in inventory.fields
+        if item.id in {
+            "H_A_input_mode__0",
+            "H_A_mode__0",
+            "C_A_input_mode__0",
+            "C_A_mode__0",
+        }
+    }
+
+    for field in (fields["H_A_input_mode__0"], fields["H_A_mode__0"]):
+        assert field.section.startswith("⑦-2 暖房")
+        assert field.group == "エネルギー消費効率の入力"
+        assert field.category == "暖房"
+        assert field.enabled_when is not None
+        assert field.enabled_when.path == ("H_A", "type")
+        assert field.enabled_when.allowed_values == (2,)
+        assert field.origin is FieldOrigin.BRI_WEB
+
+    for field in (fields["C_A_input_mode__0"], fields["C_A_mode__0"]):
+        assert field.section.startswith("⑧-2 冷房")
+        assert field.group == "エネルギー消費効率の入力"
+        assert field.category == "冷房"
+        assert field.enabled_when is not None
+        assert field.enabled_when.path == ("C_A", "type")
+        assert field.enabled_when.allowed_values == (2,)
+        assert field.origin is FieldOrigin.BRI_WEB
+
+    assert fields["H_A_input_mode__0"].source_name == "H_A_input_mode"
+    assert fields["H_A_mode__0"].source_name == "H_A_mode"
+    assert fields["C_A_input_mode__0"].source_name == "C_A_input_mode"
+    assert fields["C_A_mode__0"].source_name == "C_A_mode"
+
+
+def test_260809_classifies_bri_web_and_verification_platform_inputs() -> None:
+    inventory = load_legacy_inventory()
+    fields = {item.id: item for item in inventory.fields}
+
+    assert Counter(item.origin for item in inventory.fields) == {
+        FieldOrigin.BRI_WEB: 47,
+        FieldOrigin.VERIFICATION_PLATFORM: 178,
+    }
+    assert fields["A_A__0"].origin is FieldOrigin.BRI_WEB
+    assert fields["H_A_input_V_hs_dsgn_H__0"].origin is FieldOrigin.BRI_WEB
+    assert fields["C_A_input_mode__0"].origin is FieldOrigin.BRI_WEB
+    assert fields["climateFile__0"].origin is FieldOrigin.VERIFICATION_PLATFORM
+    assert fields["H_A_input_V_hs_min__0"].origin is FieldOrigin.VERIFICATION_PLATFORM
+    assert (
+        fields["correct_cooling_partition_heat_transfer__0"].origin
+        is FieldOrigin.VERIFICATION_PLATFORM
+    )
 
 
 def test_260804_historical_inventory_remains_frozen() -> None:

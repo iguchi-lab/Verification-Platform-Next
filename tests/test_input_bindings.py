@@ -12,7 +12,7 @@ def test_active_catalog_covers_every_ui_field() -> None:
     inventory = load_legacy_inventory()
     catalog = load_input_bindings()
 
-    assert len(catalog.bindings) == 268
+    assert len(catalog.bindings) == 270
     assert catalog.source_ids == frozenset(field.id for field in inventory.fields)
 
 
@@ -49,6 +49,22 @@ def test_correction_checkboxes_are_bound_to_both_seasons() -> None:
     values["correct_cooling_partition_heat_transfer__0"] = True
     values["correct_no_general_ventilation_airflow__0"] = True
     assert all(binding.evaluate(values) == 2 for binding in partition + airflow)
+
+
+def test_efficiency_classes_are_bound_to_each_season() -> None:
+    catalog = load_input_bindings()
+    values = default_ui_values()
+
+    heating_input, = catalog.for_target("H_A", "input_mode")
+    heating_mode, = catalog.for_target("H_A", "mode")
+    values["H_A_input_mode__0"] = "入力する"
+    values["H_A_mode__0"] = "ろ"
+
+    assert heating_input.evaluate(values) == 2
+    assert heating_mode.evaluate(values) == 2
+
+    assert catalog.for_target("C_A", "input_mode")
+    assert catalog.for_target("C_A", "mode")
 
 
 def test_heating_and_cooling_types_keep_all_conditional_mappings() -> None:
