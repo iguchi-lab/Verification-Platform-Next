@@ -59,31 +59,7 @@ class FormModel:
         }
 
     def visibility(self, values: Mapping[str, Any]) -> dict[str, bool]:
-        fields_by_key = {field.key: field for field in self.schema.fields}
-        resolved: dict[str, bool] = {}
-        resolving: set[str] = set()
-
-        def is_visible(field: FieldDefinition) -> bool:
-            if field.key in resolved:
-                return resolved[field.key]
-            if field.key in resolving:
-                raise ValueError(f"Circular visibility dependency: {field.key}")
-            resolving.add(field.key)
-            condition = field.enabled_when
-            if condition is None:
-                visible = True
-            else:
-                control = fields_by_key.get(".".join(condition.path))
-                visible = (
-                    control is not None
-                    and is_visible(control)
-                    and condition.matches(values)
-                )
-            resolving.remove(field.key)
-            resolved[field.key] = visible
-            return visible
-
-        return {field.key: is_visible(field) for field in self.schema.fields}
+        return _visibility(self.schema, values)
 
 
 def load_form_model(
@@ -94,6 +70,7 @@ def load_form_model(
     resolved_values = schema.defaults()
     if values is not None:
         resolved_values.update(values)
+    visibility = _visibility(schema, resolved_values)
 
     sections: list[FormSection] = []
     for section_name in dict.fromkeys(field.section for field in schema.fields):
@@ -104,7 +81,7 @@ def load_form_model(
                 fields=tuple(
                     FormField(
                         definition=field,
-                        visible=field.is_enabled(resolved_values),
+                        visible=visibility[field.key],
                     )
                     for field in section_fields
                     if field.group == group_name
@@ -114,6 +91,37 @@ def load_form_model(
         )
         sections.append(FormSection(name=section_name, groups=groups))
     return FormModel(schema=schema, sections=tuple(sections))
+
+
+def _visibility(
+    schema: InputSchema,
+    values: Mapping[str, Any],
+) -> dict[str, bool]:
+    fields_by_key = {field.key: field for field in schema.fields}
+    resolved: dict[str, bool] = {}
+    resolving: set[str] = set()
+
+    def is_visible(field: FieldDefinition) -> bool:
+        if field.key in resolved:
+            return resolved[field.key]
+        if field.key in resolving:
+            raise ValueError(f"Circular visibility dependency: {field.key}")
+        resolving.add(field.key)
+        condition = field.enabled_when
+        if condition is None:
+            visible = True
+        else:
+            control = fields_by_key.get(".".join(condition.path))
+            visible = (
+                control is not None
+                and is_visible(control)
+                and condition.matches(values)
+            )
+        resolving.remove(field.key)
+        resolved[field.key] = visible
+        return visible
+
+    return {field.key: is_visible(field) for field in schema.fields}
 
 
 def _coerce_value(field: FieldDefinition, value: Any) -> Any:

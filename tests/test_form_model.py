@@ -58,10 +58,18 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     values["H_A_type__0"] = heating_type.definition.choices[1]
     values["C_A_type__0"] = cooling_type.definition.choices[1]
     visibility = model.visibility(values)
-    assert all(visibility[field.key] for field in heating_group.fields)
-    assert all(visibility[field.key] for field in cooling_group.fields)
+    assert visibility["H_A_input_mode__0"]
+    assert not visibility["H_A_mode__0"]
+    assert visibility["C_A_input_mode__0"]
+    assert not visibility["C_A_mode__0"]
     assert not visibility["H_A_input__0"]
     assert not visibility["C_A_input__0"]
+
+    values["H_A_input_mode__0"] = "入力する"
+    values["C_A_input_mode__0"] = "入力する"
+    selected_efficiency = model.visibility(values)
+    assert selected_efficiency["H_A_mode__0"]
+    assert selected_efficiency["C_A_mode__0"]
 
 
 def test_form_model_updates_model_specific_visibility() -> None:
@@ -111,6 +119,92 @@ def test_form_model_updates_nested_underfloor_visibility() -> None:
     assert not hidden_parent["Theta_g_avg__0"]
     assert not hidden_parent["U_s_vert__0"]
     assert not hidden_parent["phi__0"]
+
+
+@pytest.mark.parametrize(
+    ("control_key", "enabled_value", "dependent_keys"),
+    (
+        (
+            "carry_over_heat__0",
+            True,
+            (
+                "c1_BR_R_1__0",
+                "c1_BR_R_2__0",
+                "c1_BR_R_3__0",
+                "c1_BR_R_4__0",
+                "c1_BR_R_5__0",
+                "c1_NR_R__0",
+            ),
+        ),
+        ("H_A_input_V_hs_dsgn_H__0", "入力する", ("H_A_V_hs_dsgn_H__0",)),
+        ("H_A_input_V_hs_min__0", "入力する", ("H_A_V_hs_min__0",)),
+        (
+            "H_A_input_E_E_fan_min__0",
+            "入力する",
+            ("H_A_E_E_fan_logic__0", "H_A_E_E_fan_min__0"),
+        ),
+        ("C_A_input_V_hs_dsgn_C__0", "入力する", ("C_A_V_hs_dsgn_C__0",)),
+        ("C_A_input_V_hs_min__0", "入力する", ("C_A_V_hs_min__0",)),
+        (
+            "C_A_input_E_E_fan_min__0",
+            "入力する",
+            ("C_A_E_E_fan_logic__0", "C_A_E_E_fan_min__0"),
+        ),
+        ("HEX_install__0", "設置する", ("etr_t__0",)),
+    ),
+)
+def test_form_model_hides_optional_values_until_their_input_is_enabled(
+    control_key: str,
+    enabled_value: object,
+    dependent_keys: tuple[str, ...],
+) -> None:
+    model = load_form_model()
+    values = model.schema.defaults()
+
+    initial = model.visibility(values)
+    assert all(not initial[key] for key in dependent_keys)
+
+    values[control_key] = enabled_value
+    enabled = model.visibility(values)
+    assert all(enabled[key] for key in dependent_keys)
+
+
+def test_form_model_applies_nested_equipment_input_visibility() -> None:
+    model = load_form_model()
+    values = model.schema.defaults()
+
+    initial = model.visibility(values)
+    assert initial["H_A_input__0"]
+    assert not initial["H_A_q_hs_rtd_H1__0"]
+    assert not initial["H_A_q_hs_mid_H1__0"]
+
+    values["H_A_input__0"] = "定格能力試験の値を入力する"
+    rated = model.visibility(values)
+    assert rated["H_A_q_hs_rtd_H1__0"]
+    assert not rated["H_A_q_hs_mid_H1__0"]
+
+    values["H_A_input__0"] = "定格能力試験と中間能力試験の値を入力する"
+    rated_and_mid = model.visibility(values)
+    assert rated_and_mid["H_A_q_hs_rtd_H1__0"]
+    assert rated_and_mid["H_A_q_hs_mid_H1__0"]
+
+    heating_type = next(field for field in model.fields if field.key == "H_A_type__0")
+    values["H_A_type__0"] = heating_type.definition.choices[1]
+    rac = model.visibility(values)
+    assert rac["H_A_input_C_af_H2__0"]
+    assert rac["H_A_dedicated_chamber2__0"]
+    assert not rac["H_A_C_af_H2__0"]
+    assert not rac["H_A_q_rac_rtd_H__0"]
+    assert not rac["f_SFP_H__0"]
+
+    values["H_A_input_C_af_H2__0"] = "補正係数を直接入力する"
+    values["H_A_input_rac_performance__0"] = "性能を直接入力"
+    values["H_A_input_f_SFP_H__0"] = "入力する"
+    direct = model.visibility(values)
+    assert not direct["H_A_dedicated_chamber2__0"]
+    assert direct["H_A_C_af_H2__0"]
+    assert direct["H_A_q_rac_rtd_H__0"]
+    assert direct["f_SFP_H__0"]
 
 
 def test_form_values_are_mapped_by_schema_order() -> None:

@@ -67,7 +67,11 @@
       "section": "⑨ 熱交換型換気設備"
     },
     "etr_t__0": {
-      "section": "⑨ 熱交換型換気設備"
+      "section": "⑨ 熱交換型換気設備",
+      "enabled_when": {
+        "path": ["HEX_install__0"],
+        "allowed_values": ["設置する"]
+      }
     },
     "carry_over_heat__0": {
       "section": "⑥ その他",
@@ -75,33 +79,457 @@
     },
     "c1_BR_R_1__0": {
       "section": "⑥ その他",
-      "group": "過剰熱量持越し"
+      "group": "過剰熱量持越し",
+      "enabled_when": {
+        "path": ["carry_over_heat__0"],
+        "allowed_values": [true]
+      }
     },
     "c1_BR_R_2__0": {
       "section": "⑥ その他",
-      "group": "過剰熱量持越し"
+      "group": "過剰熱量持越し",
+      "enabled_when": {
+        "path": ["carry_over_heat__0"],
+        "allowed_values": [true]
+      }
     },
     "c1_BR_R_3__0": {
       "section": "⑥ その他",
-      "group": "過剰熱量持越し"
+      "group": "過剰熱量持越し",
+      "enabled_when": {
+        "path": ["carry_over_heat__0"],
+        "allowed_values": [true]
+      }
     },
     "c1_BR_R_4__0": {
       "section": "⑥ その他",
-      "group": "過剰熱量持越し"
+      "group": "過剰熱量持越し",
+      "enabled_when": {
+        "path": ["carry_over_heat__0"],
+        "allowed_values": [true]
+      }
     },
     "c1_BR_R_5__0": {
       "section": "⑥ その他",
-      "group": "過剰熱量持越し"
+      "group": "過剰熱量持越し",
+      "enabled_when": {
+        "path": ["carry_over_heat__0"],
+        "allowed_values": [true]
+      }
     },
     "c1_NR_R__0": {
       "section": "⑥ その他",
-      "group": "過剰熱量持越し"
+      "group": "過剰熱量持越し",
+      "enabled_when": {
+        "path": ["carry_over_heat__0"],
+        "allowed_values": [true]
+      }
+    },
+    "H_A_V_hs_dsgn_H__0": {
+      "enabled_when": {
+        "path": ["H_A_input_V_hs_dsgn_H__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "H_A_V_hs_min__0": {
+      "enabled_when": {
+        "path": ["H_A_input_V_hs_min__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "H_A_E_E_fan_logic__0": {
+      "enabled_when": {
+        "path": ["H_A_input_E_E_fan_min__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "H_A_E_E_fan_min__0": {
+      "enabled_when": {
+        "path": ["H_A_input_E_E_fan_min__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "C_A_V_hs_dsgn_C__0": {
+      "enabled_when": {
+        "path": ["C_A_input_V_hs_dsgn_C__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "C_A_V_hs_min__0": {
+      "enabled_when": {
+        "path": ["C_A_input_V_hs_min__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "C_A_E_E_fan_logic__0": {
+      "enabled_when": {
+        "path": ["C_A_input_E_E_fan_min__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "C_A_E_E_fan_min__0": {
+      "enabled_when": {
+        "path": ["C_A_input_E_E_fan_min__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "H_A_q_hs_rtd_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_hs_rtd_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_V_fan_rtd_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_fan_rtd_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_q_hs_mid_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_hs_mid_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_V_fan_mid_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_fan_mid_H1__0": {
+      "enabled_when": {
+        "path": ["H_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_q_hs_rtd_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_hs_rtd_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_V_fan_rtd_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_fan_rtd_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_q_hs_mid_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_hs_mid_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_V_fan_mid_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_fan_mid_C1__0": {
+      "enabled_when": {
+        "path": ["C_A_input__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_mode__0": {
+      "description": "冷房用ルームエアコンディショナーのエネルギー消費効率区分を選択します。",
+      "enabled_when": {
+        "path": ["C_A_input_mode__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "H_A_q_rac_rtd_H__0": {
+      "enabled_when": {
+        "path": ["H_A_input_rac_performance__0"],
+        "allowed_values": ["性能を直接入力"]
+      }
+    },
+    "H_A_q_rac_max_H__0": {
+      "enabled_when": {
+        "path": ["H_A_input_rac_performance__0"],
+        "allowed_values": ["性能を直接入力"]
+      }
+    },
+    "e_rac_rtd_H__0": {
+      "enabled_when": {
+        "path": ["H_A_input_rac_performance__0"],
+        "allowed_values": ["性能を直接入力"]
+      }
+    },
+    "C_A_q_rac_rtd_C__0": {
+      "enabled_when": {
+        "path": ["C_A_input_rac_performance__0"],
+        "allowed_values": ["性能を直接入力"]
+      }
+    },
+    "C_A_q_rac_max_C__0": {
+      "enabled_when": {
+        "path": ["C_A_input_rac_performance__0"],
+        "allowed_values": ["性能を直接入力"]
+      }
+    },
+    "e_rac_rtd_C__0": {
+      "enabled_when": {
+        "path": ["C_A_input_rac_performance__0"],
+        "allowed_values": ["性能を直接入力"]
+      }
+    },
+    "f_SFP_H__0": {
+      "enabled_when": {
+        "path": ["H_A_input_f_SFP_H__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "C_A_f_SFP_C__0": {
+      "enabled_when": {
+        "path": ["C_A_input_f_SFP_C__0"],
+        "allowed_values": ["入力する"]
+      }
+    },
+    "H_A_dedicated_chamber2__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H2__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "H_A_fixed_fin_direction2__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H2__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "H_A_C_af_H2__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H2__0"],
+        "allowed_values": ["補正係数を直接入力する"]
+      }
+    },
+    "H_A_dedicated_chamber3__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H3__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "H_A_fixed_fin_direction3__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H3__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "H_A_C_af_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H3__0"],
+        "allowed_values": ["補正係数を直接入力する"]
+      }
+    },
+    "H_A_dedicated_chamber4__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H4__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "H_A_fixed_fin_direction4__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H4__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "H_A_C_af_H4__0": {
+      "enabled_when": {
+        "path": ["H_A_input_C_af_H4__0"],
+        "allowed_values": ["補正係数を直接入力する"]
+      }
+    },
+    "C_A_dedicated_chamber2__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C2__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "C_A_fixed_fin_direction2__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C2__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "C_A_C_af_C2__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C2__0"],
+        "allowed_values": ["補正係数を直接入力する"]
+      }
+    },
+    "C_A_dedicated_chamber3__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C3__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "C_A_fixed_fin_direction3__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C3__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "C_A_C_af_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C3__0"],
+        "allowed_values": ["補正係数を直接入力する"]
+      }
+    },
+    "C_A_dedicated_chamber4__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C4__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "C_A_fixed_fin_direction4__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C4__0"],
+        "allowed_values": ["設置方法を入力する"]
+      }
+    },
+    "C_A_C_af_C4__0": {
+      "enabled_when": {
+        "path": ["C_A_input_C_af_C4__0"],
+        "allowed_values": ["補正係数を直接入力する"]
+      }
+    },
+    "H_A_q_hs_rtd_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_hs_rtd_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_V_fan_rtd_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_fan_rtd_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_q_hs_mid_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_hs_mid_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_V_fan_mid_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "H_A_P_fan_mid_H3__0": {
+      "enabled_when": {
+        "path": ["H_A_input__1"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_q_hs_rtd_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_hs_rtd_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_V_fan_rtd_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_fan_rtd_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験の値を入力する", "定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_q_hs_mid_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_hs_mid_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_V_fan_mid_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
+    },
+    "C_A_P_fan_mid_C3__0": {
+      "enabled_when": {
+        "path": ["C_A_input3__0"],
+        "allowed_values": ["定格能力試験と中間能力試験の値を入力する"]
+      }
     },
     "C_A_input_mode__0": {
       "description": "建研Webと同じ冷房側の性能区分です。冷房定格効率の算定に使用します。"
-    },
-    "C_A_mode__0": {
-      "description": "冷房用ルームエアコンディショナーのエネルギー消費効率区分を選択します。"
     }
   },
   "append_fields": [
@@ -136,8 +564,8 @@
       "default": "は",
       "choices": ["い", "ろ", "は"],
       "enabled_when": {
-        "path": ["H_A", "type"],
-        "allowed_values": [2]
+        "path": ["H_A_input_mode__0"],
+        "allowed_values": ["入力する"]
       },
       "insert_after_field_id": "H_A_input_mode__0",
       "origin": "bri_web",
