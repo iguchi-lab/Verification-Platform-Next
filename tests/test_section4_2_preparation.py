@@ -1651,31 +1651,15 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
 ):
     calls = []
     cooling = SimpleNamespace(q_max=10.0, q_rtd=8.0, input_C_af=1.2)
-    sensible_by_room = object()
-    latent_by_room = object()
-    load = SimpleNamespace(
-        L_CS_d_t_i=sensible_by_room,
-        L_CL_d_t_i=latent_by_room,
-    )
     theta = object()
-    sensible_total = object()
-    latent_total = object()
     outputs = (1.25,) + tuple(object() for _ in range(9))
-
-    def sum_values(value, axis):
-        calls.append(("sum", value, axis))
-        return sensible_total if value is sensible_by_room else latent_total
-
-    monkeypatch.setattr(sut.np, "sum", sum_values)
+    balanced = sut._BalancedCoolingLoadsResult(
+        object(), object(), outputs[4], outputs[5], outputs[6], outputs[7])
     functions = (
         ("get_q_r_max_C", "ratio", outputs[0]),
         ("calc_Q_r_max_C_d_t", "output_ratio", outputs[1]),
         ("calc_Q_max_C_d_t", "output", outputs[2]),
         ("get_SHF_L_min_c", "minimum_shf", outputs[3]),
-        ("get_L_max_CL_d_t", "max_latent", outputs[4]),
-        ("get_L_dash_CL_d_t", "latent", outputs[5]),
-        ("get_L_dash_C_d_t", "total", outputs[6]),
-        ("get_SHF_dash_d_t", "shf", outputs[7]),
         ("get_Q_max_CS_d_t", "max_sensible", outputs[8]),
         ("get_Q_max_CL_d_t", "max_latent_output", outputs[9]),
     )
@@ -1692,7 +1676,7 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
     monkeypatch.setattr(sut._logger, "NDdebug", lambda name, value: calls.append(("NDdebug", name, value)))
 
     result = sut._get_rac_cooling_capacity(sut._RacCoolingCapacityInputs(
-        cooling, load, theta, log_intermediates
+        cooling, balanced, theta, log_intermediates
     ))
 
     assert result == outputs
@@ -1710,18 +1694,40 @@ def test_rac_cooling_capacity_preserves_formula_and_log_order(
         expected.append(("NDdebug", "Q_max_C_d_t", outputs[2]))
     expected.extend((
         ("minimum_shf", ()),
-        ("sum", sensible_by_room, 0),
-        ("max_latent", (sensible_total, outputs[3])),
-        ("sum", latent_by_room, 0),
-        ("latent", (outputs[4], latent_total)),
-        ("sum", sensible_by_room, 0),
-        ("total", (sensible_total, outputs[5])),
-        ("sum", sensible_by_room, 0),
-        ("shf", (sensible_total, outputs[6])),
         ("max_sensible", (outputs[2], outputs[7])),
         ("max_latent_output", (outputs[2], outputs[7], outputs[5])),
     ))
     assert calls == expected
+
+
+def test_rac_cooling_capacity_uses_balanced_loads_for_july_17_09(monkeypatch):
+    """RAC熱源の能力を、7月17日9時の全館空調負荷で顕潜熱分割する。"""
+    q_max_c = 23.3062231687866
+    shf = 0.768003098839161
+    latent = 2.40124575830906
+    balanced = sut._BalancedCoolingLoadsResult(
+        latent,
+        7.94908972588916,
+        11.9236345888337,
+        latent,
+        10.3503354841982,
+        shf,
+    )
+    monkeypatch.setattr(sut.rac, "get_q_r_max_C", lambda *args: 1.0)
+    monkeypatch.setattr(sut.rac, "calc_Q_r_max_C_d_t", lambda *args: 1.0)
+    monkeypatch.setattr(sut.rac, "calc_Q_max_C_d_t", lambda *args: q_max_c)
+
+    result = sut._get_rac_cooling_capacity(sut._RacCoolingCapacityInputs(
+        SimpleNamespace(q_max=5944.62, q_rtd=5600.0, input_C_af=1.0),
+        balanced,
+        np.array([32.0]),
+        False,
+    ))
+
+    assert result.SHF_dash_d_t == pytest.approx(shf)
+    assert result.Q_max_C_d_t == pytest.approx(q_max_c)
+    assert result.Q_max_CS_d_t == pytest.approx(17.8992516158651)
+    assert result.Q_max_CL_d_t == pytest.approx(latent)
 
 def test_carryover_at_hour_rejects_overlapping_seasons_before_first_hour():
     with pytest.raises(ValueError, match="想定外の季節"):
@@ -3273,7 +3279,9 @@ def test_prepare_no_carryover_capacity_state_preserves_model_branch(monkeypatch,
 
     assert result[:4] == ((standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
                       if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
-    assert [e[0] for e in events] == (["loads", "standard"] if standard else ["defrost", "log", "rac_heat", "rac_cool"])
+    assert [e[0] for e in events] == (["loads", "standard"] if standard else ["loads", "defrost", "log", "rac_heat", "rac_cool"])
+    if not standard:
+        assert events[-1][1][0].balanced_cooling is standard_loads
 
 def test_prepare_balanced_heat_source_inlet_state_preserves_formula_20_19_order(monkeypatch):
     events = []
@@ -3407,8 +3415,10 @@ def test_prepare_carryover_capacity_state_preserves_model_branch(monkeypatch, st
         sut._CarryoverCapacityStateInputs(setting, *inputs))
 
     expected = (["loads", "standard"] if standard
-                else ["defrost", "rac_heat", "rac_cool"])
+                else ["loads", "defrost", "rac_heat", "rac_cool"])
     assert [event[0] for event in events] == expected
+    if not standard:
+        assert events[-1][1][0].balanced_cooling is standard_loads
     assert result[:4] == (
         (standard_caps[0], standard_caps[1], standard_caps[2], standard_caps[4])
         if standard else (cool_caps[2], cool_caps[9], cool_caps[8], heat_caps[2]))
