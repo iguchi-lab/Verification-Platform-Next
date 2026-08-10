@@ -32,8 +32,9 @@ Nextの製品版は[`jjjexperiment/release.py`](../packages/pyhees-jjj/src/jjjex
 | --- | --- | --- | --- | --- |
 | BRI-01 | 冷房時の居室・非居室間の間仕切熱移動の符号 | `+Q_trs` | `+Q_trs` | 既定OFFは`+Q_trs`、①をONにすると全経路で`-Q_trs` |
 | BRI-02 | 全般換気なし時も区画別全般換気量を給気下限に使用 | 使用する | 使用する。最低風量直接入力時は過大値が拡大 | 既定OFFは建研式、②をONにすると換気下限と設備最低風量を分離 |
+| VP-01 | RAC活用型の冷房SHFに用いる負荷 | 該当モデルなし（ダクト式は負荷バランス後） | 負荷バランス前のRAC負荷 | 負荷バランス後の全館空調負荷 |
 
-両項目とも既定値はOFFである。建研本家との比較照合ではOFF、物理的に正しいと
+BRI-01とBRI-02の既定値はOFFである。建研本家との比較照合ではOFF、物理的に正しいと
 判断した方法を使う計算ではONにする。①と②は独立して選択できる。
 
 ## 4. BRI-01：冷房時の間仕切熱移動の符号
@@ -223,7 +224,7 @@ Nextでは、次の二つを別の物理量として扱う。
 
 ## 6. 旧Verification Platformからの差分
 
-この二件に限った旧版との差は次のとおりである。
+旧版との差は次のとおりである。
 
 | 項目 | 旧Verification Platform | Verification Platform Next（入力仕様260809） |
 | --- | --- | --- |
@@ -232,6 +233,45 @@ Nextでは、次の二つを別の物理量として扱う。
 | 最低風量直接入力 | `V_vent_g_i`を拡大し、区画別`max`で合計が過大になる場合がある | ②ONでは設備最低風量を換気量から分離 |
 | VAVあり・全般換気なし | サーモOFF・小負荷時の設備下限が不明確 | ②ONでは暖冷房期に設備最低風量を明示的に保証 |
 | 全般換気なしの中間期 | 給気またはファン電力が残る経路がある | 給気・ファン電力とも0 |
+| RAC活用型の冷房SHF | 負荷バランス前の`L_CS`、`L_CL`から算定 | 負荷バランス後の`L_star_CS`、`L_star_CL`から算定 |
+
+### 6.1 VP-01：RAC活用型の冷房SHF
+
+RAC活用型全館空調では、住宅負荷と空気搬送はダクト式全館空調の計算を使い、
+熱源機の定格・最大能力および効率特性だけにRACの特性を使う。このモデル境界に
+従えば、熱源機の最大冷房能力を顕熱と潜熱に分けるSHFにも、式(28)～(33)で
+算定した負荷バランス後の全館空調負荷を用いる必要がある。
+
+旧Verification Platformと修正前のNextは、RAC能力計算へ入った時点で負荷を
+負荷バランス前の値へ戻し、次式の`L_CS`、`L_CL`からSHFを算定していた。
+
+```math
+L'_{CL}=\min\left(L_{CL},L_{CL,\max}\right),\qquad
+SHF'=\frac{L_{CS}}{L_{CS}+L'_{CL}}
+```
+
+修正後のNextは、負荷バランス後の値を維持して次式で算定する。
+
+```math
+L^{*'}_{CL}=\min\left(L^*_{CL},L^*_{CL,\max}\right),\qquad
+SHF'=\frac{L^*_{CS}}{L^*_{CS}+L^{*'}_{CL}}
+```
+
+RAC式で求める時刻別最大冷房能力$Q_{\max,C}$は変更せず、この能力を分ける
+$Q_{\max,CS}$と$Q_{\max,CL}$だけに上記SHFと補正潜熱負荷を使う。したがって、
+「全館空調の負荷・搬送＋RAC熱源」という今回のモデルに整合する。
+
+7月17日9時（平日）の確認例は次のとおりである。
+
+| 値 | 旧Verification Platform・修正前Next | 修正後Next・RAC選択Excel |
+| --- | ---: | ---: |
+| `SHF_dash_d_t` | 0.773448685960026 | 0.768003098839161 |
+| `Q_hs_max_C_d_t` [MJ/h] | 23.3062231687866 | 23.3062231687866 |
+| `Q_hs_max_CS_d_t` [MJ/h] | 18.0261676845891 | 17.8992516158651 |
+| `Q_hs_max_CL_d_t` [MJ/h] | 3.31350297568073 | 2.40124575830906 |
+
+この差は冷房の顕潜熱配分だけに生じる。暖房にはSHFによる顕熱・潜熱分割がなく、
+RACの最大暖房能力をそのまま熱源上限へ使うため、同種の問題はない。
 
 床下計算全体に関する旧版・Excel床下13・Excel床下14との差は、
 [`underfloor_ac_seven_changes.md`](underfloor_ac_seven_changes.md)および
@@ -246,6 +286,7 @@ Nextでは、次の二つを別の物理量として扱う。
 | 新床下の①OFF/ON | [`test_4_2_f8.py`](../packages/pyhees-jjj/src/tests/underfloor_ac/test_4_2_f8.py) |
 | 全般換気なし・最低風量160/420 m3/h | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py#L923-L1001) |
 | VAVあり・全般換気なし | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py#L1004-L1031) |
+| RAC活用型冷房の負荷バランス後SHF | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
 
 ver.1.0.2リリース時には、全体pytest、Phase 5、Excel床下14 Golden、
 計算エンジン内部試験、RuffおよびGitHub Actionsの成功を確認している。

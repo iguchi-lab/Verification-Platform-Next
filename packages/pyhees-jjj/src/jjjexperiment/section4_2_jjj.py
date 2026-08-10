@@ -1184,7 +1184,7 @@ class _RatedHeatSourceCapacitiesInputs(NamedTuple):
 
 class _RacCoolingCapacityInputs(NamedTuple):
     cool_CRAC: object
-    load: object
+    balanced_cooling: object
     Theta_ex_d_t: object
     log_intermediates: object
 
@@ -2046,9 +2046,9 @@ def _get_rac_heating_capacity(inputs: _RacHeatingCapacityInputs):
     )
 
 def _get_rac_cooling_capacity(inputs: _RacCoolingCapacityInputs):
-    """Calculate the RAC maximum cooling capacity in its original order."""
+    """Calculate RAC cooling capacity and split it with balanced whole-house loads."""
     cool_CRAC = inputs.cool_CRAC
-    load = inputs.load
+    balanced_cooling = inputs.balanced_cooling
     Theta_ex_d_t = inputs.Theta_ex_d_t
     log_intermediates = inputs.log_intermediates
     # 最大冷房能力比
@@ -2067,18 +2067,13 @@ def _get_rac_cooling_capacity(inputs: _RacCoolingCapacityInputs):
     if log_intermediates:
         _logger.NDdebug("Q_max_C_d_t", Q_max_C_d_t)
 
-    # 冷房負荷最小顕熱比
+    # RACの最小顕熱比は診断出力として維持する。顕潜熱配分には、全館空調の
+    # 負荷バランス後の冷房負荷（式(28)～(33)）を使用する。
     SHF_L_min_c = rac.get_SHF_L_min_c()
-
-    # 最大冷房潜熱負荷
-    L_max_CL_d_t = rac.get_L_max_CL_d_t(np.sum(load.L_CS_d_t_i, axis=0), SHF_L_min_c)
-
-    # 補正冷房潜熱負荷
-    L_dash_CL_d_t = rac.get_L_dash_CL_d_t(L_max_CL_d_t, np.sum(load.L_CL_d_t_i, axis=0))
-    L_dash_C_d_t = rac.get_L_dash_C_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_CL_d_t)
-
-    # 冷房負荷補正顕熱比
-    SHF_dash_d_t = rac.get_SHF_dash_d_t(np.sum(load.L_CS_d_t_i, axis=0), L_dash_C_d_t)
+    L_max_CL_d_t = balanced_cooling.L_star_CL_max_d_t
+    L_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
+    L_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
+    SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
 
     # 最大冷房顕熱出力, 最大冷房潜熱出力
     Q_max_CS_d_t = rac.get_Q_max_CS_d_t(Q_max_C_d_t, SHF_dash_d_t)
@@ -3547,7 +3542,6 @@ def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs
     house = inputs.house
     heat_CRAC = inputs.heat_CRAC
     cool_CRAC = inputs.cool_CRAC
-    load = inputs.load
     climate = inputs.climate
     Theta_ex_d_t = inputs.Theta_ex_d_t
     h_ex_d_t = inputs.h_ex_d_t
@@ -3558,17 +3552,16 @@ def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs
     Q_r_max_H_d_t = Q_r_max_C_d_t = None
     L_max_CL_d_t = L_dash_CL_d_t = L_dash_C_d_t = None
     q_r_max_H = q_r_max_C = SHF_L_min_c = None
+    balanced_cooling = _get_balanced_cooling_loads(
+        L_star_CL_d_t_i, L_star_CS_d_t_i)
+    L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
+    L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
+    L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
+    L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
+    SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル]:
-        balanced_cooling = _get_balanced_cooling_loads(
-            L_star_CL_d_t_i, L_star_CS_d_t_i)
-        L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
-        L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
-        L_star_CL_max_d_t = balanced_cooling.L_star_CL_max_d_t
-        L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
-        L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
-        SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
         standard_capacity = _get_standard_heat_source_capacity_limits(_StandardHeatSourceCapacityLimitsInputs(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
             L_star_dash_CL_d_t, climate.get_C_df_H_d_t))
@@ -3590,7 +3583,7 @@ def _prepare_no_carryover_capacity_state(inputs: _NoCarryoverCapacityStateInputs
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
         rac_cooling = _get_rac_cooling_capacity(_RacCoolingCapacityInputs(
-            cool_CRAC, load, Theta_ex_d_t, log_intermediates=True))
+            cool_CRAC, balanced_cooling, Theta_ex_d_t, log_intermediates=True))
         q_r_max_C = rac_cooling.q_r_max_C
         Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
         Q_max_C_d_t = rac_cooling.Q_max_C_d_t
@@ -4221,7 +4214,6 @@ def _prepare_carryover_capacity_state(inputs: _CarryoverCapacityStateInputs):
     house = inputs.house
     heat_CRAC = inputs.heat_CRAC
     cool_CRAC = inputs.cool_CRAC
-    load = inputs.load
     Theta_ex_d_t = inputs.Theta_ex_d_t
     h_ex_d_t = inputs.h_ex_d_t
     L_star_CL_d_t_i = inputs.L_star_CL_d_t_i
@@ -4231,17 +4223,16 @@ def _prepare_carryover_capacity_state(inputs: _CarryoverCapacityStateInputs):
     Q_r_max_H_d_t = Q_r_max_C_d_t = None
     L_max_CL_d_t = L_dash_CL_d_t = L_dash_C_d_t = None
     q_r_max_H = q_r_max_C = SHF_L_min_c = None
+    balanced_cooling = _get_balanced_cooling_loads(
+        L_star_CL_d_t_i, L_star_CS_d_t_i)
+    L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
+    L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
+    L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
+    L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
+    SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
     if ac_setting.type in [
             計算モデル.ダクト式セントラル空調機,
             計算モデル.RAC活用型全館空調_潜熱評価モデル]:
-        balanced_cooling = _get_balanced_cooling_loads(
-            L_star_CL_d_t_i, L_star_CS_d_t_i)
-        L_star_CL_d_t = balanced_cooling.L_star_CL_d_t
-        L_star_CS_d_t = balanced_cooling.L_star_CS_d_t
-        L_star_CL_max_d_t = balanced_cooling.L_star_CL_max_d_t
-        L_star_dash_CL_d_t = balanced_cooling.L_star_dash_CL_d_t
-        L_star_dash_C_d_t = balanced_cooling.L_star_dash_C_d_t
-        SHF_dash_d_t = balanced_cooling.SHF_dash_d_t
         standard_capacity = _get_standard_heat_source_capacity_limits(_StandardHeatSourceCapacityLimitsInputs(
             ac_setting, house, heat_CRAC, cool_CRAC, SHF_dash_d_t,
             L_star_dash_CL_d_t,
@@ -4263,7 +4254,7 @@ def _prepare_carryover_capacity_state(inputs: _CarryoverCapacityStateInputs):
         Q_max_H_d_t = rac_heating.Q_max_H_d_t
         Q_hs_max_H_d_t = Q_max_H_d_t
         rac_cooling = _get_rac_cooling_capacity(_RacCoolingCapacityInputs(
-            cool_CRAC, load, Theta_ex_d_t, log_intermediates=False))
+            cool_CRAC, balanced_cooling, Theta_ex_d_t, log_intermediates=False))
         q_r_max_C = rac_cooling.q_r_max_C
         Q_r_max_C_d_t = rac_cooling.Q_r_max_C_d_t
         Q_max_C_d_t = rac_cooling.Q_max_C_d_t
