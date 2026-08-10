@@ -86,6 +86,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         and "デフォルトから変更した入力" in value
         for value in html_values
     )
+    assert "変更した項目は濃い緑色で表示されます。" in markdown_values
     assert "↩ 入力をデフォルトに戻す" in buttons
     assert buttons["↩ 入力をデフォルトに戻す"]["props"]["variant"] == "secondary"
     assert origin_classes == {
@@ -174,10 +175,18 @@ def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
 
     assert json.dumps([field.default for field in fields], ensure_ascii=True) in modified_js
     assert "test-field-0" in modified_js
+    assert 'typeof defaultValue !== "number"' in modified_js
+    assert "const numericValue = Number(value);" in modified_js
+    assert "JSON.stringify(normalizedValue)" in modified_js
     assert 'classList.toggle("input-value-modified", changed)' in modified_js
     assert "MutationObserver" in modified_js
     assert "test-field-1" in reset_js
     assert 'classList.remove("input-value-modified")' in reset_js
+
+
+def test_modified_input_highlight_uses_a_strong_green_treatment() -> None:
+    assert "color-mix(in srgb, #16a34a 22%, transparent)" in form_app._INPUT_ORIGIN_CSS
+    assert "box-shadow: inset 0 0 0 2px #16a34a" in form_app._INPUT_ORIGIN_CSS
 
 
 class _LaunchRecorder:

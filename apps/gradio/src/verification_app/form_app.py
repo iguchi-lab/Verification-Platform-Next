@@ -57,8 +57,8 @@ _INPUT_ORIGIN_CSS = """
   border-left-color: #f59e0b !important;
 }
 .input-value-modified {
-  background: color-mix(in srgb, #22c55e 9%, transparent) !important;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #16a34a 35%, transparent);
+  background: color-mix(in srgb, #16a34a 22%, transparent) !important;
+  box-shadow: inset 0 0 0 2px #16a34a;
 }
 .default-reset-row {
   align-items: center;
@@ -127,7 +127,7 @@ def build_app(
                 scale=0,
             )
             gr.Markdown(
-                "変更した項目は薄い緑色で表示されます。",
+                "変更した項目は濃い緑色で表示されます。",
                 elem_classes=["default-reset-note"],
             )
 
@@ -429,10 +429,16 @@ def _install_default_highlight_js(
     }}
     return input.value;
   }};
+  const normalizeValue = (value, defaultValue) => {{
+    if (value === null || typeof defaultValue !== "number") return value;
+    const numericValue = Number(value);
+    return Number.isNaN(numericValue) ? value : numericValue;
+  }};
   const update = (container, index) => {{
     const value = readValue(container, kinds[index]);
     if (value === undefined) return;
-    const changed = JSON.stringify(value) !== JSON.stringify(defaults[index]);
+    const normalizedValue = normalizeValue(value, defaults[index]);
+    const changed = JSON.stringify(normalizedValue) !== JSON.stringify(defaults[index]);
     container.classList.toggle("input-value-modified", changed);
   }};
   const bindAll = () => domIds.forEach((domId, index) => {{
