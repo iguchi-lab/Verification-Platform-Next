@@ -1,3 +1,4 @@
+import json
 from collections import Counter
 
 import pytest
@@ -42,6 +43,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         for component in config["components"]
         if component["type"] == "accordion"
     }
+    buttons = {
+        component["props"].get("value", ""): component
+        for component in config["components"]
+        if component["type"] == "button"
+    }
 
     def equipment_section(prefix: str) -> dict[str, object]:
         return next(
@@ -76,8 +82,12 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         and "Verification Platformで追加・拡張した入力" in value
         and ".input-section {\n  overflow-x: clip !important;" in value
         and ".input-section > button > span:not(.icon)" in value
+        and ".input-value-modified" in value
+        and "デフォルトから変更した入力" in value
         for value in html_values
     )
+    assert "↩ 入力をデフォルトに戻す" in buttons
+    assert buttons["↩ 入力をデフォルトに戻す"]["props"]["variant"] == "secondary"
     assert origin_classes == {
         "input-origin-bri-web": 47,
         "input-origin-verification-platform": 178,
@@ -102,6 +112,8 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         underfloor_constants_visibility,
         heating_visibility,
         cooling_visibility,
+        reset_inputs,
+        install_default_highlights,
     ) = config["dependencies"]
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
@@ -115,6 +127,29 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(underfloor_constants_visibility["outputs"]) == 3
     assert len(heating_visibility["outputs"]) == 78
     assert len(cooling_visibility["outputs"]) == 83
+    assert len(reset_inputs["inputs"]) == 0
+    assert len(reset_inputs["outputs"]) == 458
+    assert len(install_default_highlights["inputs"]) == 0
+    assert len(install_default_highlights["outputs"]) == 0
+    assert install_default_highlights["queue"] is False
+    assert "input-value-modified" in install_default_highlights["js"]
+    reset_function = next(
+        block_fn.fn
+        for block_fn in demo.fns.values()
+        if getattr(block_fn.fn, "__name__", "") == "reset_inputs"
+    )
+    reset_outputs = reset_function()
+    assert reset_outputs[:225] == tuple(field.default for field in form_app.load_form_model().schema.fields)
+    assert [update["visible"] for update in reset_outputs[-8:]] == [
+        True,
+        False,
+        False,
+        False,
+        True,
+        False,
+        False,
+        False,
+    ]
     heating_section_ids = {
         equipment_section(prefix)["id"] for prefix in ("⑦-1", "⑦-2", "⑦-3", "⑦-4")
     }
@@ -126,6 +161,23 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert "先行計算がある場合は、順番に実行します" in (
         form_app._calculation_started_outputs()[0]
     )
+
+
+def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
+    fields = form_app.load_form_model().schema.fields[:2]
+    field_dom_ids = {
+        field.key: f"test-field-{index}" for index, field in enumerate(fields)
+    }
+
+    modified_js = form_app._install_default_highlight_js(fields, field_dom_ids)
+    reset_js = form_app._reset_highlight_js(fields, field_dom_ids)
+
+    assert json.dumps([field.default for field in fields], ensure_ascii=True) in modified_js
+    assert "test-field-0" in modified_js
+    assert 'classList.toggle("input-value-modified", changed)' in modified_js
+    assert "MutationObserver" in modified_js
+    assert "test-field-1" in reset_js
+    assert 'classList.remove("input-value-modified")' in reset_js
 
 
 class _LaunchRecorder:
