@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import time
 from collections.abc import Iterable
@@ -42,6 +43,7 @@ _INPUT_ORIGIN_CSS = """
 }
 .input-origin-legend__swatch--bri { background: #2563eb; }
 .input-origin-legend__swatch--vp { background: #f59e0b; }
+.input-origin-legend__swatch--modified { background: #22c55e; }
 .input-origin-bri-web,
 .input-origin-verification-platform {
   border-left-style: solid !important;
@@ -53,6 +55,18 @@ _INPUT_ORIGIN_CSS = """
 .input-origin-verification-platform {
   background: color-mix(in srgb, #f59e0b 7%, transparent);
   border-left-color: #f59e0b !important;
+}
+.input-value-modified {
+  background: color-mix(in srgb, #22c55e 9%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #16a34a 35%, transparent);
+}
+.default-reset-row {
+  align-items: center;
+  margin: 0 0 0.75rem;
+}
+.default-reset-note p {
+  color: var(--body-text-color-subdued);
+  margin: 0 !important;
 }
 .input-section {
   overflow-x: clip !important;
@@ -97,11 +111,29 @@ def build_app(
             'input-origin-legend__swatch--vp"></span>'
             "Verification Platformで追加・拡張した入力"
             "</span>"
+            '<span class="input-origin-legend__item">'
+            '<span class="input-origin-legend__swatch '
+            'input-origin-legend__swatch--modified"></span>'
+            "デフォルトから変更した入力"
+            "</span>"
             "</div>"
         )
 
+        with gr.Row(elem_classes=["default-reset-row"]):
+            reset = gr.Button(
+                "↩ 入力をデフォルトに戻す",
+                variant="secondary",
+                size="sm",
+                scale=0,
+            )
+            gr.Markdown(
+                "変更した項目は薄い緑色で表示されます。",
+                elem_classes=["default-reset-note"],
+            )
+
         components: dict[str, Any] = {}
         containers: dict[str, Any] = {}
+        field_dom_ids: dict[str, str] = {}
         section_containers: dict[str, Any] = {}
         section_fields = {
             section.name: tuple(
@@ -136,10 +168,12 @@ def build_app(
                     for row_index, row_fields in enumerate(_chunks(group.fields, 3)):
                         with gr.Row(key=f"row:{section_index}:{group_index}:{row_index}"):
                             for form_field in row_fields:
+                                field_dom_id = f"input-field-container-{len(components)}"
                                 with gr.Column(
                                     visible=form_field.visible,
                                     min_width=280,
                                     key=f"field-container:{form_field.key}",
+                                    elem_id=field_dom_id,
                                     elem_classes=[
                                         _origin_css_class(form_field.definition.origin)
                                     ],
@@ -147,6 +181,7 @@ def build_app(
                                     component = _input_component(form_field.definition)
                                 components[form_field.key] = component
                                 containers[form_field.key] = container
+                                field_dom_ids[form_field.key] = field_dom_id
 
         run = gr.Button("▶ 計算を実行", variant="primary", size="lg")
         status = gr.Markdown("**状態: 未実行**")
@@ -261,6 +296,53 @@ def build_app(
                 queue=False,
                 api_visibility="private",
             )
+
+        ordered_fields = tuple(form.schema.fields)
+        ordered_containers = [containers[field.key] for field in ordered_fields]
+        equipment_section_names = tuple(
+            name for name in section_containers if _is_equipment_section(name)
+        )
+
+        def reset_inputs() -> tuple[Any, ...]:
+            visibility = form.visibility(form.schema.defaults())
+            input_values = tuple(field.default for field in ordered_fields)
+            container_updates = tuple(
+                gr.update(
+                    visible=visibility[field.key],
+                )
+                for field in ordered_fields
+            )
+            section_updates = tuple(
+                gr.update(
+                    visible=_section_is_visible(
+                        section_name,
+                        section_fields,
+                        visibility,
+                    )
+                )
+                for section_name in equipment_section_names
+            )
+            return (*input_values, *container_updates, *section_updates)
+
+        reset.click(
+            reset_inputs,
+            outputs=[
+                *ordered_components,
+                *ordered_containers,
+                *(section_containers[name] for name in equipment_section_names),
+            ],
+            queue=False,
+            api_visibility="private",
+            js=_reset_highlight_js(ordered_fields, field_dom_ids),
+        )
+
+        demo.load(
+            fn=None,
+            queue=False,
+            api_visibility="private",
+            show_progress="hidden",
+            js=_install_default_highlight_js(ordered_fields, field_dom_ids),
+        )
     return demo
 
 
@@ -322,6 +404,73 @@ def _input_component(field: FieldDefinition) -> Any:
 
 def _origin_css_class(origin: FieldOrigin) -> str:
     return f"input-origin-{origin.value.replace('_', '-')}"
+
+
+def _install_default_highlight_js(
+    fields: tuple[FieldDefinition, ...],
+    field_dom_ids: dict[str, str],
+) -> str:
+    defaults = json.dumps([field.default for field in fields], ensure_ascii=True)
+    dom_ids = json.dumps([field_dom_ids[field.key] for field in fields])
+    kinds = json.dumps([field.kind.value for field in fields])
+    return f"""
+() => {{
+  const defaults = {defaults};
+  const domIds = {dom_ids};
+  const kinds = {kinds};
+  const readValue = (container, kind) => {{
+    if (kind === "boolean") {{
+      return container.querySelector('input[type="checkbox"]')?.checked;
+    }}
+    const input = container.querySelector('textarea, input:not([type="hidden"])');
+    if (!input) return undefined;
+    if (kind === "number" || kind === "integer") {{
+      return input.value === "" ? null : Number(input.value);
+    }}
+    return input.value;
+  }};
+  const update = (container, index) => {{
+    const value = readValue(container, kinds[index]);
+    if (value === undefined) return;
+    const changed = JSON.stringify(value) !== JSON.stringify(defaults[index]);
+    container.classList.toggle("input-value-modified", changed);
+  }};
+  const bindAll = () => domIds.forEach((domId, index) => {{
+    const container = document.getElementById(domIds[index]);
+    if (!container) return;
+    if (container.dataset.defaultHighlightBound !== "true") {{
+      container.dataset.defaultHighlightBound = "true";
+      container.addEventListener("input", () => update(container, index));
+      container.addEventListener("change", () => update(container, index));
+    }}
+    update(container, index);
+  }});
+  bindAll();
+  window.__verificationDefaultHighlightObserver?.disconnect();
+  window.__verificationDefaultHighlightObserver = new MutationObserver(bindAll);
+  window.__verificationDefaultHighlightObserver.observe(document.body, {{
+    childList: true,
+    subtree: true,
+  }});
+  return [];
+}}
+"""
+
+
+def _reset_highlight_js(
+    fields: tuple[FieldDefinition, ...],
+    field_dom_ids: dict[str, str],
+) -> str:
+    dom_ids = json.dumps([field_dom_ids[field.key] for field in fields])
+    return f"""
+() => {{
+  const domIds = {dom_ids};
+  domIds.forEach((domId) => {{
+    document.getElementById(domId)?.classList.remove("input-value-modified");
+  }});
+  return [];
+}}
+"""
 
 
 def _chunks(values: tuple[FormField, ...], size: int) -> Iterable[tuple[FormField, ...]]:
