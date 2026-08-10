@@ -103,18 +103,22 @@ def test_260809_has_independent_heating_and_cooling_efficiency_classes() -> None
         assert field.group == "エネルギー消費効率の入力"
         assert field.category == "暖房"
         assert field.enabled_when is not None
-        assert field.enabled_when.path == ("H_A", "type")
-        assert field.enabled_when.allowed_values == (2,)
         assert field.origin is FieldOrigin.BRI_WEB
+    assert fields["H_A_input_mode__0"].enabled_when.path == ("H_A", "type")
+    assert fields["H_A_input_mode__0"].enabled_when.allowed_values == (2,)
+    assert fields["H_A_mode__0"].enabled_when.path == ("H_A_input_mode__0",)
+    assert fields["H_A_mode__0"].enabled_when.allowed_values == ("入力する",)
 
     for field in (fields["C_A_input_mode__0"], fields["C_A_mode__0"]):
         assert field.section.startswith("⑧-2 冷房")
         assert field.group == "エネルギー消費効率の入力"
         assert field.category == "冷房"
         assert field.enabled_when is not None
-        assert field.enabled_when.path == ("C_A", "type")
-        assert field.enabled_when.allowed_values == (2,)
         assert field.origin is FieldOrigin.BRI_WEB
+    assert fields["C_A_input_mode__0"].enabled_when.path == ("C_A", "type")
+    assert fields["C_A_input_mode__0"].enabled_when.allowed_values == (2,)
+    assert fields["C_A_mode__0"].enabled_when.path == ("C_A_input_mode__0",)
+    assert fields["C_A_mode__0"].enabled_when.allowed_values == ("入力する",)
 
     assert fields["H_A_input_mode__0"].source_name == "H_A_input_mode"
     assert fields["H_A_mode__0"].source_name == "H_A_mode"
@@ -179,6 +183,23 @@ def test_model_sections_have_activation_conditions() -> None:
     assert cooling.enabled_when is not None
     assert cooling.enabled_when.path == ("C_A", "type")
     assert cooling.enabled_when.allowed_values == (4,)
+
+
+def test_optional_input_values_have_their_own_activation_conditions() -> None:
+    inventory = load_legacy_inventory()
+    optional_values = [
+        item
+        for item in inventory.fields
+        if "入力する場合のみ" in item.label or "設置する場合のみ" in item.label
+    ]
+
+    assert len(optional_values) == 55
+    assert all(item.enabled_when is not None for item in optional_values)
+    assert all(
+        item.enabled_when.path not in {("H_A", "type"), ("C_A", "type")}
+        for item in optional_values
+        if item.enabled_when is not None
+    )
 
 
 def test_select_defaults_are_valid() -> None:

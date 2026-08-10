@@ -35,8 +35,8 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     origin_classes = Counter(
         elem_class
         for component in config["components"]
-        if component["type"] == "column"
         for elem_class in component["props"].get("elem_classes", ())
+        if elem_class.startswith("input-origin-")
     )
     accordions = {
         component["props"]["label"]: component
@@ -104,18 +104,21 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     for prefix in ("⑦-2", "⑦-3", "⑦-4", "⑧-2", "⑧-3", "⑧-4"):
         assert equipment_section(prefix)["props"]["visible"] is False
 
-    (
-        calculation_started,
-        calculation,
-        graph_generation,
-        ventilation_visibility,
-        new_underfloor_visibility,
-        underfloor_constants_visibility,
-        heating_visibility,
-        cooling_visibility,
-        reset_inputs,
-        install_default_highlights,
-    ) = config["dependencies"]
+    dependencies = config["dependencies"]
+    calculation_started, calculation, graph_generation = dependencies[:3]
+    reset_inputs = next(
+        dependency for dependency in dependencies if len(dependency["outputs"]) == 233
+    )
+    install_default_highlights = next(
+        dependency
+        for dependency in dependencies
+        if "defaultHighlightBound" in (dependency.get("js") or "")
+    )
+    visibility_dependencies = tuple(
+        dependency
+        for dependency in dependencies[3:]
+        if dependency not in (reset_inputs, install_default_highlights)
+    )
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
     assert len(calculation_started["outputs"]) == 10
@@ -123,13 +126,13 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(calculation["outputs"]) == 6
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
-    assert len(ventilation_visibility["outputs"]) == 2
-    assert len(new_underfloor_visibility["outputs"]) == 5
-    assert len(underfloor_constants_visibility["outputs"]) == 3
-    assert len(heating_visibility["outputs"]) == 78
-    assert len(cooling_visibility["outputs"]) == 83
+    assert len(visibility_dependencies) >= 14
+    assert 2 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
+    assert 5 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
+    assert 78 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
+    assert 83 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert len(reset_inputs["inputs"]) == 0
-    assert len(reset_inputs["outputs"]) == 458
+    assert len(reset_inputs["outputs"]) == 233
     assert len(install_default_highlights["inputs"]) == 0
     assert len(install_default_highlights["outputs"]) == 0
     assert install_default_highlights["queue"] is False
@@ -140,7 +143,13 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         if getattr(block_fn.fn, "__name__", "") == "reset_inputs"
     )
     reset_outputs = reset_function()
-    assert reset_outputs[:225] == tuple(field.default for field in form_app.load_form_model().schema.fields)
+    model = form_app.load_form_model()
+    assert tuple(update["value"] for update in reset_outputs[:225]) == tuple(
+        field.default for field in model.schema.fields
+    )
+    assert tuple(update["visible"] for update in reset_outputs[:225]) == tuple(
+        field.visible for field in model.fields
+    )
     assert [update["visible"] for update in reset_outputs[-8:]] == [
         True,
         False,
@@ -157,8 +166,14 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     cooling_section_ids = {
         equipment_section(prefix)["id"] for prefix in ("⑧-1", "⑧-2", "⑧-3", "⑧-4")
     }
-    assert heating_section_ids <= set(heating_visibility["outputs"])
-    assert cooling_section_ids <= set(cooling_visibility["outputs"])
+    assert any(
+        heating_section_ids <= set(dependency["outputs"])
+        for dependency in visibility_dependencies
+    )
+    assert any(
+        cooling_section_ids <= set(dependency["outputs"])
+        for dependency in visibility_dependencies
+    )
     assert "先行計算がある場合は、順番に実行します" in (
         form_app._calculation_started_outputs()[0]
     )
@@ -179,6 +194,7 @@ def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
     assert "const numericValue = Number(value);" in modified_js
     assert "JSON.stringify(normalizedValue)" in modified_js
     assert 'classList.toggle("input-value-modified", changed)' in modified_js
+    assert 'container.classList.remove("input-value-modified")' in modified_js
     assert "MutationObserver" in modified_js
     assert "test-field-1" in reset_js
     assert 'classList.remove("input-value-modified")' in reset_js

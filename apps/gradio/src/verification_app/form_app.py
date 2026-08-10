@@ -169,18 +169,17 @@ def build_app(
                         with gr.Row(key=f"row:{section_index}:{group_index}:{row_index}"):
                             for form_field in row_fields:
                                 field_dom_id = f"input-field-container-{len(components)}"
-                                with gr.Column(
+                                component = _input_component(
+                                    form_field.definition,
                                     visible=form_field.visible,
                                     min_width=280,
-                                    key=f"field-container:{form_field.key}",
                                     elem_id=field_dom_id,
                                     elem_classes=[
                                         _origin_css_class(form_field.definition.origin)
                                     ],
-                                ) as container:
-                                    component = _input_component(form_field.definition)
+                                )
                                 components[form_field.key] = component
-                                containers[form_field.key] = container
+                                containers[form_field.key] = component
                                 field_dom_ids[form_field.key] = field_dom_id
 
         run = gr.Button("▶ 計算を実行", variant="primary", size="lg")
@@ -266,16 +265,16 @@ def build_app(
                 *selected: Any,
                 fields: tuple[FieldDefinition, ...] = affected_fields,
                 sections: tuple[str, ...] = affected_sections,
-            ) -> tuple[Any, ...]:
+            ) -> Any:
                 values = form.schema.defaults()
                 values.update(zip(control_keys, selected, strict=True))
                 visibility = form.visibility(values)
                 field_updates = tuple(
-                    gr.Column(visible=visibility[field.key])
+                    gr.update(visible=visibility[field.key])
                     for field in fields
                 )
                 section_updates = tuple(
-                    gr.Accordion(
+                    gr.update(
                         visible=_section_is_visible(
                             section_name,
                             section_fields,
@@ -284,7 +283,8 @@ def build_app(
                     )
                     for section_name in sections
                 )
-                return (*field_updates, *section_updates)
+                updates = (*field_updates, *section_updates)
+                return updates[0] if len(updates) == 1 else updates
 
             components[control_key].change(
                 update_visibility,
@@ -298,16 +298,15 @@ def build_app(
             )
 
         ordered_fields = tuple(form.schema.fields)
-        ordered_containers = [containers[field.key] for field in ordered_fields]
         equipment_section_names = tuple(
             name for name in section_containers if _is_equipment_section(name)
         )
 
         def reset_inputs() -> tuple[Any, ...]:
             visibility = form.visibility(form.schema.defaults())
-            input_values = tuple(field.default for field in ordered_fields)
-            container_updates = tuple(
+            field_updates = tuple(
                 gr.update(
+                    value=field.default,
                     visible=visibility[field.key],
                 )
                 for field in ordered_fields
@@ -322,13 +321,12 @@ def build_app(
                 )
                 for section_name in equipment_section_names
             )
-            return (*input_values, *container_updates, *section_updates)
+            return (*field_updates, *section_updates)
 
         reset.click(
             reset_inputs,
             outputs=[
                 *ordered_components,
-                *ordered_containers,
                 *(section_containers[name] for name in equipment_section_names),
             ],
             queue=False,
@@ -380,12 +378,23 @@ def _section_is_visible(
     return any(visibility[field.key] for field in section_fields[section_name])
 
 
-def _input_component(field: FieldDefinition) -> Any:
+def _input_component(
+    field: FieldDefinition,
+    *,
+    visible: bool = True,
+    min_width: int | None = None,
+    elem_id: str | None = None,
+    elem_classes: list[str] | None = None,
+) -> Any:
     common = {
         "label": field.label,
         "value": field.default,
         "info": field.description or None,
         "key": f"field:{field.key}",
+        "visible": visible,
+        "min_width": min_width,
+        "elem_id": elem_id,
+        "elem_classes": elem_classes,
     }
     if field.kind is FieldKind.TEXT:
         return gr.Textbox(**common)
@@ -448,8 +457,8 @@ def _install_default_highlight_js(
       container.dataset.defaultHighlightBound = "true";
       container.addEventListener("input", () => update(container, index));
       container.addEventListener("change", () => update(container, index));
+      container.classList.remove("input-value-modified");
     }}
-    update(container, index);
   }});
   bindAll();
   window.__verificationDefaultHighlightObserver?.disconnect();
