@@ -46,19 +46,19 @@ _INPUT_ORIGIN_CSS = """
 .input-origin-legend__swatch--modified { background: #22c55e; }
 .input-origin-bri-web,
 .input-origin-verification-platform {
-  border-left-style: solid !important;
-  border-left-width: 4px !important;
   border-radius: 0.4rem;
   padding-left: 0.65rem !important;
 }
-.input-origin-bri-web { border-left-color: #2563eb !important; }
-.input-origin-verification-platform {
-  background: color-mix(in srgb, #f59e0b 7%, transparent);
-  border-left-color: #f59e0b !important;
+div.block.input-origin-bri-web {
+  box-shadow: inset 4px 0 0 #2563eb !important;
 }
-.input-value-modified {
+div.block.input-origin-verification-platform {
+  background: color-mix(in srgb, #f59e0b 7%, transparent) !important;
+  box-shadow: inset 4px 0 0 #f59e0b !important;
+}
+div.block.input-value-modified {
   background: color-mix(in srgb, #16a34a 22%, transparent) !important;
-  box-shadow: inset 0 0 0 2px #16a34a;
+  box-shadow: inset 0 0 0 2px #16a34a !important;
 }
 .default-reset-row {
   align-items: center;
@@ -460,13 +460,21 @@ def _install_default_highlight_js(
       container.classList.remove("input-value-modified");
     }}
   }});
+  const reconcileAll = () => domIds.forEach((domId, index) => {{
+    const container = document.getElementById(domId);
+    if (container) update(container, index);
+  }});
   bindAll();
   window.__verificationDefaultHighlightObserver?.disconnect();
-  window.__verificationDefaultHighlightObserver = new MutationObserver(bindAll);
+  window.__verificationDefaultHighlightObserver = new MutationObserver(() => {{
+    bindAll();
+    reconcileAll();
+  }});
   window.__verificationDefaultHighlightObserver.observe(document.body, {{
     childList: true,
     subtree: true,
   }});
+  requestAnimationFrame(() => requestAnimationFrame(reconcileAll));
   return [];
 }}
 """
