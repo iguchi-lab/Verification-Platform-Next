@@ -63,6 +63,118 @@
       "section": "①・② 計算条件・外部ファイル",
       "group": "外部ファイル（任意）"
     },
+    "Theta_hs_out_max_H_d_t_limit__0": {
+      "group": "熱源機出口温度の制限"
+    },
+    "Theta_hs_out_min_C_d_t_limit__0": {
+      "group": "熱源機出口温度の制限"
+    },
+    "C_df_H_d_t_defrost_ductcentral__0": {
+      "group": "ダクト式セントラル空調機のデフロスト"
+    },
+    "defrost_temp_ductcentral__0": {
+      "group": "ダクト式セントラル空調機のデフロスト"
+    },
+    "defrost_humid_ductcentral__0": {
+      "group": "ダクト式セントラル空調機のデフロスト"
+    },
+    "phi_i__0": {
+      "group": "ダクト・送風機"
+    },
+    "C_V_fan_dsgn_H__0": {
+      "group": "ダクト・送風機"
+    },
+    "C_V_fan_dsgn_C__0": {
+      "group": "ダクト・送風機"
+    },
+    "C_df_H_d_t_defrost_rac__0": {
+      "group": "ルームエアコンディショナーのデフロスト"
+    },
+    "defrost_temp_rac__0": {
+      "group": "ルームエアコンディショナーのデフロスト"
+    },
+    "defrost_humid_rac__0": {
+      "group": "ルームエアコンディショナーのデフロスト"
+    },
+    "C_hm_C__0": {
+      "group": "冷房能力・湿度補正"
+    },
+    "q_rtd_C_limit__0": {
+      "group": "冷房能力・湿度補正"
+    },
+    "change_supply_volume_before_vav_adjust__0": {
+      "group": "計算方法の切替",
+      "label": "VAV採用時の調整前吹き出し風量を、時刻別の負荷比で配分する",
+      "description": "OFFでは建研方式と同じ床面積比で各区画へ配分します。ONでは、VAV採用時に暖冷房負荷から時刻別の風量比を求め、式(44)・(45)の吹き出し風量を計算します。VAVを採用しない場合は計算結果に影響しません。"
+    },
+    "change_heat_source_outlet_required_temperature__0": {
+      "group": "計算方法の切替",
+      "label": "VAVなし時も、熱源機出口温度を区画別要求温度の最大・最小で決定する",
+      "description": "OFFかつVAVなしでは、区画別の要求出口温度を吹き出し風量で加重平均します。ONではVAVの有無にかかわらず、暖房時は区画別要求温度の最大値、冷房時は最小値を採用します。出口温度の上下限制約はその後に適用されます。"
+    },
+    "change_V_supply_d_t_i_max__0": {
+      "group": "計算方法の切替",
+      "description": "VAV調整後の区画別吹き出し風量に適用する上限方式を選択します。従来上限を維持するほか、設計風量を全室または風量が増える室だけの上限として使用できます。"
+    },
+    "H_A_type__0": {
+      "group": "暖房機器の種類",
+      "label": "暖房機器の種類"
+    },
+    "H_A_duct_insulation__0": {
+      "group": "ダクト・換気方式",
+      "label": "ダクトが通過する空間",
+      "description": "ダクトの全部または一部が断熱区画外を通るか、すべて断熱区画内を通るかを選択します。"
+    },
+    "H_A_VAV__0": {
+      "group": "ダクト・換気方式",
+      "label": "VAV方式",
+      "description": "暖房負荷に応じて暖冷房区画ごとの吹き出し風量を調整するVAV方式の採否を選択します。"
+    },
+    "H_A_general_ventilation__0": {
+      "group": "ダクト・換気方式",
+      "label": "全般換気機能",
+      "description": "全館空調設備が全般換気機能を備えるかを選択します。"
+    },
+    "C_A_type__0": {
+      "group": "冷房機器の種類",
+      "label": "冷房機器の種類"
+    },
+    "C_A_duct_insulation__0": {
+      "group": "ダクト・換気方式",
+      "label": "ダクトが通過する空間",
+      "description": "ダクトの全部または一部が断熱区画外を通るか、すべて断熱区画内を通るかを選択します。"
+    },
+    "C_A_VAV__0": {
+      "group": "ダクト・換気方式",
+      "label": "VAV方式",
+      "description": "冷房負荷に応じて暖冷房区画ごとの吹き出し風量を調整するVAV方式の採否を選択します。"
+    },
+    "C_A_general_ventilation__0": {
+      "group": "ダクト・換気方式",
+      "label": "全般換気機能",
+      "description": "全館空調設備が全般換気機能を備えるかを選択します。"
+    },
+    "input_ufac_consts__0": {
+      "group": "新床下空調（Verification Platform）",
+      "description": "チェックすると手動設定する補助定数を表示します。地盤表面熱伝達抵抗R_gは未選択時に既定値0.15を使用し、チェック時に変更できます。現行逐次計算で手入力値が反映されるもう一つの値は、基礎側面の線熱貫流率φです。"
+    },
+    "R_g__0": {
+      "group": "手動設定する補助定数",
+      "description": "地盤応答と床下から地盤への熱移動に使用します。補助定数を手動設定しない場合は既定値0.15を使用します。",
+      "enabled_when": {
+        "path": ["input_ufac_consts__0"],
+        "allowed_values": [true]
+      }
+    },
+    "Theta_g_avg__0": {
+      "group": "手動設定する補助定数"
+    },
+    "U_s_vert__0": {
+      "group": "手動設定する補助定数"
+    },
+    "phi__0": {
+      "group": "手動設定する補助定数"
+    },
     "H_A_dualcompressor__0": {
       "group": "小能力時高効率型コンプレッサー"
     },
