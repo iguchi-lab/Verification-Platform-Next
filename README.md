@@ -2,6 +2,15 @@
 
 [![CI](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/ci.yml/badge.svg)](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/ci.yml)
 
+## 公開Web版
+
+**[Verification Platform Next ver.1.1.1をブラウザで開く](https://verification-platform-next-dnoeszca4a-an.a.run.app/)**
+
+公開Web版では、インストールせずに入力、計算、結果ファイルの取得を行えます。
+計算は1件ずつ処理するため、混雑時は画面に表示される順番をお待ちください。
+入力ファイルと計算成果物は一時的に保存されるため、機密情報や個人情報を含む
+データはアップロードしないでください。
+
 住宅の省エネルギー性能を検証するための計算エンジン、入力スキーマ、Gradio UIを
 まとめたPythonモノレポです。正式版は **ver.1.1.1** です。
 
