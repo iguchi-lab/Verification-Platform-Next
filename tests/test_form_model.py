@@ -72,6 +72,33 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     assert selected_efficiency["C_A_mode__0"]
 
 
+def test_rac_dual_compressor_is_grouped_separately_from_capacity_inputs() -> None:
+    model = load_form_model()
+
+    for section_prefix, compressor_key, capacity_group_name in (
+        ("⑦-2", "H_A_dualcompressor__0", "暖房能力の入力"),
+        ("⑧-2", "C_A_dualcompressor__0", "冷房能力の入力"),
+    ):
+        section = next(
+            section for section in model.sections if section.name.startswith(section_prefix)
+        )
+        capacity_group = next(
+            group for group in section.groups if group.name == capacity_group_name
+        )
+        compressor_group = next(
+            group
+            for group in section.groups
+            if group.name == "小能力時高効率型コンプレッサー"
+        )
+
+        assert compressor_key not in tuple(
+            field.key for field in capacity_group.fields
+        )
+        assert tuple(field.key for field in compressor_group.fields) == (
+            compressor_key,
+        )
+
+
 def test_form_model_updates_model_specific_visibility() -> None:
     model = load_form_model()
     values = model.schema.defaults()
@@ -188,6 +215,11 @@ def test_form_model_applies_nested_equipment_input_visibility() -> None:
     assert rated_and_mid["H_A_q_hs_rtd_H1__0"]
     assert rated_and_mid["H_A_q_hs_mid_H1__0"]
 
+    values["H_A_input__0"] = "入力しない"
+    hidden_again = model.visibility(values)
+    assert not hidden_again["H_A_q_hs_rtd_H1__0"]
+    assert not hidden_again["H_A_q_hs_mid_H1__0"]
+
     heating_type = next(field for field in model.fields if field.key == "H_A_type__0")
     values["H_A_type__0"] = heating_type.definition.choices[1]
     rac = model.visibility(values)
@@ -205,6 +237,11 @@ def test_form_model_applies_nested_equipment_input_visibility() -> None:
     assert direct["H_A_C_af_H2__0"]
     assert direct["H_A_q_rac_rtd_H__0"]
     assert direct["f_SFP_H__0"]
+
+    values["H_A_input_rac_performance__0"] = "面積から能力を算出"
+    capacity_hidden_again = model.visibility(values)
+    assert not capacity_hidden_again["H_A_q_rac_rtd_H__0"]
+    assert capacity_hidden_again["H_A_dualcompressor__0"]
 
 
 def test_form_values_are_mapped_by_schema_order() -> None:
