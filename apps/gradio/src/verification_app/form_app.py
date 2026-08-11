@@ -136,6 +136,7 @@ def build_app(
         field_dom_ids: dict[str, str] = {}
         section_containers: dict[str, Any] = {}
         section_dom_ids: dict[str, str] = {}
+        group_targets: list[tuple[str, tuple[FieldDefinition, ...]]] = []
         section_fields = {
             section.name: tuple(
                 form_field.definition
@@ -165,10 +166,16 @@ def build_app(
                         "を参照してください。"
                     )
                 for group_index, group in enumerate(section.groups):
+                    group_dom_id = f"input-group-heading-{section_index}-{group_index}"
+                    group_fields = tuple(
+                        form_field.definition for form_field in group.fields
+                    )
                     gr.Markdown(
                         f"## {group.name}",
+                        elem_id=group_dom_id,
                         elem_classes=["input-group-heading"],
                     )
+                    group_targets.append((group_dom_id, group_fields))
                     for row_index, row_fields in enumerate(_chunks(group.fields, 3)):
                         with gr.Row(key=f"row:{section_index}:{group_index}:{row_index}"):
                             for form_field in row_fields:
@@ -342,6 +349,7 @@ def build_app(
                 equipment_section_names,
                 section_fields,
                 section_dom_ids,
+                tuple(group_targets),
             ),
         )
 
@@ -357,6 +365,7 @@ def build_app(
                 equipment_section_names,
                 section_fields,
                 section_dom_ids,
+                tuple(group_targets),
             ),
         )
     return demo
@@ -440,6 +449,7 @@ def _install_default_highlight_js(
     equipment_section_names: tuple[str, ...] = (),
     section_fields: dict[str, tuple[FieldDefinition, ...]] | None = None,
     section_dom_ids: dict[str, str] | None = None,
+    group_targets: tuple[tuple[str, tuple[FieldDefinition, ...]], ...] = (),
 ) -> str:
     defaults = json.dumps([field.default for field in fields], ensure_ascii=True)
     field_keys = json.dumps([field.key for field in fields])
@@ -463,6 +473,13 @@ def _install_default_highlight_js(
         }
         for section_name in equipment_section_names
     ])
+    group_targets_json = json.dumps([
+        {
+            "domId": dom_id,
+            "fieldKeys": [field.key for field in group_fields],
+        }
+        for dom_id, group_fields in group_targets
+    ])
     return f"""
 () => {{
   const defaults = {defaults};
@@ -472,6 +489,7 @@ def _install_default_highlight_js(
   const controlKeys = {control_keys_json};
   const conditions = {conditions};
   const sectionTargets = {section_targets};
+  const groupTargets = {group_targets_json};
   const fieldIndexes = Object.fromEntries(fieldKeys.map((key, index) => [key, index]));
   const readValue = (container, kind) => {{
     if (kind === "boolean") {{
@@ -531,6 +549,12 @@ def _install_default_highlight_js(
         section.fieldKeys.some((key) => isVisible(key)),
       );
     }});
+    groupTargets.forEach((group) => {{
+      setVisible(
+        document.getElementById(group.domId),
+        group.fieldKeys.some((key) => isVisible(key)),
+      );
+    }});
   }};
   const bindAll = () => domIds.forEach((domId, index) => {{
     const container = document.getElementById(domIds[index]);
@@ -579,6 +603,7 @@ def _reset_highlight_js(
     equipment_section_names: tuple[str, ...] = (),
     section_fields: dict[str, tuple[FieldDefinition, ...]] | None = None,
     section_dom_ids: dict[str, str] | None = None,
+    group_targets: tuple[tuple[str, tuple[FieldDefinition, ...]], ...] = (),
 ) -> str:
     dom_ids = json.dumps([field_dom_ids[field.key] for field in fields])
     visible_fields = json.dumps(
@@ -597,11 +622,21 @@ def _reset_highlight_js(
         }
         for section_name in equipment_section_names
     ])
+    group_visibility = json.dumps([
+        {
+            "domId": dom_id,
+            "visible": any(
+                visibility[field.key] for field in group_fields
+            ) if visibility is not None else True,
+        }
+        for dom_id, group_fields in group_targets
+    ])
     return f"""
 () => {{
   const domIds = {dom_ids};
   const visibleFields = {visible_fields};
   const sectionTargets = {section_targets};
+  const groupVisibility = {group_visibility};
   const setVisible = (container, visible) => {{
     if (!container) return;
     if (visible) container.style.removeProperty("display");
@@ -614,6 +649,9 @@ def _reset_highlight_js(
   }});
   sectionTargets.forEach((section) => {{
     setVisible(document.getElementById(section.domId), section.visible);
+  }});
+  groupVisibility.forEach((group) => {{
+    setVisible(document.getElementById(group.domId), group.visible);
   }});
   return [];
 }}
