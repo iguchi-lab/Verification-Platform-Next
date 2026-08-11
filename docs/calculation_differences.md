@@ -20,7 +20,7 @@ Verification Platform Nextは、建築研究所等の技術的協力のもと公
 | --- | --- |
 | 建研本家 | `BRI-EES-House/pyhees` Ver.3.10、commit `d5224c4a01def00a8421bcd2fcc0d4b4a5b88644` |
 | 旧Verification Platform | Next移行時の基準commit `0f91ba8381df1b4960557b92b39339385cc9009f` |
-| Verification Platform Next | ver.1.1.0、入力仕様 `260809` |
+| Verification Platform Next | ver.1.1.1、入力仕様 `260809` |
 
 建研本家の版は[`packages/pyhees-jjj/UPSTREAM.md`](../packages/pyhees-jjj/UPSTREAM.md)、
 Nextの製品版は[`jjjexperiment/release.py`](../packages/pyhees-jjj/src/jjjexperiment/release.py)
