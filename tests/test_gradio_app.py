@@ -180,12 +180,37 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
 
 
 def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
-    fields = form_app.load_form_model().schema.fields[:2]
+    model = form_app.load_form_model()
+    fields = model.schema.fields
     field_dom_ids = {
         field.key: f"test-field-{index}" for index, field in enumerate(fields)
     }
+    section_fields = {
+        section.name: tuple(
+            field.definition
+            for group in section.groups
+            for field in group.fields
+        )
+        for section in model.sections
+    }
+    section_dom_ids = {
+        section.name: f"test-section-{index}"
+        for index, section in enumerate(model.sections)
+    }
+    control_keys = tuple(dict.fromkeys(
+        field.enabled_when.path[0]
+        for field in fields
+        if field.enabled_when is not None
+    ))
 
-    modified_js = form_app._install_default_highlight_js(fields, field_dom_ids)
+    modified_js = form_app._install_default_highlight_js(
+        fields,
+        field_dom_ids,
+        control_keys,
+        (model.sections[6].name,),
+        section_fields,
+        section_dom_ids,
+    )
     reset_js = form_app._reset_highlight_js(fields, field_dom_ids)
 
     assert json.dumps([field.default for field in fields], ensure_ascii=True) in modified_js
@@ -196,10 +221,15 @@ def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
     assert 'classList.toggle("input-value-modified", changed)' in modified_js
     assert 'container.classList.remove("input-value-modified")' in modified_js
     assert "const reconcileAll" in modified_js
-    assert "requestAnimationFrame(() => requestAnimationFrame(reconcileAll))" in modified_js
+    assert "const reconcileVisibility" in modified_js
+    assert 'style.setProperty("display", "none", "important")' in modified_js
+    assert "H_A_q_hs_rtd_H1__0" in modified_js
+    assert "H_A_q_hs_mid_H1__0" in modified_js
+    assert "requestAnimationFrame(() => requestAnimationFrame" in modified_js
     assert "MutationObserver" in modified_js
     assert "test-field-1" in reset_js
     assert 'classList.remove("input-value-modified")' in reset_js
+    assert 'style.setProperty("display", "none", "important")' in reset_js
 
 
 def test_modified_input_highlight_uses_a_strong_green_treatment() -> None:

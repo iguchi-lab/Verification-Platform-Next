@@ -135,6 +135,7 @@ def build_app(
         containers: dict[str, Any] = {}
         field_dom_ids: dict[str, str] = {}
         section_containers: dict[str, Any] = {}
+        section_dom_ids: dict[str, str] = {}
         section_fields = {
             section.name: tuple(
                 form_field.definition
@@ -144,6 +145,7 @@ def build_app(
             for section in form.sections
         }
         for section_index, section in enumerate(form.sections):
+            section_dom_id = f"input-section-{section_index}"
             with gr.Accordion(
                 section.name,
                 open=section_index == 0,
@@ -151,9 +153,11 @@ def build_app(
                     field.key: field.visible for field in form.fields
                 }),
                 key=f"section:{section_index}",
+                elem_id=section_dom_id,
                 elem_classes=["input-section"],
             ) as section_container:
                 section_containers[section.name] = section_container
+                section_dom_ids[section.name] = section_dom_id
                 if section.name == "⑥ その他":
                     gr.Markdown(
                         "📘 床下関係の方式選択、推奨値、入力例は"
@@ -331,7 +335,14 @@ def build_app(
             ],
             queue=False,
             api_visibility="private",
-            js=_reset_highlight_js(ordered_fields, field_dom_ids),
+            js=_reset_highlight_js(
+                ordered_fields,
+                field_dom_ids,
+                form.visibility(form.schema.defaults()),
+                equipment_section_names,
+                section_fields,
+                section_dom_ids,
+            ),
         )
 
         demo.load(
@@ -339,7 +350,14 @@ def build_app(
             queue=False,
             api_visibility="private",
             show_progress="hidden",
-            js=_install_default_highlight_js(ordered_fields, field_dom_ids),
+            js=_install_default_highlight_js(
+                ordered_fields,
+                field_dom_ids,
+                control_keys,
+                equipment_section_names,
+                section_fields,
+                section_dom_ids,
+            ),
         )
     return demo
 
@@ -418,15 +436,43 @@ def _origin_css_class(origin: FieldOrigin) -> str:
 def _install_default_highlight_js(
     fields: tuple[FieldDefinition, ...],
     field_dom_ids: dict[str, str],
+    control_keys: tuple[str, ...] = (),
+    equipment_section_names: tuple[str, ...] = (),
+    section_fields: dict[str, tuple[FieldDefinition, ...]] | None = None,
+    section_dom_ids: dict[str, str] | None = None,
 ) -> str:
     defaults = json.dumps([field.default for field in fields], ensure_ascii=True)
+    field_keys = json.dumps([field.key for field in fields])
     dom_ids = json.dumps([field_dom_ids[field.key] for field in fields])
     kinds = json.dumps([field.kind.value for field in fields])
+    control_keys_json = json.dumps(control_keys)
+    conditions = json.dumps({
+        field.key: {
+            "controller": field.enabled_when.path[0],
+            "allowed": list(field.enabled_when.allowed_values),
+        }
+        for field in fields
+        if field.enabled_when is not None
+    }, ensure_ascii=True)
+    section_fields = section_fields or {}
+    section_dom_ids = section_dom_ids or {}
+    section_targets = json.dumps([
+        {
+            "domId": section_dom_ids[section_name],
+            "fieldKeys": [field.key for field in section_fields[section_name]],
+        }
+        for section_name in equipment_section_names
+    ])
     return f"""
 () => {{
   const defaults = {defaults};
+  const fieldKeys = {field_keys};
   const domIds = {dom_ids};
   const kinds = {kinds};
+  const controlKeys = {control_keys_json};
+  const conditions = {conditions};
+  const sectionTargets = {section_targets};
+  const fieldIndexes = Object.fromEntries(fieldKeys.map((key, index) => [key, index]));
   const readValue = (container, kind) => {{
     if (kind === "boolean") {{
       return container.querySelector('input[type="checkbox"]')?.checked;
@@ -450,13 +496,55 @@ def _install_default_highlight_js(
     const changed = JSON.stringify(normalizedValue) !== JSON.stringify(defaults[index]);
     container.classList.toggle("input-value-modified", changed);
   }};
+  const setVisible = (container, visible) => {{
+    if (!container) return;
+    if (visible) container.style.removeProperty("display");
+    else container.style.setProperty("display", "none", "important");
+  }};
+  const reconcileVisibility = () => {{
+    const values = Object.fromEntries(controlKeys.map((key) => {{
+      const index = fieldIndexes[key];
+      const container = document.getElementById(domIds[index]);
+      const value = container ? readValue(container, kinds[index]) : undefined;
+      return [key, value ?? defaults[index]];
+    }}));
+    const visibility = {{}};
+    const isVisible = (key) => {{
+      if (key in visibility) return visibility[key];
+      const condition = conditions[key];
+      if (!condition) return true;
+      const controllerVisible = isVisible(condition.controller);
+      const selectedValue = values[condition.controller];
+      const allowed = condition.allowed.some(
+        (value) => JSON.stringify(value) === JSON.stringify(selectedValue),
+      );
+      visibility[key] = controllerVisible && allowed;
+      return visibility[key];
+    }};
+    Object.keys(conditions).forEach((key) => {{
+      const index = fieldIndexes[key];
+      setVisible(document.getElementById(domIds[index]), isVisible(key));
+    }});
+    sectionTargets.forEach((section) => {{
+      setVisible(
+        document.getElementById(section.domId),
+        section.fieldKeys.some((key) => isVisible(key)),
+      );
+    }});
+  }};
   const bindAll = () => domIds.forEach((domId, index) => {{
     const container = document.getElementById(domIds[index]);
     if (!container) return;
     if (container.dataset.defaultHighlightBound !== "true") {{
       container.dataset.defaultHighlightBound = "true";
-      container.addEventListener("input", () => update(container, index));
-      container.addEventListener("change", () => update(container, index));
+      container.addEventListener("input", () => {{
+        update(container, index);
+        reconcileVisibility();
+      }});
+      container.addEventListener("change", () => {{
+        update(container, index);
+        reconcileVisibility();
+      }});
       container.classList.remove("input-value-modified");
     }}
   }});
@@ -469,12 +557,16 @@ def _install_default_highlight_js(
   window.__verificationDefaultHighlightObserver = new MutationObserver(() => {{
     bindAll();
     reconcileAll();
+    reconcileVisibility();
   }});
   window.__verificationDefaultHighlightObserver.observe(document.body, {{
     childList: true,
     subtree: true,
   }});
-  requestAnimationFrame(() => requestAnimationFrame(reconcileAll));
+  requestAnimationFrame(() => requestAnimationFrame(() => {{
+    reconcileAll();
+    reconcileVisibility();
+  }}));
   return [];
 }}
 """
@@ -483,13 +575,45 @@ def _install_default_highlight_js(
 def _reset_highlight_js(
     fields: tuple[FieldDefinition, ...],
     field_dom_ids: dict[str, str],
+    visibility: dict[str, bool] | None = None,
+    equipment_section_names: tuple[str, ...] = (),
+    section_fields: dict[str, tuple[FieldDefinition, ...]] | None = None,
+    section_dom_ids: dict[str, str] | None = None,
 ) -> str:
     dom_ids = json.dumps([field_dom_ids[field.key] for field in fields])
+    visible_fields = json.dumps(
+        [visibility[field.key] for field in fields]
+        if visibility is not None
+        else [True] * len(fields)
+    )
+    section_fields = section_fields or {}
+    section_dom_ids = section_dom_ids or {}
+    section_targets = json.dumps([
+        {
+            "domId": section_dom_ids[section_name],
+            "visible": any(
+                visibility[field.key] for field in section_fields[section_name]
+            ),
+        }
+        for section_name in equipment_section_names
+    ])
     return f"""
 () => {{
   const domIds = {dom_ids};
-  domIds.forEach((domId) => {{
-    document.getElementById(domId)?.classList.remove("input-value-modified");
+  const visibleFields = {visible_fields};
+  const sectionTargets = {section_targets};
+  const setVisible = (container, visible) => {{
+    if (!container) return;
+    if (visible) container.style.removeProperty("display");
+    else container.style.setProperty("display", "none", "important");
+  }};
+  domIds.forEach((domId, index) => {{
+    const container = document.getElementById(domId);
+    container?.classList.remove("input-value-modified");
+    setVisible(container, visibleFields[index]);
+  }});
+  sectionTargets.forEach((section) => {{
+    setVisible(document.getElementById(section.domId), section.visible);
   }});
   return [];
 }}

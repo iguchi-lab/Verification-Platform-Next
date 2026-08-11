@@ -63,6 +63,12 @@
       "section": "①・② 計算条件・外部ファイル",
       "group": "外部ファイル（任意）"
     },
+    "H_A_dualcompressor__0": {
+      "group": "小能力時高効率型コンプレッサー"
+    },
+    "C_A_dualcompressor__0": {
+      "group": "小能力時高効率型コンプレッサー"
+    },
     "HEX_install__0": {
       "section": "⑨ 熱交換型換気設備"
     },
