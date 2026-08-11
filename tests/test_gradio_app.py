@@ -77,6 +77,14 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         "input-group-heading" in component["props"].get("elem_classes", ())
         for component in group_headings
     )
+    group_heading_ids = tuple(
+        component["props"].get("elem_id") for component in group_headings
+    )
+    assert all(
+        elem_id is not None and elem_id.startswith("input-group-heading-")
+        for elem_id in group_heading_ids
+    )
+    assert len(group_heading_ids) == len(set(group_heading_ids))
     assert any(
         "建研Webにある入力" in value
         and "Verification Platformで追加・拡張した入力" in value
@@ -202,6 +210,17 @@ def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
         for field in fields
         if field.enabled_when is not None
     ))
+    hidden_group = next(
+        group
+        for section in model.sections
+        for group in section.groups
+        if group.fields and not any(field.visible for field in group.fields)
+    )
+    group_targets = ((
+        "test-hidden-group",
+        tuple(field.definition for field in hidden_group.fields),
+    ),)
+    visibility = {field.definition.key: field.visible for field in model.fields}
 
     modified_js = form_app._install_default_highlight_js(
         fields,
@@ -210,8 +229,17 @@ def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
         (model.sections[6].name,),
         section_fields,
         section_dom_ids,
+        group_targets,
     )
-    reset_js = form_app._reset_highlight_js(fields, field_dom_ids)
+    reset_js = form_app._reset_highlight_js(
+        fields,
+        field_dom_ids,
+        visibility,
+        (model.sections[6].name,),
+        section_fields,
+        section_dom_ids,
+        group_targets,
+    )
 
     assert json.dumps([field.default for field in fields], ensure_ascii=True) in modified_js
     assert "test-field-0" in modified_js
@@ -227,9 +255,14 @@ def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
     assert "H_A_q_hs_mid_H1__0" in modified_js
     assert "requestAnimationFrame(() => requestAnimationFrame" in modified_js
     assert "MutationObserver" in modified_js
+    assert "const groupTargets" in modified_js
+    assert "test-hidden-group" in modified_js
+    assert "group.fieldKeys.some((key) => isVisible(key))" in modified_js
     assert "test-field-1" in reset_js
     assert 'classList.remove("input-value-modified")' in reset_js
     assert 'style.setProperty("display", "none", "important")' in reset_js
+    assert "const groupVisibility" in reset_js
+    assert '"domId": "test-hidden-group", "visible": false' in reset_js
 
 
 def test_modified_input_highlight_uses_a_strong_green_treatment() -> None:
