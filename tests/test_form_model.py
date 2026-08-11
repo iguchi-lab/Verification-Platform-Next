@@ -25,6 +25,86 @@ def test_form_model_preserves_input_origin() -> None:
     )
 
 
+def test_general_input_sections_are_grouped_by_calculation_role() -> None:
+    model = load_form_model()
+
+    constants = next(section for section in model.sections if section.name.startswith("③"))
+    assert tuple(group.name for group in constants.groups) == (
+        "熱源機出口温度の制限",
+        "ダクト式セントラル空調機のデフロスト",
+        "ダクト・送風機",
+        "ルームエアコンディショナーのデフロスト",
+        "冷房能力・湿度補正",
+        "計算方法の切替",
+    )
+
+    for section_name, equipment_group in (
+        ("⑦ 暖房全般", "暖房機器の種類"),
+        ("⑧ 冷房全般", "冷房機器の種類"),
+    ):
+        section = next(item for item in model.sections if item.name == section_name)
+        assert tuple(group.name for group in section.groups) == (
+            equipment_group,
+            "ダクト・換気方式",
+            "設計風量",
+            "最低風量",
+            "最低電力",
+        )
+
+
+def test_calculation_switches_explain_their_formula_changes() -> None:
+    model = load_form_model()
+    fields = {field.key: field for field in model.schema.fields}
+
+    vav_formula = fields["change_supply_volume_before_vav_adjust__0"]
+    assert "時刻別の負荷比" in vav_formula.label
+    assert "床面積比" in vav_formula.description
+    assert "式(44)・(45)" in vav_formula.description
+    assert "VAVを採用しない場合" in vav_formula.description
+
+    outlet_temperature = fields[
+        "change_heat_source_outlet_required_temperature__0"
+    ]
+    assert "最大・最小" in outlet_temperature.label
+    assert "吹き出し風量で加重平均" in outlet_temperature.description
+    assert "暖房時は区画別要求温度の最大値" in outlet_temperature.description
+    assert "冷房時は最小値" in outlet_temperature.description
+
+
+def test_underfloor_manual_constants_follow_their_control() -> None:
+    model = load_form_model()
+    underfloor = next(section for section in model.sections if section.name == "⑥ その他")
+    main_group = next(
+        group
+        for group in underfloor.groups
+        if group.name == "新床下空調（Verification Platform）"
+    )
+    constants_group = next(
+        group for group in underfloor.groups if group.name == "手動設定する補助定数"
+    )
+
+    assert tuple(field.key for field in main_group.fields) == (
+        "change_underfloor_temperature__0",
+        "input_ufac_consts__0",
+    )
+    assert tuple(field.key for field in constants_group.fields) == (
+        "R_g__0",
+        "Theta_g_avg__0",
+        "U_s_vert__0",
+        "phi__0",
+    )
+
+    values = model.schema.defaults()
+    values["change_underfloor_temperature__0"] = True
+    automatic = model.visibility(values)
+    assert automatic["input_ufac_consts__0"]
+    assert not automatic["R_g__0"]
+
+    values["input_ufac_consts__0"] = True
+    manual = model.visibility(values)
+    assert all(manual[field.key] for field in constants_group.fields)
+
+
 def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     model = load_form_model()
     heating = next(section for section in model.sections if section.name.startswith("⑦-2"))
@@ -130,12 +210,13 @@ def test_form_model_updates_nested_underfloor_visibility() -> None:
 
     values["change_underfloor_temperature__0"] = True
     new_underfloor = model.visibility(values)
-    assert new_underfloor["R_g__0"]
+    assert not new_underfloor["R_g__0"]
     assert new_underfloor["input_ufac_consts__0"]
     assert not new_underfloor["Theta_g_avg__0"]
 
     values["input_ufac_consts__0"] = True
     constants = model.visibility(values)
+    assert constants["R_g__0"]
     assert constants["Theta_g_avg__0"]
     assert constants["U_s_vert__0"]
     assert constants["phi__0"]
@@ -143,6 +224,7 @@ def test_form_model_updates_nested_underfloor_visibility() -> None:
     values["change_underfloor_temperature__0"] = False
     hidden_parent = model.visibility(values)
     assert not hidden_parent["input_ufac_consts__0"]
+    assert not hidden_parent["R_g__0"]
     assert not hidden_parent["Theta_g_avg__0"]
     assert not hidden_parent["U_s_vert__0"]
     assert not hidden_parent["phi__0"]

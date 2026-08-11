@@ -39,10 +39,10 @@ def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
     ground_resistance = next(
         item for item in inventory.fields if item.id == "R_g__0"
     )
+    assert ground_resistance.group == "手動設定する補助定数"
     assert ground_resistance.enabled_when is not None
-    assert ground_resistance.enabled_when.path == (
-        "change_underfloor_temperature__0",
-    )
+    assert ground_resistance.enabled_when.path == ("input_ufac_consts__0",)
+    assert "既定値0.15" in ground_resistance.description
 
     corrections = {
         item.id: item for item in inventory.fields
