@@ -4,7 +4,12 @@ import gradio as gr
 import pandas as pd
 from matplotlib.figure import Figure
 
-from verification_app.graphs import GRAPH_LABELS, build_result_graphs
+from verification_app.graphs import (
+    GRAPH_LABELS,
+    _format_apf,
+    _ratio_of_sums,
+    build_result_graphs,
+)
 
 
 def test_build_result_graphs_recreates_the_five_legacy_views(tmp_path: Path) -> None:
@@ -55,9 +60,15 @@ def test_build_result_graphs_recreates_the_five_legacy_views(tmp_path: Path) -> 
         "暖房負荷順",
         "冷房代表期間",
         "冷房負荷順",
-        "部分負荷効率（sCOP）",
+        "部分負荷効率（sCOP）\n年間APF = 2.81（暖房 2.78／冷房 2.84）",
     ]
     plot_data = gr.Plot().postprocess(figures[0])
     assert plot_data is not None
     assert plot_data.type == "matplotlib"
     assert plot_data.plot.startswith("data:image/")
+
+
+def test_annual_apf_is_unavailable_without_electricity() -> None:
+    apf = _ratio_of_sums(pd.Series([1.0, 2.0]), pd.Series([0.0, 0.0]))
+
+    assert _format_apf(apf) == "算定不能"
