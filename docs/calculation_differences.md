@@ -20,7 +20,7 @@ Verification Platform Nextは、建築研究所等の技術的協力のもと公
 | --- | --- |
 | 建研本家 | `BRI-EES-House/pyhees` Ver.3.10、commit `d5224c4a01def00a8421bcd2fcc0d4b4a5b88644` |
 | 旧Verification Platform | Next移行時の基準commit `0f91ba8381df1b4960557b92b39339385cc9009f` |
-| Verification Platform Next | ver.1.1.1、入力仕様 `260809` |
+| Verification Platform Next | ver.1.1.1、入力仕様 `260812` |
 
 建研本家の版は[`packages/pyhees-jjj/UPSTREAM.md`](../packages/pyhees-jjj/UPSTREAM.md)、
 Nextの製品版は[`jjjexperiment/release.py`](../packages/pyhees-jjj/src/jjjexperiment/release.py)
@@ -28,7 +28,7 @@ Nextの製品版は[`jjjexperiment/release.py`](../packages/pyhees-jjj/src/jjjex
 
 ## 3. 結論一覧
 
-| ID | 不具合候補・変更点 | 建研本家 | 旧Verification Platform | Next（入力仕様260809） |
+| ID | 不具合候補・変更点 | 建研本家 | 旧Verification Platform | Next（入力仕様260812） |
 | --- | --- | --- | --- | --- |
 | BRI-01 | 冷房時の居室・非居室間の間仕切熱移動の符号 | `+Q_trs` | `+Q_trs` | 既定OFFは`+Q_trs`、①をONにすると全経路で`-Q_trs` |
 | BRI-02 | 全般換気なし時も区画別全般換気量を給気下限に使用 | 使用する | 使用する。最低風量直接入力時は過大値が拡大 | 既定OFFは建研式、②をONにすると換気下限と設備最低風量を分離 |
@@ -95,7 +95,7 @@ L_{CS,i}+Q^{*}_{\mathrm{trs,prt},i},
 
 ### 4.3 Nextの補正モード
 
-新床下空調では、元の住宅負荷に含まれる断熱床経路を取り除くため、
+床下空調では、元の住宅負荷に含まれる断熱床経路を取り除くため、
 床を通る符号付き熱流$\Delta L_{\mathrm{floor},i}$も同時に扱う。
 
 ```math
@@ -226,7 +226,7 @@ Nextでは、次の二つを別の物理量として扱う。
 
 旧版との差は次のとおりである。
 
-| 項目 | 旧Verification Platform | Verification Platform Next（入力仕様260809） |
+| 項目 | 旧Verification Platform | Verification Platform Next（入力仕様260812） |
 | --- | --- | --- |
 | 冷房時の間仕切熱移動 | 建研式の`+Q_trs` | ①OFFは同じ。ONは非床下・繰越・新床下すべて`-Q_trs` |
 | 全般換気なしの式(43)/(44)下限 | 区画別全般換気量を使用 | ②OFFは同じ。ONは区画別下限を0へ切替 |

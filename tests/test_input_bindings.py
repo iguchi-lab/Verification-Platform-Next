@@ -24,6 +24,17 @@ def test_removed_legacy_underfloor_binding_is_fixed_disabled() -> None:
     assert binding.evaluate(default_ui_values()) == "1"
 
 
+def test_automatic_underfloor_values_have_no_ui_sources() -> None:
+    catalog = load_input_bindings()
+    (ground_temperature,) = catalog.for_target("Theta_g_avg")
+    (floor_u_value,) = catalog.for_target("U_s_vert")
+
+    assert ground_temperature.source_ids == ()
+    assert ground_temperature.evaluate(default_ui_values()) == 15.7
+    assert floor_u_value.source_ids == ()
+    assert floor_u_value.evaluate(default_ui_values()) == 2.223
+
+
 def test_correction_checkboxes_are_bound_to_both_seasons() -> None:
     catalog = load_input_bindings()
     values = default_ui_values()

@@ -79,7 +79,7 @@ class OuterSkin:
     # ▼ 床下空調利用時
     r_A_ufac: Optional[float] = None
     """当該住戸において、床下空間全体の面積に対する 空調を供給する床下空間の面積の比 [-]"""
-    # NOTE: 新床下空調インプットによって決まる
+    # NOTE: 床下空調インプットによって決まる
 
     underfloor_insulation: bool = False
     """床下空間の断熱"""
@@ -120,7 +120,7 @@ class OuterSkin:
         if 'underfloor_insulation' in data:
             kwargs['underfloor_insulation'] = int(data['underfloor_insulation']) == 2
 
-        # 新床下空調がオンの場合は、床下換気なし・床下断熱状態となります
+        # 床下空調がオンの場合は、床下換気なし・床下断熱状態となります
         if (
             'change_underfloor_temperature' in data
             and int(data['change_underfloor_temperature']) == 2

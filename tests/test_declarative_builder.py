@@ -36,6 +36,30 @@ def test_removed_legacy_underfloor_input_is_always_disabled() -> None:
     assert data["change_underfloor_temperature"] == "2"
 
 
+def test_underfloor_automatic_values_are_not_editable_from_the_ui() -> None:
+    data = build_input_data({
+        "Theta_g_avg__0": 9.9,
+        "U_s_vert__0": 9.9,
+    })
+
+    assert data["Theta_g_avg"] == 15.7
+    assert data["U_s_vert"] == 2.223
+
+
+def test_underfloor_manual_ground_constants_use_ui_values() -> None:
+    data = build_input_data({
+        "change_underfloor_temperature__0": True,
+        "input_ufac_consts__0": True,
+        "R_g__0": 0.2,
+        "phi__0": 0.9,
+    })
+
+    assert data["change_underfloor_temperature"] == "2"
+    assert data["input_ufac_consts"] == 2
+    assert data["R_g"] == 0.2
+    assert data["phi"] == 0.9
+
+
 def test_partial_values_use_inventory_defaults() -> None:
     data = build_input_data({"case_name__0": "partial"})
 

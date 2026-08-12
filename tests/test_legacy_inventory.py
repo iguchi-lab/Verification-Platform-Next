@@ -3,19 +3,19 @@ from collections import Counter
 from verification_core import FieldKind, FieldOrigin, load_legacy_inventory
 
 
-def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
+def test_260812_active_inventory_adds_opt_in_calculation_corrections() -> None:
     inventory = load_legacy_inventory()
 
-    assert inventory.version == "260809"
-    assert len(inventory.fields) == 225
+    assert inventory.version == "260812"
+    assert len(inventory.fields) == 223
     assert inventory.category_counts == {
-        "基本設定": 46,
+        "基本設定": 44,
         "暖房": 86,
         "冷房": 91,
         "換気": 2,
     }
     assert len(inventory.section_names) == 16
-    assert len({item.id for item in inventory.fields}) == 225
+    assert len({item.id for item in inventory.fields}) == 223
     assert "underfloor_air_conditioning_air_supply__0" not in {
         item.id for item in inventory.fields
     }
@@ -24,8 +24,8 @@ def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
         for item in inventory.fields
         if item.id == "change_underfloor_temperature__0"
     )
-    assert new_underfloor.label == "新床下空調を使用する"
-    assert new_underfloor.group == "新床下空調（Verification Platform）"
+    assert new_underfloor.label == "床下空調を使用する"
+    assert new_underfloor.group == "床下空調（Verification Platform）"
     assert "床下利用面積は100%" in new_underfloor.description
 
     ventilation_area = next(
@@ -55,7 +55,7 @@ def test_260809_active_inventory_adds_opt_in_calculation_corrections() -> None:
     assert all(item.default is False for item in corrections.values())
 
 
-def test_260809_consolidates_related_general_sections() -> None:
+def test_260812_consolidates_related_general_sections() -> None:
     inventory = load_legacy_inventory()
     fields = {item.id: item for item in inventory.fields}
 
@@ -85,7 +85,7 @@ def test_260809_consolidates_related_general_sections() -> None:
     assert "⑨ 熱交換型換気設備）" not in inventory.section_names
 
 
-def test_260809_has_independent_heating_and_cooling_efficiency_classes() -> None:
+def test_260812_has_independent_heating_and_cooling_efficiency_classes() -> None:
     inventory = load_legacy_inventory()
     fields = {
         item.id: item
@@ -126,13 +126,13 @@ def test_260809_has_independent_heating_and_cooling_efficiency_classes() -> None
     assert fields["C_A_mode__0"].source_name == "C_A_mode"
 
 
-def test_260809_classifies_bri_web_and_verification_platform_inputs() -> None:
+def test_260812_classifies_bri_web_and_verification_platform_inputs() -> None:
     inventory = load_legacy_inventory()
     fields = {item.id: item for item in inventory.fields}
 
     assert Counter(item.origin for item in inventory.fields) == {
         FieldOrigin.BRI_WEB: 47,
-        FieldOrigin.VERIFICATION_PLATFORM: 178,
+        FieldOrigin.VERIFICATION_PLATFORM: 176,
     }
     assert fields["A_A__0"].origin is FieldOrigin.BRI_WEB
     assert fields["H_A_input_V_hs_dsgn_H__0"].origin is FieldOrigin.BRI_WEB
@@ -143,6 +143,17 @@ def test_260809_classifies_bri_web_and_verification_platform_inputs() -> None:
         fields["correct_cooling_partition_heat_transfer__0"].origin
         is FieldOrigin.VERIFICATION_PLATFORM
     )
+
+
+def test_260809_historical_inventory_remains_frozen() -> None:
+    inventory = load_legacy_inventory("260809")
+
+    assert inventory.version == "260809"
+    assert len(inventory.fields) == 225
+    fields = {item.id: item for item in inventory.fields}
+    assert fields["change_underfloor_temperature__0"].label == "新床下空調を使用する"
+    assert "Theta_g_avg__0" in fields
+    assert "U_s_vert__0" in fields
 
 
 def test_260804_historical_inventory_remains_frozen() -> None:

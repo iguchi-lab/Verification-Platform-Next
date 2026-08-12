@@ -39,7 +39,7 @@ def test_new_underfloor_updates_ratio_and_preserves_log_order(capsys):
 
     assert module._input["r_A_ufac"] == 100.0
     assert capsys.readouterr().out == (
-        "新・床下空調ロジックを使用\n"
+        "床下空調ロジックを使用\n"
         "r_A_ufac = 100.0 [%]\n"
         "空調空気を床下を通して給気する\n"
     )
@@ -93,7 +93,7 @@ def test_feature_conflict_error_precedes_logs_and_mutation(capsys):
     before = deepcopy(data)
 
     with pytest.raises(
-        ValueError, match="新床下空調と過剰熱量繰越計算は同時に使用できません"
+        ValueError, match="床下空調と過剰熱量繰越計算は同時に使用できません"
     ):
         JJJExperimentModule(data)
 

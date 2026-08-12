@@ -46,7 +46,7 @@ def test_new_underfloor_input_sets_only_new_underfloor_state():
 
 
 def test_new_underfloor_and_carryover_fail_instead_of_falling_back():
-    with pytest.raises(ValueError, match="新床下空調と過剰熱量繰越計算は同時に使用できません"):
+    with pytest.raises(ValueError, match="床下空調と過剰熱量繰越計算は同時に使用できません"):
         JJJExperimentModule(_underfloor_inputs(
             change_underfloor_temperature=床下空調ロジック.変更する.value,
             carry_over_heat=過剰熱量繰越計算.行う.value,

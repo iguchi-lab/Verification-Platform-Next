@@ -22,7 +22,7 @@ def get_Theta_HBR_i(
     ) -> Array5x1:
     """単時点版 (46-1)(46-2)(46-3) の床下空調 補正
     """
-    # TODO: 事前条件: 新床下空調ロジック 有効時のみ
+    # TODO: 事前条件: 床下空調ロジック 有効時のみ
 
     assert V_supply_i.shape == (5, 1), '想定外の行列数'
     assert Theta_supply_i.shape == (5, 1), '想定外の行列数'
@@ -84,7 +84,7 @@ def get_Theta_NR(
     ) -> float:
     """単時点版 (48a)(48b) 床下空調 補正アリ
     """
-    # TODO: 事前条件: 新床下空調ロジック 有効時のみ
+    # TODO: 事前条件: 床下空調ロジック 有効時のみ
 
     assert Theta_HBR_i.shape == (5, 1), '想定外の行列数'
     assert V_dash_supply_i.shape == (5, 1), '想定外の行列数'

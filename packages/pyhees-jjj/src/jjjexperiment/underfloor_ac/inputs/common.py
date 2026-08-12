@@ -12,7 +12,8 @@ class UnderfloorAc:
 
     new_ufac_flg: 床下空調ロジック = 床下空調ロジック.変更しない
 
-    # NOTE: 従来 pyhees では上書き対象でない定数たち
+    # NOTE: Theta_g_avg と U_s_vert は旧入力JSONとの互換保持用。
+    # 現行計算ではそれぞれ気象系列からの自動算定値と用途別U値を使用する。
     """床下空調ロジック"""
     Theta_g_avg: float = 15.7
     """地盤内の不易層の温度 [℃]"""
@@ -38,8 +39,6 @@ class UnderfloorAc:
                 # 実行条件: 明示的な上書き宣言が必要
                 if 'input_ufac_consts' in data and int(data['input_ufac_consts']) == 2:
                     kwargs['explicit_constants'] = True
-                    kwargs['Theta_g_avg'] = float(data['Theta_g_avg'])
-                    kwargs['U_s_vert'] = float(data['U_s_vert'])
                     kwargs['phi'] = float(data['phi'])
         return cls(**kwargs)
 

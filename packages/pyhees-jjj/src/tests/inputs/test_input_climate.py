@@ -80,7 +80,7 @@ def test_underfloor_constants_are_derived_when_not_explicit():
     )
 
 
-def test_explicit_underfloor_constants_do_not_override_load_floor_u_value():
+def test_explicit_underfloor_constants_only_override_foundation_phi():
     q = 2.647962191872085
     climate = ClimateService(
         6,
@@ -92,9 +92,27 @@ def test_explicit_underfloor_constants_do_not_override_load_floor_u_value():
         ),
     )
 
-    assert climate.get_Theta_g_avg() == 14.1
+    assert climate.get_Theta_g_avg() == pytest.approx(
+        15.686130136986295,
+        abs=1e-12,
+    )
     assert climate.get_U_s_vert(q) == pytest.approx(
         0.5422264459110593,
         abs=1e-12,
     )
     assert climate.get_phi(2.6) == 0.91
+
+
+def test_underfloor_input_only_accepts_editable_ground_constants():
+    underfloor = UnderfloorAc.from_dict({
+        "change_underfloor_temperature": 2,
+        "input_ufac_consts": 2,
+        "Theta_g_avg": 14.1,
+        "U_s_vert": 9.9,
+        "phi": 0.91,
+    })
+
+    assert underfloor.explicit_constants
+    assert underfloor.Theta_g_avg == 15.7
+    assert underfloor.U_s_vert == 2.223
+    assert underfloor.phi == 0.91

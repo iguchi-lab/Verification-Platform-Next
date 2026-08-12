@@ -18,7 +18,7 @@ import jjjexperiment.denchu.inputs.cooling as denchu_cooling_input
 from jjjexperiment.v_supply_cap.inputs.v_supply_cap_dto import VSupplyCapDto
 # F24-04 過剰熱量繰越
 from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
-# F24-05 新床下空調
+# F24-05 床下空調
 import jjjexperiment.underfloor_ac.inputs.common as ufac_input
 # F25-01 最小風量・最低電力 直接入力
 import jjjexperiment.v_min_input.inputs.heating as v_min_heating_input
@@ -102,7 +102,7 @@ class JJJExperimentModule(Module):
         if removed_ufac_flg is not None and int(removed_ufac_flg) == 2:
             raise ValueError(
                 'underfloor_air_conditioning_air_supply=2 の旧床下空調計算は'
-                '削除されました。新床下空調を使用する場合は '
+                '削除されました。床下空調を使用する場合は '
                 'change_underfloor_temperature=2 を指定してください。'
             )
 
@@ -117,7 +117,7 @@ class JJJExperimentModule(Module):
         )
         if new_ufac_enabled and carry_over_enabled:
             raise ValueError(
-                '新床下空調と過剰熱量繰越計算は同時に使用できません。'
+                '床下空調と過剰熱量繰越計算は同時に使用できません。'
                 'どちらか一方を無効にしてください。'
             )
 
@@ -126,8 +126,8 @@ class JJJExperimentModule(Module):
     def _update_underfloor_input(self, new_ufac_enabled: bool) -> None:
         """床下利用状態を入力辞書へ反映し、従来のログを出力する。"""
         if new_ufac_enabled:
-            print("新・床下空調ロジックを使用")
-            # 新床下空調
+            print("床下空調ロジックを使用")
+            # 床下空調
             self._input['r_A_ufac'] = 100.0  # [%] WG資料より
             print("r_A_ufac = 100.0 [%]")
             print("空調空気を床下を通して給気する")
@@ -259,7 +259,7 @@ class JJJExperimentModule(Module):
     def provide_carryover_heat_dto(self) -> CarryoverHeatDto:
         return CarryoverHeatDto.from_dict(self._get_root_input())
 
-    # F24-05 新・床下空調
+    # F24-05 床下空調
     @singleton
     @provider
     def provide_underfloor_ac_input(self) -> ufac_input.UnderfloorAc:

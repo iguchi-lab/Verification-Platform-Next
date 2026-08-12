@@ -1,0 +1,41 @@
+{
+  "version": "260812",
+  "base_version": "260809",
+  "field_count": 223,
+  "remove_field_ids": [
+    "Theta_g_avg__0",
+    "U_s_vert__0"
+  ],
+  "field_overrides": {
+    "underfloor_ventilation__0": {
+      "description": "建研付録D系の床下換気による負荷補正です。床下空調とは別の計算です。"
+    },
+    "r_A_ufvnt__0": {
+      "description": "床下換気を評価する場合だけ使用します。床下空調の床下利用面積ではありません。"
+    },
+    "underfloor_insulation__0": {
+      "description": "床下換気の負荷計算に使用します。床下空調では断熱区画内に固定されます。"
+    },
+    "change_underfloor_temperature__0": {
+      "group": "床下空調（Verification Platform）",
+      "label": "床下空調を使用する",
+      "description": "Excel床下14に合わせたPass 1・Pass 2・地盤逐時計算を使用します。床下利用面積は100%、床下断熱は断熱区画内に固定されます。"
+    },
+    "input_ufac_consts__0": {
+      "group": "床下空調（Verification Platform）",
+      "label": "床下空調の補助定数を手動設定する",
+      "description": "OFFではR_gに既定値0.15を使い、基礎側面の線熱貫流率φを地域区分とQ値から算定します。ONでは表示されるR_gとφを使用します。不易層温度は外気温8760時間値の年間平均から自動算定します。床板熱貫流率は、元負荷控除用を地域区分とQ値から算定し、床下から室への熱移動用を2.223 W/(m²・K)に固定します。"
+    },
+    "R_g__0": {
+      "group": "手動設定する補助定数",
+      "description": "地盤応答と床下から地盤への熱移動に使用します。手動設定しない場合は既定値0.15 (m²・K)/Wを使用します。"
+    },
+    "phi__0": {
+      "group": "手動設定する補助定数",
+      "description": "床下から外気への基礎側面熱損失に使用します。手動設定しない場合は地域区分とQ値から自動算定します。"
+    },
+    "carry_over_heat__0": {
+      "description": "床下空調とは同時に使用できません。両方を有効にすると計算開始時にエラーになります。"
+    }
+  }
+}

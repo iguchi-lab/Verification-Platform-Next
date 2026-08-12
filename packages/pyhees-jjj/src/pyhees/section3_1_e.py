@@ -503,7 +503,7 @@ def calc_Theta(region, A_A, A_MR, A_OR, Q, r_A_ufvnt, underfloor_insulation, The
 
     Theta_in_H = 20
     Theta_in_C = 27
-    # NOTE: 既存コードにあったものを、新床下空調時 目標 Theta_uf の実行可否の閾値に再利用しています
+    # NOTE: 既存コードにあったものを、床下空調時 目標 Theta_uf の実行可否の閾値に再利用しています
 
     # 指数項mにおける吸熱応答係数
     phi_1_A_m = np.array([get_phi_1_A_m(m) for m in range(1, M + 1)])
