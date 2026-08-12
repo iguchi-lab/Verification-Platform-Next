@@ -5,17 +5,17 @@
 Verification Platform Nextは、製品全体を1つの
 [Semantic Versioning](https://semver.org/) で管理します。
 
-- Pythonパッケージ版: `1.1.1`
-- 表示名: `ver.1.1.1`
-- Gitタグ: `v1.1.1`
-- 成果物接尾辞: `_v1.1.1`
+- Pythonパッケージ版: `1.1.2`
+- 表示名: `ver.1.1.2`
+- Gitタグ: `v1.1.2`
+- 成果物接尾辞: `_v1.1.2`
 
 製品版の正本は
 `packages/pyhees-jjj/src/jjjexperiment/release.py`です。ルート、
 `verification-core`、Gradioアプリ、`pyhees-jjj`の各`pyproject.toml`は
 同じ版にそろえ、契約テストで不一致を検出します。
 
-日付は版番号として使いません。パッチ修正は`1.1.1`、後方互換な機能追加は
+日付は版番号として使いません。パッチ修正は`1.1.2`、後方互換な機能追加は
 `1.2.0`、互換性を破る変更は`2.0.0`とします。
 
 ## 計算成果物の追跡
@@ -23,10 +23,10 @@ Verification Platform Nextは、製品全体を1つの
 成果物名には安定した版接尾辞を付けます。
 
 ```text
-<case_name>_v1.1.1_input.json
-<case_name>_v1.1.1_output1.csv
-<case_name>_v1.1.1_output2.csv
-<case_name>_v1.1.1_manifest.json
+<case_name>_v1.1.2_input.json
+<case_name>_v1.1.2_output1.csv
+<case_name>_v1.1.2_output2.csv
+<case_name>_v1.1.2_manifest.json
 ```
 
 計算が正常終了すると、マニフェストへ次を記録します。
@@ -67,9 +67,9 @@ GitHub Actionsがすべて成功した後、PRをマージし、マージコミ�
 ```bash
 git switch main
 git pull --ff-only
-git tag -a v1.1.1 -m "Verification Platform Next ver.1.1.1"
-git push origin v1.1.1
-gh release create v1.1.1 --title "Verification Platform Next ver.1.1.1"
+git tag -a v1.1.2 -m "Verification Platform Next ver.1.1.2"
+git push origin v1.1.2
+gh release create v1.1.2 --title "Verification Platform Next ver.1.1.2"
 ```
 
 GitHub Releaseには`CHANGELOG.md`の該当版、試験結果、既知の制約を記載します。
