@@ -51,7 +51,7 @@ def build_result_graphs(
         _load_duration(heating_sorted, heating=True),
         _season_timeseries(summer, summer_detail, heating=False),
         _load_duration(cooling_sorted, heating=False),
-        _scop(winter, summer),
+        _scop(output2, winter, summer),
     )
 
 
@@ -164,7 +164,11 @@ def _load_duration(output2: pd.DataFrame, *, heating: bool) -> Figure:
     return figure
 
 
-def _scop(winter: pd.DataFrame, summer: pd.DataFrame) -> Figure:
+def _scop(
+    annual: pd.DataFrame,
+    winter: pd.DataFrame,
+    summer: pd.DataFrame,
+) -> Figure:
     figure = Figure(figsize=(18, 7), layout="constrained")
     axes = figure.subplots(1, 2)
     heating_heat = winter["q_hs_H_d_t [Wh/h]"] / 1000
@@ -194,12 +198,43 @@ def _scop(winter: pd.DataFrame, summer: pd.DataFrame) -> Figure:
             legend=True,
         )
         axis.set_title(title)
-    figure.suptitle("部分負荷効率（sCOP）")
+    annual_heating_heat = annual["q_hs_H_d_t [Wh/h]"] / 1000
+    annual_cooling_heat = (
+        annual["q_hs_CS_d_t [Wh/h]"] + annual["q_hs_CL_d_t [Wh/h]"]
+    ) / 1000
+    heating_apf = _ratio_of_sums(
+        annual_heating_heat,
+        annual["E_E_H_d_t [kWh/h]"],
+    )
+    cooling_apf = _ratio_of_sums(
+        annual_cooling_heat,
+        annual["E_E_C_d_t [kWh/h]"],
+    )
+    annual_apf = _ratio_of_sums(
+        annual_heating_heat + annual_cooling_heat,
+        annual["E_E_H_d_t [kWh/h]"] + annual["E_E_C_d_t [kWh/h]"],
+    )
+    figure.suptitle(
+        "部分負荷効率（sCOP）\n"
+        f"年間APF = {_format_apf(annual_apf)}"
+        f"（暖房 {_format_apf(heating_apf)}／冷房 {_format_apf(cooling_apf)}）"
+    )
     return figure
 
 
 def _safe_ratio(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
     return numerator / denominator.replace(0, np.nan)
+
+
+def _ratio_of_sums(numerator: pd.Series, denominator: pd.Series) -> float:
+    denominator_sum = float(denominator.sum())
+    if denominator_sum <= 0.0:
+        return float("nan")
+    return float(numerator.sum()) / denominator_sum
+
+
+def _format_apf(value: float) -> str:
+    return "算定不能" if not np.isfinite(value) else f"{value:.2f}"
 
 
 def _style_axis(
