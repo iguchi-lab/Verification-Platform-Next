@@ -91,7 +91,7 @@ def _field_from_dict(item: dict[str, Any]) -> LegacyFieldDefinition:
     )
 
 
-def load_legacy_inventory(version: str = "260809") -> LegacyInputInventory:
+def load_legacy_inventory(version: str = "260812") -> LegacyInputInventory:
     file_name = f"input_fields_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:

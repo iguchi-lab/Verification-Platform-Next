@@ -7,7 +7,7 @@ from verification_app.form_model import load_form_model
 def test_form_model_preserves_schema_order_and_groups() -> None:
     model = load_form_model()
 
-    assert len(model.fields) == 225
+    assert len(model.fields) == 223
     assert len(model.sections) == 16
     assert model.keys == tuple(field.key for field in model.schema.fields)
     assert all(section.groups for section in model.sections)
@@ -77,7 +77,7 @@ def test_underfloor_manual_constants_follow_their_control() -> None:
     main_group = next(
         group
         for group in underfloor.groups
-        if group.name == "新床下空調（Verification Platform）"
+        if group.name == "床下空調（Verification Platform）"
     )
     constants_group = next(
         group for group in underfloor.groups if group.name == "手動設定する補助定数"
@@ -89,10 +89,10 @@ def test_underfloor_manual_constants_follow_their_control() -> None:
     )
     assert tuple(field.key for field in constants_group.fields) == (
         "R_g__0",
-        "Theta_g_avg__0",
-        "U_s_vert__0",
         "phi__0",
     )
+    assert "Theta_g_avg__0" not in model.keys
+    assert "U_s_vert__0" not in model.keys
 
     values = model.schema.defaults()
     values["change_underfloor_temperature__0"] = True
@@ -199,8 +199,6 @@ def test_form_model_updates_nested_underfloor_visibility() -> None:
     assert not initial["r_A_ufvnt__0"]
     assert not initial["R_g__0"]
     assert not initial["input_ufac_consts__0"]
-    assert not initial["Theta_g_avg__0"]
-    assert not initial["U_s_vert__0"]
     assert not initial["phi__0"]
 
     values["underfloor_ventilation__0"] = True
@@ -209,24 +207,19 @@ def test_form_model_updates_nested_underfloor_visibility() -> None:
     assert ventilation["underfloor_insulation__0"]
 
     values["change_underfloor_temperature__0"] = True
-    new_underfloor = model.visibility(values)
-    assert not new_underfloor["R_g__0"]
-    assert new_underfloor["input_ufac_consts__0"]
-    assert not new_underfloor["Theta_g_avg__0"]
+    underfloor = model.visibility(values)
+    assert not underfloor["R_g__0"]
+    assert underfloor["input_ufac_consts__0"]
 
     values["input_ufac_consts__0"] = True
     constants = model.visibility(values)
     assert constants["R_g__0"]
-    assert constants["Theta_g_avg__0"]
-    assert constants["U_s_vert__0"]
     assert constants["phi__0"]
 
     values["change_underfloor_temperature__0"] = False
     hidden_parent = model.visibility(values)
     assert not hidden_parent["input_ufac_consts__0"]
     assert not hidden_parent["R_g__0"]
-    assert not hidden_parent["Theta_g_avg__0"]
-    assert not hidden_parent["U_s_vert__0"]
     assert not hidden_parent["phi__0"]
 
 
@@ -338,5 +331,5 @@ def test_form_values_are_mapped_by_schema_order() -> None:
 def test_form_value_count_is_validated() -> None:
     model = load_form_model()
 
-    with pytest.raises(ValueError, match="Expected 225 form values, found 1"):
+    with pytest.raises(ValueError, match="Expected 223 form values, found 1"):
         model.values_from_sequence(("only-one",))

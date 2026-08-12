@@ -47,7 +47,7 @@ import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
 # F24-4 過剰熱量繰越
 from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
 import jjjexperiment.carryover_heat as jjj_carryover_heat
-# F24-5 新床下空調
+# F24-5 床下空調
 import jjjexperiment.underfloor_ac.section4_2_jjj as jjj_ufac_dc
 from jjjexperiment.underfloor_ac.section3_1_e_jjj import calc_Theta_uf_d_t_2023
 
@@ -2503,7 +2503,7 @@ def _get_new_underfloor_requested_temperatures(inputs: _NewUnderfloorRequestedTe
     Theta_uf_d_t_2023 = calc_Theta_uf_d_t_2023(*_ExpectedUnderfloorTemperatureInputs(
         L_star_H_d_t_i, L_star_CS_d_t_i, house.A_A, house.A_MR,
         house.A_OR, skin.r_A_ufac, V_dash_supply_d_t_i, Theta_ex_d_t, house.region))
-    # 新床下空調-1st: θuf_supply を逆算(二分探索)
+    # 床下空調-1st: θuf_supply を逆算(二分探索)
     _, _, Theta_uf_supply_d_t = algo.calc_Theta(
         region=house.region,
         A_A=house.A_A,
@@ -2569,7 +2569,7 @@ def _get_new_underfloor_supply_temperatures(inputs: _NewUnderfloorSupplyTemperat
     Theta_underfloor_supply_override_d_t = (
         inputs.Theta_underfloor_supply_override_d_t
     )
-    # 新床下空調-2nd: θuf の本計算
+    # 床下空調-2nd: θuf の本計算
     Theta_uf_d_t, Theta_g_surf_d_t, *others = algo.calc_Theta(
         region=house.region,
         A_A=house.A_A,

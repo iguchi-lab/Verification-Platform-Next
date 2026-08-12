@@ -26,7 +26,7 @@ def calc_sum_Theta_dash_g_surf_A_m_runup(
         state.commit(Theta_uf_const, response)
     return float(np.sum(response))
 
-#260112 IGUCHI 新床下空調用固定値
+#260112 IGUCHI 床下空調用固定値
 @jjj_cloning
 def get_Theta_uf_d_t_runup(
     underfloor_insulation: bool,

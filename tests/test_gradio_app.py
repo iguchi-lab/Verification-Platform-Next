@@ -48,6 +48,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         for component in config["components"]
         if component["type"] == "button"
     }
+    components_by_key = {
+        component["props"].get("key"): component
+        for component in config["components"]
+        if isinstance(component["props"].get("key"), str)
+    }
 
     def equipment_section(prefix: str) -> dict[str, object]:
         return next(
@@ -59,7 +64,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert gradio.__version__.startswith("6.")
     assert config["title"] == "Verification Platform Next ver.1.1.1"
     assert component_types["accordion"] == 16
-    assert component_types["number"] == 158
+    assert component_types["number"] == 156
     assert component_types["dropdown"] == 54
     assert component_types["checkbox"] == 10
     assert component_types["textbox"] == 4  # three text inputs and the log output
@@ -95,11 +100,18 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         for value in html_values
     )
     assert "変更した項目は濃い緑色で表示されます。" in markdown_values
+    manual_constants = components_by_key["field:input_ufac_consts__0"]
+    assert "不易層温度は外気温8760時間値の年間平均から自動算定" in (
+        manual_constants["props"]["info"]
+    )
+    assert "床下から室への熱移動用を2.223" in manual_constants["props"]["info"]
+    assert "field:Theta_g_avg__0" not in components_by_key
+    assert "field:U_s_vert__0" not in components_by_key
     assert "↩ 入力をデフォルトに戻す" in buttons
     assert buttons["↩ 入力をデフォルトに戻す"]["props"]["variant"] == "secondary"
     assert origin_classes == {
         "input-origin-bri-web": 47,
-        "input-origin-verification-platform": 178,
+        "input-origin-verification-platform": 176,
     }
     assert equipment_section("⑦-1")["props"]["visible"] is True
     assert equipment_section("⑧-1")["props"]["visible"] is True
@@ -115,7 +127,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     dependencies = config["dependencies"]
     calculation_started, calculation, graph_generation = dependencies[:3]
     reset_inputs = next(
-        dependency for dependency in dependencies if len(dependency["outputs"]) == 233
+        dependency for dependency in dependencies if len(dependency["outputs"]) == 231
     )
     install_default_highlights = next(
         dependency
@@ -130,17 +142,17 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
     assert len(calculation_started["outputs"]) == 10
-    assert len(calculation["inputs"]) == 225
+    assert len(calculation["inputs"]) == 223
     assert len(calculation["outputs"]) == 6
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
     assert len(visibility_dependencies) >= 14
     assert 2 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
-    assert 5 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
+    assert 3 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert 78 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert 83 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert len(reset_inputs["inputs"]) == 0
-    assert len(reset_inputs["outputs"]) == 233
+    assert len(reset_inputs["outputs"]) == 231
     assert len(install_default_highlights["inputs"]) == 0
     assert len(install_default_highlights["outputs"]) == 0
     assert install_default_highlights["queue"] is False
@@ -152,10 +164,10 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
     reset_outputs = reset_function()
     model = form_app.load_form_model()
-    assert tuple(update["value"] for update in reset_outputs[:225]) == tuple(
+    assert tuple(update["value"] for update in reset_outputs[:223]) == tuple(
         field.default for field in model.schema.fields
     )
-    assert tuple(update["visible"] for update in reset_outputs[:225]) == tuple(
+    assert tuple(update["visible"] for update in reset_outputs[:223]) == tuple(
         field.visible for field in model.fields
     )
     assert [update["visible"] for update in reset_outputs[-8:]] == [

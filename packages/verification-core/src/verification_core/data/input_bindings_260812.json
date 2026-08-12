@@ -1,0 +1,19 @@
+{
+  "version": "260812",
+  "base_version": "260809",
+  "binding_count": 270,
+  "binding_overrides": [
+    {
+      "line": 138,
+      "target_path": ["Theta_g_avg"],
+      "expression": "15.7",
+      "source_ids": []
+    },
+    {
+      "line": 141,
+      "target_path": ["U_s_vert"],
+      "expression": "2.223",
+      "source_ids": []
+    }
+  ]
+}

@@ -69,7 +69,7 @@ def get_Theta_star_NR(
     Returns:
         Theta_star_NR: 単時点版 負荷バランス時の非居室の室温 [℃]
     """
-    # NOTE: 新床下空調ロジックのみで使用可能
+    # NOTE: 床下空調ロジックのみで使用可能
 
     # vectorize可能
     c_p_air, rho_air, U_s = _get_formula_52_properties()

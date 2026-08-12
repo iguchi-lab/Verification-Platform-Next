@@ -33,10 +33,7 @@ class ClimateService:
         return Theta_ex_d_t
 
     def get_Theta_g_avg(self) -> float:
-        if (ufac := self._new_ufac) and ufac.explicit_constants:
-            return self._new_ufac.Theta_g_avg
-        else:
-            return algo.get_Theta_g_avg(self.get_Theta_ex_d_t())
+        return algo.get_Theta_g_avg(self.get_Theta_ex_d_t())
 
     def get_HCM_d_t(self) -> Array8760:
         H, C, M = dc.get_season_array_d_t(self.region)
