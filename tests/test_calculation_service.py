@@ -37,11 +37,55 @@ def test_service_builds_input_captures_log_and_collects_outputs(tmp_path: Path) 
     assert result.artifact_dir == str(tmp_path / "run-first")
     assert result.input_data is not None
     assert result.input_data["case_name"] == "service"
-    assert result.log == "engine log\n"
+    assert "===== 1. 計算条件 =====" in result.log
+    assert "暖房方式:" in result.log
+    assert "===== 2. 実行した処理 =====" in result.log
+    assert "===== 5. 計算エンジン詳細ログ =====" in result.log
+    assert "engine log" in result.log
     assert {Path(path).suffix for path in result.files} == {".csv"}
     assert result.graph_status == "✅ 2件のグラフを生成しました。"
     assert result.graphs == ("heating", "cooling")
     assert (tmp_path / "run-first" / "servicev1.csv").is_file()
+
+
+def test_service_builds_annual_heating_and_cooling_summary(tmp_path: Path) -> None:
+    def calculate(input_data: dict[str, object]) -> None:
+        prefix = f"{input_data['case_name']}v1"
+        Path(f"{prefix}_output1.csv").write_text(
+            ",E_H [MJ/year],E_C [MJ/year]\n合計値,100,200\n",
+            encoding="cp932",
+        )
+        Path(f"{prefix}_output2.csv").write_text(
+            ",E_E_H_d_t [kWh/h],E_E_C_d_t [kWh/h],"
+            "E_UT_H_d_t [MJ/h],E_UT_C_d_t [MJ/h],"
+            "E_E_fan_H_d_t [kWh/h],E_E_fan_C_d_t [kWh/h]\n"
+            "2023-01-01 00:00:00,1,3,10,30,0.2,0.5\n"
+            "2023-01-01 01:00:00,2,4,20,40,0.3,1.0\n",
+            encoding="cp932",
+        )
+
+    service = CalculationService(
+        calculate,
+        lambda: "v1",
+        workdir=tmp_path,
+        run_id_factory=lambda: "summary",
+    )
+
+    result = service.run({"case_name__0": "annual"}, include_graphs=False)
+
+    assert result.succeeded
+    assert result.annual_summary is not None
+    assert result.annual_summary.heating.primary_energy_mj == 100
+    assert result.annual_summary.heating.unprocessed_load_mj == 30
+    assert result.annual_summary.heating.air_conditioner_electricity_kwh == 2.5
+    assert result.annual_summary.heating.fan_electricity_kwh == 0.5
+    assert result.annual_summary.cooling.primary_energy_mj == 200
+    assert result.annual_summary.cooling.unprocessed_load_mj == 70
+    assert result.annual_summary.cooling.air_conditioner_electricity_kwh == 5.5
+    assert result.annual_summary.cooling.fan_electricity_kwh == 1.5
+    assert "暖房 一次エネルギー消費量: 100.000 MJ/年" in result.log
+    assert "冷房 消費電力量（ファン）: 1.500 kWh/年" in result.log
+    assert "一次エネルギー消費量には未処理負荷" in result.log
 
 
 def test_service_returns_traceback_on_error(tmp_path: Path) -> None:
@@ -64,6 +108,7 @@ def test_service_returns_traceback_on_error(tmp_path: Path) -> None:
     assert result.artifact_dir == str(tmp_path / "run-failed")
     assert "before failure" in result.log
     assert "RuntimeError: engine failed" in result.log
+    assert "===== 4. エラー詳細 =====" in result.log
     assert result.files == ()
     assert result.graph_status == "計算完了後にグラフを表示します。"
     assert result.graphs == ()

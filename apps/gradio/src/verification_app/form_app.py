@@ -4,6 +4,7 @@ import json
 import os
 import time
 from collections.abc import Iterable
+from html import escape
 from itertools import islice
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,7 @@ from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
 from .form_model import FormField, FormModel, load_form_model
 from .graphs import GRAPH_LABELS
-from .services import CalculationResult, CalculationService
+from .services import AnnualMetrics, AnnualSummary, CalculationResult, CalculationService
 
 _UNDERFLOOR_INPUT_GUIDE_URL = (
     "https://github.com/iguchi-lab/Verification-Platform-Next/"
@@ -81,6 +82,68 @@ div.block.input-value-modified {
   font-weight: 600 !important;
   line-height: 1.45 !important;
   margin: 0.65rem 0 0.35rem !important;
+}
+.annual-summary {
+  margin: 0.85rem 0 1rem;
+}
+.annual-summary__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.7rem;
+}
+.annual-summary__note {
+  color: var(--body-text-color-subdued);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  margin: -0.35rem 0 0.8rem;
+}
+.annual-summary__seasons {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.annual-summary__season {
+  background: var(--block-background-fill);
+  border: 1px solid var(--border-color-primary);
+  border-radius: 0.65rem;
+  padding: 1rem;
+}
+.annual-summary__season--heating { border-top: 5px solid #ef4444; }
+.annual-summary__season--cooling { border-top: 5px solid #2563eb; }
+.annual-summary__season h3 {
+  font-size: 1.3rem;
+  margin: 0 0 0.75rem;
+}
+.annual-summary__metrics {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.annual-summary__metric {
+  background: var(--background-fill-secondary);
+  border-radius: 0.45rem;
+  padding: 0.7rem;
+}
+.annual-summary__label {
+  color: var(--body-text-color-subdued);
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.annual-summary__value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 750;
+  line-height: 1.3;
+  margin-top: 0.15rem;
+}
+.annual-summary__unit {
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .annual-summary__metrics { grid-template-columns: 1fr; }
 }
 """
 
@@ -149,7 +212,7 @@ def build_app(
             section_dom_id = f"input-section-{section_index}"
             with gr.Accordion(
                 section.name,
-                open=section_index == 0,
+                open=False,
                 visible=_section_is_visible(section.name, section_fields, {
                     field.key: field.visible for field in form.fields
                 }),
@@ -195,14 +258,19 @@ def build_app(
 
         run = gr.Button("▶ 計算を実行", variant="primary", size="lg")
         status = gr.Markdown("**状態: 未実行**")
+        annual_summary = gr.HTML(
+            value="",
+            visible=False,
+            elem_classes=["annual-summary"],
+        )
         result_state = gr.State()
         with gr.Tabs():
             with gr.Tab("計算入力"):
                 preview = gr.JSON(label="計算に使用した input_data")
             with gr.Tab("計算ログ"):
                 log = gr.Textbox(
-                    label="標準出力・エラー",
-                    lines=16,
+                    label="計算の内容・年間結果・計算エンジン詳細ログ",
+                    lines=28,
                     interactive=False,
                 )
             with gr.Tab("グラフ"):
@@ -229,14 +297,30 @@ def build_app(
 
         calculation_started = run.click(
             _calculation_started_outputs,
-            outputs=[status, preview, log, graph_status, *graphs, files],
+            outputs=[
+                status,
+                annual_summary,
+                preview,
+                log,
+                graph_status,
+                *graphs,
+                files,
+            ],
             queue=False,
             api_visibility="private",
         )
         calculation_finished = calculation_started.then(
             calculate,
             inputs=ordered_components,
-            outputs=[result_state, status, preview, log, graph_status, files],
+            outputs=[
+                result_state,
+                status,
+                annual_summary,
+                preview,
+                log,
+                graph_status,
+                files,
+            ],
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -668,6 +752,7 @@ def _calculation_started_outputs() -> tuple[Any, ...]:
     return (
         "⏳ 計算要求を受け付けました。先行計算がある場合は、順番に実行します。"
         "画面を閉じずにお待ちください。",
+        gr.update(value="", visible=False),
         None,
         "",
         "計算完了後にグラフを生成します。",
@@ -685,10 +770,65 @@ def _calculation_outputs(result: CalculationResult) -> tuple[Any, ...]:
     return (
         result,
         result.status,
+        gr.update(
+            value=_annual_summary_html(result.annual_summary),
+            visible=result.succeeded and result.annual_summary is not None,
+        ),
         result.input_data,
         result.log,
         graph_status,
         list(result.files),
+    )
+
+
+def _annual_summary_html(summary: AnnualSummary | None) -> str:
+    if summary is None:
+        return ""
+
+    def metric(label: str, value: float, unit: str) -> str:
+        return (
+            '<div class="annual-summary__metric">'
+            f'<span class="annual-summary__label">{escape(label)}</span>'
+            f'<span class="annual-summary__value">{value:,.1f} '
+            f'<span class="annual-summary__unit">{escape(unit)}</span></span>'
+            "</div>"
+        )
+
+    def season(label: str, css_name: str, values: AnnualMetrics) -> str:
+        return (
+            f'<section class="annual-summary__season annual-summary__season--{css_name}">'
+            f"<h3>{escape(label)}</h3>"
+            '<div class="annual-summary__metrics">'
+            + metric("一次エネルギー消費量", values.primary_energy_mj, "MJ/年")
+            + metric(
+                "未処理負荷（一次エネルギー相当）",
+                values.unprocessed_load_mj,
+                "MJ/年",
+            )
+            + metric(
+                "消費電力量（エアコン）",
+                values.air_conditioner_electricity_kwh,
+                "kWh/年",
+            )
+            + metric(
+                "消費電力量（ファン）",
+                values.fan_electricity_kwh,
+                "kWh/年",
+            )
+            + "</div></section>"
+        )
+
+    return (
+        '<div class="annual-summary">'
+        '<div class="annual-summary__title">年間計算結果</div>'
+        '<div class="annual-summary__note">'
+        '一次エネルギー消費量には未処理負荷の一次エネルギー相当分を含みます。'
+        'エアコンの消費電力量は、熱源機とファンの合計からファン分を除いた値です。'
+        "</div>"
+        '<div class="annual-summary__seasons">'
+        + season("暖房", "heating", summary.heating)
+        + season("冷房", "cooling", summary.cooling)
+        + "</div></div>"
     )
 
 
