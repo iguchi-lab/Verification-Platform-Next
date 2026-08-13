@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import csv
 import io
+import math
 import os
 import shutil
 import threading
@@ -34,6 +36,21 @@ class CalculationResult:
     files: tuple[str, ...]
     graph_status: str
     graphs: tuple[Any, ...]
+    annual_summary: AnnualSummary | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AnnualMetrics:
+    primary_energy_mj: float
+    unprocessed_load_mj: float
+    air_conditioner_electricity_kwh: float
+    fan_electricity_kwh: float
+
+
+@dataclass(frozen=True, slots=True)
+class AnnualSummary:
+    heating: AnnualMetrics
+    cooling: AnnualMetrics
 
 
 class CalculationService:
@@ -80,20 +97,38 @@ class CalculationService:
             if run_id is None or artifact_dir is None:
                 raise RuntimeError("Calculation directory was not initialized")
             files = self._result_files(input_data, artifact_dir)
+            annual_summary = self._annual_summary(input_data, artifact_dir)
             result = CalculationResult(
                 succeeded=True,
                 status=f"✅ 計算が完了しました。（計算ID: {run_id[:12]}）",
                 input_data=input_data,
                 run_id=run_id,
                 artifact_dir=str(artifact_dir),
-                log=output.getvalue(),
+                log=_format_success_log(
+                    input_data,
+                    run_id,
+                    self._version_info(),
+                    artifact_dir,
+                    files,
+                    annual_summary,
+                    output.getvalue(),
+                ),
                 files=files,
                 graph_status="計算完了後にグラフを表示します。",
                 graphs=(),
+                annual_summary=annual_summary,
             )
             return self.generate_graphs(result) if include_graphs else result
         except Exception:
-            log = output.getvalue() + traceback.format_exc()
+            error = traceback.format_exc()
+            log = _format_failure_log(
+                input_data,
+                run_id,
+                self._version_info(),
+                artifact_dir,
+                output.getvalue(),
+                error,
+            )
             return CalculationResult(
                 succeeded=False,
                 status=(
@@ -152,6 +187,51 @@ class CalculationService:
             if path.is_file()
         )
 
+    def _annual_summary(
+        self,
+        input_data: Mapping[str, Any],
+        artifact_dir: Path,
+    ) -> AnnualSummary | None:
+        prefix = f"{input_data.get('case_name', 'default')}{self._version_info()}"
+        output1_path = artifact_dir / f"{prefix}_output1.csv"
+        output2_path = artifact_dir / f"{prefix}_output2.csv"
+        if not output1_path.is_file() or not output2_path.is_file():
+            return None
+
+        try:
+            with output1_path.open(encoding="cp932", newline="") as file:
+                output1_rows = tuple(csv.DictReader(file))
+            if not output1_rows:
+                return None
+            annual = output1_rows[0]
+
+            with output2_path.open(encoding="cp932", newline="") as file:
+                hourly = tuple(csv.DictReader(file))
+            if not hourly:
+                return None
+
+            def sum_column(name: str) -> float:
+                return math.fsum(float(row[name]) for row in hourly)
+
+            def metrics(suffix: str) -> AnnualMetrics:
+                total_electricity = sum_column(f"E_E_{suffix}_d_t [kWh/h]")
+                fan_electricity = sum_column(f"E_E_fan_{suffix}_d_t [kWh/h]")
+                air_conditioner_electricity = total_electricity - fan_electricity
+                if abs(air_conditioner_electricity) < 1e-9:
+                    air_conditioner_electricity = 0.0
+                return AnnualMetrics(
+                    primary_energy_mj=float(annual[f"E_{suffix} [MJ/year]"]),
+                    unprocessed_load_mj=sum_column(f"E_UT_{suffix}_d_t [MJ/h]"),
+                    air_conditioner_electricity_kwh=air_conditioner_electricity,
+                    fan_electricity_kwh=fan_electricity,
+                )
+
+            return AnnualSummary(heating=metrics("H"), cooling=metrics("C"))
+        except (OSError, KeyError, TypeError, ValueError):
+            # The calculation itself succeeded. A missing optional summary must not
+            # discard the engine outputs or prevent users from downloading them.
+            return None
+
     def _create_artifact_dir(self, output_root: Path) -> tuple[str, Path]:
         for _ in range(10):
             run_id = self._run_id_factory()
@@ -192,3 +272,131 @@ def _validate_case_name(value: object) -> None:
         or PureWindowsPath(case_name).name != case_name
     ):
         raise ValueError("計算条件名にパスとして解釈される文字は使用できません。")
+
+
+_MODEL_NAMES = {
+    1: "ダクト式セントラル空調機",
+    2: "RAC活用型全館空調（現行省エネ法RACモデル）",
+    3: "RAC活用型全館空調（潜熱評価モデル）",
+    4: "電中研モデル",
+}
+
+
+def _format_input_summary(input_data: Mapping[str, Any] | None) -> list[str]:
+    if input_data is None:
+        return ["入力データの構築前にエラーが発生しました。"]
+    heating = input_data.get("H_A")
+    cooling = input_data.get("C_A")
+    heating = heating if isinstance(heating, Mapping) else {}
+    cooling = cooling if isinstance(cooling, Mapping) else {}
+    return [
+        f"計算条件名: {input_data.get('case_name', 'default')}",
+        f"地域区分: {input_data.get('region', '不明')}地域",
+        f"暖房方式: {_MODEL_NAMES.get(heating.get('type'), heating.get('type', '不明'))}",
+        f"冷房方式: {_MODEL_NAMES.get(cooling.get('type'), cooling.get('type', '不明'))}",
+        "暖房VAV / 全般換気: "
+        f"{_yes_no(heating.get('VAV'))} / {_yes_no(heating.get('general_ventilation'))}",
+        "冷房VAV / 全般換気: "
+        f"{_yes_no(cooling.get('VAV'))} / {_yes_no(cooling.get('general_ventilation'))}",
+        "床下換気 / 床下空調: "
+        f"{_enabled_when_two(input_data.get('underfloor_ventilation'))} / "
+        f"{_enabled_when_two(input_data.get('change_underfloor_temperature'))}",
+        f"気象データ: {_file_source(input_data.get('climateFile'))}",
+        f"暖冷房負荷データ: {_file_source(input_data.get('loadFile'))}",
+        f"入力項目数（エンジン入力）: {len(input_data)}",
+    ]
+
+
+def _yes_no(value: object) -> str:
+    return "あり" if str(value) == "1" else "なし" if str(value) == "2" else str(value)
+
+
+def _enabled_when_two(value: object) -> str:
+    return "使用する" if str(value) == "2" else "使用しない" if str(value) == "1" else str(value)
+
+
+def _file_source(value: object) -> str:
+    return "標準データを使用" if value in (None, "", "-") else str(value)
+
+
+def _format_annual_summary(summary: AnnualSummary | None) -> list[str]:
+    if summary is None:
+        return ["年間集計: 対象のoutput1/output2がないため表示できません。"]
+    lines = [
+        "注: 一次エネルギー消費量には未処理負荷の一次エネルギー相当分を含みます。",
+        "注: エアコンの消費電力量は、熱源機とファンの合計からファン分を除いた値です。",
+    ]
+    for label, metrics in (("暖房", summary.heating), ("冷房", summary.cooling)):
+        lines.extend((
+            f"{label} 一次エネルギー消費量: {metrics.primary_energy_mj:,.3f} MJ/年",
+            f"{label} 未処理負荷（一次エネルギー相当）: {metrics.unprocessed_load_mj:,.3f} MJ/年",
+            f"{label} 消費電力量（エアコン）: {metrics.air_conditioner_electricity_kwh:,.3f} kWh/年",
+            f"{label} 消費電力量（ファン）: {metrics.fan_electricity_kwh:,.3f} kWh/年",
+        ))
+    return lines
+
+
+def _format_success_log(
+    input_data: Mapping[str, Any],
+    run_id: str,
+    version: str,
+    artifact_dir: Path,
+    files: tuple[str, ...],
+    annual_summary: AnnualSummary | None,
+    engine_log: str,
+) -> str:
+    lines = [
+        "===== 1. 計算条件 =====",
+        *_format_input_summary(input_data),
+        f"計算ID: {run_id[:12]}",
+        f"成果物版: {version}",
+        "",
+        "===== 2. 実行した処理 =====",
+        "1) 画面入力を検証し、計算エンジン用input_dataへ変換",
+        "2) 暖房・冷房の8760時間計算を順番に実行",
+        "3) 一次エネルギー、未処理負荷、機器・ファン電力を集計",
+        "4) CSV、入力JSON、計算条件マニフェストを計算ID別に保存",
+        "",
+        "===== 3. 年間結果 =====",
+        *_format_annual_summary(annual_summary),
+        "",
+        "===== 4. 出力 =====",
+        f"保存先: {artifact_dir}",
+        f"出力ファイル数: {len(files)}",
+        *(f"- {Path(path).name}" for path in files),
+        "",
+        "===== 5. 計算エンジン詳細ログ =====",
+        "以下は式・分岐・機器能力などを確認するための詳細ログです。",
+        engine_log.rstrip() or "（詳細ログの出力はありません）",
+        "",
+        "===== 計算完了 =====",
+        "すべての計算と成果物保存が正常に終了しました。",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _format_failure_log(
+    input_data: Mapping[str, Any] | None,
+    run_id: str | None,
+    version: str,
+    artifact_dir: Path | None,
+    engine_log: str,
+    error: str,
+) -> str:
+    lines = [
+        "===== 1. 計算条件 =====",
+        *_format_input_summary(input_data),
+        f"計算ID: {run_id[:12] if run_id else '未採番'}",
+        f"成果物版: {version}",
+        "",
+        "===== 2. エラー発生位置 =====",
+        f"作業フォルダー: {artifact_dir if artifact_dir else '作成前'}",
+        "入力変換、8760時間計算、または成果物保存の途中で停止しました。",
+        "",
+        "===== 3. 停止前の計算エンジンログ =====",
+        engine_log.rstrip() or "（停止前の詳細ログはありません）",
+        "",
+        "===== 4. エラー詳細 =====",
+        error.rstrip(),
+    ]
+    return "\n".join(lines) + "\n"

@@ -7,7 +7,11 @@ gradio = pytest.importorskip("gradio")
 
 from verification_app import form_app  # noqa: E402
 from verification_app.form_app import build_app  # noqa: E402
-from verification_app.services import CalculationService  # noqa: E402
+from verification_app.services import (  # noqa: E402
+    AnnualMetrics,
+    AnnualSummary,
+    CalculationService,
+)
 
 
 def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
@@ -69,6 +73,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert component_types["checkbox"] == 10
     assert component_types["textbox"] == 4  # three text inputs and the log output
     assert component_types["plot"] == 5
+    assert component_types["html"] == 2
     assert component_types["gallery"] == 0
     assert any(
         "床下関連設定の入力ガイド" in value
@@ -121,6 +126,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         "input-section" in component["props"].get("elem_classes", ())
         for component in accordions.values()
     )
+    assert all(component["props"]["open"] is False for component in accordions.values())
     for prefix in ("⑦-2", "⑦-3", "⑦-4", "⑧-2", "⑧-3", "⑧-4"):
         assert equipment_section(prefix)["props"]["visible"] is False
 
@@ -141,9 +147,9 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
-    assert len(calculation_started["outputs"]) == 10
+    assert len(calculation_started["outputs"]) == 11
     assert len(calculation["inputs"]) == 223
-    assert len(calculation["outputs"]) == 6
+    assert len(calculation["outputs"]) == 7
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
     assert len(visibility_dependencies) >= 14
@@ -197,6 +203,27 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert "先行計算がある場合は、順番に実行します" in (
         form_app._calculation_started_outputs()[0]
     )
+    assert form_app._calculation_started_outputs()[1]["visible"] is False
+
+
+def test_annual_summary_html_shows_heating_and_cooling_metrics() -> None:
+    summary = AnnualSummary(
+        heating=AnnualMetrics(100.0, 2.0, 30.0, 4.0),
+        cooling=AnnualMetrics(200.0, 5.0, 60.0, 7.0),
+    )
+
+    html = form_app._annual_summary_html(summary)
+
+    assert "年間計算結果" in html
+    assert "一次エネルギー消費量には未処理負荷" in html
+    assert "暖房" in html
+    assert "冷房" in html
+    assert "一次エネルギー消費量" in html
+    assert "未処理負荷（一次エネルギー相当）" in html
+    assert "消費電力量（エアコン）" in html
+    assert "消費電力量（ファン）" in html
+    assert "100.0" in html
+    assert "200.0" in html
 
 
 def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:
