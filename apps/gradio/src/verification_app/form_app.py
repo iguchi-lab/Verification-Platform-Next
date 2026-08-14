@@ -81,7 +81,19 @@ div.block.input-value-modified {
   font-size: 1rem !important;
   font-weight: 600 !important;
   line-height: 1.45 !important;
-  margin: 0.65rem 0 0.35rem !important;
+  margin: 0.65rem 0 0.2rem !important;
+}
+.input-section-description p,
+.input-group-heading p {
+  color: var(--body-text-color-subdued);
+  font-size: 0.88rem !important;
+  line-height: 1.55 !important;
+}
+.input-section-description p {
+  margin: 0 0 0.75rem !important;
+}
+.input-group-heading p {
+  margin: 0 0 0.45rem !important;
 }
 .annual-summary {
   margin: 0.85rem 0 1rem;
@@ -222,7 +234,12 @@ def build_app(
             ) as section_container:
                 section_containers[section.name] = section_container
                 section_dom_ids[section.name] = section_dom_id
-                if section.name == "⑥ その他":
+                if section.description:
+                    gr.Markdown(
+                        section.description,
+                        elem_classes=["input-section-description"],
+                    )
+                if section.name == "④ 床下・空気搬送":
                     gr.Markdown(
                         "📘 床下関係の方式選択、推奨値、入力例は"
                         f"[床下関連設定の入力ガイド]({_UNDERFLOOR_INPUT_GUIDE_URL})"
@@ -234,7 +251,8 @@ def build_app(
                         form_field.definition for form_field in group.fields
                     )
                     gr.Markdown(
-                        f"## {group.name}",
+                        f"## {group.name}"
+                        + (f"\n\n{group.description}" if group.description else ""),
                         elem_id=group_dom_id,
                         elem_classes=["input-group-heading"],
                     )
@@ -245,6 +263,9 @@ def build_app(
                                 field_dom_id = f"input-field-container-{len(components)}"
                                 component = _input_component(
                                     form_field.definition,
+                                    label=form_field.label,
+                                    description=form_field.description,
+                                    choices=form_field.choices,
                                     visible=form_field.visible,
                                     min_width=280,
                                     elem_id=field_dom_id,
@@ -537,15 +558,18 @@ def _section_is_visible(
 def _input_component(
     field: FieldDefinition,
     *,
+    label: str | None = None,
+    description: str | None = None,
+    choices: tuple[Any, ...] | None = None,
     visible: bool = True,
     min_width: int | None = None,
     elem_id: str | None = None,
     elem_classes: list[str] | None = None,
 ) -> Any:
     common = {
-        "label": field.label,
+        "label": label or field.label,
         "value": field.default,
-        "info": field.description or None,
+        "info": description if description is not None else field.description or None,
         "key": f"field:{field.key}",
         "visible": visible,
         "min_width": min_width,
@@ -560,7 +584,7 @@ def _input_component(
         return gr.Checkbox(**common)
     if field.kind is FieldKind.SELECT:
         return gr.Dropdown(
-            choices=list(field.choices),
+            choices=list(choices if choices is not None else field.choices),
             allow_custom_value=False,
             **common,
         )

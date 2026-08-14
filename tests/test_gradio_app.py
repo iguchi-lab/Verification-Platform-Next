@@ -58,16 +58,9 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         if isinstance(component["props"].get("key"), str)
     }
 
-    def equipment_section(prefix: str) -> dict[str, object]:
-        return next(
-            component
-            for label, component in accordions.items()
-            if label.startswith(prefix)
-        )
-
     assert gradio.__version__.startswith("6.")
     assert config["title"] == "Verification Platform Next ver.1.2.0"
-    assert component_types["accordion"] == 16
+    assert component_types["accordion"] == 8
     assert component_types["number"] == 156
     assert component_types["dropdown"] == 54
     assert component_types["checkbox"] == 10
@@ -80,7 +73,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         and "docs/underfloor_ac_input_guide.md" in value
         for value in markdown_values
     )
-    assert "## 計算条件" in markdown_values
+    assert any(value.startswith("## 計算条件") for value in markdown_values)
+    assert any(
+        "建研Webプログラムの「基本情報」に対応" in value
+        for value in markdown_values
+    )
     assert not any(value.startswith("### ") for value in markdown_values)
     assert group_headings
     assert all(
@@ -120,22 +117,29 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         "input-origin-bri-web": 47,
         "input-origin-verification-platform": 176,
     }
-    assert equipment_section("⑦-1")["props"]["visible"] is True
-    assert equipment_section("⑧-1")["props"]["visible"] is True
-    assert "⑨ 熱交換型換気設備" in accordions
-    assert "⑨ 熱交換型換気設備）" not in accordions
+    assert tuple(accordions) == (
+        "① 計算条件・外部データ",
+        "② 住宅基本情報",
+        "③ 外皮性能",
+        "④ 床下・空気搬送",
+        "⑤ 暖房設備",
+        "⑥ 冷房設備",
+        "⑦ 熱交換型換気設備",
+        "⑧ 詳細設定・比較検証",
+    )
     assert all(
         "input-section" in component["props"].get("elem_classes", ())
         for component in accordions.values()
     )
     assert all(component["props"]["open"] is False for component in accordions.values())
-    for prefix in ("⑦-2", "⑦-3", "⑦-4", "⑧-2", "⑧-3", "⑧-4"):
-        assert equipment_section(prefix)["props"]["visible"] is False
+    assert all(component["props"]["visible"] is True for component in accordions.values())
 
     dependencies = config["dependencies"]
     calculation_started, calculation, graph_generation, csv_export = dependencies[:4]
     reset_inputs = next(
-        dependency for dependency in dependencies if len(dependency["outputs"]) == 231
+        dependency
+        for dependency in dependencies
+        if len(dependency["outputs"]) == 223 and dependency.get("js")
     )
     install_default_highlights = next(
         dependency
@@ -159,10 +163,10 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(visibility_dependencies) >= 14
     assert 2 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert 3 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
-    assert 78 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
-    assert 83 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
+    assert 74 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
+    assert 79 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert len(reset_inputs["inputs"]) == 0
-    assert len(reset_inputs["outputs"]) == 231
+    assert len(reset_inputs["outputs"]) == 223
     assert len(install_default_highlights["inputs"]) == 0
     assert len(install_default_highlights["outputs"]) == 0
     assert install_default_highlights["queue"] is False
@@ -179,30 +183,6 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
     assert tuple(update["visible"] for update in reset_outputs[:223]) == tuple(
         field.visible for field in model.fields
-    )
-    assert [update["visible"] for update in reset_outputs[-8:]] == [
-        True,
-        False,
-        False,
-        False,
-        True,
-        False,
-        False,
-        False,
-    ]
-    heating_section_ids = {
-        equipment_section(prefix)["id"] for prefix in ("⑦-1", "⑦-2", "⑦-3", "⑦-4")
-    }
-    cooling_section_ids = {
-        equipment_section(prefix)["id"] for prefix in ("⑧-1", "⑧-2", "⑧-3", "⑧-4")
-    }
-    assert any(
-        heating_section_ids <= set(dependency["outputs"])
-        for dependency in visibility_dependencies
-    )
-    assert any(
-        cooling_section_ids <= set(dependency["outputs"])
-        for dependency in visibility_dependencies
     )
     assert "先行計算がある場合は、順番に実行します" in (
         form_app._calculation_started_outputs()[0]

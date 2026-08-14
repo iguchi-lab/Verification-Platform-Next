@@ -8,7 +8,16 @@ def test_form_model_preserves_schema_order_and_groups() -> None:
     model = load_form_model()
 
     assert len(model.fields) == 223
-    assert len(model.sections) == 16
+    assert tuple(section.name for section in model.sections) == (
+        "① 計算条件・外部データ",
+        "② 住宅基本情報",
+        "③ 外皮性能",
+        "④ 床下・空気搬送",
+        "⑤ 暖房設備",
+        "⑥ 冷房設備",
+        "⑦ 熱交換型換気設備",
+        "⑧ 詳細設定・比較検証",
+    )
     assert model.keys == tuple(field.key for field in model.schema.fields)
     assert all(section.groups for section in model.sections)
     assert all(group.fields for section in model.sections for group in section.groups)
@@ -28,28 +37,58 @@ def test_form_model_preserves_input_origin() -> None:
 def test_general_input_sections_are_grouped_by_calculation_role() -> None:
     model = load_form_model()
 
-    constants = next(section for section in model.sections if section.name.startswith("③"))
+    constants = next(section for section in model.sections if section.name.startswith("⑧"))
     assert tuple(group.name for group in constants.groups) == (
         "熱源機出口温度の制限",
         "ダクト式セントラル空調機のデフロスト",
-        "ダクト・送風機",
+        "ダクト・送風機の補助定数",
         "ルームエアコンディショナーのデフロスト",
         "冷房能力・湿度補正",
-        "計算方法の切替",
+        "計算方法の比較切替",
     )
 
     for section_name, equipment_group in (
-        ("⑦ 暖房全般", "暖房機器の種類"),
-        ("⑧ 冷房全般", "冷房機器の種類"),
+        ("⑤ 暖房設備", "暖房方式"),
+        ("⑥ 冷房設備", "冷房方式"),
     ):
         section = next(item for item in model.sections if item.name == section_name)
-        assert tuple(group.name for group in section.groups) == (
+        assert tuple(group.name for group in section.groups[:3]) == (
             equipment_group,
             "ダクト・換気方式",
-            "設計風量",
-            "最低風量",
-            "最低電力",
+            "風量・送風機電力",
         )
+
+
+def test_bri_web_fields_use_bri_web_wording_in_the_presentation() -> None:
+    model = load_form_model()
+    fields = {field.key: field for field in model.fields}
+
+    assert fields["A_A__0"].label == "合計"
+    assert fields["A_MR__0"].label == "主たる居室"
+    assert fields["A_OR__0"].label == "その他の居室"
+    assert fields["region__0"].label == "地域の区分"
+    assert fields["A_env__0"].label == "外皮面積の合計"
+    assert fields["H_A_input__0"].label == "機器の仕様の入力"
+    assert fields["H_A_q_hs_rtd_H1__0"].label == "能力"
+    assert fields["H_A_P_hs_rtd_H1__0"].label == "消費電力"
+    assert fields["H_A_V_fan_rtd_H1__0"].label == "風量"
+    assert (
+        fields["H_A_P_fan_rtd_H1__0"].label
+        == "室内側送風機の消費電力"
+    )
+    assert fields["HEX_install__0"].label == "熱交換型換気設備"
+
+
+def test_presentation_changes_do_not_modify_schema_values_or_keys() -> None:
+    model = load_form_model()
+    fields = {field.key: field for field in model.fields}
+
+    assert model.keys == tuple(field.key for field in model.schema.fields)
+    assert fields["H_A_type__0"].definition.choices[0] == "ダクト式セントラル空調機"
+    assert fields["H_A_type__0"].choices == fields["H_A_type__0"].definition.choices
+    assert model.values_from_sequence(
+        tuple(field.definition.default for field in model.fields)
+    ) == model.schema.defaults()
 
 
 def test_calculation_switches_explain_their_formula_changes() -> None:
@@ -73,14 +112,16 @@ def test_calculation_switches_explain_their_formula_changes() -> None:
 
 def test_underfloor_manual_constants_follow_their_control() -> None:
     model = load_form_model()
-    underfloor = next(section for section in model.sections if section.name == "⑥ その他")
+    underfloor = next(
+        section for section in model.sections if section.name == "④ 床下・空気搬送"
+    )
     main_group = next(
         group
         for group in underfloor.groups
-        if group.name == "床下空調（Verification Platform）"
+        if group.name == "床下空調"
     )
     constants_group = next(
-        group for group in underfloor.groups if group.name == "手動設定する補助定数"
+        group for group in underfloor.groups if group.name == "床下空調｜補助定数"
     )
 
     assert tuple(field.key for field in main_group.fields) == (
@@ -107,11 +148,12 @@ def test_underfloor_manual_constants_follow_their_control() -> None:
 
 def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     model = load_form_model()
-    heating = next(section for section in model.sections if section.name.startswith("⑦-2"))
+    heating = next(section for section in model.sections if section.name == "⑤ 暖房設備")
     heating_group = next(
         group
         for group in heating.groups
-        if group.name == "エネルギー消費効率の入力"
+        if group.name
+        == "RAC活用型（省エネ法モデル）｜エネルギー消費効率の入力"
     )
 
     assert tuple(field.key for field in heating_group.fields) == (
@@ -120,11 +162,12 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     )
     assert not any(field.visible for field in heating_group.fields)
 
-    cooling = next(section for section in model.sections if section.name.startswith("⑧-2"))
+    cooling = next(section for section in model.sections if section.name == "⑥ 冷房設備")
     cooling_group = next(
         group
         for group in cooling.groups
-        if group.name == "エネルギー消費効率の入力"
+        if group.name
+        == "RAC活用型（省エネ法モデル）｜エネルギー消費効率の入力"
     )
     assert tuple(field.key for field in cooling_group.fields) == (
         "C_A_input_mode__0",
@@ -155,20 +198,27 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
 def test_rac_dual_compressor_is_grouped_separately_from_capacity_inputs() -> None:
     model = load_form_model()
 
-    for section_prefix, compressor_key, capacity_group_name in (
-        ("⑦-2", "H_A_dualcompressor__0", "暖房能力の入力"),
-        ("⑧-2", "C_A_dualcompressor__0", "冷房能力の入力"),
+    for section_name, compressor_key, capacity_group_name in (
+        (
+            "⑤ 暖房設備",
+            "H_A_dualcompressor__0",
+            "RAC活用型（省エネ法モデル）｜暖房能力の入力",
+        ),
+        (
+            "⑥ 冷房設備",
+            "C_A_dualcompressor__0",
+            "RAC活用型（省エネ法モデル）｜冷房能力の入力",
+        ),
     ):
-        section = next(
-            section for section in model.sections if section.name.startswith(section_prefix)
-        )
+        section = next(section for section in model.sections if section.name == section_name)
         capacity_group = next(
             group for group in section.groups if group.name == capacity_group_name
         )
         compressor_group = next(
             group
             for group in section.groups
-            if group.name == "小能力時高効率型コンプレッサー"
+            if group.name
+            == "RAC活用型（省エネ法モデル）｜小能力時高効率型コンプレッサー"
         )
 
         assert compressor_key not in tuple(
