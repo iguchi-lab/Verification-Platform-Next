@@ -8,21 +8,38 @@ import shutil
 import threading
 import time
 import traceback
-from contextlib import redirect_stderr, redirect_stdout
-from dataclasses import dataclass, replace
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, ContextManager, Mapping
 from uuid import uuid4
 
 from verification_core import build_input_data
 
 CalculationFunction = Callable[[dict[str, Any]], Any]
 VersionFunction = Callable[[], str]
-GraphFunction = Callable[[Mapping[str, Any], Path, str], tuple[Any, ...]]
+GraphFunction = Callable[[Mapping[str, Any], Path, str, Any | None], tuple[Any, ...]]
 RunIdFactory = Callable[[], str]
+CsvExportSessionFactory = Callable[[], ContextManager[Any]]
 
 _CALCULATION_CWD_LOCK = threading.Lock()
+
+
+def _captured_dataframe(csv_exports: Any | None, path: Path) -> Any | None:
+    if csv_exports is None:
+        return None
+    dataframe = getattr(csv_exports, "dataframe", None)
+    return None if dataframe is None else dataframe(path)
+
+
+def _pending_csv_count(csv_exports: Any | None) -> int:
+    if csv_exports is None:
+        return 0
+    try:
+        return len(csv_exports)
+    except TypeError:
+        return 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +54,8 @@ class CalculationResult:
     graph_status: str
     graphs: tuple[Any, ...]
     annual_summary: AnnualSummary | None = None
+    csv_status: str = "CSVファイルはまだ出力されていません。"
+    csv_exports: Any | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +81,7 @@ class CalculationService:
         build_graphs: GraphFunction | None = None,
         result_ttl_seconds: float | None = 24 * 60 * 60,
         run_id_factory: RunIdFactory | None = None,
+        csv_export_session: CsvExportSessionFactory | None = None,
     ) -> None:
         self._calculate = calculate
         self._version_info = version_info
@@ -69,6 +89,7 @@ class CalculationService:
         self._build_graphs = build_graphs
         self._result_ttl_seconds = result_ttl_seconds
         self._run_id_factory = run_id_factory or (lambda: uuid4().hex)
+        self._csv_export_session = csv_export_session
 
     def run(
         self,
@@ -79,11 +100,22 @@ class CalculationService:
         input_data: dict[str, Any] | None = None
         run_id: str | None = None
         artifact_dir: Path | None = None
+        csv_exports: Any | None = None
         output = io.StringIO()
         try:
             input_data = build_input_data(values)
             _validate_case_name(input_data.get("case_name", "default"))
-            with _CALCULATION_CWD_LOCK, redirect_stdout(output), redirect_stderr(output):
+            csv_session = (
+                self._csv_export_session()
+                if self._csv_export_session is not None
+                else nullcontext(None)
+            )
+            with (
+                _CALCULATION_CWD_LOCK,
+                csv_session as csv_exports,
+                redirect_stdout(output),
+                redirect_stderr(output),
+            ):
                 output_root = (self._workdir or Path.cwd()).resolve()
                 output_root.mkdir(parents=True, exist_ok=True)
                 self._remove_expired_results(output_root)
@@ -97,7 +129,12 @@ class CalculationService:
             if run_id is None or artifact_dir is None:
                 raise RuntimeError("Calculation directory was not initialized")
             files = self._result_files(input_data, artifact_dir)
-            annual_summary = self._annual_summary(input_data, artifact_dir)
+            annual_summary = self._annual_summary(
+                input_data,
+                artifact_dir,
+                csv_exports,
+            )
+            pending_csv_count = _pending_csv_count(csv_exports)
             result = CalculationResult(
                 succeeded=True,
                 status=f"✅ 計算が完了しました。（計算ID: {run_id[:12]}）",
@@ -112,11 +149,19 @@ class CalculationService:
                     files,
                     annual_summary,
                     output.getvalue(),
+                    pending_csv_count,
                 ),
                 files=files,
                 graph_status="計算完了後にグラフを表示します。",
                 graphs=(),
                 annual_summary=annual_summary,
+                csv_status=(
+                    f"CSVファイルは未出力です（{pending_csv_count}件）。"
+                    "必要な場合だけ下のボタンで作成してください。"
+                    if pending_csv_count
+                    else "CSVファイルは計算時に出力済みです。"
+                ),
+                csv_exports=csv_exports,
             )
             return self.generate_graphs(result) if include_graphs else result
         except Exception:
@@ -160,6 +205,7 @@ class CalculationService:
                 result.input_data,
                 artifact_dir,
                 self._version_info(),
+                result.csv_exports,
             )
             return replace(
                 result,
@@ -171,8 +217,39 @@ class CalculationService:
             return replace(
                 result,
                 log=log,
-                graph_status="❌ グラフ生成エラー（計算結果CSVは正常に作成されています）",
+                graph_status="❌ グラフ生成エラー（計算自体は完了しています）",
                 graphs=(),
+            )
+
+    def export_csv(self, result: CalculationResult) -> CalculationResult:
+        """Serialize deferred CSV artifacts for a completed calculation."""
+        if not result.succeeded or result.artifact_dir is None:
+            return replace(result, csv_status="CSV出力対象の計算結果がありません。")
+        if result.csv_exports is None:
+            return replace(result, csv_status="CSVファイルはすでに出力されています。")
+        try:
+            exported = tuple(result.csv_exports.write_all())
+            artifact_dir = Path(result.artifact_dir)
+            files = self._result_files(result.input_data or {}, artifact_dir)
+            return replace(
+                result,
+                files=files,
+                csv_status=f"✅ {len(exported)}件のCSVファイルを出力しました。",
+                log=(
+                    result.log.rstrip()
+                    + "\n\n===== CSV出力 =====\n"
+                    + f"{len(exported)}件のCSVファイルを作成しました。\n"
+                ),
+            )
+        except Exception:
+            return replace(
+                result,
+                csv_status="❌ CSVファイルの出力に失敗しました。計算ログを確認してください。",
+                log=(
+                    result.log.rstrip()
+                    + "\n\n===== CSV出力エラー =====\n"
+                    + traceback.format_exc()
+                ),
             )
 
     def _result_files(
@@ -191,27 +268,38 @@ class CalculationService:
         self,
         input_data: Mapping[str, Any],
         artifact_dir: Path,
+        csv_exports: Any | None = None,
     ) -> AnnualSummary | None:
         prefix = f"{input_data.get('case_name', 'default')}{self._version_info()}"
         output1_path = artifact_dir / f"{prefix}_output1.csv"
         output2_path = artifact_dir / f"{prefix}_output2.csv"
-        if not output1_path.is_file() or not output2_path.is_file():
-            return None
-
         try:
-            with output1_path.open(encoding="cp932", newline="") as file:
-                output1_rows = tuple(csv.DictReader(file))
-            if not output1_rows:
-                return None
-            annual = output1_rows[0]
+            output1_frame = _captured_dataframe(csv_exports, output1_path)
+            output2_frame = _captured_dataframe(csv_exports, output2_path)
+            if output1_frame is not None and output2_frame is not None:
+                if output1_frame.empty or output2_frame.empty:
+                    return None
+                annual = output1_frame.iloc[0]
 
-            with output2_path.open(encoding="cp932", newline="") as file:
-                hourly = tuple(csv.DictReader(file))
-            if not hourly:
-                return None
+                def sum_column(name: str) -> float:
+                    return math.fsum(float(value) for value in output2_frame[name])
 
-            def sum_column(name: str) -> float:
-                return math.fsum(float(row[name]) for row in hourly)
+            else:
+                if not output1_path.is_file() or not output2_path.is_file():
+                    return None
+                with output1_path.open(encoding="cp932", newline="") as file:
+                    output1_rows = tuple(csv.DictReader(file))
+                if not output1_rows:
+                    return None
+                annual = output1_rows[0]
+
+                with output2_path.open(encoding="cp932", newline="") as file:
+                    hourly = tuple(csv.DictReader(file))
+                if not hourly:
+                    return None
+
+                def sum_column(name: str) -> float:
+                    return math.fsum(float(row[name]) for row in hourly)
 
             def metrics(suffix: str) -> AnnualMetrics:
                 total_electricity = sum_column(f"E_E_{suffix}_d_t [kWh/h]")
@@ -344,7 +432,13 @@ def _format_success_log(
     files: tuple[str, ...],
     annual_summary: AnnualSummary | None,
     engine_log: str,
+    pending_csv_count: int = 0,
 ) -> str:
+    output_step = (
+        f"4) 詳細CSV {pending_csv_count}件をメモリに保持（画面のボタンで出力）"
+        if pending_csv_count
+        else "4) CSV、入力JSON、計算条件マニフェストを計算ID別に保存"
+    )
     lines = [
         "===== 1. 計算条件 =====",
         *_format_input_summary(input_data),
@@ -355,22 +449,30 @@ def _format_success_log(
         "1) 画面入力を検証し、計算エンジン用input_dataへ変換",
         "2) 暖房・冷房の8760時間計算を順番に実行",
         "3) 一次エネルギー、未処理負荷、機器・ファン電力を集計",
-        "4) CSV、入力JSON、計算条件マニフェストを計算ID別に保存",
+        output_step,
         "",
         "===== 3. 年間結果 =====",
         *_format_annual_summary(annual_summary),
         "",
         "===== 4. 出力 =====",
         f"保存先: {artifact_dir}",
-        f"出力ファイル数: {len(files)}",
+        f"計算時に保存したファイル数: {len(files)}",
         *(f"- {Path(path).name}" for path in files),
+        *(
+            (
+                f"詳細CSV: 未出力（{pending_csv_count}件）",
+                "必要な場合は、画面の「CSVファイルを出力」ボタンを押してください。",
+            )
+            if pending_csv_count
+            else ()
+        ),
         "",
         "===== 5. 計算エンジン詳細ログ =====",
         "以下は式・分岐・機器能力などを確認するための詳細ログです。",
         engine_log.rstrip() or "（詳細ログの出力はありません）",
         "",
         "===== 計算完了 =====",
-        "すべての計算と成果物保存が正常に終了しました。",
+        "計算と画面表示用データの準備が正常に終了しました。",
     ]
     return "\n".join(lines) + "\n"
 

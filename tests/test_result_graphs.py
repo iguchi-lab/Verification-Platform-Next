@@ -2,6 +2,7 @@ from pathlib import Path
 
 import gradio as gr
 import pandas as pd
+from jjjexperiment.csv_artifacts import capture_csv_exports, write_dataframe_csv
 from matplotlib.figure import Figure
 
 from verification_app.graphs import (
@@ -72,3 +73,41 @@ def test_annual_apf_is_unavailable_without_electricity() -> None:
     apf = _ratio_of_sums(pd.Series([1.0, 2.0]), pd.Series([0.0, 0.0]))
 
     assert _format_apf(apf) == "算定不能"
+
+
+def test_build_result_graphs_reads_deferred_dataframes(tmp_path: Path) -> None:
+    index = pd.to_datetime(["2023-02-05", "2023-08-06"])
+    output2 = pd.DataFrame(
+        {
+            "Theta_ex_d_t [℃]": [2.0, 30.0],
+            "q_hs_H_d_t [Wh/h]": [3000.0, 0.0],
+            "q_hs_CS_d_t [Wh/h]": [0.0, 2500.0],
+            "q_hs_CL_d_t [Wh/h]": [0.0, 500.0],
+            "E_E_H_d_t [kWh/h]": [1.0, 0.0],
+            "E_E_C_d_t [kWh/h]": [0.0, 1.0],
+            "E_E_fan_H_d_t [kWh/h]": [0.1, 0.0],
+            "E_E_fan_C_d_t [kWh/h]": [0.0, 0.1],
+            "E_UT_H_d_t [MJ/h]": [0.0, 0.0],
+            "E_UT_C_d_t [MJ/h]": [0.0, 0.0],
+            "Theta_hs_H_out_d_t [℃]": [35.0, 0.0],
+            "Theta_hs_H_in_d_t [℃]": [20.0, 0.0],
+            "Theta_hs_C_out_d_t [℃]": [0.0, 16.0],
+            "Theta_hs_C_in_d_t [℃]": [0.0, 27.0],
+            "V_hs_supply_H_d_t [m3/h]": [1000.0, 0.0],
+            "V_hs_supply_C_d_t [m3/h]": [0.0, 1000.0],
+            "E_H_d_t [MJ/h]": [10.0, 0.0],
+            "E_C_d_t [MJ/h]": [0.0, 9.0],
+        },
+        index=index,
+    )
+    output5 = pd.DataFrame({"X_ex_d_t": [0.004, 0.012]}, index=index)
+    prefix = tmp_path / "graphsv1"
+    with capture_csv_exports() as exports:
+        write_dataframe_csv(output2, f"{prefix}_output2.csv", encoding="cp932")
+        write_dataframe_csv(output5, f"{prefix}_H_output5.csv", encoding="cp932")
+        write_dataframe_csv(output5, f"{prefix}_C_output5.csv", encoding="cp932")
+
+    figures = build_result_graphs({"case_name": "graphs"}, tmp_path, "v1", exports)
+
+    assert len(figures) == 5
+    assert not tuple(tmp_path.glob("*.csv"))

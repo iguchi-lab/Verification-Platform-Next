@@ -22,13 +22,22 @@ _SUMMER = slice("2023-08-06 00:00:00", "2023-08-14 00:00:00")
 
 
 def build_result_graphs(
-    input_data: Mapping[str, Any], output_dir: Path, version: str
+    input_data: Mapping[str, Any],
+    output_dir: Path,
+    version: str,
+    csv_exports: Any | None = None,
 ) -> tuple[Figure, ...]:
     """Build the five graphs provided by the legacy 260715 notebook."""
     prefix = f"{input_data.get('case_name', 'default')}{version}"
-    output2 = _read_output(output_dir / f"{prefix}_output2.csv")
-    output5_heating = _read_output(output_dir / f"{prefix}_H_output5.csv")
-    output5_cooling = _read_output(output_dir / f"{prefix}_C_output5.csv")
+    output2 = _read_output(output_dir / f"{prefix}_output2.csv", csv_exports)
+    output5_heating = _read_output(
+        output_dir / f"{prefix}_H_output5.csv",
+        csv_exports,
+    )
+    output5_cooling = _read_output(
+        output_dir / f"{prefix}_C_output5.csv",
+        csv_exports,
+    )
 
     winter = output2.loc[_WINTER]
     summer = output2.loc[_SUMMER]
@@ -55,8 +64,14 @@ def build_result_graphs(
     )
 
 
-def _read_output(path: Path) -> pd.DataFrame:
-    frame = pd.read_csv(path, encoding="cp932", index_col=0)
+def _read_output(path: Path, csv_exports: Any | None = None) -> pd.DataFrame:
+    dataframe = getattr(csv_exports, "dataframe", None)
+    captured = None if dataframe is None else dataframe(path)
+    frame = (
+        pd.read_csv(path, encoding="cp932", index_col=0)
+        if captured is None
+        else captured.copy(deep=False)
+    )
     frame.index = pd.to_datetime(frame.index)
     return frame
 

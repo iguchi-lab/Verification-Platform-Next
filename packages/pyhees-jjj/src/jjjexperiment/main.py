@@ -52,6 +52,7 @@ from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQu
 import jjjexperiment.constants as jjj_consts
 import jjjexperiment.artifact_paths as artifact_paths
 import jjjexperiment.common as jjj_common
+from jjjexperiment.csv_artifacts import write_dataframe_csv
 from jjjexperiment.release import write_artifact_manifest
 from jjjexperiment.result import ResultSummary, SutValues
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
@@ -393,7 +394,8 @@ def _get_heating_fan_model(heat_ac_setting, V_hs_dsgn_H, heat_denchu_catalog, he
         df_denchu_consts = jjjexperiment.denchu.denchu_1.get_DataFrame_denchu_modeling_consts(
             heat_denchu_catalog, R2, R1, R0, heat_real_inner, P_rac_fan_rtd_H
         )
-        df_denchu_consts.to_csv(
+        write_dataframe_csv(
+            df_denchu_consts,
             artifact_paths.denchu_constants_csv_path(case_name, "H"),
             encoding='cp932',
         )
@@ -721,7 +723,8 @@ def _get_cooling_fan_model(cool_ac_setting, V_hs_dsgn_C, cool_denchu_catalog, co
         df_denchu_consts = jjjexperiment.denchu.denchu_1.get_DataFrame_denchu_modeling_consts(
             cool_denchu_catalog, R2, R1, R0, cool_real_inner, P_rac_fan_rtd_C
         )
-        df_denchu_consts.to_csv(
+        write_dataframe_csv(
+            df_denchu_consts,
             artifact_paths.denchu_constants_csv_path(case_name, "C"),
             encoding='cp932',
         )
@@ -1035,7 +1038,8 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
     df_output1 = pd.DataFrame(index=['合計値'])
     df_output1['E_H [MJ/year]'] = E_H
     df_output1['E_C [MJ/year]'] = E_C
-    df_output1.to_csv(
+    write_dataframe_csv(
+        df_output1,
         artifact_paths.main_output_csv_path(case_name, 1),
         encoding='cp932',
     )
@@ -1059,7 +1063,8 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
     df_output2['q_hs_H_d_t [Wh/h]'] = q_hs_H_d_t
     df_output2['q_hs_CS_d_t [Wh/h]'] = q_hs_CS_d_t
     df_output2['q_hs_CL_d_t [Wh/h]'] = q_hs_CL_d_t
-    df_output2.to_csv(
+    write_dataframe_csv(
+        df_output2,
         artifact_paths.main_output_csv_path(case_name, 2),
         encoding='cp932',
     )

@@ -2,6 +2,7 @@ import pandas as pd
 from dataclasses import dataclass
 # JJJ
 from jjjexperiment.inputs.options import 床下空調ロジック
+from jjjexperiment.csv_artifacts import write_dataframe_csv
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 __all__ = ['UnderfloorAc', 'UfVarsDataFrame']
@@ -54,4 +55,9 @@ class UfVarsDataFrame:
 
     def export_to_csv(self, filename: str, encoding: str = 'cp932'):
         '''csv書き出し'''
-        self._df_d_t.to_csv(filename, index=False, encoding=encoding)
+        write_dataframe_csv(
+            self._df_d_t,
+            filename,
+            index=False,
+            encoding=encoding,
+        )
