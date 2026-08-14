@@ -5,11 +5,21 @@ from typing import Any, Iterable, Mapping
 
 from verification_core import FieldDefinition, FieldKind, InputSchema, load_input_schema
 
+from .form_presentation import (
+    SECTION_DESCRIPTIONS,
+    SECTION_ORDER,
+    group_description,
+    present_field,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class FormField:
     definition: FieldDefinition
     visible: bool
+    label: str
+    description: str
+    choices: tuple[Any, ...]
 
     @property
     def key(self) -> str:
@@ -20,12 +30,14 @@ class FormField:
 class FormGroup:
     name: str
     fields: tuple[FormField, ...]
+    description: str = ""
 
 
 @dataclass(frozen=True, slots=True)
 class FormSection:
     name: str
     groups: tuple[FormGroup, ...]
+    description: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,9 +84,19 @@ def load_form_model(
         resolved_values.update(values)
     visibility = _visibility(schema, resolved_values)
 
+    presented_fields = tuple(
+        (field, present_field(field))
+        for field in schema.fields
+    )
     sections: list[FormSection] = []
-    for section_name in dict.fromkeys(field.section for field in schema.fields):
-        section_fields = tuple(field for field in schema.fields if field.section == section_name)
+    for section_name in SECTION_ORDER:
+        section_fields = tuple(
+            (field, presentation)
+            for field, presentation in presented_fields
+            if presentation.section == section_name
+        )
+        if not section_fields:
+            continue
         groups = tuple(
             FormGroup(
                 name=group_name,
@@ -82,14 +104,26 @@ def load_form_model(
                     FormField(
                         definition=field,
                         visible=visibility[field.key],
+                        label=presentation.label,
+                        description=presentation.description,
+                        choices=presentation.choices,
                     )
-                    for field in section_fields
-                    if field.group == group_name
+                    for field, presentation in section_fields
+                    if presentation.group == group_name
                 ),
+                description=group_description(group_name),
             )
-            for group_name in dict.fromkeys(field.group for field in section_fields)
+            for group_name in dict.fromkeys(
+                presentation.group for _, presentation in section_fields
+            )
         )
-        sections.append(FormSection(name=section_name, groups=groups))
+        sections.append(
+            FormSection(
+                name=section_name,
+                groups=groups,
+                description=SECTION_DESCRIPTIONS.get(section_name, ""),
+            )
+        )
     return FormModel(schema=schema, sections=tuple(sections))
 
 
