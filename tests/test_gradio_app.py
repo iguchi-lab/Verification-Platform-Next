@@ -114,6 +114,8 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert "field:U_s_vert__0" not in components_by_key
     assert "↩ 入力をデフォルトに戻す" in buttons
     assert buttons["↩ 入力をデフォルトに戻す"]["props"]["variant"] == "secondary"
+    assert "CSVファイルを出力" in buttons
+    assert buttons["CSVファイルを出力"]["props"]["interactive"] is False
     assert origin_classes == {
         "input-origin-bri-web": 47,
         "input-origin-verification-platform": 176,
@@ -131,7 +133,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         assert equipment_section(prefix)["props"]["visible"] is False
 
     dependencies = config["dependencies"]
-    calculation_started, calculation, graph_generation = dependencies[:3]
+    calculation_started, calculation, graph_generation, csv_export = dependencies[:4]
     reset_inputs = next(
         dependency for dependency in dependencies if len(dependency["outputs"]) == 231
     )
@@ -142,16 +144,18 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
     visibility_dependencies = tuple(
         dependency
-        for dependency in dependencies[3:]
+        for dependency in dependencies[4:]
         if dependency not in (reset_inputs, install_default_highlights)
     )
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
-    assert len(calculation_started["outputs"]) == 11
+    assert len(calculation_started["outputs"]) == 13
     assert len(calculation["inputs"]) == 223
-    assert len(calculation["outputs"]) == 7
+    assert len(calculation["outputs"]) == 9
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
+    assert len(csv_export["inputs"]) == 1
+    assert len(csv_export["outputs"]) == 5
     assert len(visibility_dependencies) >= 14
     assert 2 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert 3 in {len(dependency["outputs"]) for dependency in visibility_dependencies}

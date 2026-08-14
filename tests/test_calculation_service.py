@@ -1,8 +1,11 @@
+import copy
 import os
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
+from jjjexperiment.csv_artifacts import capture_csv_exports, write_dataframe_csv
 from verification_app.services import CalculationService
 
 
@@ -14,11 +17,15 @@ def test_service_builds_input_captures_log_and_collects_outputs(tmp_path: Path) 
         Path("unrelated.txt").write_text("ignore", encoding="utf-8")
 
     def build_graphs(
-        input_data: dict[str, object], output_dir: Path, version: str
+        input_data: dict[str, object],
+        output_dir: Path,
+        version: str,
+        csv_exports: object | None,
     ) -> tuple[str, ...]:
         assert input_data["case_name"] == "service"
         assert output_dir == tmp_path / "run-first"
         assert version == "v1"
+        assert csv_exports is None
         return ("heating", "cooling")
 
     service = CalculationService(
@@ -120,7 +127,10 @@ def test_service_preserves_successful_calculation_when_graphs_fail(tmp_path: Pat
         Path(f"{prefix}.csv").write_text("result", encoding="utf-8")
 
     def build_graphs(
-        input_data: dict[str, object], output_dir: Path, version: str
+        input_data: dict[str, object],
+        output_dir: Path,
+        version: str,
+        csv_exports: object | None,
     ) -> tuple[object, ...]:
         raise KeyError("missing graph column")
 
@@ -149,7 +159,10 @@ def test_service_can_return_files_before_generating_graphs(tmp_path: Path) -> No
         Path(f"{prefix}.csv").write_text("result", encoding="utf-8")
 
     def build_graphs(
-        input_data: dict[str, object], output_dir: Path, version: str
+        input_data: dict[str, object],
+        output_dir: Path,
+        version: str,
+        csv_exports: object | None,
     ) -> tuple[str, ...]:
         graph_calls.append(str(input_data["case_name"]))
         return ("heating", "cooling")
@@ -177,6 +190,52 @@ def test_service_can_return_files_before_generating_graphs(tmp_path: Path) -> No
     assert graph_calls == ["deferred"]
     assert completed.graph_status == "✅ 2件のグラフを生成しました。"
     assert completed.graphs == ("heating", "cooling")
+
+
+def test_service_defers_csv_until_explicit_export(tmp_path: Path) -> None:
+    def calculate(input_data: dict[str, object]) -> None:
+        prefix = f"{input_data['case_name']}v1"
+        output1 = pd.DataFrame(
+            {"E_H [MJ/year]": [100.0], "E_C [MJ/year]": [200.0]},
+            index=["合計値"],
+        )
+        output2 = pd.DataFrame(
+            {
+                "E_E_H_d_t [kWh/h]": [1.0, 2.0],
+                "E_E_C_d_t [kWh/h]": [3.0, 4.0],
+                "E_UT_H_d_t [MJ/h]": [10.0, 20.0],
+                "E_UT_C_d_t [MJ/h]": [30.0, 40.0],
+                "E_E_fan_H_d_t [kWh/h]": [0.2, 0.3],
+                "E_E_fan_C_d_t [kWh/h]": [0.5, 1.0],
+            }
+        )
+        write_dataframe_csv(output1, f"{prefix}_output1.csv", encoding="cp932")
+        write_dataframe_csv(output2, f"{prefix}_output2.csv", encoding="cp932")
+
+    service = CalculationService(
+        calculate,
+        lambda: "v1",
+        workdir=tmp_path,
+        run_id_factory=lambda: "deferred-csv",
+        csv_export_session=capture_csv_exports,
+    )
+
+    result = service.run({"case_name__0": "deferred"}, include_graphs=False)
+    artifact_dir = tmp_path / "run-deferred-csv"
+
+    assert result.succeeded
+    assert result.annual_summary is not None
+    assert result.annual_summary.heating.primary_energy_mj == 100.0
+    assert result.annual_summary.cooling.unprocessed_load_mj == 70.0
+    assert not tuple(artifact_dir.glob("*.csv"))
+    assert result.csv_status.startswith("CSVファイルは未出力")
+    assert copy.deepcopy(result).csv_exports is result.csv_exports
+
+    exported = service.export_csv(result)
+
+    assert exported.csv_status == "✅ 2件のCSVファイルを出力しました。"
+    assert len(tuple(artifact_dir.glob("*.csv"))) == 2
+    assert {Path(path).suffix for path in exported.files} == {".csv"}
 
 
 def test_same_case_name_uses_independent_artifact_directories(tmp_path: Path) -> None:

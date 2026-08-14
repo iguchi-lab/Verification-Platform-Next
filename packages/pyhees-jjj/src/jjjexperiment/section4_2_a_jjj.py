@@ -9,6 +9,7 @@ import pyhees.section4_3
 from jjjexperiment.common import Array8760
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger, log_res  # デバッグ用ロガー
 import jjjexperiment.artifact_paths as artifact_paths
+from jjjexperiment.csv_artifacts import write_dataframe_csv
 from jjjexperiment.inputs.options import 計算モデル
 import jjjexperiment.latent_load.compressor_efficiency as jjj_latent
 
@@ -160,7 +161,8 @@ def _write_type4_heating_output(
         E_E_fan_H_d_t):
     df_output_denchuH = _build_type4_heating_output(
         q_hs_H_d_t, COP_H_d_t, E_E_CRAC_H_d_t, E_E_fan_H_d_t)
-    df_output_denchuH.to_csv(
+    write_dataframe_csv(
+        df_output_denchuH,
         artifact_paths.denchu_output_csv_path(case_name, "H"),
         encoding='cp932')  # =Shift_JIS
 
@@ -183,7 +185,8 @@ def _write_type4_cooling_output(
         E_E_fan_C_d_t):
     df_output_denchuC = _build_type4_cooling_output(
         q_hs_C_d_t, COP_C_d_t, E_E_CRAC_C_d_t, E_E_fan_C_d_t)
-    df_output_denchuC.to_csv(
+    write_dataframe_csv(
+        df_output_denchuC,
         artifact_paths.denchu_output_csv_path(case_name, "C"),
         encoding='cp932')  # =Shift_JIS
 

@@ -277,8 +277,15 @@ def build_app(
                 graph_status = gr.Markdown("計算完了後にグラフを表示します。")
                 graphs = [gr.Plot(label=label) for label in GRAPH_LABELS]
             with gr.Tab("出力ファイル", render_children=True):
+                csv_status = gr.Markdown(
+                    "計算完了後、必要な場合だけCSVファイルを出力できます。"
+                )
+                export_csv_button = gr.Button(
+                    "CSVファイルを出力",
+                    interactive=False,
+                )
                 files = gr.File(
-                    label="計算出力",
+                    label="ダウンロード可能な計算出力",
                     file_count="multiple",
                     interactive=False,
                 )
@@ -295,6 +302,26 @@ def build_app(
                 return _graph_outputs(None)
             return _graph_outputs(calculation_service.generate_graphs(result))
 
+        def export_csv_files(
+            result: CalculationResult | None,
+        ) -> tuple[Any, ...]:
+            if result is None:
+                return (
+                    None,
+                    "CSV出力対象の計算結果がありません。",
+                    gr.update(interactive=False),
+                    [],
+                    "",
+                )
+            exported = calculation_service.export_csv(result)
+            return (
+                exported,
+                exported.csv_status,
+                gr.update(interactive=exported.csv_status.startswith("❌")),
+                list(exported.files),
+                exported.log,
+            )
+
         calculation_started = run.click(
             _calculation_started_outputs,
             outputs=[
@@ -304,6 +331,8 @@ def build_app(
                 log,
                 graph_status,
                 *graphs,
+                csv_status,
+                export_csv_button,
                 files,
             ],
             queue=False,
@@ -319,6 +348,8 @@ def build_app(
                 preview,
                 log,
                 graph_status,
+                csv_status,
+                export_csv_button,
                 files,
             ],
             concurrency_limit=1,
@@ -329,6 +360,20 @@ def build_app(
             generate_graphs,
             inputs=result_state,
             outputs=[graph_status, log, *graphs],
+            concurrency_limit=1,
+            concurrency_id="calculation",
+            show_progress="full",
+        )
+        export_csv_button.click(
+            export_csv_files,
+            inputs=result_state,
+            outputs=[
+                result_state,
+                csv_status,
+                export_csv_button,
+                files,
+                log,
+            ],
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -757,6 +802,8 @@ def _calculation_started_outputs() -> tuple[Any, ...]:
         "",
         "計算完了後にグラフを生成します。",
         *((None,) * len(GRAPH_LABELS)),
+        "計算中です。CSVファイルはまだ出力できません。",
+        gr.update(interactive=False),
         [],
     )
 
@@ -777,6 +824,10 @@ def _calculation_outputs(result: CalculationResult) -> tuple[Any, ...]:
         result.input_data,
         result.log,
         graph_status,
+        result.csv_status,
+        gr.update(
+            interactive=result.succeeded and result.csv_exports is not None,
+        ),
         list(result.files),
     )
 
@@ -851,6 +902,7 @@ def _graph_outputs(result: CalculationResult | None) -> tuple[Any, ...]:
 def _default_service() -> CalculationService:
     import jjjexperiment.main
     from jjjexperiment.constants import version_info
+    from jjjexperiment.csv_artifacts import capture_csv_exports
 
     from .graphs import build_result_graphs
 
@@ -864,6 +916,7 @@ def _default_service() -> CalculationService:
         workdir=output_dir,
         build_graphs=build_result_graphs,
         result_ttl_seconds=(result_ttl_seconds if result_ttl_seconds > 0 else None),
+        csv_export_session=capture_csv_exports,
     )
 
 

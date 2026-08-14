@@ -24,6 +24,7 @@ import pyhees.section4_2_a as dc_a
 from jjjexperiment.common import Array5x8760, jjj_cloning
 import jjjexperiment.constants as jjj_consts
 import jjjexperiment.artifact_paths as artifact_paths
+from jjjexperiment.csv_artifacts import write_dataframe_csv
 from jjjexperiment.logger import LimitedLoggerAdapter as _logger  # デバッグ用ロガー
 from jjjexperiment.inputs.options import (
     VAVありなしの吹出風量,
@@ -2313,13 +2314,13 @@ def _export_standard_outputs(inputs: _StandardOutputExportInputs):
         case(None, None):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
         case(_, None):
-            df_output3.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "H", 3), encoding = 'cp932')
-            df_output2.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "H", 4), encoding = 'cp932')
-            df_output.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "H", 5), encoding = 'cp932')
+            write_dataframe_csv(df_output3, artifact_paths.seasonal_output_csv_path(case_name, "H", 3), encoding = 'cp932')
+            write_dataframe_csv(df_output2, artifact_paths.seasonal_output_csv_path(case_name, "H", 4), encoding = 'cp932')
+            write_dataframe_csv(df_output, artifact_paths.seasonal_output_csv_path(case_name, "H", 5), encoding = 'cp932')
         case(None, _):
-            df_output3.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "C", 3), encoding = 'cp932')
-            df_output2.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "C", 4), encoding = 'cp932')
-            df_output.to_csv(artifact_paths.seasonal_output_csv_path(case_name, "C", 5), encoding = 'cp932')
+            write_dataframe_csv(df_output3, artifact_paths.seasonal_output_csv_path(case_name, "C", 3), encoding = 'cp932')
+            write_dataframe_csv(df_output2, artifact_paths.seasonal_output_csv_path(case_name, "C", 4), encoding = 'cp932')
+            write_dataframe_csv(df_output, artifact_paths.seasonal_output_csv_path(case_name, "C", 5), encoding = 'cp932')
         case(_, _):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
 
@@ -4018,11 +4019,13 @@ def _export_carryover_diagnostics(inputs: _CarryoverDiagnosticExportInputs):
         case (None, None):
             raise Exception("q_hs_rtd_H, q_hs_rtd_C はどちらかのみを前提")
         case (_, None):
-            df_carryover_output.to_csv(
+            write_dataframe_csv(
+                df_carryover_output,
                 artifact_paths.carryover_output_csv_path(case_name, "H"),
                 encoding='cp932')
         case (None, _):
-            df_carryover_output.to_csv(
+            write_dataframe_csv(
+                df_carryover_output,
                 artifact_paths.carryover_output_csv_path(case_name, "C"),
                 encoding='cp932')
         case (_, _):
