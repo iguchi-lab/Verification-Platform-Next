@@ -5,10 +5,10 @@
 Verification Platform Nextは、製品全体を1つの
 [Semantic Versioning](https://semver.org/) で管理します。
 
-- Pythonパッケージ版: `1.2.0`
-- 表示名: `ver.1.2.0`
-- Gitタグ: `v1.2.0`
-- 成果物接尾辞: `_v1.2.0`
+- Pythonパッケージ版: `1.3.0`
+- 表示名: `ver.1.3.0`
+- Gitタグ: `v1.3.0`
+- 成果物接尾辞: `_v1.3.0`
 
 製品版の正本は
 `packages/pyhees-jjj/src/jjjexperiment/release.py`です。ルート、
@@ -23,10 +23,10 @@ Verification Platform Nextは、製品全体を1つの
 成果物名には安定した版接尾辞を付けます。
 
 ```text
-<case_name>_v1.2.0_input.json
-<case_name>_v1.2.0_output1.csv
-<case_name>_v1.2.0_output2.csv
-<case_name>_v1.2.0_manifest.json
+<case_name>_v1.3.0_input.json
+<case_name>_v1.3.0_output1.csv
+<case_name>_v1.3.0_output2.csv
+<case_name>_v1.3.0_manifest.json
 ```
 
 計算が正常終了すると、マニフェストへ次を記録します。
@@ -67,9 +67,9 @@ GitHub Actionsがすべて成功した後、PRをマージし、マージコミ�
 ```bash
 git switch main
 git pull --ff-only
-git tag -a v1.2.0 -m "Verification Platform Next ver.1.2.0"
-git push origin v1.2.0
-gh release create v1.2.0 --title "Verification Platform Next ver.1.2.0"
+git tag -a v1.3.0 -m "Verification Platform Next ver.1.3.0"
+git push origin v1.3.0
+gh release create v1.3.0 --title "Verification Platform Next ver.1.3.0"
 ```
 
 GitHub Releaseには`CHANGELOG.md`の該当版、試験結果、既知の制約を記載します。
