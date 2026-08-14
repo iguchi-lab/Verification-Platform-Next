@@ -4,7 +4,7 @@
 
 ## 公開Web版
 
-**[Verification Platform Next ver.1.2.0をブラウザで開く](https://verification-platform-next-dnoeszca4a-an.a.run.app/)**
+**[Verification Platform Next ver.1.3.0をブラウザで開く](https://verification-platform-next-dnoeszca4a-an.a.run.app/)**
 
 公開Web版では、インストールせずに入力、計算、結果ファイルの取得を行えます。
 計算は1件ずつ処理するため、混雑時は画面に表示される順番をお待ちください。
@@ -14,7 +14,7 @@
 データはアップロードしないでください。
 
 住宅の省エネルギー性能を検証するための計算エンジン、入力スキーマ、Gradio UIを
-まとめたPythonモノレポです。正式版は **ver.1.2.0** です。
+まとめたPythonモノレポです。正式版は **ver.1.3.0** です。
 
 本リポジトリは、建築研究所が公開する住宅のエネルギー消費性能計算プログラム
 `pyhees`を基礎とし、検証用の入力画面、床下空調などの拡張計算、数値回帰試験を
