@@ -39,7 +39,7 @@ def expected_result_type1():
 @pytest.fixture
 def expected_result_type2():
     """ 負荷バランス後の冷房負荷でSHFを算定した場合の期待結果 """
-    return ResultSummary(E_C=13857.745579445591, E_H=40692.8527046848)
+    return ResultSummary(E_C=13857.745579445591, E_H=39433.352028185276)
 
 def deep_update(d, u):
     for k, v in u.items():

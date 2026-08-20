@@ -49,7 +49,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40703.110799509814)
+        assert result['TValue'].E_H == pytest.approx(39441.84221310339)
 
     def test_入力値入替_02(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -66,7 +66,7 @@ class Test既存計算維持_入力値切替_方式2:
         assert result['TValue'].E_C == pytest.approx(13297.408128678953)
 
     def test_入力値入替_03(self, expected_result_type2):
-        """ 以前のプログラムと同じ計算結果になる
+        """ RAC活用型にダクト式のデフロスト係数を重ねない
             デフロストに関する暖房出力補正係数（ダクトセントラル空調機）
             C_df_H_d_t_defrost_ductcentral
         """
@@ -76,11 +76,10 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
-        assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40259.614225256155)
+        assert result['TValue'].E_H == pytest.approx(expected_result_type2.E_H)
 
     def test_入力値入替_04(self, expected_result_type2):
-        """ 以前のプログラムと同じ計算結果になる
+        """ RAC活用型にダクト式のデフロスト温度条件を重ねない
             デフロスト発生外気温度（ダクトセントラル空調機）
             defrost_temp_ductcentral
         """
@@ -90,11 +89,10 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
-        assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(41211.39467707037)
+        assert result['TValue'].E_H == pytest.approx(expected_result_type2.E_H)
 
     def test_入力値入替_05(self, expected_result_type2):
-        """ 以前のプログラムと同じ計算結果になる
+        """ RAC活用型にダクト式のデフロスト湿度条件を重ねない
             デフロスト発生外気相対湿度（ダクトセントラル空調機）
             defrost_humid_ductcentral
         """
@@ -104,8 +102,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
-        assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(41446.61835562958)
+        assert result['TValue'].E_H == pytest.approx(expected_result_type2.E_H)
 
     def test_入力値入替_06(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -120,7 +117,7 @@ class Test既存計算維持_入力値切替_方式2:
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(13978.101338792161)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(41116.4326458173)
+        assert result['TValue'].E_H == pytest.approx(39899.415470236745)
 
     def test_入力値入替_07(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -134,7 +131,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40651.396812654966)
+        assert result['TValue'].E_H == pytest.approx(39375.502975572876)
 
     def test_入力値入替_08(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -162,7 +159,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40108.03642034368)
+        assert result['TValue'].E_H == pytest.approx(38231.03647029923)
 
     def test_入力値入替_10(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -176,7 +173,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40806.580581208946)
+        assert result['TValue'].E_H == pytest.approx(39547.07990470942)
 
     def test_入力値入替_11(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -190,7 +187,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40362.181064378994)
+        assert result['TValue'].E_H == pytest.approx(38832.776006294924)
 
     def test_入力値入替_12(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -219,7 +216,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(38861.62504332851)
+        assert result['TValue'].E_H == pytest.approx(38795.35976591757)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(15563.079021522884)
 
@@ -234,7 +231,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40487.48035409603)
+        assert result['TValue'].E_H == pytest.approx(39098.426203275085)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(13305.987836187865)
 
@@ -249,7 +246,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(47568.49376799733)
+        assert result['TValue'].E_H == pytest.approx(46955.11952738601)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(21944.37878738222)
 
@@ -264,7 +261,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(58421.88338474051)
+        assert result['TValue'].E_H == pytest.approx(58271.95941940279)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(24288.367155641543)
 
@@ -279,7 +276,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(174261.67585289382)
+        assert result['TValue'].E_H == pytest.approx(165908.65711298122)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(2802.5193170301254)
 
@@ -294,7 +291,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(45431.40860402107)
+        assert result['TValue'].E_H == pytest.approx(44513.01518125113)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(14370.582844217894)
 
@@ -309,7 +306,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(50840.21334169296)
+        assert result['TValue'].E_H == pytest.approx(50212.65609353035)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(13299.403436916855)
 
@@ -339,7 +336,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(42822.54947702187)
+        assert result['TValue'].E_H == pytest.approx(41536.48189211298)
 
     def test_入力値入替_22(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -352,7 +349,7 @@ class Test既存計算維持_入力値切替_方式2:
         result = calc(inputs, test_mode=True)
 
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(38220.231632402436)
+        assert result['TValue'].E_H == pytest.approx(36623.44261215648)
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(11921.975635902661)
 
@@ -419,7 +416,7 @@ class Test既存計算維持_入力値切替_方式2:
         assert result['TValue'].E_C != expected_result_type2.E_C
         assert result['TValue'].E_C == pytest.approx(15139.137857477981)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(41489.49730383161)
+        assert result['TValue'].E_H == pytest.approx(40148.95202360735)
 
     def test_入力値入替_H1(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -433,7 +430,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(38426.4135686332)
+        assert result['TValue'].E_H == pytest.approx(36903.80868890366)
 
     def test_入力値入替_H2(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -447,7 +444,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(39667.322879561434)
+        assert result['TValue'].E_H == pytest.approx(38367.82936826073)
 
     def test_入力値入替_H3(self, expected_result_type2):
         """ 補正ONかつ全般換気なしでは熱源機の換気下限を給気風量に含めない
@@ -461,7 +458,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(41355.78022134368)
+        assert result['TValue'].E_H == pytest.approx(40096.27954484415)
 
     def test_入力値入替_H4(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -476,7 +473,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40703.594298106414)
+        assert result['TValue'].E_H == pytest.approx(39307.07965540052)
 
     def test_入力値入替_H5_方式2(self, expected_inputs, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -520,7 +517,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(31465.044727934437)
+        assert result['TValue'].E_H == pytest.approx(29504.65246370503)
 
     def test_入力値入替_H6_方式2(self, expected_inputs, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -569,7 +566,7 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(40211.253920843934)
+        assert result['TValue'].E_H == pytest.approx(40187.590301873955)
 
     def test_入力値入替_R1(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -714,7 +711,7 @@ class Test既存計算維持_入力値切替_方式2:
         assert result['TInput'].e_rtd_H == pytest.approx(3.6543)
 
         assert result['TValue'].E_C == pytest.approx(20475.8370428381)
-        assert result['TValue'].E_H == pytest.approx(46788.506664833956)
+        assert result['TValue'].E_H == pytest.approx(46758.401828572394)
 
     def test_入力値入替_HEX1(self, expected_result_type2):
         """ 以前のプログラムと同じ計算結果になる
@@ -729,4 +726,4 @@ class Test既存計算維持_入力値切替_方式2:
 
         assert result['TValue'].E_C == pytest.approx(expected_result_type2.E_C)
         assert result['TValue'].E_H != expected_result_type2.E_H
-        assert result['TValue'].E_H == pytest.approx(37895.580913287784)
+        assert result['TValue'].E_H == pytest.approx(36421.2477000799)
