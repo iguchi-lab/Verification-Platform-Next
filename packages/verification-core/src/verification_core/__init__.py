@@ -11,12 +11,14 @@ from .legacy import (
     LegacyInputInventory,
     load_legacy_inventory,
 )
+from .json_compat import CompatibleInputData, load_compatible_input_json
 from .schema import Condition, FieldDefinition, FieldKind, FieldOrigin, InputSchema
 from .schema_loader import load_input_schema
 
 __all__ = [
     "BindingCondition",
     "Condition",
+    "CompatibleInputData",
     "FieldDefinition",
     "FieldKind",
     "FieldOrigin",
@@ -28,6 +30,7 @@ __all__ = [
     "build_input_data",
     "default_ui_values",
     "load_input_bindings",
+    "load_compatible_input_json",
     "load_input_schema",
     "load_legacy_inventory",
 ]

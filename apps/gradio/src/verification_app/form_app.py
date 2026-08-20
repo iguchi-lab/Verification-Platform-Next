@@ -206,6 +206,25 @@ def build_app(
                 elem_classes=["default-reset-note"],
             )
 
+        with gr.Accordion("JSONファイルから計算", open=False):
+            gr.Markdown(
+                "旧Verification Platformまたは現在の画面で保存した入力JSONを"
+                "そのまま実行できます。旧JSONに存在しない項目は、現在の"
+                "デフォルト値で補完します。アップロード内容は画面上の入力欄には"
+                "反映されないため、実行後の「計算入力」タブで確認してください。"
+            )
+            with gr.Row():
+                json_upload = gr.File(
+                    label="入力JSONファイル",
+                    file_types=[".json"],
+                    file_count="single",
+                    type="filepath",
+                )
+                json_run = gr.Button(
+                    "JSONファイルをアップロードして計算",
+                    variant="secondary",
+                )
+
         components: dict[str, Any] = {}
         containers: dict[str, Any] = {}
         field_dom_ids: dict[str, str] = {}
@@ -318,6 +337,13 @@ def build_app(
             result = calculation_service.run(values, include_graphs=False)
             return _calculation_outputs(result)
 
+        def calculate_uploaded_json(uploaded_file: str | None) -> tuple[Any, ...]:
+            result = calculation_service.run_uploaded_json(
+                uploaded_file,
+                include_graphs=False,
+            )
+            return _calculation_outputs(result)
+
         def generate_graphs(result: CalculationResult | None) -> tuple[Any, ...]:
             if result is None:
                 return _graph_outputs(None)
@@ -395,6 +421,49 @@ def build_app(
                 files,
                 log,
             ],
+            concurrency_limit=1,
+            concurrency_id="calculation",
+            show_progress="full",
+        )
+
+        json_calculation_started = json_run.click(
+            _calculation_started_outputs,
+            outputs=[
+                status,
+                annual_summary,
+                preview,
+                log,
+                graph_status,
+                *graphs,
+                csv_status,
+                export_csv_button,
+                files,
+            ],
+            queue=False,
+            api_visibility="private",
+        )
+        json_calculation_finished = json_calculation_started.then(
+            calculate_uploaded_json,
+            inputs=json_upload,
+            outputs=[
+                result_state,
+                status,
+                annual_summary,
+                preview,
+                log,
+                graph_status,
+                csv_status,
+                export_csv_button,
+                files,
+            ],
+            concurrency_limit=1,
+            concurrency_id="calculation",
+            show_progress="full",
+        )
+        json_calculation_finished.then(
+            generate_graphs,
+            inputs=result_state,
+            outputs=[graph_status, log, *graphs],
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",

@@ -15,7 +15,7 @@ from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any, Callable, ContextManager, Mapping
 from uuid import uuid4
 
-from verification_core import build_input_data
+from verification_core import build_input_data, load_compatible_input_json
 
 CalculationFunction = Callable[[dict[str, Any]], Any]
 VersionFunction = Callable[[], str]
@@ -24,6 +24,7 @@ RunIdFactory = Callable[[], str]
 CsvExportSessionFactory = Callable[[], ContextManager[Any]]
 
 _CALCULATION_CWD_LOCK = threading.Lock()
+_MAX_INPUT_JSON_BYTES = 5 * 1024 * 1024
 
 
 def _captured_dataframe(csv_exports: Any | None, path: Path) -> Any | None:
@@ -96,6 +97,8 @@ class CalculationService:
         values: Mapping[str, Any],
         *,
         include_graphs: bool = True,
+        prepared_input_data: Mapping[str, Any] | None = None,
+        input_source: str = "画面入力",
     ) -> CalculationResult:
         input_data: dict[str, Any] | None = None
         run_id: str | None = None
@@ -103,7 +106,11 @@ class CalculationService:
         csv_exports: Any | None = None
         output = io.StringIO()
         try:
-            input_data = build_input_data(values)
+            input_data = (
+                dict(prepared_input_data)
+                if prepared_input_data is not None
+                else build_input_data(values)
+            )
             _validate_case_name(input_data.get("case_name", "default"))
             csv_session = (
                 self._csv_export_session()
@@ -150,6 +157,7 @@ class CalculationService:
                     annual_summary,
                     output.getvalue(),
                     pending_csv_count,
+                    input_source,
                 ),
                 files=files,
                 graph_status="計算完了後にグラフを表示します。",
@@ -185,6 +193,55 @@ class CalculationService:
                 run_id=run_id,
                 artifact_dir=str(artifact_dir) if artifact_dir is not None else None,
                 log=log,
+                files=(),
+                graph_status="計算完了後にグラフを表示します。",
+                graphs=(),
+            )
+
+    def run_uploaded_json(
+        self,
+        uploaded_file: str | Path | None,
+        *,
+        include_graphs: bool = True,
+    ) -> CalculationResult:
+        """Run an input JSON saved by an old or current platform version."""
+
+        try:
+            if uploaded_file is None:
+                raise ValueError("実行するJSONファイルを選択してください。")
+            path = Path(uploaded_file)
+            if not path.is_file():
+                raise ValueError("選択したJSONファイルを読み取れません。")
+            if path.stat().st_size > _MAX_INPUT_JSON_BYTES:
+                raise ValueError("入力JSONは5 MB以下にしてください。")
+            compatible = load_compatible_input_json(path.read_bytes())
+            count = len(compatible.supplemented_paths)
+            input_source = (
+                "アップロードJSON（不足項目なし）"
+                if count == 0
+                else f"アップロードJSON（不足していた{count}項目を現行デフォルトで補完）"
+            )
+            return self.run(
+                {},
+                include_graphs=include_graphs,
+                prepared_input_data=compatible.input_data,
+                input_source=input_source,
+            )
+        except Exception:
+            return CalculationResult(
+                succeeded=False,
+                status="❌ 入力JSONエラー",
+                input_data=None,
+                run_id=None,
+                artifact_dir=None,
+                log=_format_failure_log(
+                    None,
+                    None,
+                    self._version_info(),
+                    None,
+                    "",
+                    traceback.format_exc(),
+                ),
                 files=(),
                 graph_status="計算完了後にグラフを表示します。",
                 graphs=(),
@@ -433,6 +490,7 @@ def _format_success_log(
     annual_summary: AnnualSummary | None,
     engine_log: str,
     pending_csv_count: int = 0,
+    input_source: str = "画面入力",
 ) -> str:
     output_step = (
         f"4) 詳細CSV {pending_csv_count}件をメモリに保持（画面のボタンで出力）"
@@ -446,7 +504,7 @@ def _format_success_log(
         f"成果物版: {version}",
         "",
         "===== 2. 実行した処理 =====",
-        "1) 画面入力を検証し、計算エンジン用input_dataへ変換",
+        f"1) {input_source}を検証し、計算エンジン用input_dataを準備",
         "2) 暖房・冷房の8760時間計算を順番に実行",
         "3) 一次エネルギー、未処理負荷、機器・ファン電力を集計",
         output_step,

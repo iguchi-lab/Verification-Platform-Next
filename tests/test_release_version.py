@@ -13,9 +13,9 @@ def _project_version(path: str) -> str:
 
 
 def test_release_version_is_consistent_across_projects():
-    assert release.VERSION == "1.3.1"
-    assert release.DISPLAY_VERSION == "ver.1.3.1"
-    assert release.ARTIFACT_VERSION == "_v1.3.1"
+    assert release.VERSION == "1.4.0"
+    assert release.DISPLAY_VERSION == "ver.1.4.0"
+    assert release.ARTIFACT_VERSION == "_v1.4.0"
     assert {
         _project_version("pyproject.toml"),
         _project_version("packages/verification-core/pyproject.toml"),
