@@ -577,14 +577,36 @@ def _get_heating_electricity_type1_and_type3(heat_ac_setting, E_E_fan_H_d_t, q_h
         )
     )
 
-def _get_heating_electricity_type2(heat_ac_setting, house, climateFile, E_E_fan_H_d_t, q_hs_H_d_t, heat_CRAC, cool_CRAC):
+def _get_type2_rac_heating_load(q_hs_H_d_t, climate):
+    """Return delivered heat before the duct-central defrost correction.
+
+    ``dc_a.get_q_hs_H_d_t`` returns the heat-source average capacity after
+    dividing the air-side heat by the duct-central defrost coefficient.  The
+    type-2 RAC model accepts an uncorrected heating load and applies its own
+    RAC-specific ``C_af`` and ``C_df``.  Undo the duct-central correction at
+    this boundary so the two equipment-specific coefficients do not overlap.
+    """
+    return q_hs_H_d_t * climate.get_C_df_H_d_t()
+
+
+def _get_heating_electricity_type2(
+    heat_ac_setting,
+    house,
+    climateFile,
+    climate,
+    E_E_fan_H_d_t,
+    q_hs_H_d_t,
+    heat_CRAC,
+    cool_CRAC,
+):
+    rac_heating_load_d_t = _get_type2_rac_heating_load(q_hs_H_d_t, climate)
     return jjj_dc_a.calc_E_E_H_d_t_type2(
         *_HeatingType2ElectricityInputs(
             heat_ac_setting.type,
             house.region,
             climateFile,
             E_E_fan_H_d_t,
-            q_hs_H_d_t,
+            rac_heating_load_d_t,
             heat_CRAC.e_rtd,
             heat_CRAC.q_rtd,
             cool_CRAC.q_rtd,
@@ -650,6 +672,7 @@ def _select_heating_electricity(
             heat_ac_setting,
             house,
             climateFile,
+            climate,
             E_E_fan_H_d_t,
             q_hs_H_d_t,
             heat_CRAC,

@@ -391,6 +391,10 @@ def test_get_heating_electricity_type2_preserves_argument_order(monkeypatch):
     )
     setting = SimpleNamespace(type='type')
     house = SimpleNamespace(region=6)
+    climate = SimpleNamespace(
+        get_C_df_H_d_t=lambda: np.array([1.0, 0.77]),
+    )
+    q_hs = np.array([1000.0, 2000.0])
     heat = SimpleNamespace(
         e_rtd='e-rtd-h', q_rtd='q-rtd-h', q_max='q-max-h',
         input_C_af='c-af-h', dualcompressor='dual-h',
@@ -398,14 +402,18 @@ def test_get_heating_electricity_type2_preserves_argument_order(monkeypatch):
     cool = SimpleNamespace(q_rtd='q-rtd-c', q_max='q-max-c')
 
     result = experiment_main._get_heating_electricity_type2(
-        setting, house, 'climate.csv', 'fan', 'q-h', heat, cool
+        setting, house, 'climate.csv', climate, 'fan', q_hs, heat, cool
     )
 
     assert result == 'electricity'
-    assert calls == [(
-        'type', 6, 'climate.csv', 'fan', 'q-h', 'e-rtd-h', 'q-rtd-h',
-        'q-rtd-c', 'q-max-h', 'q-max-c', 'c-af-h', 'dual-h',
-    )]
+    assert len(calls) == 1
+    args = calls[0]
+    assert args[:4] == ('type', 6, 'climate.csv', 'fan')
+    np.testing.assert_array_equal(args[4], np.array([1000.0, 1540.0]))
+    assert args[5:] == (
+        'e-rtd-h', 'q-rtd-h', 'q-rtd-c', 'q-max-h', 'q-max-c', 'c-af-h',
+        'dual-h',
+    )
 def test_get_heating_electricity_type4_preserves_argument_order(monkeypatch):
     calls = []
     monkeypatch.setattr(
