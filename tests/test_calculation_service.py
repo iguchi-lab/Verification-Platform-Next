@@ -121,6 +121,54 @@ def test_service_returns_traceback_on_error(tmp_path: Path) -> None:
     assert result.graphs == ()
 
 
+def test_service_runs_old_uploaded_json_with_current_defaults(tmp_path: Path) -> None:
+    captured: list[dict[str, object]] = []
+
+    def calculate(input_data: dict[str, object]) -> None:
+        captured.append(input_data)
+
+    input_path = tmp_path / "old_input.json"
+    input_path.write_text(
+        '{"case_name": "uploaded", "region": 2, "H_A": {"type": 2}}',
+        encoding="utf-8",
+    )
+    service = CalculationService(
+        calculate,
+        lambda: "v1",
+        workdir=tmp_path,
+        run_id_factory=lambda: "uploaded-json",
+    )
+
+    result = service.run_uploaded_json(input_path, include_graphs=False)
+
+    assert result.succeeded
+    assert captured[0]["case_name"] == "uploaded"
+    assert captured[0]["region"] == 2
+    assert captured[0]["H_A"]["type"] == 2
+    assert captured[0]["C_A"]["type"] == 1
+    assert "アップロードJSON（不足していた" in result.log
+    assert "現行デフォルトで補完" in result.log
+
+
+def test_service_rejects_invalid_uploaded_json_without_running_engine(
+    tmp_path: Path,
+) -> None:
+    input_path = tmp_path / "invalid.json"
+    input_path.write_text("[]", encoding="utf-8")
+    service = CalculationService(
+        lambda input_data: pytest.fail("engine must not run"),
+        lambda: "v1",
+        workdir=tmp_path,
+    )
+
+    result = service.run_uploaded_json(input_path, include_graphs=False)
+
+    assert not result.succeeded
+    assert result.status == "❌ 入力JSONエラー"
+    assert "最上位はオブジェクト" in result.log
+    assert not tuple(tmp_path.glob("run-*"))
+
+
 def test_service_preserves_successful_calculation_when_graphs_fail(tmp_path: Path) -> None:
     def calculate(input_data: dict[str, object]) -> None:
         prefix = f"{input_data['case_name']}v1"

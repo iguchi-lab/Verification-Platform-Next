@@ -59,8 +59,8 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     }
 
     assert gradio.__version__.startswith("6.")
-    assert config["title"] == "Verification Platform Next ver.1.3.1"
-    assert component_types["accordion"] == 8
+    assert config["title"] == "Verification Platform Next ver.1.4.0"
+    assert component_types["accordion"] == 9
     assert component_types["number"] == 156
     assert component_types["dropdown"] == 54
     assert component_types["checkbox"] == 10
@@ -113,11 +113,19 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert buttons["↩ 入力をデフォルトに戻す"]["props"]["variant"] == "secondary"
     assert "CSVファイルを出力" in buttons
     assert buttons["CSVファイルを出力"]["props"]["interactive"] is False
+    assert "JSONファイルをアップロードして計算" in buttons
+    assert component_types["file"] == 2
+    assert any(
+        "旧Verification Platformまたは現在の画面で保存した入力JSON" in value
+        and "現在のデフォルト値で補完" in value
+        for value in markdown_values
+    )
     assert origin_classes == {
         "input-origin-bri-web": 47,
         "input-origin-verification-platform": 176,
     }
     assert tuple(accordions) == (
+        "JSONファイルから計算",
         "① 計算条件・外部データ",
         "② 住宅基本情報",
         "③ 外皮性能",
@@ -127,9 +135,12 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         "⑦ 熱交換型換気設備",
         "⑧ 詳細設定・比較検証",
     )
+    input_accordions = tuple(
+        component for label, component in accordions.items() if label[0].isdigit()
+    )
     assert all(
         "input-section" in component["props"].get("elem_classes", ())
-        for component in accordions.values()
+        for component in input_accordions
     )
     assert all(component["props"]["open"] is False for component in accordions.values())
     assert all(component["props"]["visible"] is True for component in accordions.values())
