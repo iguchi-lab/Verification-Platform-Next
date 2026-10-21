@@ -29,6 +29,8 @@ def test_write_artifact_manifest_records_release_and_input(tmp_path, monkeypatch
     manifest = json.loads(path.read_text(encoding="utf-8"))
     assert manifest == {
         "schema_version": 1,
+        "calculation_method": "next",
+        "tg_specification": None,
         "product": "Verification Platform Next",
         "version": "1.4.0",
         "display_version": "ver.1.4.0",

@@ -22,6 +22,7 @@ import pyhees.section4_2_a as dc_a
 
 """ JJJ_EXPERIMENT ORIGINAL """
 from jjjexperiment.common import Array5x8760, jjj_cloning
+from jjjexperiment import calculation_method as method
 import jjjexperiment.constants as jjj_consts
 import jjjexperiment.artifact_paths as artifact_paths
 from jjjexperiment.csv_artifacts import write_dataframe_csv
@@ -1462,6 +1463,13 @@ def _get_rated_heat_source_capacities(inputs: _RatedHeatSourceCapacitiesInputs):
     else:
         raise Exception('設備機器の種類の入力が不正です。')
 
+    if method.current() is not None:
+        # The reference evaluates heating and cooling separately, with only
+        # the active season's rated capacity supplied to formula (36).
+        if isinstance(ac_setting, HeatingAcSetting):
+            Q_hs_rtd_C = None
+        else:
+            Q_hs_rtd_H = None
     return _RatedHeatSourceCapacitiesResult(Q_hs_rtd_H, Q_hs_rtd_C)
 
 
@@ -1522,6 +1530,8 @@ def _get_heat_source_supply_airflow_before_vav(inputs: _HeatSourceSupplyAirflowB
     Q_hat_hs_d_t = inputs.Q_hat_hs_d_t
     Q_hat_hs_CS_d_t = inputs.Q_hat_hs_CS_d_t
     # (36)　VAV 調整前の熱源機の風量
+    if method.current() is not None:
+        return method.current().pre_vav_airflow(inputs)
     if skin.hs_CAV:
         H, C, M = dc_a.get_season_array_d_t(house.region)
         V_dash_hs_supply_d_t = np.zeros(24 * 365)
@@ -1570,6 +1580,8 @@ def _get_heat_source_ventilation_airflow_by_zone(
     correction removes that lower bound from formulas (44) and (43) when the
     heat source has no general-ventilation function.
     """
+    if method.current() is not None:
+        return V_vent_g_i if general_ventilation else np.zeros_like(V_vent_g_i)
     if not correct_no_general_ventilation_airflow:
         return V_vent_g_i
     if general_ventilation is True:
@@ -1592,7 +1604,7 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
         ac_setting.general_ventilation,
         getattr(ac_setting, "correct_no_general_ventilation_airflow", False),
     )
-    if ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
+    if method.current() is None and ac_setting.VAV and jjj_consts.change_supply_volume_before_vav_adjust == VAVありなしの吹出風量.数式を統一する.value:
         # (45)　風量バランス
         r_supply_des_d_t_i = dc.get_r_supply_des_d_t_i_2023(house.region, load.L_CS_d_t_i, load.L_H_d_t_i)
         assert r_supply_des_d_t_i.shape == (5, 24*365)
@@ -1611,6 +1623,8 @@ def _get_supply_airflow_before_vav(inputs: _SupplyAirflowBeforeVavInputs):
         V_dash_supply_d_t_i = dc.get_V_dash_supply_d_t_i(
             r_supply_des_i, V_dash_hs_supply_d_t, V_hs_vent_g_i)
 
+    if method.current() is not None:
+        method.current().ratios = r_supply_des_i.copy()
     return _SupplyAirflowBeforeVavResult(r_supply_des_i, r_supply_des_d_t_i, V_dash_supply_d_t_i)
 
 def _adjust_heat_source_output_for_room_to_underfloor_transfer(inputs: _RoomToUnderfloorTransferInputs):
@@ -1859,6 +1873,8 @@ def _get_heat_source_outlet_temperatures(inputs: _HeatSourceOutletTemperaturesIn
 
 def _get_capped_supply_airflows(inputs: _CappedSupplyAirflowInputs):
     """Calculate and cap formula (43) while preserving JJJ diagnostics."""
+    if method.current() is not None:
+        return _CappedSupplyAirflowsResult(*method.current().supply_airflow(inputs))
     v_supply_cap_dto = inputs.v_supply_cap_dto
     ac_setting = inputs.ac_setting
     house = inputs.house
@@ -2031,7 +2047,11 @@ def _get_rac_heating_capacity(inputs: _RacHeatingCapacityInputs):
         _logger.debug(f'q_r_max_H: {q_r_max_H}')  # here
 
     # 最大暖房出力比
-    Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(cool_CRAC.q_rtd, q_r_max_H, Theta_ex_d_t)
+    q_rtd_C_for_heating = (
+        (heat_CRAC.q_rtd + 85.1) / 1.2090
+        if method.current() is not None else cool_CRAC.q_rtd
+    )
+    Q_r_max_H_d_t = rac.calc_Q_r_max_H_d_t(q_rtd_C_for_heating, q_r_max_H, Theta_ex_d_t)
     if log_intermediates:
         _logger.NDdebug("Q_r_max_H_d_t", Q_r_max_H_d_t)  # here
 
@@ -2987,7 +3007,9 @@ def _prepare_general_ventilation_state(inputs: _GeneralVentilationStateInputs):
     A_HCZ_i = inputs.A_HCZ_i
     A_HCZ_R_i = inputs.A_HCZ_R_i
     V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
-    if v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
+    if method.current() is not None:
+        method.current().set_ventilation(V_vent_g_i)
+    elif v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
         V_vent_g_i = rescale_V_vent_g_i(V_vent_g_i, v_min_input.V_hs_min)
     df_output2['V_vent_g_i'] = V_vent_g_i
     return V_vent_g_i
@@ -3155,6 +3177,9 @@ def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
     """Calculate formula (39) and preserve its direct output write."""
     V_hs_min = dc.get_V_hs_min(V_vent_g_i)
     df_output3['V_hs_min'] = [V_hs_min]
+    if method.current() is not None:
+        for season, minimum in zip(('H', 'C', 'M'), method.current().minima):
+            df_output3[f'TG_V_hs_min_{season}'] = [minimum]
     return V_hs_min
 
 def _prepare_rated_heat_source_capacity_state(inputs: _RatedHeatSourceCapacityStateInputs):

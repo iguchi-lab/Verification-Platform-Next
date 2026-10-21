@@ -65,6 +65,8 @@ def build_artifact_manifest(input_data: Mapping[str, Any]) -> dict[str, Any]:
     """Build metadata that makes an output reproducible and auditable."""
     return {
         "schema_version": 1,
+        "calculation_method": input_data.get("calculation_method", "next"),
+        "tg_specification": input_data.get("tg_specification"),
         "product": "Verification Platform Next",
         "version": VERSION,
         "display_version": DISPLAY_VERSION,

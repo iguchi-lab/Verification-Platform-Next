@@ -71,6 +71,10 @@ class AnnualMetrics:
 class AnnualSummary:
     heating: AnnualMetrics
     cooling: AnnualMetrics
+    calculation_method: str = "next"
+    fan_ventilation_mj: float | None = None
+    chapter5_ventilation_mj: float | None = None
+    tg_total_mj: float | None = None
 
 
 class CalculationService:
@@ -371,7 +375,16 @@ class CalculationService:
                     fan_electricity_kwh=fan_electricity,
                 )
 
-            return AnnualSummary(heating=metrics("H"), cooling=metrics("C"))
+            return AnnualSummary(
+                heating=metrics("H"), cooling=metrics("C"),
+                calculation_method=str(input_data.get("calculation_method", "next")),
+                fan_ventilation_mj=(float(annual["E_fan_vent [MJ/year]"])
+                                    if "E_fan_vent [MJ/year]" in annual else None),
+                chapter5_ventilation_mj=(float(annual["E_vent_ch5 [MJ/year]"])
+                                         if "E_vent_ch5 [MJ/year]" in annual else None),
+                tg_total_mj=(float(annual["E_total_TG [MJ/year]"])
+                             if "E_total_TG [MJ/year]" in annual else None),
+            )
         except (OSError, KeyError, TypeError, ValueError):
             # The calculation itself succeeded. A missing optional summary must not
             # discard the engine outputs or prevent users from downloading them.
