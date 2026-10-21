@@ -19,7 +19,7 @@
       ],
       "enabled_when": null,
       "origin": "verification_platform",
-      "description": "next：従来方式。tg：TG比較方式（床下空調は未対応）。"
+      "description": "自立：従来方式。TG：TG比較方式（床下空調は未対応）。"
     },
     {
       "id": "tg_fan_exponent__0",

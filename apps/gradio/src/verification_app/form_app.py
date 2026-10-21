@@ -18,6 +18,8 @@ from .form_model import TG_NEXT_ONLY_FIELDS, FormField, FormModel, load_form_mod
 from .graphs import GRAPH_LABELS
 from .services import AnnualMetrics, AnnualSummary, CalculationResult, CalculationService
 
+_CALCULATION_METHOD_LABELS = {"next": "自立", "tg": "TG"}
+
 _UNDERFLOOR_INPUT_GUIDE_URL = (
     "https://github.com/iguchi-lab/Verification-Platform-Next/"
     "blob/main/docs/underfloor_ac_input_guide.md"
@@ -704,7 +706,11 @@ def _input_component(
         return gr.Checkbox(**common)
     if field.kind is FieldKind.SELECT:
         return gr.Dropdown(
-            choices=list(choices if choices is not None else field.choices),
+            choices=[
+                (_CALCULATION_METHOD_LABELS[value], value)
+                if field.key == "calculation_method__0" else value
+                for value in (choices if choices is not None else field.choices)
+            ],
             allow_custom_value=False,
             **common,
         )
@@ -765,7 +771,8 @@ def _install_default_highlight_js(
   const sectionTargets = {section_targets};
   const groupTargets = {group_targets_json};
   const fieldIndexes = Object.fromEntries(fieldKeys.map((key, index) => [key, index]));
-  const readValue = (container, kind) => {{
+  const methodValues = {json.dumps({label: value for value, label in _CALCULATION_METHOD_LABELS.items()}, ensure_ascii=True)};
+  const readValue = (container, kind, key) => {{
     if (kind === "boolean") {{
       return container.querySelector('input[type="checkbox"]')?.checked;
     }}
@@ -774,7 +781,8 @@ def _install_default_highlight_js(
     if (kind === "number" || kind === "integer") {{
       return input.value === "" ? null : Number(input.value);
     }}
-    return input.value;
+    return key === "calculation_method__0"
+      ? (methodValues[input.value] ?? input.value) : input.value;
   }};
   const normalizeValue = (value, defaultValue) => {{
     if (value === null || typeof defaultValue !== "number") return value;
@@ -782,7 +790,7 @@ def _install_default_highlight_js(
     return Number.isNaN(numericValue) ? value : numericValue;
   }};
   const update = (container, index) => {{
-    const value = readValue(container, kinds[index]);
+    const value = readValue(container, kinds[index], fieldKeys[index]);
     if (value === undefined) return;
     const normalizedValue = normalizeValue(value, defaults[index]);
     const changed = JSON.stringify(normalizedValue) !== JSON.stringify(defaults[index]);
@@ -797,7 +805,7 @@ def _install_default_highlight_js(
     const values = Object.fromEntries(controlKeys.map((key) => {{
       const index = fieldIndexes[key];
       const container = document.getElementById(domIds[index]);
-      const value = container ? readValue(container, kinds[index]) : undefined;
+      const value = container ? readValue(container, kinds[index], key) : undefined;
       return [key, value ?? defaults[index]];
     }}));
     const visibility = {{}};
@@ -1032,7 +1040,7 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
 
     return (
         '<div class="annual-summary">'
-        f'<div class="annual-summary__title">年間計算結果（{"TG" if summary.calculation_method == "tg" else "Next"}方式）</div>'
+        f'<div class="annual-summary__title">年間計算結果（{_CALCULATION_METHOD_LABELS[summary.calculation_method]}方式）</div>'
         '<div class="annual-summary__note">'
         '一次エネルギー消費量には未処理負荷の一次エネルギー相当分を含みます。'
         'エアコンの消費電力量は、熱源機とファンの合計からファン分を除いた値です。'
