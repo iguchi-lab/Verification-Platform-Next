@@ -63,7 +63,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert method["value"] == "next"
 
     assert gradio.__version__.startswith("6.")
-    assert config["title"] == "Verification Platform Next ver.1.5.2"
+    assert config["title"] == "Verification Platform Next ver.1.6.0"
     assert component_types["accordion"] == 9
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 58

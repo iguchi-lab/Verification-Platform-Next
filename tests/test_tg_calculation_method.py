@@ -193,7 +193,7 @@ def test_tg_full_year_accounting_and_metadata(kind, ventilation, minimum, vav, t
     from jjjexperiment.release import input_sha256
     saved = json.loads((tmp_path / artifact_paths.input_json_path('default')).read_text())
     assert manifest['input_sha256'] == input_sha256(saved)
-    service = CalculationService(lambda data: None, lambda: '_v1.5.2')
+    service = CalculationService(lambda data: None, lambda: '_v1.6.0')
     summary = service._annual_summary(data, tmp_path, exports)
     assert summary.tg_total_mj == annual['E_total_TG [MJ/year]']
     assert 'TG比較合計' in _annual_summary_html(summary)
@@ -344,7 +344,7 @@ def test_isolated_minimum_at_original_flow_preserves_hvac_energy_and_ventilation
     assert saved['tg_profile'] == 'minimum_airflow'
     manifest = json.loads((tmp_path / artifact_paths.metadata_json_path('default')).read_text())
     assert manifest['tg_profile'] == 'minimum_airflow'
-    service = CalculationService(lambda data: None, lambda: '_v1.5.2')
+    service = CalculationService(lambda data: None, lambda: '_v1.6.0')
     summary = service._annual_summary(isolated, tmp_path, comparison)
     assert summary.tg_profile == 'minimum_airflow'
     assert summary.tg_total_mj is None
