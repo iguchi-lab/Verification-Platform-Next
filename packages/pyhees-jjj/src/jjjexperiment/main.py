@@ -1,5 +1,6 @@
 import json
 from contextlib import nullcontext
+from copy import deepcopy
 from typing import NamedTuple
 import numpy as np
 from injector import Injector, inject
@@ -49,6 +50,7 @@ from jjjexperiment.inputs.cooling import CRACSpecification as CoolCRACSpec
 from jjjexperiment.inputs.climate_service import ClimateService
 from jjjexperiment.inputs.ac_quantity_service import HeatQuantityService, CoolQuantityService
 
+from jjjexperiment import calculation_method as method
 import jjjexperiment.constants as jjj_consts
 import jjjexperiment.artifact_paths as artifact_paths
 import jjjexperiment.common as jjj_common
@@ -257,9 +259,18 @@ class _MainLoadPreparationResult(NamedTuple):
 
 
 def calc(input_data: dict, test_mode=False):
+    input_data = method.prepare_input(input_data)
+    with method.calculation_scope(input_data):
+        return _calc_with_method(input_data, test_mode)
+
+
+def _calc_with_method(input_data, test_mode):
+    print('計算方式:', input_data.get('calculation_method', 'next'))
     case_name = input_data.get('case_name', 'default')
     with open(artifact_paths.input_json_path(case_name), 'w') as f:
         json.dump(input_data, f, indent=4)
+
+    manifest_input = deepcopy(input_data) if method.current() is not None else input_data
 
     # グローバル定数の設定
     # NOTE: 必要最小限に留めること
@@ -268,7 +279,7 @@ def calc(input_data: dict, test_mode=False):
     injector = jjj_ipt_di.create_injector_from_json(input_data, test_mode)
     # NOTE: 引数全てを型解決できるようにする必要があった
     result = injector.call_with_injection(calc_main)
-    write_artifact_manifest(artifact_paths.metadata_json_path(case_name), input_data)
+    write_artifact_manifest(artifact_paths.metadata_json_path(case_name), manifest_input)
     return result
 
 def _log_equipment_specs(cool_CRAC, heat_CRAC):
@@ -286,6 +297,8 @@ def _create_domain_services(house, ufac, climateFile, heat_ac_setting, cool_ac_s
     climate = ClimateService(house.region, ufac, climateFile)
     heat_quantity = HeatQuantityService(heat_ac_setting, house.region, house.A_A)
     cool_quantity = CoolQuantityService(cool_ac_setting, house.region, house.A_A)
+    if method.current() is not None:
+        method.current().configure(house, heat_quantity, cool_quantity, climate)
     return climate, heat_quantity, cool_quantity
 
 def _get_virtual_heating_devices_and_modes(region):
@@ -340,6 +353,8 @@ def _sum_zone_loads(L_H_d_t_i, L_CS_d_t_i, L_CL_d_t_i):
     return L_H_d_t, L_CS_d_t, L_CL_d_t
 
 def _get_V_hs_dsgn_H(type: 計算モデル, v_fan_rtd, q_rtd_H):
+    if method.current() is not None:
+        return method.current().designs['H']
     if type in [
         計算モデル.ダクト式セントラル空調機,
         計算モデル.RAC活用型全館空調_潜熱評価モデル,
@@ -498,6 +513,8 @@ def _select_heating_fan_power(
     q_hs_H_d_t,
     region,
 ):
+    if method.current() is not None:
+        return method.current().fan_hvac('H', V_hs_supply_d_t)
     if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
         return _get_latent_heating_fan_power(
             heat_ac_setting, V_hs_vent_d_t, q_hs_H_d_t
@@ -599,6 +616,9 @@ def _get_heating_electricity_type2(
     heat_CRAC,
     cool_CRAC,
 ):
+    if method.current() is not None:
+        return E_E_fan_H_d_t + method.rac_electricity(
+            'H', q_hs_H_d_t, heat_CRAC, climate.get_Theta_ex_d_t())
     rac_heating_load_d_t = _get_type2_rac_heating_load(q_hs_H_d_t, climate)
     return jjj_dc_a.calc_E_E_H_d_t_type2(
         *_HeatingType2ElectricityInputs(
@@ -708,6 +728,8 @@ def _build_heating_output_dataframe(E_UT_H_d_t, Theta_hs_out_d_t, Theta_hs_in_d_
     df_output2['C_df_H_d_t [-]'] = climate.get_C_df_H_d_t()
     return df_output2
 def _get_V_hs_dsgn_C(type: 計算モデル, v_fan_rtd: float, q_rtd_C: float):
+    if method.current() is not None:
+        return method.current().designs['C']
     if type in [
         計算モデル.ダクト式セントラル空調機,
         計算モデル.RAC活用型全館空調_潜熱評価モデル,
@@ -868,6 +890,8 @@ def _select_cooling_fan_power(
     q_hs_C_d_t,
     region,
 ):
+    if method.current() is not None:
+        return method.current().fan_hvac('C', V_hs_supply_d_t)
     if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
         return _get_latent_cooling_fan_power(
             cool_ac_setting, V_hs_vent_d_t, q_hs_C_d_t
@@ -951,6 +975,9 @@ def _get_cooling_electricity_type1_and_type3(cool_ac_setting, house, E_E_fan_C_d
         )
     )
 def _get_cooling_electricity_type2(cool_ac_setting, house, climateFile, E_E_fan_C_d_t, q_hs_CS_d_t, q_hs_CL_d_t, cool_CRAC):
+    if method.current() is not None:
+        return E_E_fan_C_d_t + method.rac_electricity(
+            'C', q_hs_CS_d_t + q_hs_CL_d_t, cool_CRAC, method.current().temperature)
     return jjj_dc_a.calc_E_E_C_d_t_type2(
         *_CoolingType2ElectricityInputs(
             cool_ac_setting.type,
@@ -1061,11 +1088,6 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
     df_output1 = pd.DataFrame(index=['合計値'])
     df_output1['E_H [MJ/year]'] = E_H
     df_output1['E_C [MJ/year]'] = E_C
-    write_dataframe_csv(
-        df_output1,
-        artifact_paths.main_output_csv_path(case_name, 1),
-        encoding='cp932',
-    )
 
     df_output2['Theta_hs_C_out_d_t [℃]'] = Theta_hs_out_d_t
     df_output2['Theta_hs_C_in_d_t [℃]'] = Theta_hs_in_d_t
@@ -1086,6 +1108,13 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
     df_output2['q_hs_H_d_t [Wh/h]'] = q_hs_H_d_t
     df_output2['q_hs_CS_d_t [Wh/h]'] = q_hs_CS_d_t
     df_output2['q_hs_CL_d_t [Wh/h]'] = q_hs_CL_d_t
+    if method.current() is not None:
+        method.current().write_accounting(df_output1, df_output2, E_H, E_C)
+    write_dataframe_csv(
+        df_output1,
+        artifact_paths.main_output_csv_path(case_name, 1),
+        encoding='cp932',
+    )
     write_dataframe_csv(
         df_output2,
         artifact_paths.main_output_csv_path(case_name, 2),
@@ -1293,6 +1322,23 @@ def _run_heating_phase(inputs: _HeatingPhaseInputs):
     )
 
 
+def _get_tg_cooling_unprocessed_energy(inputs, V_hs_dsgn_C):
+    context = method.current()
+    alternate_design = (
+        context.cooling_unprocessed_design(inputs.house)
+        if context is not None else None
+    )
+    if alternate_design is None or alternate_design == V_hs_dsgn_C:
+        return None
+    # Run this first so the normal cooling pass remains the exported diagnostic
+    # result. Only the UT energy is taken from the reference's separate pass.
+    try:
+        inputs.injector.binder.bind(jjj_dc.VHS_DSGN_C, to=alternate_design)
+        return inputs.injector.call_with_injection(jjj_dc.calc_Q_UT_A)[0]
+    finally:
+        inputs.injector.binder.bind(jjj_dc.VHS_DSGN_C, to=V_hs_dsgn_C)
+
+
 def _run_cooling_phase(inputs: _CoolingPhaseInputs):
     print("冷房消費電力の計算")
     _, V_hs_dsgn_C = _bind_cooling_design_airflows(
@@ -1320,6 +1366,7 @@ def _run_cooling_phase(inputs: _CoolingPhaseInputs):
         inputs.cool_real_inner,
         inputs.case_name,
     )
+    tg_unprocessed = _get_tg_cooling_unprocessed_energy(inputs, V_hs_dsgn_C)
     (
         E_UT_C_d_t,
         Theta_hs_out_d_t,
@@ -1341,6 +1388,8 @@ def _run_cooling_phase(inputs: _CoolingPhaseInputs):
             else None
         ),
     )
+    if tg_unprocessed is not None:
+        E_UT_C_d_t = tg_unprocessed
     E_E_fan_C_d_t = _select_cooling_fan_power(
         inputs.cool_ac_setting,
         inputs.cool_quantity,
@@ -1475,6 +1524,11 @@ def calc_main(
             cool_quantity=preparation.cool_quantity,
         )
     )
+    if method.current() is not None:
+        method.current().exclude_midseason(
+            heating.E_E_H_d_t, heating.E_UT_H_d_t,
+            cooling.E_E_C_d_t, cooling.E_UT_C_d_t,
+        )
     E_H_d_t, E_C_d_t, E_H, E_C = _summarize_primary_energy(
         heating.E_E_H_d_t,
         heating.E_UT_H_d_t,

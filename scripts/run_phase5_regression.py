@@ -38,6 +38,12 @@ class RegressionMismatch(AssertionError):
 def _legacy_input_projection(input_data: dict[str, Any]) -> dict[str, Any]:
     """Remove only default-valued options that did not exist in the legacy form."""
     projected = copy.deepcopy(input_data)
+    for key, expected in {
+        "calculation_method": "next", "tg_fan_exponent": 1.0,
+        "tg_q_rtd_H": 6700, "tg_q_rtd_C": 5600, "tg_rac_class": "い",
+    }.items():
+        if projected.pop(key, expected) != expected:
+            raise RegressionMismatch(f"Phase 5 legacy projection requires {key}={expected}")
     for season in ("H_A", "C_A"):
         settings = projected.get(season, {})
         for key in _OPT_IN_CORRECTION_KEYS:

@@ -12,7 +12,7 @@ def test_active_catalog_covers_every_ui_field() -> None:
     inventory = load_legacy_inventory()
     catalog = load_input_bindings()
 
-    assert len(catalog.bindings) == 270
+    assert len(catalog.bindings) == 275
     assert catalog.source_ids == frozenset(field.id for field in inventory.fields)
 
 

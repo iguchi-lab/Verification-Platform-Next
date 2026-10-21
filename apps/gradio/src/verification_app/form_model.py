@@ -13,6 +13,18 @@ from .form_presentation import (
 )
 
 
+TG_NEXT_ONLY_FIELDS = frozenset({
+    "change_supply_volume_before_vav_adjust__0", "change_V_supply_d_t_i_max__0",
+    "correct_no_general_ventilation_airflow__0", "C_df_H_d_t_defrost_rac__0",
+    "defrost_temp_rac__0", "defrost_humid_rac__0", "C_hm_C__0", "q_rtd_C_limit__0",
+} | {
+    f"{season}_A_{name}__0"
+    for season in ("H", "C")
+    for name in ("subtract_ventilation_power", "input_E_E_fan_min", "input_mode",
+                 "input_rac_performance", f"input_f_SFP_{season}", f"input_C_af_{season}2")
+})
+
+
 @dataclass(frozen=True, slots=True)
 class FormField:
     definition: FieldDefinition
@@ -75,7 +87,7 @@ class FormModel:
 
 
 def load_form_model(
-    version: str = "260812",
+    version: str = "261021",
     values: Mapping[str, Any] | None = None,
 ) -> FormModel:
     schema = load_input_schema(version)
@@ -151,6 +163,9 @@ def _visibility(
                 and is_visible(control)
                 and condition.matches(values)
             )
+        if values.get("calculation_method__0", "next") == "tg":
+            if field.key in TG_NEXT_ONLY_FIELDS:
+                visible = False
         resolving.remove(field.key)
         resolved[field.key] = visible
         return visible

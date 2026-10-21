@@ -14,7 +14,7 @@ import gradio as gr
 from jjjexperiment.release import DISPLAY_VERSION
 from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
-from .form_model import FormField, FormModel, load_form_model
+from .form_model import TG_NEXT_ONLY_FIELDS, FormField, FormModel, load_form_model
 from .graphs import GRAPH_LABELS
 from .services import AnnualMetrics, AnnualSummary, CalculationResult, CalculationService
 
@@ -239,6 +239,18 @@ def build_app(
             )
             for section in form.sections
         }
+        for form_field in (field for field in form.fields if field.definition.group == "計算方式"):
+            field_dom_id = f"input-field-container-{len(components)}"
+            component = _input_component(
+                form_field.definition, label=form_field.label,
+                description=form_field.description, choices=form_field.choices,
+                visible=form_field.visible, min_width=280, elem_id=field_dom_id,
+                elem_classes=[_origin_css_class(form_field.definition.origin)],
+            )
+            components[form_field.key] = component
+            containers[form_field.key] = component
+            field_dom_ids[form_field.key] = field_dom_id
+
         for section_index, section in enumerate(form.sections):
             section_dom_id = f"input-section-{section_index}"
             with gr.Accordion(
@@ -265,6 +277,8 @@ def build_app(
                         "を参照してください。"
                     )
                 for group_index, group in enumerate(section.groups):
+                    if group.name == "計算方式":
+                        continue
                     group_dom_id = f"input-group-heading-{section_index}-{group_index}"
                     group_fields = tuple(
                         form_field.definition for form_field in group.fields
@@ -478,9 +492,9 @@ def build_app(
         control_inputs = [components[key] for key in control_keys]
 
         for control_key in control_keys:
-            affected_fields = _visibility_descendants(
-                form.schema.fields,
-                control_key,
+            affected_fields = (
+                form.schema.fields if control_key == "calculation_method__0"
+                else _visibility_descendants(form.schema.fields, control_key)
             )
             affected_sections = tuple(
                 section_name
@@ -527,6 +541,41 @@ def build_app(
                 api_visibility="private",
             )
 
+        if "calculation_method__0" in components:
+            unsupported_keys = ("change_underfloor_temperature__0", "carry_over_heat__0", "hs_CAV__0")
+
+            equipment_keys = ("H_A_type__0", "C_A_type__0")
+            equipment_choices = {
+                field.key: field.choices for field in form.schema.fields
+                if field.key in equipment_keys
+            }
+
+            def reset_unsupported_mode_inputs(
+                selected_method: str, heating_type: str, cooling_type: str,
+            ) -> tuple[Any, ...]:
+                toggles = tuple(
+                    gr.update(value=False) if selected_method == "tg" else gr.update()
+                    for _ in unsupported_keys
+                )
+                equipment = []
+                for key, value in zip(equipment_keys, (heating_type, cooling_type), strict=True):
+                    choices = equipment_choices[key]
+                    if selected_method == "tg":
+                        choices = choices[:2]
+                    equipment.append(gr.update(
+                        choices=list(choices), value=value if value in choices else choices[0],
+                    ))
+                return (*toggles, *equipment)
+
+            components["calculation_method__0"].change(
+                reset_unsupported_mode_inputs,
+                inputs=[components["calculation_method__0"],
+                        *(components[key] for key in equipment_keys)],
+                outputs=[components[key] for key in (*unsupported_keys, *equipment_keys)],
+                queue=False,
+                api_visibility="private",
+            )
+
         ordered_fields = tuple(form.schema.fields)
         equipment_section_names = tuple(
             name for name in section_containers if _is_equipment_section(name)
@@ -538,6 +587,8 @@ def build_app(
                 gr.update(
                     value=field.default,
                     visible=visibility[field.key],
+                    **({"choices": list(field.choices)}
+                       if field.key in ("H_A_type__0", "C_A_type__0") else {}),
                 )
                 for field in ordered_fields
             )
@@ -710,6 +761,7 @@ def _install_default_highlight_js(
   const kinds = {kinds};
   const controlKeys = {control_keys_json};
   const conditions = {conditions};
+  const nextOnlyFields = {json.dumps(sorted(TG_NEXT_ONLY_FIELDS))};
   const sectionTargets = {section_targets};
   const groupTargets = {group_targets_json};
   const fieldIndexes = Object.fromEntries(fieldKeys.map((key, index) => [key, index]));
@@ -751,6 +803,10 @@ def _install_default_highlight_js(
     const visibility = {{}};
     const isVisible = (key) => {{
       if (key in visibility) return visibility[key];
+      if (values.calculation_method__0 === "tg" && nextOnlyFields.includes(key)) {{
+        visibility[key] = false;
+        return false;
+      }}
       const condition = conditions[key];
       if (!condition) return true;
       const controllerVisible = isVisible(condition.controller);
@@ -761,9 +817,9 @@ def _install_default_highlight_js(
       visibility[key] = controllerVisible && allowed;
       return visibility[key];
     }};
-    Object.keys(conditions).forEach((key) => {{
+    [...new Set([...Object.keys(conditions), ...nextOnlyFields])].forEach((key) => {{
       const index = fieldIndexes[key];
-      setVisible(document.getElementById(domIds[index]), isVisible(key));
+      if (index !== undefined) setVisible(document.getElementById(domIds[index]), isVisible(key));
     }});
     sectionTargets.forEach((section) => {{
       setVisible(
@@ -962,9 +1018,21 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
             + "</div></section>"
         )
 
+    accounting = ""
+    if summary.tg_total_mj is not None:
+        accounting = (
+            '<div class="annual-summary__note">TG方式：暖冷房のファン欄は暖冷房分です。'
+            '換気相当分を下に別計上します。合計は比較用で、住宅全体の法定評価値ではありません。</div>'
+            '<div class="annual-summary__metrics">'
+            + metric("送風機の換気相当分", summary.fan_ventilation_mj, "MJ/年")
+            + metric("第五章の換気相当分", summary.chapter5_ventilation_mj, "MJ/年")
+            + metric("TG比較合計（暖冷房＋換気）", summary.tg_total_mj, "MJ/年")
+            + "</div>"
+        )
+
     return (
         '<div class="annual-summary">'
-        '<div class="annual-summary__title">年間計算結果</div>'
+        f'<div class="annual-summary__title">年間計算結果（{"TG" if summary.calculation_method == "tg" else "Next"}方式）</div>'
         '<div class="annual-summary__note">'
         '一次エネルギー消費量には未処理負荷の一次エネルギー相当分を含みます。'
         'エアコンの消費電力量は、熱源機とファンの合計からファン分を除いた値です。'
@@ -972,7 +1040,7 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
         '<div class="annual-summary__seasons">'
         + season("暖房", "heating", summary.heating)
         + season("冷房", "cooling", summary.cooling)
-        + "</div></div>"
+        + "</div>" + accounting + "</div>"
     )
 
 

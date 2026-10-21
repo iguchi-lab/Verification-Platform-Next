@@ -4,7 +4,7 @@
 
 ## 公開Web版
 
-**[Verification Platform Next ver.1.4.0をブラウザで開く](https://verification-platform-next-dnoeszca4a-an.a.run.app/)**
+**[Verification Platform Next ver.1.5.0をブラウザで開く](https://verification-platform-next-dnoeszca4a-an.a.run.app/)**
 
 公開Web版では、インストールせずに入力、計算、結果ファイルの取得を行えます。
 計算は1件ずつ処理するため、混雑時は画面に表示される順番をお待ちください。
@@ -16,7 +16,7 @@
 データはアップロードしないでください。
 
 住宅の省エネルギー性能を検証するための計算エンジン、入力スキーマ、Gradio UIを
-まとめたPythonモノレポです。正式版は **ver.1.4.0** です。
+まとめたPythonモノレポです。正式版は **ver.1.5.0** です。
 
 本リポジトリは、建築研究所が公開する住宅のエネルギー消費性能計算プログラム
 `pyhees`を基礎とし、検証用の入力画面、床下空調などの拡張計算、数値回帰試験を
@@ -24,7 +24,8 @@
 
 ## 主な機能
 
-- 223項目の正規入力スキーマと方式別の表示・検証条件
+- 228項目の正規入力スキーマと方式別の表示・検証条件
+- Next／TG計算方式の切替（TG＋床下空調は未対応）
 - JSON入力とGradio Web UI
 - ダクト式セントラル空調、ルームエアコン、床下空調などの計算
 - 暖冷房別の年間結果、8760時間系列、グラフ、計算ログの出力
@@ -127,6 +128,7 @@ docker run --rm -p 8080:8080 verification-platform-next
 - [変更履歴](CHANGELOG.md)
 - [入力画面ガイド](docs/input_guide.md)
 - [床下関連設定の入力ガイド](docs/underfloor_ac_input_guide.md)
+- [Next・TG方式の切替と計算範囲](docs/tg_calculation_method.md)
 - [床下空調計算の7つの変更点](docs/underfloor_ac_seven_changes.md)
 - [Excelとの床下計算整合](docs/underfloor_ac_excel_alignment.md)
 - [建研本家・旧Verification Platformとの計算差分](docs/calculation_differences.md)

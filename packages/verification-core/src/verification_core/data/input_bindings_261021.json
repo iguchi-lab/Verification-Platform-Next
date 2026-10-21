@@ -1,0 +1,62 @@
+{
+  "version": "261021",
+  "base_version": "260812",
+  "binding_count": 275,
+  "append_bindings": [
+    {
+      "line": 10000,
+      "target_path": [
+        "calculation_method"
+      ],
+      "expression": "calculation_method",
+      "conditions": [],
+      "source_ids": [
+        "calculation_method__0"
+      ]
+    },
+    {
+      "line": 10001,
+      "target_path": [
+        "tg_fan_exponent"
+      ],
+      "expression": "tg_fan_exponent",
+      "conditions": [],
+      "source_ids": [
+        "tg_fan_exponent__0"
+      ]
+    },
+    {
+      "line": 10002,
+      "target_path": [
+        "tg_q_rtd_H"
+      ],
+      "expression": "tg_q_rtd_H",
+      "conditions": [],
+      "source_ids": [
+        "tg_q_rtd_H__0"
+      ]
+    },
+    {
+      "line": 10003,
+      "target_path": [
+        "tg_q_rtd_C"
+      ],
+      "expression": "tg_q_rtd_C",
+      "conditions": [],
+      "source_ids": [
+        "tg_q_rtd_C__0"
+      ]
+    },
+    {
+      "line": 10004,
+      "target_path": [
+        "tg_rac_class"
+      ],
+      "expression": "tg_rac_class",
+      "conditions": [],
+      "source_ids": [
+        "tg_rac_class__0"
+      ]
+    }
+  ]
+}

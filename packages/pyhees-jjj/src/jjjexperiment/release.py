@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Any, Mapping
 
 
-VERSION = "1.4.0"
-DISPLAY_VERSION = "ver.1.4.0"
-RELEASE_DATE = "2026-08-21"
-ARTIFACT_VERSION = "_v1.4.0"
+VERSION = "1.5.0"
+DISPLAY_VERSION = "ver.1.5.0"
+RELEASE_DATE = "2026-10-21"
+ARTIFACT_VERSION = "_v1.5.0"
 
 UPSTREAM_PYHEES_VERSION = "3.10.0"
 UPSTREAM_PYHEES_COMMIT = "d5224c4a01def00a8421bcd2fcc0d4b4a5b88644"
@@ -65,6 +65,8 @@ def build_artifact_manifest(input_data: Mapping[str, Any]) -> dict[str, Any]:
     """Build metadata that makes an output reproducible and auditable."""
     return {
         "schema_version": 1,
+        "calculation_method": input_data.get("calculation_method", "next"),
+        "tg_specification": input_data.get("tg_specification"),
         "product": "Verification Platform Next",
         "version": VERSION,
         "display_version": DISPLAY_VERSION,

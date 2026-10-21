@@ -4,7 +4,7 @@ from verification_core import FieldKind, FieldOrigin, load_legacy_inventory
 
 
 def test_260812_active_inventory_adds_opt_in_calculation_corrections() -> None:
-    inventory = load_legacy_inventory()
+    inventory = load_legacy_inventory("260812")
 
     assert inventory.version == "260812"
     assert len(inventory.fields) == 223
@@ -127,7 +127,7 @@ def test_260812_has_independent_heating_and_cooling_efficiency_classes() -> None
 
 
 def test_260812_classifies_bri_web_and_verification_platform_inputs() -> None:
-    inventory = load_legacy_inventory()
+    inventory = load_legacy_inventory("260812")
     fields = {item.id: item for item in inventory.fields}
 
     assert Counter(item.origin for item in inventory.fields) == {

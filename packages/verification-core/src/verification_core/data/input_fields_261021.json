@@ -1,0 +1,160 @@
+{
+  "version": "261021",
+  "base_version": "260812",
+  "field_count": 228,
+  "append_fields": [
+    {
+      "id": "calculation_method__0",
+      "source_name": "calculation_method",
+      "source_occurrence": 0,
+      "label": "計算方式",
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "計算方式",
+      "category": "基本設定",
+      "kind": "select",
+      "default": "next",
+      "choices": [
+        "next",
+        "tg"
+      ],
+      "enabled_when": null,
+      "origin": "verification_platform",
+      "description": "next：従来方式。tg：TG比較方式（床下空調は未対応）。"
+    },
+    {
+      "id": "tg_fan_exponent__0",
+      "source_name": "tg_fan_exponent",
+      "source_occurrence": 0,
+      "label": "TG：送風機の指数 n",
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "計算方式",
+      "category": "基本設定",
+      "kind": "select",
+      "default": 1.0,
+      "choices": [
+        1.0,
+        1.5,
+        2.0,
+        3.0
+      ],
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "tg"
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "P = 定格送風機電力 × (風量 / 設計風量)^n。最低風量未入力時は設計風量を使います。"
+    },
+    {
+      "id": "tg_q_rtd_H__0",
+      "source_name": "tg_q_rtd_H",
+      "source_occurrence": 0,
+      "label": "TG RAC：定格暖房能力 [W]",
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "計算方式",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 6700,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "tg"
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "暖房方式2で使用します。最大能力・効率はTG式と下の効率区分から算定します。"
+    },
+    {
+      "id": "tg_q_rtd_C__0",
+      "source_name": "tg_q_rtd_C",
+      "source_occurrence": 0,
+      "label": "TG RAC：定格冷房能力 [W]",
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "計算方式",
+      "category": "基本設定",
+      "kind": "number",
+      "default": 5600,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "tg"
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "冷房方式2で使用します。暖房能力とは独立に入力します。"
+    },
+    {
+      "id": "tg_rac_class__0",
+      "source_name": "tg_rac_class",
+      "source_occurrence": 0,
+      "label": "TG RAC：効率区分",
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "計算方式",
+      "category": "基本設定",
+      "kind": "select",
+      "default": "い",
+      "choices": [
+        "い",
+        "ろ",
+        "は"
+      ],
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "tg"
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "方式2の暖冷房に共通の区分です。RACのNext専用性能入力は使用しません。"
+    }
+  ],
+  "field_overrides": {
+    "change_underfloor_temperature__0": {
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "next"
+        ]
+      }
+    },
+    "carry_over_heat__0": {
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "next"
+        ]
+      }
+    },
+    "hs_CAV__0": {
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "next"
+        ]
+      }
+    },
+    "H_A_input_V_hs_min__0": {
+      "description": "Next：従来の最低風量。TG：入力値を区画の床面積比で配分し、未入力時は設計風量を使います。"
+    },
+    "C_A_input_V_hs_min__0": {
+      "description": "Next：従来の最低風量。TG：入力値を区画の床面積比で配分し、未入力時は設計風量を使います。"
+    }
+  }
+}
