@@ -58,8 +58,12 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         if isinstance(component["props"].get("key"), str)
     }
 
+    method = components_by_key["field:calculation_method__0"]["props"]
+    assert method["choices"] == [("自立", "next"), ("TG", "tg")]
+    assert method["value"] == "next"
+
     assert gradio.__version__.startswith("6.")
-    assert config["title"] == "Verification Platform Next ver.1.5.0"
+    assert config["title"] == "Verification Platform Next ver.1.5.1"
     assert component_types["accordion"] == 9
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 57
@@ -209,7 +213,7 @@ def test_annual_summary_html_shows_heating_and_cooling_metrics() -> None:
 
     html = form_app._annual_summary_html(summary)
 
-    assert "年間計算結果" in html
+    assert "年間計算結果（自立方式）" in html
     assert "一次エネルギー消費量には未処理負荷" in html
     assert "暖房" in html
     assert "冷房" in html
