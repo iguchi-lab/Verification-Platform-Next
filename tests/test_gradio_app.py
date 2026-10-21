@@ -63,7 +63,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert method["value"] == "next"
 
     assert gradio.__version__.startswith("6.")
-    assert config["title"] == "Verification Platform Next ver.1.5.1"
+    assert config["title"] == "Verification Platform Next ver.1.5.2"
     assert component_types["accordion"] == 9
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 57
@@ -205,15 +205,20 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert form_app._calculation_started_outputs()[1]["visible"] is False
 
 
-def test_annual_summary_html_shows_heating_and_cooling_metrics() -> None:
+@pytest.mark.parametrize("method", ["next", "tg"])
+def test_annual_summary_html_shows_heating_and_cooling_metrics(method: str) -> None:
     summary = AnnualSummary(
         heating=AnnualMetrics(100.0, 2.0, 30.0, 4.0),
         cooling=AnnualMetrics(200.0, 5.0, 60.0, 7.0),
+        calculation_method=method,
+        fan_ventilation_mj=40.0 if method == "tg" else None,
+        chapter5_ventilation_mj=50.0 if method == "tg" else None,
+        tg_total_mj=390.0 if method == "tg" else None,
     )
 
     html = form_app._annual_summary_html(summary)
 
-    assert "年間計算結果（自立方式）" in html
+    assert f"年間計算結果（{'自立' if method == 'next' else 'TG'}方式）" in html
     assert "一次エネルギー消費量には未処理負荷" in html
     assert "暖房" in html
     assert "冷房" in html
@@ -223,6 +228,16 @@ def test_annual_summary_html_shows_heating_and_cooling_metrics() -> None:
     assert "消費電力量（ファン）" in html
     assert "100.0" in html
     assert "200.0" in html
+    total_html = html.split('annual-summary__season--total">', 1)[1].split("</section>", 1)[0]
+    assert "暖冷房合計" in total_html
+    assert "300.0" in total_html
+    assert "7.0" in total_html
+    assert "90.0" in total_html
+    assert "11.0" in total_html
+    assert html.index("<h3>冷房</h3>") < html.index("<h3>暖冷房合計</h3>")
+    if method == "tg":
+        assert "390.0" not in total_html
+        assert html.index("<h3>暖冷房合計</h3>") < html.index("TG比較合計")
 
 
 def test_highlight_javascript_uses_schema_defaults_and_field_dom_ids() -> None:

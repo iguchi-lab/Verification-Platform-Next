@@ -124,6 +124,10 @@ div.block.input-value-modified {
 }
 .annual-summary__season--heating { border-top: 5px solid #ef4444; }
 .annual-summary__season--cooling { border-top: 5px solid #2563eb; }
+.annual-summary__season--total {
+  border-top: 5px solid #16a34a;
+  grid-column: 1 / -1;
+}
 .annual-summary__season h3 {
   font-size: 1.3rem;
   margin: 0 0 0.75rem;
@@ -1026,6 +1030,19 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
             + "</div></section>"
         )
 
+    total = AnnualMetrics(
+        primary_energy_mj=summary.heating.primary_energy_mj + summary.cooling.primary_energy_mj,
+        unprocessed_load_mj=(
+            summary.heating.unprocessed_load_mj + summary.cooling.unprocessed_load_mj
+        ),
+        air_conditioner_electricity_kwh=(
+            summary.heating.air_conditioner_electricity_kwh
+            + summary.cooling.air_conditioner_electricity_kwh
+        ),
+        fan_electricity_kwh=(
+            summary.heating.fan_electricity_kwh + summary.cooling.fan_electricity_kwh
+        ),
+    )
     accounting = ""
     if summary.tg_total_mj is not None:
         accounting = (
@@ -1048,6 +1065,7 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
         '<div class="annual-summary__seasons">'
         + season("暖房", "heating", summary.heating)
         + season("冷房", "cooling", summary.cooling)
+        + season("暖冷房合計", "total", total)
         + "</div>" + accounting + "</div>"
     )
 
