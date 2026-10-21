@@ -66,7 +66,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert config["title"] == "Verification Platform Next ver.1.5.2"
     assert component_types["accordion"] == 9
     assert component_types["number"] == 158
-    assert component_types["dropdown"] == 57
+    assert component_types["dropdown"] == 58
     assert component_types["checkbox"] == 10
     assert component_types["textbox"] == 4  # three text inputs and the log output
     assert component_types["plot"] == 5
@@ -126,7 +126,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
     assert origin_classes == {
         "input-origin-bri-web": 47,
-        "input-origin-verification-platform": 181,
+        "input-origin-verification-platform": 182,
     }
     assert tuple(accordions) == (
         "JSONファイルから計算",
@@ -154,7 +154,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     reset_inputs = next(
         dependency
         for dependency in dependencies
-        if len(dependency["outputs"]) == 228 and dependency.get("js")
+        if len(dependency["outputs"]) == 229 and dependency.get("js")
     )
     install_default_highlights = next(
         dependency
@@ -169,7 +169,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
     assert len(calculation_started["outputs"]) == 13
-    assert len(calculation["inputs"]) == 228
+    assert len(calculation["inputs"]) == 229
     assert len(calculation["outputs"]) == 9
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
@@ -181,7 +181,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert 74 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert 79 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert len(reset_inputs["inputs"]) == 0
-    assert len(reset_inputs["outputs"]) == 228
+    assert len(reset_inputs["outputs"]) == 229
     assert len(install_default_highlights["inputs"]) == 0
     assert len(install_default_highlights["outputs"]) == 0
     assert install_default_highlights["queue"] is False

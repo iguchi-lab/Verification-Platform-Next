@@ -75,6 +75,7 @@ class AnnualSummary:
     fan_ventilation_mj: float | None = None
     chapter5_ventilation_mj: float | None = None
     tg_total_mj: float | None = None
+    tg_profile: str = 'standard'
 
 
 class CalculationService:
@@ -378,6 +379,7 @@ class CalculationService:
             return AnnualSummary(
                 heating=metrics("H"), cooling=metrics("C"),
                 calculation_method=str(input_data.get("calculation_method", "next")),
+                tg_profile=str(annual.get('tg_profile', input_data.get('tg_profile', 'standard'))),
                 fan_ventilation_mj=(float(annual["E_fan_vent [MJ/year]"])
                                     if "E_fan_vent [MJ/year]" in annual else None),
                 chapter5_ventilation_mj=(float(annual["E_vent_ch5 [MJ/year]"])

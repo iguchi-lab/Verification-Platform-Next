@@ -1,0 +1,54 @@
+{
+  "version": "261021_2",
+  "base_version": "261021",
+  "field_count": 229,
+  "append_fields": [
+    {
+      "id": "tg_profile__0",
+      "source_name": "tg_profile",
+      "source_occurrence": 0,
+      "label": "TG：比較する修正内容",
+      "section": "①・② 計算条件・外部ファイル",
+      "group": "計算方式",
+      "category": "基本設定",
+      "kind": "select",
+      "default": "standard",
+      "choices": [
+        "standard",
+        "baseline",
+        "outlet_temperature",
+        "minimum_airflow",
+        "fan_accounting",
+        "fan_characteristic",
+        "ventilation_lower_bound",
+        "ventilation_no_stop",
+        "ventilation_stop",
+        "partition_sign"
+      ],
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "tg"
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "個別比較では選んだ修正だけを適用します。住宅・外皮・VAV・機器仕様は比較条件に合わせて設定してください。旧入力は「TG総合」を使用します。",
+      "insert_after_field_id": "calculation_method__0"
+    }
+  ],
+  "field_overrides": {
+    "tg_fan_exponent__0": {
+      "enabled_when": {
+        "path": [
+          "tg_profile__0"
+        ],
+        "allowed_values": [
+          "standard",
+          "fan_characteristic"
+        ]
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ from urllib.request import urlopen
 
 import gradio as gr
 from jjjexperiment.release import DISPLAY_VERSION
+from jjjexperiment.calculation_method import TG_PROFILES
 from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
 from .form_model import TG_NEXT_ONLY_FIELDS, FormField, FormModel, load_form_model
@@ -557,7 +558,7 @@ def build_app(
             }
 
             def reset_unsupported_mode_inputs(
-                selected_method: str, heating_type: str, cooling_type: str,
+                selected_method: str, heating_type: str, cooling_type: str, profile: str = 'standard',
             ) -> tuple[Any, ...]:
                 toggles = tuple(
                     gr.update(value=False) if selected_method == "tg" else gr.update()
@@ -567,20 +568,48 @@ def build_app(
                 for key, value in zip(equipment_keys, (heating_type, cooling_type), strict=True):
                     choices = equipment_choices[key]
                     if selected_method == "tg":
-                        choices = choices[:2]
+                        choices = choices[:2] if profile == 'standard' else choices[:1]
                     equipment.append(gr.update(
                         choices=list(choices), value=value if value in choices else choices[0],
                     ))
                 return (*toggles, *equipment)
 
-            components["calculation_method__0"].change(
-                reset_unsupported_mode_inputs,
-                inputs=[components["calculation_method__0"],
-                        *(components[key] for key in equipment_keys)],
-                outputs=[components[key] for key in (*unsupported_keys, *equipment_keys)],
-                queue=False,
-                api_visibility="private",
-            )
+            for control in ('calculation_method__0', 'tg_profile__0'):
+                components[control].change(
+                    reset_unsupported_mode_inputs,
+                    inputs=[components['calculation_method__0'],
+                            *(components[key] for key in equipment_keys), components['tg_profile__0']],
+                    outputs=[components[key] for key in (*unsupported_keys, *equipment_keys)],
+                    queue=False, api_visibility='private',
+                )
+
+            profile_keys = ('change_heat_source_outlet_required_temperature__0',
+                            'correct_cooling_partition_heat_transfer__0', 'tg_fan_exponent__0',
+                            'H_A_general_ventilation__0', 'C_A_general_ventilation__0',
+                            'H_A_input_V_hs_min__0', 'C_A_input_V_hs_min__0')
+
+            def apply_comparison_profile(selected_method: str, profile: str) -> tuple[Any, ...]:
+                if selected_method != 'tg' or profile == 'standard':
+                    return tuple(gr.update(interactive=True) for _ in profile_keys)
+                fixed_minimum = profile in ('baseline', 'outlet_temperature', 'partition_sign')
+                ventilation = 'なし' if profile.startswith('ventilation_') else 'あり'
+                return (
+                    gr.update(value=profile == 'outlet_temperature', interactive=False),
+                    gr.update(value=profile == 'partition_sign', interactive=False),
+                    gr.update(interactive=True) if profile == 'fan_characteristic' else gr.update(value=1.0, interactive=False),
+                    *(gr.update(interactive=True) if profile == 'baseline'
+                      else gr.update(value=ventilation, interactive=False) for _ in ('H', 'C')),
+                    *(gr.update(value='入力しない', interactive=False) if fixed_minimum
+                      else gr.update(interactive=True) for _ in ('H', 'C')),
+                )
+
+            for control in ('calculation_method__0', 'tg_profile__0'):
+                components[control].change(
+                    apply_comparison_profile,
+                    inputs=[components['calculation_method__0'], components['tg_profile__0']],
+                    outputs=[components[key] for key in profile_keys],
+                    queue=False, api_visibility='private',
+                )
 
         ordered_fields = tuple(form.schema.fields)
         equipment_section_names = tuple(
@@ -712,7 +741,8 @@ def _input_component(
         return gr.Dropdown(
             choices=[
                 (_CALCULATION_METHOD_LABELS[value], value)
-                if field.key == "calculation_method__0" else value
+                if field.key == "calculation_method__0" else
+                (TG_PROFILES[value], value) if field.key == 'tg_profile__0' else value
                 for value in (choices if choices is not None else field.choices)
             ],
             allow_custom_value=False,
@@ -776,6 +806,7 @@ def _install_default_highlight_js(
   const groupTargets = {group_targets_json};
   const fieldIndexes = Object.fromEntries(fieldKeys.map((key, index) => [key, index]));
   const methodValues = {json.dumps({label: value for value, label in _CALCULATION_METHOD_LABELS.items()}, ensure_ascii=True)};
+  const profileValues = {json.dumps({label: value for value, label in TG_PROFILES.items()}, ensure_ascii=True)};
   const readValue = (container, kind, key) => {{
     if (kind === "boolean") {{
       return container.querySelector('input[type="checkbox"]')?.checked;
@@ -786,7 +817,8 @@ def _install_default_highlight_js(
       return input.value === "" ? null : Number(input.value);
     }}
     return key === "calculation_method__0"
-      ? (methodValues[input.value] ?? input.value) : input.value;
+      ? (methodValues[input.value] ?? input.value) : key === 'tg_profile__0'
+      ? (profileValues[input.value] ?? input.value) : input.value;
   }};
   const normalizeValue = (value, defaultValue) => {{
     if (value === null || typeof defaultValue !== "number") return value;
@@ -1045,9 +1077,14 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
     )
     accounting = ""
     if summary.tg_total_mj is not None:
+        fan_note = (
+            '現行式の送風機の換気相当分は追加計上せず0です。'
+            if summary.tg_profile == 'baseline' else
+            '暖冷房のファン欄は暖冷房分で、換気相当分を下に別計上します。'
+        )
         accounting = (
-            '<div class="annual-summary__note">TG方式：暖冷房のファン欄は暖冷房分です。'
-            '換気相当分を下に別計上します。合計は比較用で、住宅全体の法定評価値ではありません。</div>'
+            '<div class="annual-summary__note">換気を含む比較では、下のTG比較合計を使用します。'
+            + fan_note + '合計は比較用で、住宅全体の法定評価値ではありません。</div>'
             '<div class="annual-summary__metrics">'
             + metric("送風機の換気相当分", summary.fan_ventilation_mj, "MJ/年")
             + metric("第五章の換気相当分", summary.chapter5_ventilation_mj, "MJ/年")
@@ -1058,7 +1095,10 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
     return (
         '<div class="annual-summary">'
         f'<div class="annual-summary__title">年間計算結果（{_CALCULATION_METHOD_LABELS[summary.calculation_method]}方式）</div>'
-        '<div class="annual-summary__note">'
+        + (f'<div class="annual-summary__note">比較条件：{escape(TG_PROFILES.get(summary.tg_profile, summary.tg_profile))}'
+           + ('。比較対象は暖冷房合計です。' if summary.tg_total_mj is None else '。暖冷房合計と換気を含む比較合計を表示します。')
+           + '</div>' if summary.calculation_method == 'tg' else '')
+        + '<div class="annual-summary__note">'
         '一次エネルギー消費量には未処理負荷の一次エネルギー相当分を含みます。'
         'エアコンの消費電力量は、熱源機とファンの合計からファン分を除いた値です。'
         "</div>"

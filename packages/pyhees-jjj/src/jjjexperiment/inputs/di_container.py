@@ -148,7 +148,10 @@ class JJJExperimentModule(Module):
             if self._input is not None and ha_key in self._input:
                 v_min = self._input[ha_key].get('input_V_hs_min', None)
                 v_min_input_enabled = v_min is not None and 最低風量直接入力(int(v_min)) == 最低風量直接入力.入力する
-                if v_min_input_enabled:
+                if v_min_input_enabled and not (
+                    self._input.get('calculation_method') == 'tg'
+                    and self._input.get('tg_profile') == 'minimum_airflow'
+                ):
                     self._input[ha_key]['subtract_ventilation_power'] = ファン消費電力から換気分を引く.換気分を引かない.value
                     print(f"{ha_key}: subtract_ventilation_power を強制オフ (最低風量直接入力有効)")
 

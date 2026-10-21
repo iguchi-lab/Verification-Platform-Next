@@ -1581,7 +1581,7 @@ def _get_heat_source_ventilation_airflow_by_zone(
     heat source has no general-ventilation function.
     """
     if method.current() is not None:
-        return V_vent_g_i if general_ventilation else np.zeros_like(V_vent_g_i)
+        return V_vent_g_i if method.current().ventilation_lower_bound else np.zeros_like(V_vent_g_i)
     if not correct_no_general_ventilation_airflow:
         return V_vent_g_i
     if general_ventilation is True:
@@ -3007,9 +3007,10 @@ def _prepare_general_ventilation_state(inputs: _GeneralVentilationStateInputs):
     A_HCZ_i = inputs.A_HCZ_i
     A_HCZ_R_i = inputs.A_HCZ_R_i
     V_vent_g_i = dc.get_V_vent_g_i(A_HCZ_i, A_HCZ_R_i)
+    method.record_minimum_airflow(v_min_input)
     if method.current() is not None:
         method.current().set_ventilation(V_vent_g_i)
-    elif v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
+    elif not method.isolated_comparison() and v_min_input.input_V_hs_min == 最低風量直接入力.入力する:
         V_vent_g_i = rescale_V_vent_g_i(V_vent_g_i, v_min_input.V_hs_min)
     df_output2['V_vent_g_i'] = V_vent_g_i
     return V_vent_g_i
@@ -3175,7 +3176,7 @@ def _prepare_initial_heat_source_output(inputs: _InitialHeatSourceOutputInputs):
 
 def _prepare_minimum_heat_source_airflow(df_output3, V_vent_g_i):
     """Calculate formula (39) and preserve its direct output write."""
-    V_hs_min = dc.get_V_hs_min(V_vent_g_i)
+    V_hs_min = method.minimum_airflow(dc.get_V_hs_min(V_vent_g_i))
     df_output3['V_hs_min'] = [V_hs_min]
     if method.current() is not None:
         for season, minimum in zip(('H', 'C', 'M'), method.current().minima):

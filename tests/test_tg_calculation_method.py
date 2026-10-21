@@ -233,3 +233,119 @@ def test_tg_rejects_unknown_method_model_and_mismatched_ventilation():
     data['C_A']['general_ventilation'] = 2
     with pytest.raises(ValueError, match='同じ設定'):
         method.prepare_input(data)
+
+
+def test_profile_roundtrip_defaults_and_rejects_unknown_profile():
+    old = build_input_data({'calculation_method__0': 'tg'}, version='261021')
+    restored = load_compatible_input_json(json.dumps(old)).input_data
+    assert restored['tg_profile'] == 'standard'
+    for profile in method.TG_PROFILES:
+        data = build_input_data({'calculation_method__0': 'tg', 'tg_profile__0': profile})
+        assert load_compatible_input_json(json.dumps(data)).input_data == data
+    restored['tg_profile'] = 'unknown'
+    with pytest.raises(ValueError, match='修正内容'):
+        method.prepare_input(restored)
+
+
+@pytest.mark.parametrize('profile', list(method.TG_PROFILES))
+def test_comparison_profiles_normalize_stale_switches_without_mutating_input(profile):
+    data = tg_input()
+    data.update(tg_profile=profile, change_heat_source_outlet_required_temperature='2', tg_fan_exponent=3)
+    for season in ('H', 'C'):
+        data[season+'_A'].update(correct_cooling_partition_heat_transfer=2, input_V_hs_min=2, V_hs_min=240)
+    original = deepcopy(data)
+    prepared = method.prepare_input(data)
+    assert data == original
+    assert method.prepare_input(prepared) == prepared
+    if profile != 'standard':
+        assert prepared['change_heat_source_outlet_required_temperature'] == ('2' if profile == 'outlet_temperature' else '1')
+        assert prepared['C_A']['correct_cooling_partition_heat_transfer'] == (2 if profile == 'partition_sign' else 1)
+
+
+def test_isolated_minimum_is_local_and_does_not_change_ventilation():
+    from jjjexperiment.v_min_input.inputs.heating import InputMinVolumeInput
+    data = tg_input()
+    data['tg_profile'] = 'minimum_airflow'
+    with method.calculation_scope(method.prepare_input(data)):
+        assert method.current() is None
+        assert method.isolated_comparison()
+        values = InputMinVolumeInput.from_dict({'input_V_hs_min': 2, 'V_hs_min': 240})
+        method.record_minimum_airflow(values)
+        assert method.minimum_airflow(160) == 240
+        with method.calculation_scope({}):
+            assert method.minimum_airflow(160) == 160
+        assert method.minimum_airflow(160) == 240
+    assert method.minimum_airflow(160) == 160
+
+
+@pytest.mark.parametrize('profile, lower, stop', [
+    ('ventilation_lower_bound', True, False),
+    ('ventilation_no_stop', False, False),
+    ('ventilation_stop', False, True),
+])
+def test_no_ventilation_profiles_control_lower_bound_and_only_midseason_stop(profile, lower, stop):
+    data = tg_input()
+    data['tg_profile'] = profile
+    for season in ('H', 'C'):
+        data[season+'_A'].update(input_V_hs_min=2, V_hs_min=100)
+    context = method.TGCalculation(method.prepare_input(data), designs={'H': 1000, 'C': 1000})
+    context.set_ventilation(np.array([60, 20, 40, 20, 20]))
+    assert context.minima == ((160, 160, 160) if lower else (100, 100, 100))
+    value = np.ones(8760)
+    context.exclude_midseason(value)
+    h, c, middle = get_season_array_d_t(6)
+    assert np.all(value[h | c] == 1)
+    assert np.all(value[middle] == (0 if stop else 1))
+
+
+def test_profile_ui_sets_matching_controls_and_restores_standard_controls():
+    from verification_app.form_app import build_app
+    from verification_app.services import CalculationService
+    app = build_app(service=CalculationService(lambda data: None, lambda: 'test'))
+    callback = next(fn.fn for fn in app.fns.values()
+                    if fn.fn and fn.fn.__name__ == 'apply_comparison_profile')
+    stopped = callback('tg', 'ventilation_stop')
+    assert stopped[0]['value'] is False
+    assert stopped[1]['value'] is False
+    assert stopped[3]['value'] == stopped[4]['value'] == 'なし'
+    partition = callback('tg', 'partition_sign')
+    assert partition[1]['value'] is True
+    assert partition[5]['value'] == partition[6]['value'] == '入力しない'
+    assert all(item['interactive'] for item in callback('next', 'partition_sign'))
+    model = load_form_model()
+    values = model.schema.defaults()
+    values.update(calculation_method__0='tg', tg_profile__0='minimum_airflow')
+    assert model.visibility(values)['tg_profile__0']
+    assert not model.visibility(values)['tg_fan_exponent__0']
+
+
+def test_isolated_minimum_at_original_flow_preserves_hvac_energy_and_ventilation(tmp_path, monkeypatch):
+    from jjjexperiment.main import calc
+    from jjjexperiment.csv_artifacts import capture_csv_exports
+    from jjjexperiment import artifact_paths
+    from verification_app.form_app import _annual_summary_html
+    from verification_app.services import CalculationService
+    monkeypatch.chdir(tmp_path)
+    reference = build_input_data({})
+    isolated = tg_input()
+    isolated['tg_profile'] = 'minimum_airflow'
+    for season in ('H', 'C'):
+        isolated[season+'_A'].update(input_V_hs_min=2, V_hs_min=160)
+    with capture_csv_exports() as original:
+        calc(reference)
+    with capture_csv_exports() as comparison:
+        calc(isolated)
+    cols = ['E_H_d_t [MJ/h]', 'E_C_d_t [MJ/h]', 'E_E_fan_H_d_t [kWh/h]',
+            'E_E_fan_C_d_t [kWh/h]', 'V_hs_vent_H_d_t [m3/h]', 'V_hs_vent_C_d_t [m3/h]']
+    path = artifact_paths.main_output_csv_path('default', 2)
+    np.testing.assert_allclose(original.dataframe(path)[cols], comparison.dataframe(path)[cols])
+    saved = json.loads((tmp_path / artifact_paths.input_json_path('default')).read_text())
+    assert saved['H_A']['subtract_ventilation_power'] == 1
+    assert saved['tg_profile'] == 'minimum_airflow'
+    manifest = json.loads((tmp_path / artifact_paths.metadata_json_path('default')).read_text())
+    assert manifest['tg_profile'] == 'minimum_airflow'
+    service = CalculationService(lambda data: None, lambda: '_v1.5.2')
+    summary = service._annual_summary(isolated, tmp_path, comparison)
+    assert summary.tg_profile == 'minimum_airflow'
+    assert summary.tg_total_mj is None
+    assert '比較対象は暖冷房合計' in _annual_summary_html(summary)

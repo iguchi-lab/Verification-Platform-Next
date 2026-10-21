@@ -1,0 +1,18 @@
+{
+  "version": "261021_2",
+  "base_version": "261021",
+  "binding_count": 276,
+  "append_bindings": [
+    {
+      "line": 10005,
+      "target_path": [
+        "tg_profile"
+      ],
+      "expression": "tg_profile",
+      "conditions": [],
+      "source_ids": [
+        "tg_profile__0"
+      ]
+    }
+  ]
+}
