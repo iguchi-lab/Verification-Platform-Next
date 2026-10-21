@@ -129,6 +129,7 @@ docker run --rm -p 8080:8080 verification-platform-next
 - [入力画面ガイド](docs/input_guide.md)
 - [床下関連設定の入力ガイド](docs/underfloor_ac_input_guide.md)
 - [Next・TG方式の切替と計算範囲](docs/tg_calculation_method.md)
+- [修正内容ごとの設定方法（自立を基本とする）](docs/calculation_settings_from_default.md)
 - [床下空調計算の7つの変更点](docs/underfloor_ac_seven_changes.md)
 - [Excelとの床下計算整合](docs/underfloor_ac_excel_alignment.md)
 - [建研本家・旧Verification Platformとの計算差分](docs/calculation_differences.md)
