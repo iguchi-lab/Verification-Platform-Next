@@ -67,6 +67,7 @@ def build_artifact_manifest(input_data: Mapping[str, Any]) -> dict[str, Any]:
         "schema_version": 1,
         "calculation_method": input_data.get("calculation_method", "next"),
         "tg_specification": input_data.get("tg_specification"),
+        "tg_profile": input_data.get("tg_profile") if input_data.get("calculation_method") == "tg" else None,
         "product": "Verification Platform Next",
         "version": VERSION,
         "display_version": DISPLAY_VERSION,

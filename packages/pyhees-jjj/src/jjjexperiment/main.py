@@ -515,6 +515,10 @@ def _select_heating_fan_power(
 ):
     if method.current() is not None:
         return method.current().fan_hvac('H', V_hs_supply_d_t)
+    if method.isolated_comparison():
+        return _get_standard_heating_fan_power(
+            heat_ac_setting, heat_quantity, P_rac_fan_rtd_H, V_hs_vent_d_t,
+            V_hs_supply_d_t, V_hs_dsgn_H, q_hs_H_d_t, region)
     if heat_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
         return _get_latent_heating_fan_power(
             heat_ac_setting, V_hs_vent_d_t, q_hs_H_d_t
@@ -892,6 +896,10 @@ def _select_cooling_fan_power(
 ):
     if method.current() is not None:
         return method.current().fan_hvac('C', V_hs_supply_d_t)
+    if method.isolated_comparison():
+        return _get_standard_cooling_fan_power(
+            cool_ac_setting, cool_quantity, P_rac_fan_rtd_C, V_hs_vent_d_t,
+            V_hs_supply_d_t, V_hs_dsgn_C, q_hs_C_d_t, region)
     if cool_ac_setting.type == 計算モデル.RAC活用型全館空調_潜熱評価モデル:
         return _get_latent_cooling_fan_power(
             cool_ac_setting, V_hs_vent_d_t, q_hs_C_d_t
@@ -1108,8 +1116,7 @@ def _write_outputs_and_build_test_result(case_name, df_output2, climate, test_mo
     df_output2['q_hs_H_d_t [Wh/h]'] = q_hs_H_d_t
     df_output2['q_hs_CS_d_t [Wh/h]'] = q_hs_CS_d_t
     df_output2['q_hs_CL_d_t [Wh/h]'] = q_hs_CL_d_t
-    if method.current() is not None:
-        method.current().write_accounting(df_output1, df_output2, E_H, E_C)
+    method.write_comparison_accounting(df_output1, df_output2, E_H, E_C)
     write_dataframe_csv(
         df_output1,
         artifact_paths.main_output_csv_path(case_name, 1),

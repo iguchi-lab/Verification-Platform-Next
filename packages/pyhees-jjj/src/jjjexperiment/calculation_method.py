@@ -16,12 +16,74 @@ import pyhees.section4_3_a as rac_spec
 
 from jjjexperiment.v_min_input.validation import require_positive_finite
 
-TG_SPECIFICATION = 'tg-2026-10-v1'
+TG_SPECIFICATION = 'tg-2026-10-v2'
+TG_PROFILES = {
+    'standard': 'TG総合（従来のTG・ダクト／RAC）',
+    'baseline': '現行式（比較基準）',
+    'outlet_temperature': '出口温度だけを修正',
+    'minimum_airflow': '最低風量の式だけを変更',
+    'fan_accounting': '最低風量・送風機の計上方法を修正（n＝1）',
+    'fan_characteristic': '送風機特性を比較（指数nを選択）',
+    'ventilation_lower_bound': '全般換気なし：換気量下限あり・停止なし（参考）',
+    'ventilation_no_stop': '全般換気なし：換気量下限なし・停止なし',
+    'ventilation_stop': '全般換気なし：換気量下限なし・中間期停止',
+    'partition_sign': '冷房の間仕切り熱移動の符号だけを修正',
+}
+ISOLATED_PROFILES = frozenset({'baseline', 'outlet_temperature', 'minimum_airflow', 'partition_sign'})
 _current = ContextVar('calculation_method', default=None)
+_comparison = ContextVar('tg_comparison', default=None)
+_minimum_override = ContextVar('tg_minimum_override', default=None)
 
 
 def current():
     return _current.get()
+
+
+def isolated_comparison():
+    data = _comparison.get()
+    return data is not None and data.get('tg_profile', 'standard') in ISOLATED_PROFILES
+
+
+def record_minimum_airflow(v_min_input):
+    """Keep the formula (39) override local to this calculation and season."""
+    data = _comparison.get()
+    value = None
+    if data is not None and data.get('tg_profile') == 'minimum_airflow':
+        if int(v_min_input.input_V_hs_min.value) == 2:
+            value = v_min_input.V_hs_min
+    _minimum_override.set(value)
+
+
+def minimum_airflow(original):
+    value = _minimum_override.get()
+    return original if value is None else value
+
+
+def _prepare_profile(result):
+    profile = result.get('tg_profile', 'standard')
+    if profile not in TG_PROFILES:
+        raise ValueError('TGの比較する修正内容が不正です。')
+    result['tg_profile'] = profile
+    if profile == 'standard':
+        return
+    # Focused comparisons isolate the named change from other optional corrections.
+    result.update(change_supply_volume_before_vav_adjust='1', change_V_supply_d_t_i_max=1,
+                  change_heat_source_outlet_required_temperature='2' if profile == 'outlet_temperature' else '1')
+    if profile != 'fan_characteristic':
+        result['tg_fan_exponent'] = 1.0
+    for season in ('H', 'C'):
+        equipment = result[f'{season}_A']
+        if int(equipment.get('type', 1)) != 1:
+            raise ValueError('TGの個別比較はダクト式を選択してください。RACはTG総合で比較できます。')
+        equipment.update(correct_cooling_partition_heat_transfer=2 if profile == 'partition_sign' else 1,
+                         correct_no_general_ventilation_airflow=1, subtract_ventilation_power=1,
+                         input_E_E_fan_min=1, input_f_SFP=1)
+        if profile in ('baseline', 'outlet_temperature', 'partition_sign'):
+            equipment['input_V_hs_min'] = 1
+        if profile.startswith('ventilation_'):
+            equipment['general_ventilation'] = 2
+        elif profile != 'baseline':
+            equipment['general_ventilation'] = 1
 
 
 def prepare_input(data):
@@ -32,6 +94,7 @@ def prepare_input(data):
     if method == 'next':
         return data
     result = deepcopy(data)
+    _prepare_profile(result)
     for key, label in (
         ('change_underfloor_temperature', '床下空調'),
         ('carry_over_heat', '熱の繰越'),
@@ -41,7 +104,7 @@ def prepare_input(data):
             raise ValueError(f'TG方式と{label}の併用は未対応です。')
     if int(data.get('underfloor_air_conditioning_air_supply', 1)) == 2:
         raise ValueError('TG方式と床下空調の併用は未対応です。')
-    n = float(data.get('tg_fan_exponent', 1.0))
+    n = float(result.get('tg_fan_exponent', 1.0))
     if n not in (1.0, 1.5, 2.0, 3.0):
         raise ValueError('TGのファン指数は 1、1.5、2、3 から選択してください。')
     result['tg_fan_exponent'] = n
@@ -108,6 +171,15 @@ class TGCalculation:
         return int(self.data['H_A'].get('general_ventilation', 1)) == 1
 
     @property
+    def ventilation_lower_bound(self):
+        return self.general_ventilation or self.data.get('tg_profile') == 'ventilation_lower_bound'
+
+    @property
+    def stop_midseason(self):
+        return not self.general_ventilation and self.data.get('tg_profile') not in (
+            'ventilation_lower_bound', 'ventilation_no_stop')
+
+    @property
     def exponent(self):
         return self.data['tg_fan_exponent']
 
@@ -147,7 +219,7 @@ class TGCalculation:
             minimum = (require_positive_finite(equipment['V_hs_min'], f'{season} 最低風量')
                        if int(equipment.get('input_V_hs_min', 1)) == 2
                        else self.designs[season])
-            if self.general_ventilation:
+            if self.ventilation_lower_bound:
                 minimum = max(minimum, float(np.sum(ventilation)))
             if minimum > self.designs[season]:
                 raise ValueError(f'TGの{season}最低風量（換気下限適用後）が設計風量を超えています。')
@@ -169,7 +241,7 @@ class TGCalculation:
         return self.combine_seasons(values)
 
     def supply_airflow(self, inputs):
-        ventilation = inputs.V_vent_g_i if self.general_ventilation else np.zeros(5)
+        ventilation = inputs.V_vent_g_i if self.ventilation_lower_bound else np.zeros(5)
         raw_values, bounded_values = [], []
         for minimum in self.minima:
             lower = np.maximum(self.ratios * minimum, ventilation)
@@ -194,7 +266,7 @@ class TGCalculation:
         return np.where(mask, result, 0.0)
 
     def exclude_midseason(self, *arrays):
-        if not self.general_ventilation:
+        if self.stop_midseason:
             middle = dc.get_season_array_d_t(self.region)[2]
             for array in arrays:
                 array[middle] = 0.0
@@ -245,9 +317,36 @@ def rac_electricity(season, output, specification, temperature):
 
 @contextmanager
 def calculation_scope(data):
-    context = TGCalculation(data) if data.get('calculation_method', 'next') == 'tg' else None
+    comparison = data if data.get('calculation_method', 'next') == 'tg' else None
+    comparison_token = _comparison.set(comparison)
+    minimum_token = _minimum_override.set(None)
+    context = TGCalculation(data) if comparison is not None and not isolated_comparison() else None
     token = _current.set(context)
     try:
         yield context
     finally:
         _current.reset(token)
+        _minimum_override.reset(minimum_token)
+        _comparison.reset(comparison_token)
+
+
+def write_comparison_accounting(annual, hourly, heating_mj, cooling_mj):
+    data = _comparison.get()
+    if data is None:
+        return
+    profile = data.get('tg_profile', 'standard')
+    annual['calculation_method'] = 'tg'
+    annual['tg_profile'] = profile
+    if current() is not None:
+        current().write_accounting(annual, hourly, heating_mj, cooling_mj)
+    elif profile == 'baseline':
+        # The baseline keeps original HVAC accounting and adds the separate
+        # ventilation system only to the optional HVAC + ventilation comparison.
+        sfp = .7 if int(data['H_A'].get('general_ventilation', 1)) == 1 else .4
+        chapter5 = sfp * float(data['A_A']) * 2.4 * .5 * 1.1 * .001
+        annual['E_fan_vent [MJ/year]'] = 0.0
+        annual['E_vent_ch5 [MJ/year]'] = chapter5 * 8760 * 9.76
+        annual['E_total_TG [MJ/year]'] = heating_mj + cooling_mj + chapter5 * 8760 * 9.76
+        hourly['E_E_fan_vent_d_t [kWh/h]'] = 0.0
+        hourly['E_E_vent_ch5_d_t [kWh/h]'] = chapter5
+        hourly['E_total_TG_d_t [MJ/h]'] = hourly['E_H_d_t [MJ/h]'] + hourly['E_C_d_t [MJ/h]'] + chapter5 * 9.76

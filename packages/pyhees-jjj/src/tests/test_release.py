@@ -31,6 +31,7 @@ def test_write_artifact_manifest_records_release_and_input(tmp_path, monkeypatch
         "schema_version": 1,
         "calculation_method": "next",
         "tg_specification": None,
+        "tg_profile": None,
         "product": "Verification Platform Next",
         "version": "1.5.2",
         "display_version": "ver.1.5.2",
