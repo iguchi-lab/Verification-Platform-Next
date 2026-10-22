@@ -10,10 +10,12 @@ import time
 import traceback
 from contextlib import nullcontext, redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from pathlib import Path
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any, Callable, ContextManager, Mapping
 from uuid import uuid4
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from verification_core import build_input_data, load_compatible_input_json
 
@@ -60,11 +62,19 @@ class CalculationResult:
 
 
 @dataclass(frozen=True, slots=True)
+class PeakValue:
+    power_kw: float
+    timestamp: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class AnnualMetrics:
     primary_energy_mj: float
     unprocessed_load_mj: float
     air_conditioner_electricity_kwh: float
     fan_electricity_kwh: float
+    peak_load: PeakValue | None = None
+    peak_processed_heat: PeakValue | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -314,6 +324,36 @@ class CalculationService:
                 ),
             )
 
+    def create_download_archive(
+        self, result: CalculationResult, selected_names: list[str],
+    ) -> str:
+        """Bundle only the selected artifacts belonging to this calculation."""
+        if not result.succeeded or result.artifact_dir is None:
+            raise ValueError("ダウンロード対象の計算結果がありません。")
+        if not selected_names:
+            raise ValueError("ダウンロードするファイルを選択してください。")
+        root = Path(result.artifact_dir).resolve()
+        available = {Path(path).name: Path(path) for path in result.files}
+        selected = []
+        for name in dict.fromkeys(selected_names):
+            path = available.get(name)
+            if path is None or path.resolve().parent != root:
+                raise ValueError("選択したファイルは、この計算の出力に含まれていません。")
+            if not path.is_file():
+                raise ValueError("出力ファイルの保存期限が切れています。再計算してください。")
+            selected.append(path)
+        download_dir = root / "downloads"
+        download_dir.mkdir(exist_ok=True)
+        archive = download_dir / f"outputs_{uuid4().hex}.zip"
+        try:
+            with ZipFile(archive, "w", compression=ZIP_DEFLATED) as bundle:
+                for path in selected:
+                    bundle.write(path, arcname=path.name)
+        except Exception:
+            archive.unlink(missing_ok=True)
+            raise
+        return str(archive)
+
     def _result_files(
         self,
         input_data: Mapping[str, Any],
@@ -346,6 +386,13 @@ class CalculationService:
                 def sum_column(name: str) -> float:
                     return math.fsum(float(value) for value in output2_frame[name])
 
+                def hourly_values(names: tuple[str, ...]):
+                    return zip(
+                        output2_frame.index,
+                        zip(*(output2_frame[name] for name in names), strict=True),
+                        strict=True,
+                    )
+
             else:
                 if not output1_path.is_file() or not output2_path.is_file():
                     return None
@@ -363,6 +410,34 @@ class CalculationService:
                 def sum_column(name: str) -> float:
                     return math.fsum(float(row[name]) for row in hourly)
 
+                def hourly_values(names: tuple[str, ...]):
+                    time_column = next(iter(hourly[0]))
+                    return ((row[time_column], tuple(row[name] for name in names)) for row in hourly)
+
+            def peak(names: tuple[str, ...], divisor: float) -> PeakValue | None:
+                try:
+                    maximum = -math.inf
+                    timestamp = None
+                    for time_value, values in hourly_values(names):
+                        values = tuple(float(value) for value in values)
+                        if not all(math.isfinite(value) for value in values):
+                            return None
+                        power = math.fsum(values) / divisor
+                        if power > maximum:
+                            maximum = power
+                            try:
+                                timestamp = datetime.fromisoformat(str(time_value)).strftime(
+                                    "%m/%d %H:%M"
+                                )
+                            except ValueError:
+                                timestamp = None
+                    if not math.isfinite(maximum):
+                        return None
+                    # Zero load has no meaningful peak occurrence time.
+                    return PeakValue(max(0.0, maximum), timestamp if maximum > 0 else None)
+                except (KeyError, TypeError, ValueError):
+                    return None
+
             def metrics(suffix: str) -> AnnualMetrics:
                 total_electricity = sum_column(f"E_E_{suffix}_d_t [kWh/h]")
                 fan_electricity = sum_column(f"E_E_fan_{suffix}_d_t [kWh/h]")
@@ -374,6 +449,16 @@ class CalculationService:
                     unprocessed_load_mj=sum_column(f"E_UT_{suffix}_d_t [MJ/h]"),
                     air_conditioner_electricity_kwh=air_conditioner_electricity,
                     fan_electricity_kwh=fan_electricity,
+                    peak_load=peak(
+                        ("L_H_d_t [MJ/h]",) if suffix == "H" else
+                        ("L_CS_d_t [MJ/h]", "L_CL_d_t [MJ/h]"),
+                        3.6,
+                    ),
+                    peak_processed_heat=peak(
+                        ("q_hs_H_d_t [Wh/h]",) if suffix == "H" else
+                        ("q_hs_CS_d_t [Wh/h]", "q_hs_CL_d_t [Wh/h]"),
+                        1000,
+                    ),
                 )
 
             return AnnualSummary(
@@ -493,6 +578,13 @@ def _format_annual_summary(summary: AnnualSummary | None) -> list[str]:
             f"{label} 消費電力量（エアコン）: {metrics.air_conditioner_electricity_kwh:,.3f} kWh/年",
             f"{label} 消費電力量（ファン）: {metrics.fan_electricity_kwh:,.3f} kWh/年",
         ))
+        for name, peak in (
+            ("ピーク負荷（建物全体）", metrics.peak_load),
+            ("最大処理熱量（熱源機）", metrics.peak_processed_heat),
+        ):
+            if peak is not None:
+                time_note = f" / {peak.timestamp}" if peak.timestamp else ""
+                lines.append(f"{label} {name}: {peak.power_kw:,.3f} kW{time_note}")
     return lines
 
 

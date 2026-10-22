@@ -1,12 +1,86 @@
 import copy
 import os
+from dataclasses import replace
 from pathlib import Path
+from zipfile import ZipFile
 
 import pandas as pd
 import pytest
 
 from jjjexperiment.csv_artifacts import capture_csv_exports, write_dataframe_csv
 from verification_app.services import CalculationService
+
+
+@pytest.mark.parametrize("deferred", [False, True])
+def test_peak_loads_use_coincident_values_and_keep_processed_heat_separate(
+    tmp_path: Path, deferred: bool,
+) -> None:
+    def calculate(data):
+        annual = pd.DataFrame({"E_H [MJ/year]": [100], "E_C [MJ/year]": [200]})
+        hourly = pd.DataFrame({
+            **{f"{name}_{season}_d_t {unit}": [0, 0, 0]
+               for season in ("H", "C")
+               for name, unit in (("E_E", "[kWh/h]"), ("E_UT", "[MJ/h]"),
+                                  ("E_E_fan", "[kWh/h]"))},
+            "L_H_d_t [MJ/h]": [3.6, 10.8, 10.8],
+            "L_CS_d_t [MJ/h]": [10.8, 3.6, 0],
+            "L_CL_d_t [MJ/h]": [0, 14.4, 0],
+            "q_hs_H_d_t [Wh/h]": [1000, 2000, 1500],
+            "q_hs_CS_d_t [Wh/h]": [1000, 2000, 0],
+            "q_hs_CL_d_t [Wh/h]": [2000, 0, 0],
+        }, index=pd.date_range("2023-08-07 13:00", periods=3, freq="h"))
+        write_dataframe_csv(annual, "peakv1_output1.csv", encoding="cp932")
+        write_dataframe_csv(hourly, "peakv1_output2.csv", encoding="cp932")
+
+    service = CalculationService(
+        calculate, lambda: "v1", workdir=tmp_path,
+        csv_export_session=capture_csv_exports if deferred else None,
+    )
+    result = service.run({"case_name__0": "peak"}, include_graphs=False)
+    assert result.succeeded
+    heating, cooling = result.annual_summary.heating, result.annual_summary.cooling
+    assert heating.peak_load.power_kw == pytest.approx(3.0)
+    assert heating.peak_load.timestamp == "08/07 14:00"  # First of equal maxima.
+    assert cooling.peak_load.power_kw == pytest.approx(5.0)  # Not 3 + 4 = 7 kW.
+    assert cooling.peak_load.timestamp == "08/07 14:00"
+    assert heating.peak_processed_heat.power_kw == pytest.approx(2.0)
+    assert cooling.peak_processed_heat.power_kw == pytest.approx(3.0)
+    assert cooling.peak_processed_heat.timestamp == "08/07 13:00"
+    assert bool(tuple(Path(result.artifact_dir).glob("*.csv"))) is not deferred
+
+
+def test_archive_contains_only_selected_artifacts_and_preserves_bytes(tmp_path: Path) -> None:
+    def calculate(input_data: dict[str, object]) -> None:
+        Path("samplev1.csv").write_bytes("結果,123\r\n".encode("cp932"))
+        Path("samplev1.json").write_text('{"name": "sample"}', encoding="utf-8")
+
+    service = CalculationService(calculate, lambda: "v1", workdir=tmp_path)
+    result = service.run({"case_name__0": "sample"}, include_graphs=False)
+    assert result.succeeded
+    archive = service.create_download_archive(result, ["samplev1.csv"])
+    with ZipFile(archive) as bundle:
+        assert bundle.namelist() == ["samplev1.csv"]
+        assert bundle.read("samplev1.csv") == "結果,123\r\n".encode("cp932")
+    all_names = [Path(path).name for path in result.files]
+    all_archive = service.create_download_archive(result, all_names)
+    assert all_archive != archive
+    with ZipFile(all_archive) as bundle:
+        assert set(bundle.namelist()) == set(all_names)
+    assert service._result_files(result.input_data, Path(result.artifact_dir)) == result.files
+    for selection in ([], ["../other.csv"], ["outputs.zip"]):
+        with pytest.raises(ValueError):
+            service.create_download_archive(result, selection)
+    with pytest.raises(ValueError):
+        service.create_download_archive(replace(result, succeeded=False), all_names)
+    outside = tmp_path / "outside.csv"
+    outside.write_text("other calculation", encoding="utf-8")
+    csv_path = Path(result.artifact_dir) / "samplev1.csv"
+    csv_path.unlink()
+    with pytest.raises(ValueError, match="保存期限"):
+        service.create_download_archive(result, ["samplev1.csv"])
+    csv_path.symlink_to(outside)
+    with pytest.raises(ValueError, match="この計算"):
+        service.create_download_archive(result, ["samplev1.csv"])
 
 
 def test_service_builds_input_captures_log_and_collects_outputs(tmp_path: Path) -> None:

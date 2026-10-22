@@ -17,7 +17,7 @@ from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
 from .form_model import TG_NEXT_ONLY_FIELDS, FormField, FormModel, load_form_model
 from .graphs import GRAPH_LABELS
-from .services import AnnualMetrics, AnnualSummary, CalculationResult, CalculationService
+from .services import AnnualMetrics, AnnualSummary, CalculationResult, CalculationService, PeakValue
 
 _CALCULATION_METHOD_LABELS = {"next": "自立", "tg": "TG"}
 
@@ -63,6 +63,59 @@ div.block.input-origin-verification-platform {
 div.block.input-value-modified {
   background: color-mix(in srgb, #16a34a 22%, transparent) !important;
   box-shadow: inset 0 0 0 2px #16a34a !important;
+}
+.input-dropdown {
+  --vp-menu-bg: #ffffff;
+  --vp-menu-alternate: #f1f5f9;
+  --vp-menu-text: #172033;
+  --vp-menu-border: #64748b;
+  --vp-menu-hover: #dbeafe;
+  --vp-menu-selected: #1d4ed8;
+}
+.dark .input-dropdown {
+  --vp-menu-bg: #172033;
+  --vp-menu-alternate: #253247;
+  --vp-menu-text: #f1f5f9;
+  --vp-menu-border: #94a3b8;
+  --vp-menu-hover: #334d70;
+  --vp-menu-selected: #1d4ed8;
+}
+.input-dropdown [role="listbox"] {
+  background: var(--vp-menu-bg) !important;
+  border: 2px solid var(--vp-menu-border) !important;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 30%) !important;
+  z-index: 1000 !important;
+}
+.input-dropdown [role="option"] {
+  background: var(--vp-menu-bg) !important;
+  color: var(--vp-menu-text) !important;
+  border-bottom: 1px solid var(--vp-menu-border);
+  padding: 0.65rem 0.75rem !important;
+  line-height: 1.5;
+}
+.input-dropdown [role="option"]:nth-child(even) {
+  background: var(--vp-menu-alternate) !important;
+}
+.input-dropdown [role="option"]:last-child { border-bottom: 0; }
+.input-dropdown [role="option"]:hover,
+.input-dropdown [role="option"].active {
+  background: var(--vp-menu-hover) !important;
+  box-shadow: inset 4px 0 0 #2563eb;
+}
+.input-dropdown [role="option"][aria-selected="true"] {
+  background: var(--vp-menu-selected) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+.input-dropdown:focus-within,
+[id^="input-row-"]:focus-within {
+  z-index: 20 !important;
+  overflow: visible !important;
+}
+.input-section:has(.input-dropdown [aria-expanded="true"]) {
+  position: relative;
+  z-index: 20 !important;
+  overflow: visible !important;
 }
 .default-reset-row {
   align-items: center;
@@ -115,7 +168,7 @@ div.block.input-value-modified {
 .annual-summary__seasons {
   display: grid;
   gap: 0.9rem;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .annual-summary__season {
   background: var(--block-background-fill);
@@ -161,7 +214,14 @@ div.block.input-value-modified {
   font-weight: 500;
   white-space: nowrap;
 }
+.annual-summary__time {
+  color: var(--body-text-color-subdued);
+  display: block;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
 @media (max-width: 700px) {
+  .annual-summary__seasons { grid-template-columns: 1fr; }
   .annual-summary__metrics { grid-template-columns: 1fr; }
 }
 """
@@ -298,7 +358,16 @@ def build_app(
                     )
                     group_targets.append((group_dom_id, group_fields))
                     for row_index, row_fields in enumerate(_chunks(group.fields, 3)):
-                        with gr.Row(key=f"row:{section_index}:{group_index}:{row_index}"):
+                        row_dom_id = f"input-row-{section_index}-{group_index}-{row_index}"
+                        # Hide the row as well as its fields, otherwise empty rows
+                        # retain the layout gap around conditional equipment inputs.
+                        group_targets.append((row_dom_id, tuple(
+                            field.definition for field in row_fields
+                        )))
+                        with gr.Row(
+                            key=f"row:{section_index}:{group_index}:{row_index}",
+                            elem_id=row_dom_id,
+                        ):
                             for form_field in row_fields:
                                 field_dom_id = f"input-field-container-{len(components)}"
                                 component = _input_component(
@@ -346,10 +415,29 @@ def build_app(
                     interactive=False,
                 )
                 files = gr.File(
-                    label="ダウンロード可能な計算出力",
+                    label="個別にダウンロード",
                     file_count="multiple",
                     interactive=False,
                 )
+                download_selection = gr.CheckboxGroup(
+                    label="まとめてダウンロードするファイル",
+                    choices=[], value=[], interactive=True,
+                    info="CSVは「CSVファイルを出力」後に選択できます。入力JSONなどもまとめられます。",
+                )
+                with gr.Row():
+                    select_all = gr.Button("全選択", size="sm")
+                    clear_selection = gr.Button("全解除", size="sm")
+                prepare_archive = gr.Button(
+                    "選択したファイルをZIPにまとめる", interactive=False,
+                )
+                archive_status = gr.Markdown("")
+                archive_file = gr.File(
+                    label="一括ダウンロード（ZIP）", interactive=False, visible=False,
+                )
+
+        download_outputs = [
+            download_selection, prepare_archive, archive_status, archive_file,
+        ]
 
         ordered_components = [components[field.key] for field in form.schema.fields]
 
@@ -380,6 +468,7 @@ def build_app(
                     gr.update(interactive=False),
                     [],
                     "",
+                    *_download_outputs(()),
                 )
             exported = calculation_service.export_csv(result)
             return (
@@ -388,6 +477,7 @@ def build_app(
                 gr.update(interactive=exported.csv_status.startswith("❌")),
                 list(exported.files),
                 exported.log,
+                *_download_outputs(exported.files),
             )
 
         calculation_started = run.click(
@@ -402,6 +492,8 @@ def build_app(
                 csv_status,
                 export_csv_button,
                 files,
+                *download_outputs,
+                result_state,
             ],
             queue=False,
             api_visibility="private",
@@ -419,6 +511,7 @@ def build_app(
                 csv_status,
                 export_csv_button,
                 files,
+                *download_outputs,
             ],
             concurrency_limit=1,
             concurrency_id="calculation",
@@ -441,6 +534,7 @@ def build_app(
                 export_csv_button,
                 files,
                 log,
+                *download_outputs,
             ],
             concurrency_limit=1,
             concurrency_id="calculation",
@@ -459,6 +553,8 @@ def build_app(
                 csv_status,
                 export_csv_button,
                 files,
+                *download_outputs,
+                result_state,
             ],
             queue=False,
             api_visibility="private",
@@ -476,6 +572,7 @@ def build_app(
                 csv_status,
                 export_csv_button,
                 files,
+                *download_outputs,
             ],
             concurrency_limit=1,
             concurrency_id="calculation",
@@ -488,6 +585,52 @@ def build_app(
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
+        )
+
+        def select_all_files(result: CalculationResult | None) -> list[str]:
+            return [Path(path).name for path in result.files] if result else []
+
+        def reset_archive(selection: list[str]) -> tuple[Any, ...]:
+            return (
+                gr.update(interactive=bool(selection)),
+                "",
+                gr.update(value=None, visible=False),
+            )
+
+        def build_download_archive(
+            result: CalculationResult | None, selection: list[str],
+        ) -> tuple[Any, ...]:
+            if result is None:
+                return "計算完了後にファイルを選択してください。", gr.update(value=None, visible=False)
+            try:
+                archive = calculation_service.create_download_archive(result, selection)
+            except (ValueError, OSError):
+                return (
+                    "ZIPを作成できませんでした。ファイルの選択を確認してください。"
+                    "保存期限が切れている場合は再計算してください。",
+                    gr.update(value=None, visible=False),
+                )
+            return (
+                f"✅ {len(set(selection))}件をまとめました。下のZIPをダウンロードしてください。",
+                gr.update(value=archive, visible=True),
+            )
+
+        select_all.click(
+            select_all_files, inputs=result_state, outputs=download_selection,
+            queue=False, api_visibility="private",
+        )
+        clear_selection.click(
+            lambda: [], outputs=download_selection, queue=False, api_visibility="private",
+        )
+        download_selection.change(
+            reset_archive, inputs=download_selection,
+            outputs=[prepare_archive, archive_status, archive_file],
+            queue=False, api_visibility="private",
+        )
+        prepare_archive.click(
+            build_download_archive, inputs=[result_state, download_selection],
+            outputs=[archive_status, archive_file],
+            concurrency_limit=1, concurrency_id="calculation", show_progress="full",
         )
 
         conditional_fields = tuple(
@@ -738,6 +881,7 @@ def _input_component(
     if field.kind is FieldKind.BOOLEAN:
         return gr.Checkbox(**common)
     if field.kind is FieldKind.SELECT:
+        common["elem_classes"] = [*(elem_classes or []), "input-dropdown"]
         return gr.Dropdown(
             choices=[
                 (_CALCULATION_METHOD_LABELS[value], value)
@@ -998,6 +1142,18 @@ def _calculation_started_outputs() -> tuple[Any, ...]:
         "計算中です。CSVファイルはまだ出力できません。",
         gr.update(interactive=False),
         [],
+        *_download_outputs(()),
+        None,
+    )
+
+
+def _download_outputs(files: tuple[str, ...]) -> tuple[Any, ...]:
+    names = [Path(path).name for path in files]
+    return (
+        gr.update(choices=names, value=names),
+        gr.update(interactive=bool(names)),
+        "",
+        gr.update(value=None, visible=False),
     )
 
 
@@ -1022,6 +1178,7 @@ def _calculation_outputs(result: CalculationResult) -> tuple[Any, ...]:
             interactive=result.succeeded and result.csv_exports is not None,
         ),
         list(result.files),
+        *_download_outputs(result.files if result.succeeded else ()),
     )
 
 
@@ -1036,6 +1193,20 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
             f'<span class="annual-summary__value">{value:,.1f} '
             f'<span class="annual-summary__unit">{escape(unit)}</span></span>'
             "</div>"
+        )
+
+    def peak_metric(label: str, peak: PeakValue | None) -> str:
+        if peak is None:
+            value = "データなし"
+            time_label = ""
+        else:
+            value = f'{peak.power_kw:,.2f} <span class="annual-summary__unit">kW</span>'
+            time_label = f"発生日時：{escape(peak.timestamp)}" if peak.timestamp else ""
+        return (
+            '<div class="annual-summary__metric">'
+            f'<span class="annual-summary__label">{escape(label)}</span>'
+            f'<span class="annual-summary__value">{value}</span>'
+            f'<span class="annual-summary__time">{time_label}</span></div>'
         )
 
     def season(label: str, css_name: str, values: AnnualMetrics) -> str:
@@ -1058,6 +1229,11 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
                 "消費電力量（ファン）",
                 values.fan_electricity_kwh,
                 "kWh/年",
+            )
+            + (
+                peak_metric("ピーク負荷（建物全体）", values.peak_load)
+                + peak_metric("最大処理熱量（熱源機）", values.peak_processed_heat)
+                if css_name != "total" else ""
             )
             + "</div></section>"
         )
@@ -1101,6 +1277,10 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
         + '<div class="annual-summary__note">'
         '一次エネルギー消費量には未処理負荷の一次エネルギー相当分を含みます。'
         'エアコンの消費電力量は、熱源機とファンの合計からファン分を除いた値です。'
+        '<br>ピーク負荷は全区画の負荷を同時刻で合計した年間最大値です。'
+        '冷房は顕熱＋潜熱。最大処理熱量は熱源機が実際に処理した熱量の年間最大値です。'
+        'いずれも1時間平均のkWで、同値の場合は最初の日時を表示します。'
+        'ピーク負荷はダクト損失等を含む機器の必要能力とは異なります。'
         "</div>"
         '<div class="annual-summary__seasons">'
         + season("暖房", "heating", summary.heating)

@@ -1,5 +1,7 @@
 import json
 from collections import Counter
+from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -11,7 +13,49 @@ from verification_app.services import (  # noqa: E402
     AnnualMetrics,
     AnnualSummary,
     CalculationService,
+    PeakValue,
 )
+
+
+def test_bulk_download_selection_export_and_recalculation(tmp_path: Path) -> None:
+    import pandas as pd
+    from jjjexperiment.csv_artifacts import capture_csv_exports, write_dataframe_csv
+
+    def calculate(data):
+        Path("bundlev1_input.json").write_text("{}", encoding="utf-8")
+        write_dataframe_csv(pd.DataFrame({"value": [1]}), "bundlev1.csv")
+
+    service = CalculationService(
+        calculate, lambda: "v1", workdir=tmp_path,
+        csv_export_session=capture_csv_exports,
+    )
+    demo = build_app(service=service)
+    callbacks = {
+        getattr(block.fn, "__name__", ""): block.fn for block in demo.fns.values()
+        if block.fn is not None
+    }
+    result = service.run({"case_name__0": "bundle"}, include_graphs=False)
+    assert result.succeeded
+    assert callbacks["select_all_files"](result) == ["bundlev1_input.json"]
+    exported = callbacks["export_csv_files"](result)
+    result = exported[0]
+    assert set(exported[5]["choices"]) == {"bundlev1.csv", "bundlev1_input.json"}
+    selection = callbacks["select_all_files"](result)
+    assert set(selection) == set(exported[5]["value"])
+    message, archive = callbacks["build_download_archive"](result, ["bundlev1.csv"])
+    assert "1件" in message
+    with ZipFile(archive["value"]) as bundle:
+        assert bundle.namelist() == ["bundlev1.csv"]
+    cleared = callbacks["reset_archive"]([])
+    assert cleared[0]["interactive"] is False
+    assert cleared[2]["value"] is None and cleared[2]["visible"] is False
+    started = form_app._calculation_started_outputs()
+    assert started[-5]["choices"] == []
+    assert started[-2]["value"] is None
+    assert started[-1] is None  # previous calculation state is discarded
+    message, archive = callbacks["build_download_archive"](None, selection)
+    assert archive["visible"] is False
+    assert "計算完了後" in message
 
 
 def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
@@ -118,7 +162,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert "CSVファイルを出力" in buttons
     assert buttons["CSVファイルを出力"]["props"]["interactive"] is False
     assert "JSONファイルをアップロードして計算" in buttons
-    assert component_types["file"] == 2
+    assert component_types["file"] == 3
+    assert component_types["checkboxgroup"] == 1
+    assert "全選択" in buttons
+    assert "全解除" in buttons
+    assert buttons["選択したファイルをZIPにまとめる"]["props"]["interactive"] is False
     assert any(
         "旧Verification Platformまたは現在の画面で保存した入力JSON" in value
         and "現在のデフォルト値で補完" in value
@@ -168,13 +216,13 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
-    assert len(calculation_started["outputs"]) == 13
+    assert len(calculation_started["outputs"]) == 18
     assert len(calculation["inputs"]) == 229
-    assert len(calculation["outputs"]) == 9
+    assert len(calculation["outputs"]) == 13
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
     assert len(csv_export["inputs"]) == 1
-    assert len(csv_export["outputs"]) == 5
+    assert len(csv_export["outputs"]) == 9
     assert len(visibility_dependencies) >= 14
     assert 2 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert 3 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
@@ -208,7 +256,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
 @pytest.mark.parametrize("method", ["next", "tg"])
 def test_annual_summary_html_shows_heating_and_cooling_metrics(method: str) -> None:
     summary = AnnualSummary(
-        heating=AnnualMetrics(100.0, 2.0, 30.0, 4.0),
+        heating=AnnualMetrics(100.0, 2.0, 30.0, 4.0, PeakValue(6.75, "01/20 06:00")),
         cooling=AnnualMetrics(200.0, 5.0, 60.0, 7.0),
         calculation_method=method,
         fan_ventilation_mj=40.0 if method == "tg" else None,
@@ -234,6 +282,10 @@ def test_annual_summary_html_shows_heating_and_cooling_metrics(method: str) -> N
     assert "7.0" in total_html
     assert "90.0" in total_html
     assert "11.0" in total_html
+    assert "6.75" in html and "01/20 06:00" in html
+    assert html.count("ピーク負荷（建物全体）") == 2
+    assert "ピーク" not in total_html
+    assert "データなし" in html
     assert html.index("<h3>冷房</h3>") < html.index("<h3>暖冷房合計</h3>")
     if method == "tg":
         assert "390.0" not in total_html
