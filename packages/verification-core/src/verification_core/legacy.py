@@ -68,6 +68,8 @@ def _condition_from_dict(value: dict[str, Any] | None) -> Condition | None:
 
 def _field_override_from_dict(value: dict[str, Any]) -> dict[str, Any]:
     override = dict(value)
+    if "kind" in override:
+        override["kind"] = FieldKind(override["kind"])
     if "enabled_when" in override:
         override["enabled_when"] = _condition_from_dict(override["enabled_when"])
     return override

@@ -876,8 +876,12 @@ def _input_component(
     }
     if field.kind is FieldKind.TEXT:
         return gr.Textbox(**common)
-    if field.kind in {FieldKind.NUMBER, FieldKind.INTEGER}:
-        return gr.Number(**common)
+    if field.kind is FieldKind.NUMBER:
+        # HTML's default step=1 rejects decimals even when Gradio preserves them.
+        # "any" allows all decimal places without rounding the submitted value.
+        return gr.Number(step="any", **common)
+    if field.kind is FieldKind.INTEGER:
+        return gr.Number(step=1, **common)
     if field.kind is FieldKind.BOOLEAN:
         return gr.Checkbox(**common)
     if field.kind is FieldKind.SELECT:
