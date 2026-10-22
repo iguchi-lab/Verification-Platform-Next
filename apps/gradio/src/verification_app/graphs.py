@@ -79,8 +79,8 @@ def _read_output(path: Path, csv_exports: Any | None = None) -> pd.DataFrame:
 def _season_timeseries(
     output2: pd.DataFrame, output5: pd.DataFrame, *, heating: bool
 ) -> Figure:
-    figure = Figure(figsize=(18, 8), layout="constrained")
-    axes = figure.subplots(2, 2)
+    figure = Figure(figsize=(18, 12), layout="constrained")
+    axes = figure.subplots(3, 2)
     suffix = "H" if heating else "C"
 
     axes[0, 0].plot(
@@ -144,10 +144,103 @@ def _season_timeseries(
     )
     _style_axis(axes[1, 1], "sCOP[-]", ylim=(0, 10), legend=True)
 
+    _humidity_timeseries(axes[2, 0], axes[2, 1], output2, output5)
     for axis in axes.flat:
         axis.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d"))
+    figure.get_layout_engine().set(rect=(0, 0.07, 1, 0.93))
+    figure.text(
+        0.02, 0.015,
+        "湿度は計算モデルの値：居室の絶対湿度は暖房期・中間期に外気と同値、冷房期に設定値で一定。\n"
+        "相対湿度は各区画の室温と絶対湿度から換算（標準大気圧）。"
+        "絶対湿度が同じ区画はまとめて表示。居室1＝主たる居室、居室2～5＝その他の居室。",
+        fontsize=10,
+    )
     figure.suptitle("暖房代表期間" if heating else "冷房代表期間")
     return figure
+
+
+def _relative_humidity(temperature: pd.Series, humidity: pd.Series) -> pd.Series:
+    """Convert kg/kg(DA) to % using section11_5 equations at 101325 Pa.
+
+    The engine helper allocates 8760 values; this equivalent vector expression
+    also supports the representative-period slices used by the plots.
+    """
+    kelvin = temperature + 273.16
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        water = (
+            -6096.9385 / kelvin + 21.2409642 - 0.02711193 * kelvin
+            + 0.00001673952 * kelvin ** 2 + 2.433502 * np.log(kelvin)
+        )
+        ice = (
+            -6024.5282 / kelvin + 29.32707 + 0.010613863 * kelvin
+            - 0.000013198825 * kelvin ** 2 - 0.49382577 * np.log(kelvin)
+        )
+        saturation = np.exp(water.where(temperature > 0, ice))
+        relative = 100 * 101325 * humidity / (0.622 + humidity) / saturation
+    valid = (
+        np.isfinite(temperature) & np.isfinite(humidity) & (humidity >= 0)
+        & (kelvin > 0) & np.isfinite(relative)
+    )
+    # Preserve values above 100% so inconsistent model states are not concealed.
+    return relative.where(valid)
+
+
+def _humidity_timeseries(
+    absolute_axis: Any, relative_axis: Any,
+    output2: pd.DataFrame, output5: pd.DataFrame,
+) -> None:
+    absolute_axis.set_title("屋内・外気の絶対湿度")
+    relative_axis.set_title("屋内・外気の相対湿度")
+    room_series = []
+    indoor_count = 0
+    for index in range(1, 6):
+        x_key, t_key = f"X_HBR_d_t_{index}", f"Theta_HBR_d_t_{index}"
+        if x_key not in output5:
+            continue
+        indoor_count += 1
+        humidity = output5[x_key].where(np.isfinite(output5[x_key]) & (output5[x_key] >= 0))
+        color = f"C{index - 1}"
+        # Only collapse genuinely equal series; retain differing room humidity.
+        match = next((item for item in room_series if item[0].equals(humidity)), None)
+        if match is None:
+            room_series.append((humidity, [str(index)], color))
+        else:
+            match[1].append(str(index))
+        if t_key in output5:
+            relative_axis.plot(
+                output5.index, _relative_humidity(output5[t_key], humidity),
+                label=f"居室{index}", color=color,
+            )
+    for humidity, rooms, color in room_series:
+        absolute_axis.plot(
+            output5.index, humidity * 1000, color=color,
+            label="居室" + ("1～5（同値）" if len(rooms) == 5 else "・".join(rooms)),
+        )
+    for x_key, t_key, label, color, style in (
+        ("X_NR_d_t", "Theta_NR_d_t", "非居室", "C5", "-"),
+        ("X_ex_d_t", "Theta_ex_d_t [℃]", "外気", "dimgray", "--"),
+    ):
+        if x_key not in output5:
+            continue
+        humidity = output5[x_key].where(np.isfinite(output5[x_key]) & (output5[x_key] >= 0))
+        absolute_axis.plot(output5.index, humidity * 1000, label=label, color=color, ls=style)
+        temperature = output2[t_key].reindex(output5.index) if label == "外気" else output5.get(t_key)
+        if temperature is not None:
+            relative_axis.plot(
+                output5.index, _relative_humidity(temperature, humidity),
+                label=label, color=color, ls=style,
+            )
+        if label == "非居室":
+            indoor_count += 1
+    for axis, ylabel in (
+        (absolute_axis, "絶対湿度 [g/kg(DA)]"), (relative_axis, "相対湿度 [%]"),
+    ):
+        _style_axis(axis, ylabel, legend=bool(axis.lines))
+        axis.set_ylim(bottom=0)
+        if axis is relative_axis:
+            axis.set_ylim(top=max(100, axis.get_ylim()[1]))
+        if not indoor_count:
+            axis.text(0.5, 0.95, "室内湿度データなし", ha="center", va="top", transform=axis.transAxes)
 
 
 def _load_duration(output2: pd.DataFrame, *, heating: bool) -> Figure:
