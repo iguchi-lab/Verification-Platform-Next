@@ -107,14 +107,13 @@ div.block.input-value-modified {
   color: #ffffff !important;
   font-weight: 700;
 }
-.input-dropdown:focus-within,
-[id^="input-row-"]:focus-within {
-  z-index: 20 !important;
-  overflow: visible !important;
-}
-.input-section:has(.input-dropdown [aria-expanded="true"]) {
+/* Gradio labels use z-index: 40. Raise the whole open dropdown, not just
+   its listbox, above labels in sibling fields (including the top-level TG form). */
+.input-dropdown:has([role="combobox"][aria-expanded="true"]),
+[id^="input-row-"]:has(.input-dropdown [role="combobox"][aria-expanded="true"]),
+.input-section:has(.input-dropdown [role="combobox"][aria-expanded="true"]) {
   position: relative;
-  z-index: 20 !important;
+  z-index: 100 !important;
   overflow: visible !important;
 }
 .default-reset-row {
