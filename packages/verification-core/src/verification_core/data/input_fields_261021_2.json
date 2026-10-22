@@ -49,6 +49,294 @@
           "fan_characteristic"
         ]
       }
+    },
+    "Theta_hs_out_max_H_d_t_limit__0": {
+      "kind": "number"
+    },
+    "Theta_hs_out_min_C_d_t_limit__0": {
+      "kind": "number"
+    },
+    "defrost_temp_ductcentral__0": {
+      "kind": "number"
+    },
+    "defrost_humid_ductcentral__0": {
+      "kind": "number"
+    },
+    "defrost_temp_rac__0": {
+      "kind": "number"
+    },
+    "defrost_humid_rac__0": {
+      "kind": "number"
+    },
+    "r_A_ufvnt__0": {
+      "kind": "number"
+    },
+    "c1_BR_R_1__0": {
+      "kind": "number"
+    },
+    "c1_BR_R_2__0": {
+      "kind": "number"
+    },
+    "c1_BR_R_3__0": {
+      "kind": "number"
+    },
+    "c1_BR_R_4__0": {
+      "kind": "number"
+    },
+    "c1_BR_R_5__0": {
+      "kind": "number"
+    },
+    "c1_NR_R__0": {
+      "kind": "number"
+    },
+    "H_A_V_hs_dsgn_H__0": {
+      "kind": "number"
+    },
+    "H_A_V_hs_min__0": {
+      "kind": "number"
+    },
+    "H_A_E_E_fan_min__0": {
+      "kind": "number"
+    },
+    "H_A_q_hs_rtd_H1__0": {
+      "kind": "number"
+    },
+    "H_A_P_hs_rtd_H1__0": {
+      "kind": "number"
+    },
+    "H_A_V_fan_rtd_H1__0": {
+      "kind": "number"
+    },
+    "H_A_P_fan_rtd_H1__0": {
+      "kind": "number"
+    },
+    "H_A_q_hs_mid_H1__0": {
+      "kind": "number"
+    },
+    "H_A_P_hs_mid_H1__0": {
+      "kind": "number"
+    },
+    "H_A_V_fan_mid_H1__0": {
+      "kind": "number"
+    },
+    "H_A_P_fan_mid_H1__0": {
+      "kind": "number"
+    },
+    "H_A_C_af_H2__0": {
+      "kind": "number"
+    },
+    "e_rac_rtd_H__0": {
+      "kind": "number"
+    },
+    "H_A_C_af_H3__0": {
+      "kind": "number"
+    },
+    "H_A_q_hs_rtd_H3__0": {
+      "kind": "number"
+    },
+    "H_A_P_hs_rtd_H3__0": {
+      "kind": "number"
+    },
+    "H_A_V_fan_rtd_H3__0": {
+      "kind": "number"
+    },
+    "H_A_P_fan_rtd_H3__0": {
+      "kind": "number"
+    },
+    "H_A_q_hs_mid_H3__0": {
+      "kind": "number"
+    },
+    "H_A_P_hs_mid_H3__0": {
+      "kind": "number"
+    },
+    "H_A_V_fan_mid_H3__0": {
+      "kind": "number"
+    },
+    "H_A_P_fan_mid_H3__0": {
+      "kind": "number"
+    },
+    "a4__0": {
+      "kind": "number"
+    },
+    "a3__0": {
+      "kind": "number"
+    },
+    "a0__0": {
+      "kind": "number"
+    },
+    "a4__1": {
+      "kind": "number"
+    },
+    "a3__1": {
+      "kind": "number"
+    },
+    "a2__1": {
+      "kind": "number"
+    },
+    "a4__2": {
+      "kind": "number"
+    },
+    "a0__2": {
+      "kind": "number"
+    },
+    "H_A_C_af_H4__0": {
+      "kind": "number"
+    },
+    "H_A_P_rac_pub_min__0": {
+      "kind": "number"
+    },
+    "H_A_P_rac_pub_rtd__0": {
+      "kind": "number"
+    },
+    "H_A_P_rac_pub_max__0": {
+      "kind": "number"
+    },
+    "H_A_Theta_rac_pub_inner__0": {
+      "kind": "number"
+    },
+    "H_A_Theta_rac_pub_outer__0": {
+      "kind": "number"
+    },
+    "H_A_Theta_rac_real_inner__0": {
+      "kind": "number"
+    },
+    "H_A_RH_rac_real_inner__0": {
+      "kind": "number"
+    },
+    "C_A_V_hs_dsgn_C__0": {
+      "kind": "number"
+    },
+    "C_A_V_hs_min__0": {
+      "kind": "number"
+    },
+    "C_A_E_E_fan_min__0": {
+      "kind": "number"
+    },
+    "C_A_q_hs_rtd_C1__0": {
+      "kind": "number"
+    },
+    "C_A_P_hs_rtd_C1__0": {
+      "kind": "number"
+    },
+    "C_A_V_fan_rtd_C1__0": {
+      "kind": "number"
+    },
+    "C_A_P_fan_rtd_C1__0": {
+      "kind": "number"
+    },
+    "C_A_q_hs_mid_C1__0": {
+      "kind": "number"
+    },
+    "C_A_P_hs_mid_C1__0": {
+      "kind": "number"
+    },
+    "C_A_V_fan_mid_C1__0": {
+      "kind": "number"
+    },
+    "C_A_P_fan_mid_C1__0": {
+      "kind": "number"
+    },
+    "C_A_C_af_C2__0": {
+      "kind": "number"
+    },
+    "C_A_q_rac_rtd_C__0": {
+      "kind": "number"
+    },
+    "C_A_q_rac_max_C__0": {
+      "kind": "number"
+    },
+    "e_rac_rtd_C__0": {
+      "kind": "number"
+    },
+    "C_A_C_af_C3__0": {
+      "kind": "number"
+    },
+    "C_A_q_hs_rtd_C3__0": {
+      "kind": "number"
+    },
+    "C_A_P_hs_rtd_C3__0": {
+      "kind": "number"
+    },
+    "C_A_V_fan_rtd_C3__0": {
+      "kind": "number"
+    },
+    "C_A_P_fan_rtd_C3__0": {
+      "kind": "number"
+    },
+    "C_A_q_hs_mid_C3__0": {
+      "kind": "number"
+    },
+    "C_A_P_hs_mid_C3__0": {
+      "kind": "number"
+    },
+    "C_A_V_fan_mid_C3__0": {
+      "kind": "number"
+    },
+    "C_A_P_fan_mid_C3__0": {
+      "kind": "number"
+    },
+    "a4__3": {
+      "kind": "number"
+    },
+    "a3__3": {
+      "kind": "number"
+    },
+    "a2__3": {
+      "kind": "number"
+    },
+    "a4__4": {
+      "kind": "number"
+    },
+    "a3__4": {
+      "kind": "number"
+    },
+    "a0__4": {
+      "kind": "number"
+    },
+    "a4__5": {
+      "kind": "number"
+    },
+    "a3__5": {
+      "kind": "number"
+    },
+    "a2__5": {
+      "kind": "number"
+    },
+    "a4__6": {
+      "kind": "number"
+    },
+    "a0__6": {
+      "kind": "number"
+    },
+    "C_A_C_af_C4__0": {
+      "kind": "number"
+    },
+    "C_A_P_rac_pub_min__0": {
+      "kind": "number"
+    },
+    "C_A_P_rac_pub_rtd__0": {
+      "kind": "number"
+    },
+    "C_A_P_rac_pub_max__0": {
+      "kind": "number"
+    },
+    "C_A_Theta_rac_pub_inner__0": {
+      "kind": "number"
+    },
+    "C_A_Theta_rac_pub_outer__0": {
+      "kind": "number"
+    },
+    "C_A_RH_rac_pub_outer__0": {
+      "kind": "number"
+    },
+    "C_A_Theta_rac_real_inner__0": {
+      "kind": "number"
+    },
+    "C_A_RH_rac_real_inner__0": {
+      "kind": "number"
+    },
+    "etr_t__0": {
+      "kind": "number"
     }
   }
 }

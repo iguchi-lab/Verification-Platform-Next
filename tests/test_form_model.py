@@ -1,6 +1,6 @@
 import pytest
 
-from verification_core import FieldOrigin
+from verification_core import FieldOrigin, build_input_data
 from verification_app.form_model import load_form_model
 
 
@@ -383,3 +383,42 @@ def test_form_value_count_is_validated() -> None:
 
     with pytest.raises(ValueError, match="Expected 229 form values, found 1"):
         model.values_from_sequence(("only-one",))
+
+
+def test_decimal_values_reach_calculation_input_without_truncation() -> None:
+    model = load_form_model()
+    fields = {field.key: field for field in model.schema.fields}
+    values = model.schema.defaults()
+    values.update({
+        "H_A_type__0": fields["H_A_type__0"].choices[1],
+        "C_A_type__0": fields["C_A_type__0"].choices[1],
+        "H_A_input_rac_performance__0": "性能を直接入力",
+        "C_A_input_rac_performance__0": "性能を直接入力",
+        "H_A_input_C_af_H2__0": "補正係数を直接入力する",
+        "C_A_input_C_af_C2__0": "補正係数を直接入力する",
+        "HEX_install__0": True,
+    })
+    decimals = {
+        "A_A__0": 120.125,
+        "A_env__0": 307.5125,
+        "U_A__0": 0.3215,
+        "Theta_hs_out_max_H_d_t_limit__0": 45.125,
+        "e_rac_rtd_H__0": 3.875,
+        "e_rac_rtd_C__0": 4.125,
+        "H_A_C_af_H2__0": 0.925,
+        "C_A_C_af_C2__0": 0.875,
+        "C_A_q_rac_rtd_C__0": 2200.5,
+        "etr_t__0": 75.5,
+    }
+    values.update(decimals)
+    mapped = model.values_from_sequence(tuple(values[key] for key in model.keys))
+    assert {key: mapped[key] for key in decimals} == decimals
+    data = build_input_data(mapped)
+    assert data["A_A"] == 120.125
+    assert data["A_env"] == 307.5125
+    assert data["U_A"] == 0.3215
+    assert data["H_A"]["e_rac_rtd_H"] == 3.875
+    assert data["C_A"]["e_rac_rtd_C"] == 4.125
+    assert data["H_A"]["C_af_H2"] == 0.925
+    assert data["C_A"]["C_af_C2"] == 0.875
+    assert data["C_A"]["q_rac_rtd_C"] == 2200.5
