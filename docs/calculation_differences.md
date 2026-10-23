@@ -1,5 +1,10 @@
 # 建研本家・旧Verification Platformとの計算差分
 
+本書は**自立方式の計算差分と、検証当時の比較記録**である。数値表は記載した固定条件の結果を保持する。
+現行mainの入力仕様は `261023`（2026-10-23確認）。下表の `260812` は検証時の基準であり、最新版の入力仕様番号ではない。
+TGやRAC効率入力の追加を含む現在の操作は、[入力画面ガイド](input_guide.md)、
+[TGの計算範囲](tg_calculation_method.md)、[更新履歴](update_history.md)を参照する。
+
 ## 1. 目的
 
 Verification Platform Nextは、建築研究所等の技術的協力のもと公開されている
@@ -20,23 +25,23 @@ Verification Platform Nextは、建築研究所等の技術的協力のもと公
 | --- | --- |
 | 建研本家 | `BRI-EES-House/pyhees` Ver.3.10、commit `d5224c4a01def00a8421bcd2fcc0d4b4a5b88644` |
 | 旧Verification Platform | Next移行時の基準commit `0f91ba8381df1b4960557b92b39339385cc9009f` |
-| Verification Platform Next | ver.1.3.1、入力仕様 `260812` |
+| Verification Platform Next（検証時） | ver.1.3.1、入力仕様 `260812` |
 
 建研本家の版は[`packages/pyhees-jjj/UPSTREAM.md`](../packages/pyhees-jjj/UPSTREAM.md)、
-Nextの製品版は[`jjjexperiment/release.py`](../packages/pyhees-jjj/src/jjjexperiment/release.py)
-でも固定している。
+現在のNext製品版は[`jjjexperiment/release.py`](../packages/pyhees-jjj/src/jjjexperiment/release.py)
+で確認できる。現在の製品版と、本書の検証時の版は区別する。
 
 ## 3. 結論一覧
 
-| ID | 不具合候補・変更点 | 建研本家 | 旧Verification Platform | Next（入力仕様260812） |
+| ID | 不具合候補・変更点 | 建研本家 | 旧Verification Platform | Next（検証時の入力仕様260812） |
 | --- | --- | --- | --- | --- |
-| BRI-01 | 冷房時の居室・非居室間の間仕切熱移動の符号 | `+Q_trs` | `+Q_trs` | 既定OFFは`+Q_trs`、①をONにすると全経路で`-Q_trs` |
-| BRI-02 | 全般換気なし時も区画別全般換気量を給気下限に使用 | 使用する | 使用する。最低風量直接入力時は過大値が拡大 | 既定OFFは建研式、②をONにすると換気下限と設備最低風量を分離 |
+| BRI-01 | 冷房時の居室・非居室間の間仕切熱移動の符号 | `+Q_trs` | `+Q_trs` | 既定OFFは`+Q_trs`、BRI-01をONにすると全経路で`-Q_trs` |
+| BRI-02 | 全般換気なし時も区画別全般換気量を給気下限に使用 | 使用する | 使用する。最低風量直接入力時は過大値が拡大 | 既定OFFは建研式、BRI-02をONにすると換気下限と設備最低風量を分離 |
 | VP-01 | RAC活用型の冷房SHFに用いる負荷 | 該当モデルなし（ダクト式は負荷バランス後） | 負荷バランス前のRAC負荷 | 負荷バランス後の全館空調負荷 |
 | VP-02 | RAC活用型暖房のデフロスト補正の責務 | 該当モデルなし | ダクト式とRACの係数が重複 | RACの$C_{af}$と$C_{df}$だけをRAC消費電力モデルで適用 |
 
 BRI-01とBRI-02の既定値はOFFである。建研本家との比較照合ではOFF、物理的に正しいと
-判断した方法を使う計算ではONにする。①と②は独立して選択できる。
+判断した方法を使う計算ではONにする。BRI-01とBRI-02は独立して選択できる。
 
 ## 4. BRI-01：冷房時の間仕切熱移動の符号
 
@@ -110,25 +115,25 @@ L_{CS,i}
 ```
 
 実装：
-[`underfloor_ac/section4_2_jjj.py`](../packages/pyhees-jjj/src/jjjexperiment/underfloor_ac/section4_2_jjj.py#L155-L167)
+[`underfloor_ac/section4_2_jjj.py`](../packages/pyhees-jjj/src/jjjexperiment/underfloor_ac/section4_2_jjj.py)
 
 この符号は、説明資料9枚目、Excel床下14および物理的な熱流方向を照合して
 採用した。ただし自動適用はせず、入力欄の
-「① 冷房時の間仕切熱移動を物理的な符号に補正する」をONにした場合だけ使う。詳細は
+④「建研式との比較・補正」の「冷房時の間仕切壁熱移動を物理的な符号へ補正する」（BRI-01）をONにした場合だけ使う。詳細は
 [`underfloor_ac_seven_point_design_review.md`](underfloor_ac_seven_point_design_review.md)の
 「式 (8)/(9)：熱損失を含む負荷バランス時の暖冷房負荷」
 を参照する。
 
 ### 4.4 計算経路ごとの適用
 
-| 計算経路 | ① OFF：建研互換 | ① ON：物理補正 |
+| 計算経路 | BRI-01 OFF：建研互換 | BRI-01 ON：物理補正 |
 | --- | --- | --- |
 | 非床下・通常計算 | `L_CS + Q_trs` | `L_CS - Q_trs` |
 | 過剰熱量繰越 | `L_CS + Q_trs - carryover` | `L_CS - Q_trs - carryover` |
 | 新床下・通常計算 | `L_CS + Q_trs + delta_L_floor` | `L_CS - Q_trs + delta_L_floor` |
 | 新床下・逐次ソルバー | `L_CS + Q_trs + delta_L_floor` | `L_CS - Q_trs + delta_L_floor` |
 
-Excel床下14のGolden比較では①をONにする。建研本家の回帰比較ではOFFにする。
+Excel床下14のGolden比較ではBRI-01をONにする。建研本家の回帰比較ではOFFにする。
 
 ## 5. BRI-02：全般換気なし時の区画別給気下限
 
@@ -204,16 +209,16 @@ Nextでは、次の二つを別の物理量として扱う。
 | $V_{\mathrm{hs,vent},i}$ | 熱源機が搬送する区画別全般換気量。式(43)・式(44)の下限 | 0 |
 | $V_{\mathrm{hs,min}}$ | 暖冷房運転時の設備最低風量 | 維持 |
 
-入力欄の「② 全般換気なし時の給気風量下限を補正する」をONにした場合、
+④「建研式との比較・補正」の「全般換気なし時の給気風量下限を補正する」（BRI-02）をONにした場合、
 式(43)・式(44)へ渡す区画別換気下限だけをゼロにする。その後、暖房期・冷房期には
 設備最低風量を独立して保証し、中間期はゼロとする。OFFでは建研本家と同じく、
 `general_ventilation=False`でも区画別換気量を下限へ渡す。
 
-- [区画別換気下限の切替](../packages/pyhees-jjj/src/jjjexperiment/section4_2_jjj.py#L1558-L1571)
-- [VAV時の設備最低風量保証](../packages/pyhees-jjj/src/jjjexperiment/section4_2_jjj.py#L1886-L1937)
+- [区画別換気下限の切替](../packages/pyhees-jjj/src/jjjexperiment/section4_2_jjj.py)
+- [VAV時の設備最低風量保証](../packages/pyhees-jjj/src/jjjexperiment/section4_2_jjj.py)
 - [詳細な不具合修正メモ](../packages/pyhees-jjj/docs/風量設定_VAV_不具合修正メモ.md)
 
-②をONにした場合の契約は次のとおりである。
+BRI-02をONにした場合の契約は次のとおりである。
 
 | VAV | 全般換気 | 時期・状態 | 合計給気風量 |
 | --- | --- | --- | --- |
@@ -227,13 +232,13 @@ Nextでは、次の二つを別の物理量として扱う。
 
 旧版との差は次のとおりである。
 
-| 項目 | 旧Verification Platform | Verification Platform Next（入力仕様260812） |
+| 項目 | 旧Verification Platform | Verification Platform Next（検証時の入力仕様260812） |
 | --- | --- | --- |
-| 冷房時の間仕切熱移動 | 建研式の`+Q_trs` | ①OFFは同じ。ONは非床下・繰越・新床下すべて`-Q_trs` |
-| 全般換気なしの式(43)/(44)下限 | 区画別全般換気量を使用 | ②OFFは同じ。ONは区画別下限を0へ切替 |
-| 最低風量直接入力 | `V_vent_g_i`を拡大し、区画別`max`で合計が過大になる場合がある | ②ONでは設備最低風量を換気量から分離 |
-| VAVあり・全般換気なし | サーモOFF・小負荷時の設備下限が不明確 | ②ONでは暖冷房期に設備最低風量を明示的に保証 |
-| 全般換気なしの中間期 | 給気またはファン電力が残る経路がある | 給気・ファン電力とも0 |
+| 冷房時の間仕切熱移動 | 建研式の`+Q_trs` | BRI-01OFFは同じ。ONは非床下・繰越・新床下すべて`-Q_trs` |
+| 全般換気なしの式(43)/(44)下限 | 区画別全般換気量を使用 | BRI-02OFFは同じ。ONは区画別下限を0へ切替 |
+| 最低風量直接入力 | `V_vent_g_i`を拡大し、区画別`max`で合計が過大になる場合がある | BRI-02ONでは設備最低風量を換気量から分離 |
+| VAVあり・全般換気なし | サーモOFF・小負荷時の設備下限が不明確 | BRI-02ONでは暖冷房期に設備最低風量を明示的に保証 |
+| 全般換気なしの中間期 | 給気またはファン電力が残る経路がある | BRI-02 ONでは給気・ファン電力とも0 |
 | RAC活用型の冷房SHF | 負荷バランス前の`L_CS`、`L_CL`から算定 | 負荷バランス後の`L_star_CS`、`L_star_CL`から算定 |
 | RAC活用型暖房のデフロスト | ダクト式$C_{df}$で補正済みの能力へRAC式$C_{df}$を重ねて適用 | ダクト式補正をRAC入力境界で戻し、RAC式$C_{af}$・$C_{df}$のみ適用 |
 
@@ -382,11 +387,11 @@ Phase 5のRAC代表ケースでは、年間暖房値と、デフロスト影響�
 
 | 対象 | テスト |
 | --- | --- |
-| 非床下の①OFF/ON | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
-| 過剰熱量繰越の①OFF/ON | [`test_4_2_formula_8_9.py`](../packages/pyhees-jjj/src/tests/carryover_heat/test_4_2_formula_8_9.py) |
-| 新床下の①OFF/ON | [`test_4_2_f8.py`](../packages/pyhees-jjj/src/tests/underfloor_ac/test_4_2_f8.py) |
-| 全般換気なし・最低風量160/420 m3/h | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py#L923-L1001) |
-| VAVあり・全般換気なし | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py#L1004-L1031) |
+| 非床下のBRI-01OFF/ON | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
+| 過剰熱量繰越のBRI-01OFF/ON | [`test_4_2_formula_8_9.py`](../packages/pyhees-jjj/src/tests/carryover_heat/test_4_2_formula_8_9.py) |
+| 新床下のBRI-01OFF/ON | [`test_4_2_f8.py`](../packages/pyhees-jjj/src/tests/underfloor_ac/test_4_2_f8.py) |
+| 全般換気なし・最低風量160/420 m3/h | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
+| VAVあり・全般換気なし | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
 | RAC活用型冷房の負荷バランス後SHF | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
 | RAC活用型とダクト式デフロスト係数の分離 | [`test_not_broken_type2.py`](../packages/pyhees-jjj/src/tests/test_not_broken_type2.py) |
 | 地域2・等級5・RAC活用型の年間回帰 | [`test_type2_defrost_responsibility.py`](../packages/pyhees-jjj/src/tests/test_type2_defrost_responsibility.py) |
@@ -404,5 +409,5 @@ ver.1.0.2リリース時には、全体pytest、Phase 5、Excel床下14 Golden�
    一部経路だけの場合は「部分修正」と明記する。
 4. 建研本家へ修正が取り込まれた場合は、そのcommitを記録し、Next側の
    アダプターを残すか上流へ戻すかを再評価する。
-5. ①②の既定値はOFFを維持する。建研本家が修正された場合は、その版を基準に
+5. BRI-01・BRI-02の既定値はOFFを維持する。建研本家が修正された場合は、その版を基準に
    既定値およびチェック項目の廃止可否を再評価する。
