@@ -15,11 +15,14 @@ from jjjexperiment.release import DISPLAY_VERSION
 from jjjexperiment.calculation_method import TG_PROFILES
 from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
-from .form_model import TG_NEXT_ONLY_FIELDS, FormField, FormModel, load_form_model
+from .form_model import (
+    TG_NEXT_ONLY_FIELDS, TG_RAC_EQUIPMENT_CONTROLS, FormField, FormModel, load_form_model,
+)
 from .graphs import GRAPH_LABELS
 from .services import AnnualMetrics, AnnualSummary, CalculationResult, CalculationService, PeakValue
 
 _CALCULATION_METHOD_LABELS = {"next": "自立", "tg": "TG"}
+_TG_PROFILE_LABELS = {**TG_PROFILES, "standard": "標準計算（従来のTG総合・ダクト／RAC）"}
 
 _UNDERFLOOR_INPUT_GUIDE_URL = (
     "https://github.com/iguchi-lab/Verification-Platform-Next/"
@@ -238,7 +241,7 @@ def build_app(
         fill_width=True,
     ) as demo:
         gr.Markdown(f"# Verification Platform Next {DISPLAY_VERSION}")
-        gr.Markdown(f"共通入力スキーマから生成した {len(form.fields)} 項目の計算フォームです。")
+        gr.Markdown("①で計算方式を選び、①～⑦の順に設定してください。比較検証を行う場合だけ⑧を変更します。")
         gr.HTML(
             f"<style>{_INPUT_ORIGIN_CSS}</style>"
             '<div class="input-origin-legend">'
@@ -305,23 +308,11 @@ def build_app(
             )
             for section in form.sections
         }
-        for form_field in (field for field in form.fields if field.definition.group == "計算方式"):
-            field_dom_id = f"input-field-container-{len(components)}"
-            component = _input_component(
-                form_field.definition, label=form_field.label,
-                description=form_field.description, choices=form_field.choices,
-                visible=form_field.visible, min_width=280, elem_id=field_dom_id,
-                elem_classes=[_origin_css_class(form_field.definition.origin)],
-            )
-            components[form_field.key] = component
-            containers[form_field.key] = component
-            field_dom_ids[form_field.key] = field_dom_id
-
         for section_index, section in enumerate(form.sections):
             section_dom_id = f"input-section-{section_index}"
             with gr.Accordion(
                 section.name,
-                open=False,
+                open=section_index == 0,
                 visible=_section_is_visible(section.name, section_fields, {
                     field.key: field.visible for field in form.fields
                 }),
@@ -343,8 +334,6 @@ def build_app(
                         "を参照してください。"
                     )
                 for group_index, group in enumerate(section.groups):
-                    if group.name == "計算方式":
-                        continue
                     group_dom_id = f"input-group-heading-{section_index}-{group_index}"
                     group_fields = tuple(
                         form_field.definition for form_field in group.fields
@@ -829,8 +818,13 @@ def _visibility_descendants(
             field
             for field in fields
             if field not in descendants
-            and field.enabled_when is not None
-            and field.enabled_when.path[0] in controls
+            and (
+                (field.enabled_when is not None and field.enabled_when.path[0] in controls)
+                or (field.key in TG_RAC_EQUIPMENT_CONTROLS and (
+                    controls.intersection(TG_RAC_EQUIPMENT_CONTROLS[field.key])
+                    or "tg_profile__0" in controls
+                ))
+            )
         )
         if not added:
             return tuple(descendants)
@@ -889,7 +883,7 @@ def _input_component(
             choices=[
                 (_CALCULATION_METHOD_LABELS[value], value)
                 if field.key == "calculation_method__0" else
-                (TG_PROFILES[value], value) if field.key == 'tg_profile__0' else value
+                (_TG_PROFILE_LABELS[value], value) if field.key == 'tg_profile__0' else value
                 for value in (choices if choices is not None else field.choices)
             ],
             allow_custom_value=False,
@@ -949,11 +943,13 @@ def _install_default_highlight_js(
   const controlKeys = {control_keys_json};
   const conditions = {conditions};
   const nextOnlyFields = {json.dumps(sorted(TG_NEXT_ONLY_FIELDS))};
+  const racControls = {json.dumps(TG_RAC_EQUIPMENT_CONTROLS)};
+  const racEquipment = {json.dumps({field.key: field.choices[1] for field in fields if field.key in ('H_A_type__0', 'C_A_type__0')}, ensure_ascii=True)};
   const sectionTargets = {section_targets};
   const groupTargets = {group_targets_json};
   const fieldIndexes = Object.fromEntries(fieldKeys.map((key, index) => [key, index]));
   const methodValues = {json.dumps({label: value for value, label in _CALCULATION_METHOD_LABELS.items()}, ensure_ascii=True)};
-  const profileValues = {json.dumps({label: value for value, label in TG_PROFILES.items()}, ensure_ascii=True)};
+  const profileValues = {json.dumps({label: value for value, label in _TG_PROFILE_LABELS.items()}, ensure_ascii=True)};
   const readValue = (container, kind, key) => {{
     if (kind === "boolean") {{
       return container.querySelector('input[type="checkbox"]')?.checked;
@@ -994,6 +990,11 @@ def _install_default_highlight_js(
     const visibility = {{}};
     const isVisible = (key) => {{
       if (key in visibility) return visibility[key];
+      if (racControls[key] && ((values.tg_profile__0 ?? 'standard') !== 'standard' ||
+          !racControls[key].some((control) => values[control] === racEquipment[control]))) {{
+        visibility[key] = false;
+        return false;
+      }}
       if (values.calculation_method__0 === "tg" && nextOnlyFields.includes(key)) {{
         visibility[key] = false;
         return false;

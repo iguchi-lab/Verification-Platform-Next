@@ -14,6 +14,18 @@ mainへのマージとCloud Runへの公開は別の操作です。公開履歴�
 [Deploy to Cloud Run](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/deploy-cloud-run.yml)
 で、計算に使ったソースは出力マニフェストのコミット情報で確認できます。
 
+## 2026-10-23：TGの入力を①～⑧へ統合
+
+関連：[PR #213](https://github.com/iguchi-lab/Verification-Platform-Next/pull/213)
+
+画面上部の別枠にあったTGの入力を移動し、①で計算方式、⑤⑥で能力・設備条件、
+⑤の暖冷房共通設定で効率区分・送風機指数を設定する構成にしました。
+比較モードは通常折りたたまれた⑧へ移し、「TG総合」を「標準計算」と分かる表示に変更しました。
+RAC用の能力は該当季節がRACの場合だけ、共通の効率区分は暖冷房の少なくとも一方がRACの場合だけ表示します。
+
+**計算への影響：** 配置・説明・表示条件のみの変更です。保存JSONのキー、初期値、
+計算式と入力の対応は維持します。旧JSONも従来どおり使用できます。
+
 ## 2026-10-23：RAC活用型の効率入力を整理
 
 関連：[PR #211](https://github.com/iguchi-lab/Verification-Platform-Next/pull/211)

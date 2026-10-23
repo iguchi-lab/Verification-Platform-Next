@@ -6,6 +6,7 @@ from typing import Any, Iterable, Mapping
 from verification_core import FieldDefinition, FieldKind, InputSchema, load_input_schema
 
 from .form_presentation import (
+    GROUP_PRIORITY,
     SECTION_DESCRIPTIONS,
     SECTION_ORDER,
     group_description,
@@ -23,6 +24,13 @@ TG_NEXT_ONLY_FIELDS = frozenset({
     for name in ("subtract_ventilation_power", "input_E_E_fan_min", "input_mode",
                  "input_rac_performance", f"input_f_SFP_{season}", f"input_C_af_{season}2")
 })
+
+# Each field is shown when at least one of these equipment selectors is RAC.
+TG_RAC_EQUIPMENT_CONTROLS = {
+    "tg_q_rtd_H__0": ("H_A_type__0",),
+    "tg_q_rtd_C__0": ("C_A_type__0",),
+    "tg_rac_class__0": ("H_A_type__0", "C_A_type__0"),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,8 +133,9 @@ def load_form_model(
                 ),
                 description=group_description(group_name),
             )
-            for group_name in dict.fromkeys(
-                presentation.group for _, presentation in section_fields
+            for group_name in sorted(
+                dict.fromkeys(presentation.group for _, presentation in section_fields),
+                key=lambda name: GROUP_PRIORITY.get(name, 100),
             )
         )
         sections.append(
@@ -166,6 +175,11 @@ def _visibility(
         if values.get("calculation_method__0", "next") == "tg":
             if field.key in TG_NEXT_ONLY_FIELDS:
                 visible = False
+        if field.key in TG_RAC_EQUIPMENT_CONTROLS:
+            visible = visible and values.get("tg_profile__0", "standard") == "standard" and any(
+                values.get(key, fields_by_key[key].default) == fields_by_key[key].choices[1]
+                for key in TG_RAC_EQUIPMENT_CONTROLS[field.key]
+            )
         resolving.remove(field.key)
         resolved[field.key] = visible
         return visible

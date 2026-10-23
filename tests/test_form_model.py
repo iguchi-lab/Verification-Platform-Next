@@ -39,6 +39,7 @@ def test_general_input_sections_are_grouped_by_calculation_role() -> None:
 
     constants = next(section for section in model.sections if section.name.startswith("⑧"))
     assert tuple(group.name for group in constants.groups) == (
+        "TG｜標準計算・個別修正の比較",
         "熱源機出口温度の制限",
         "ダクト式セントラル空調機のデフロスト",
         "ダクト・送風機の補助定数",
@@ -424,3 +425,34 @@ def test_decimal_values_reach_calculation_input_without_truncation() -> None:
     assert data["H_A"]["C_af_H2"] == 0.925
     assert data["C_A"]["C_af_C2"] == 0.875
     assert data["C_A"]["q_rac_rtd_C"] == 2200.5
+
+
+@pytest.mark.parametrize("method", ["next", "tg"])
+@pytest.mark.parametrize("profile", ["standard", "minimum_airflow", "fan_characteristic"])
+@pytest.mark.parametrize("heating_rac,cooling_rac", [(False, False), (True, False), (False, True), (True, True)])
+def test_tg_equipment_fields_follow_the_selected_season_and_profile(
+    method, profile, heating_rac, cooling_rac,
+) -> None:
+    model = load_form_model()
+    values = model.schema.defaults()
+    fields = {field.key: field for field in model.schema.fields}
+    values.update(calculation_method__0=method, tg_profile__0=profile)
+    for season, rac in (("H", heating_rac), ("C", cooling_rac)):
+        key = f"{season}_A_type__0"
+        values[key] = fields[key].choices[int(rac)]
+    visible = model.visibility(values)
+    standard_tg = method == "tg" and profile == "standard"
+    assert visible["tg_q_rtd_H__0"] == (standard_tg and heating_rac)
+    assert visible["tg_q_rtd_C__0"] == (standard_tg and cooling_rac)
+    assert visible["tg_rac_class__0"] == (standard_tg and (heating_rac or cooling_rac))
+    assert visible["tg_profile__0"] == (method == "tg")
+    assert visible["tg_fan_exponent__0"] == (
+        method == "tg" and profile in ("standard", "fan_characteristic")
+    )
+    # Reordering presentation must not reorder calculation inputs or lose hidden values.
+    assert model.values_from_sequence(tuple(values[key] for key in model.keys)) == values
+    data = build_input_data(model.values_from_sequence(tuple(values[key] for key in model.keys)))
+    assert data["tg_profile"] == profile
+    assert data["tg_q_rtd_H"] == values["tg_q_rtd_H__0"]
+    assert data["tg_q_rtd_C"] == values["tg_q_rtd_C__0"]
+    assert data["tg_rac_class"] == values["tg_rac_class__0"]
