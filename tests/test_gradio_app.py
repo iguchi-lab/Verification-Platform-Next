@@ -106,6 +106,35 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert method["choices"] == [("自立", "next"), ("TG", "tg")]
     assert method["value"] == "next"
 
+    def descendants(node):
+        yield node["id"]
+        for child in node.get("children", ()):
+            yield from descendants(child)
+
+    def find_node(node, component_id):
+        if node["id"] == component_id:
+            return node
+        for child in node.get("children", ()):
+            found = find_node(child, component_id)
+            if found is not None:
+                return found
+        return None
+
+    expected_sections = {
+        "calculation_method__0": "① 計算条件・外部データ",
+        "tg_q_rtd_H__0": "⑤ 暖房設備",
+        "tg_q_rtd_C__0": "⑥ 冷房設備",
+        "tg_rac_class__0": "⑤ 暖房設備",
+        "tg_fan_exponent__0": "⑤ 暖房設備",
+        "tg_profile__0": "⑧ 詳細設定・比較検証",
+    }
+    for key, section in expected_sections.items():
+        section_node = find_node(config["layout"], accordions[section]["id"])
+        assert components_by_key[f"field:{key}"]["id"] in set(descendants(section_node))
+    assert components_by_key["field:tg_profile__0"]["props"]["choices"][0] == (
+        "標準計算（従来のTG総合・ダクト／RAC）", "standard",
+    )
+
     assert gradio.__version__.startswith("6.")
     assert config["title"] == "Verification Platform Next ver.1.6.0"
     assert component_types["accordion"] == 9
@@ -194,7 +223,11 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         "input-section" in component["props"].get("elem_classes", ())
         for component in input_accordions
     )
-    assert all(component["props"]["open"] is False for component in accordions.values())
+    assert accordions["① 計算条件・外部データ"]["props"]["open"] is True
+    assert all(
+        component["props"]["open"] is False
+        for label, component in accordions.items() if label != "① 計算条件・外部データ"
+    )
     assert all(component["props"]["visible"] is True for component in accordions.values())
 
     dependencies = config["dependencies"]
@@ -226,8 +259,17 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(visibility_dependencies) >= 14
     assert 2 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
     assert 3 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
-    assert 74 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
-    assert 79 in {len(dependency["outputs"]) for dependency in visibility_dependencies}
+    for season in ("H", "C"):
+        control_id = components_by_key[f"field:{season}_A_type__0"]["id"]
+        required_outputs = {
+            components_by_key[f"field:tg_q_rtd_{season}__0"]["id"],
+            components_by_key["field:tg_rac_class__0"]["id"],
+        }
+        assert any(
+            (control_id, "change") in dependency["targets"]
+            and required_outputs.issubset(dependency["outputs"])
+            for dependency in visibility_dependencies
+        )
     assert len(reset_inputs["inputs"]) == 0
     assert len(reset_inputs["outputs"]) == 229
     assert len(install_default_highlights["inputs"]) == 0
