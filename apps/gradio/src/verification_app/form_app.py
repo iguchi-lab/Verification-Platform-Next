@@ -18,6 +18,7 @@ from verification_core import FieldDefinition, FieldKind, FieldOrigin
 from .form_model import (
     TG_NEXT_ONLY_FIELDS, TG_RAC_EQUIPMENT_CONTROLS, FormField, FormModel, load_form_model,
 )
+from .json_form_import import load_json_into_form
 from .graphs import GRAPH_LABELS
 from .services import AnnualMetrics, AnnualSummary, CalculationResult, CalculationService, PeakValue
 
@@ -275,12 +276,12 @@ def build_app(
                 elem_classes=["default-reset-note"],
             )
 
-        with gr.Accordion("JSONファイルから計算", open=False):
+        with gr.Accordion("JSONファイルの読込み", open=False):
             gr.Markdown(
                 "旧Verification Platformまたは現在の画面で保存した入力JSONを"
-                "そのまま実行できます。旧JSONに存在しない項目は、現在の"
-                "デフォルト値で補完します。アップロード内容は画面上の入力欄には"
-                "反映されないため、実行後の「計算入力」タブで確認してください。"
+                "①～⑧へ読み込み、条件を確認・変更してから通常の「計算」で実行できます。"
+                "旧JSONに存在しない項目は、現在のデフォルト値で補完します。"
+                "読込みは現在の入力を置き換えます。JSONを直接実行するボタンでは入力欄は変わりません。"
             )
             with gr.Row():
                 json_upload = gr.File(
@@ -289,10 +290,12 @@ def build_app(
                     file_count="single",
                     type="filepath",
                 )
+                json_import = gr.Button("JSONを①～⑧に読み込む", variant="primary")
                 json_run = gr.Button(
                     "JSONファイルをアップロードして計算",
                     variant="secondary",
                 )
+            json_import_status = gr.Markdown("")
 
         components: dict[str, Any] = {}
         containers: dict[str, Any] = {}
@@ -706,7 +709,7 @@ def build_app(
                 return (*toggles, *equipment)
 
             for control in ('calculation_method__0', 'tg_profile__0'):
-                components[control].change(
+                components[control].input(
                     reset_unsupported_mode_inputs,
                     inputs=[components['calculation_method__0'],
                             *(components[key] for key in equipment_keys), components['tg_profile__0']],
@@ -735,7 +738,7 @@ def build_app(
                 )
 
             for control in ('calculation_method__0', 'tg_profile__0'):
-                components[control].change(
+                components[control].input(
                     apply_comparison_profile,
                     inputs=[components['calculation_method__0'], components['tg_profile__0']],
                     outputs=[components[key] for key in profile_keys],
@@ -752,6 +755,7 @@ def build_app(
             field_updates = tuple(
                 gr.update(
                     value=field.default,
+                    interactive=True,
                     visible=visibility[field.key],
                     **({"choices": list(field.choices)}
                        if field.key in ("H_A_type__0", "C_A_type__0") else {}),
@@ -769,6 +773,61 @@ def build_app(
                 for section_name in equipment_section_names
             )
             return (*field_updates, *section_updates)
+
+        import_result_outputs = [
+            status, annual_summary, preview, log, graph_status, *graphs,
+            csv_status, export_csv_button, files, *download_outputs, result_state,
+        ]
+        import_targets = [
+            *ordered_components,
+            *(section_containers[name] for name in equipment_section_names),
+            *import_result_outputs,
+        ]
+
+        def import_uploaded_json(uploaded_file: str | None) -> tuple[Any, ...]:
+            try:
+                imported = load_json_into_form(uploaded_file)
+                values = imported.values
+                visibility = form.visibility(values)
+                method = values['calculation_method__0']
+                profile = values['tg_profile__0']
+                profile_updates = dict(zip(
+                    profile_keys, apply_comparison_profile(method, profile), strict=True,
+                ))
+                updates = []
+                for field in ordered_fields:
+                    options = dict(
+                        value=values[field.key], visible=visibility[field.key], interactive=True,
+                    )
+                    if field.key in equipment_keys:
+                        choices = equipment_choices[field.key]
+                        if method == 'tg':
+                            choices = choices[:2] if profile == 'standard' else choices[:1]
+                        options['choices'] = list(choices)
+                    options.update({
+                        key: value for key, value in profile_updates.get(field.key, {}).items()
+                        if key != '__type__'
+                    })
+                    updates.append(gr.update(**options))
+                updates.extend(gr.update(visible=_section_is_visible(
+                    name, section_fields, visibility,
+                )) for name in equipment_section_names)
+                cleared = list(_calculation_started_outputs())
+                cleared[0] = 'JSONを入力欄に反映しました。条件を確認・変更して「計算」を押してください。'
+                cleared[5 + len(GRAPH_LABELS)] = '計算完了後、必要な場合だけCSVファイルを出力できます。'
+                message = '✅ JSONを①～⑧へ読み込みました。まだ計算は実行していません。'
+                if imported.notes:
+                    message += '\n\n' + '\n\n'.join(imported.notes)
+                return (message, *updates, *cleared)
+            except (OSError, ValueError, TypeError, KeyError) as error:
+                return (f'❌ {error}', *(gr.skip() for _ in import_targets))
+
+        json_import.click(
+            import_uploaded_json, inputs=json_upload,
+            outputs=[json_import_status, *import_targets],
+            concurrency_limit=1, concurrency_id='calculation',
+            api_visibility='private', show_progress='full',
+        )
 
         reset.click(
             reset_inputs,

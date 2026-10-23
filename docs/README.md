@@ -8,7 +8,7 @@ TGの能力・効率も⑤⑥の中で設定でき、別の入力一式を追加
 
 | 知りたいこと | 文書 |
 |---|---|
-| 入力順序、RAC効率、ピーク負荷・湿度グラフ、CSV・ZIPの保存 | [入力画面ガイド](input_guide.md) |
+| JSONの読込み、入力順序、RAC効率、ピーク負荷・湿度グラフ、CSV・ZIPの保存 | [入力画面ガイド](input_guide.md) |
 | 自立とTGの違い、TG標準計算・個別比較、集計範囲 | [自立方式とTG方式の切替](tg_calculation_method.md) |
 | 初期状態から個別修正やRAC置換の比較条件を設定する | [修正内容ごとの設定方法](calculation_settings_from_default.md) |
 | 自立で床下換気・床下空調を使う | [床下関連入力ガイド](underfloor_ac_input_guide.md) |
