@@ -141,6 +141,8 @@ def prepare_input(data):
                 f'C_af_{season}2': 0.8 if season == 'H' else 0.85,
                 'input': 1,
             })
+            # TG owns these specifications, regardless of the hidden Next selector.
+            equipment.pop('rac_efficiency_mode', None)
             result[f'tg_q_rtd_{season}'] = q
             result['tg_rac_class'] = efficiency_class
     if gv[0] != gv[1]:

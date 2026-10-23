@@ -46,6 +46,16 @@ def _legacy_input_projection(input_data: dict[str, Any]) -> dict[str, Any]:
             raise RegressionMismatch(f"Phase 5 legacy projection requires {key}={expected}")
     for season in ("H_A", "C_A"):
         settings = projected.get(season, {})
+        efficiency_mode = settings.pop("rac_efficiency_mode", "default")
+        if efficiency_mode != "default":
+            raise RegressionMismatch("Phase 5 legacy projection requires default RAC efficiency")
+        # Manual capacity/COP defaults are inactive in these automatic-capacity
+        # cases. Ignore their stored values on both sides, but never hide a
+        # change to an active manual input.
+        if int(settings.get("type", 0)) == 2 and int(settings.get("input_rac_performance", 1)) == 1:
+            suffix = season[0]
+            for key in (f"q_rac_rtd_{suffix}", f"q_rac_max_{suffix}", f"e_rac_rtd_{suffix}"):
+                settings.pop(key, None)
         for key in _OPT_IN_CORRECTION_KEYS:
             value = settings.pop(key, 1)
             if str(value) != "1":
@@ -88,8 +98,14 @@ def _build_case_input(case: dict[str, Any], *, legacy: bool) -> dict[str, Any]:
     values = default_ui_values()
     values.update(case["ui_overrides"])
     canonical_input = build_input_data(values)
-    legacy_input = build_legacy_input_data(values)
-    if _legacy_input_projection(canonical_input) != legacy_input:
+    legacy_values = values.copy()
+    for season in ("H", "C"):
+        key = f"{season}_A_input_mode__0"
+        if values[key] != "規定値を使用":
+            raise RegressionMismatch("Phase 5 reference cases require default RAC efficiency")
+        legacy_values[key] = "入力しない"
+    legacy_input = build_legacy_input_data(legacy_values)
+    if _legacy_input_projection(canonical_input) != _legacy_input_projection(legacy_input):
         raise RegressionMismatch(
             f"{case['id']}: canonical input no longer matches the legacy form builder"
         )

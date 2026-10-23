@@ -298,6 +298,8 @@ def _group_name(field: FieldDefinition) -> str:
 
 
 def _field_label(field: FieldDefinition) -> str:
+    if "定格COPを直接入力〔検証用〕" in field.choices:
+        return field.label
     if field.key in _BRI_LABELS:
         return _BRI_LABELS[field.key]
     if field.key in _PLATFORM_LABELS:
@@ -337,6 +339,8 @@ def _clean_label(label: str) -> str:
 
 
 def _field_description(field: FieldDefinition) -> str:
+    if "定格COPを直接入力〔検証用〕" in field.choices:
+        return field.description
     description = _DESCRIPTIONS.get(field.key, field.description)
     if description:
         return description
@@ -379,8 +383,8 @@ def group_description(group_name: str) -> str:
         "中間暖房能力試験": "中間暖房能力試験の能力、消費電力、風量、送風機電力を入力します。",
         "定格冷房能力試験": "定格冷房能力試験の能力、消費電力、風量、送風機電力を入力します。",
         "中間冷房能力試験": "中間冷房能力試験の能力、消費電力、風量、送風機電力を入力します。",
-        "エネルギー消費効率の入力": "エネルギー消費効率を直接指定するか選択します。暖房・冷房で個別に設定します。",
-        "暖房能力の入力": "暖房能力を床面積から算定するか、機器値を直接入力するか選択します。",
+        "エネルギー消費効率の入力": "規定値・効率区分・定格COPの直接入力から選択します。能力とは独立して、暖房・冷房で個別に設定します。",
+        "暖房能力の入力": "冷房側の能力から暖房能力を自動算定するか、定格・最大能力を直接入力するか選択します。",
         "冷房能力の入力": "冷房能力を床面積から算定するか、機器値を直接入力するか選択します。",
         "小能力時高効率型コンプレッサー": "能力の入力方法とは独立して、コンプレッサーの特性を設定します。",
         "ファンの消費電力": "送風機の比消費電力を自動算定するか、直接入力するか選択します。",

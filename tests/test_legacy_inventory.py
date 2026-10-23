@@ -86,7 +86,7 @@ def test_260812_consolidates_related_general_sections() -> None:
 
 
 def test_260812_has_independent_heating_and_cooling_efficiency_classes() -> None:
-    inventory = load_legacy_inventory()
+    inventory = load_legacy_inventory("260812")
     fields = {
         item.id: item
         for item in inventory.fields
@@ -204,7 +204,7 @@ def test_optional_input_values_have_their_own_activation_conditions() -> None:
         if "入力する場合のみ" in item.label or "設置する場合のみ" in item.label
     ]
 
-    assert len(optional_values) == 55
+    assert len(optional_values) == 53
     assert all(item.enabled_when is not None for item in optional_values)
     assert all(
         item.enabled_when.path not in {("H_A", "type"), ("C_A", "type")}

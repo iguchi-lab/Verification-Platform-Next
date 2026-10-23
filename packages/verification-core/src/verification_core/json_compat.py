@@ -20,7 +20,7 @@ class CompatibleInputData:
 
 def load_compatible_input_json(
     payload: str | bytes,
-    version: str = "261021_2",
+    version: str = "261023",
 ) -> CompatibleInputData:
     """Load old or current input JSON and fill fields added in newer versions.
 
@@ -49,6 +49,17 @@ def load_compatible_input_json(
         _equipment_type_defaults(imported, version),
         version=version,
     )
+    # Absence is significant for saved RAC inputs: old direct capacity also meant
+    # direct COP, and old heating without input_mode inherited the cooling COP.
+    for equipment_key in ("H_A", "C_A"):
+        equipment = imported.get(equipment_key)
+        if not isinstance(equipment, Mapping):
+            continue
+        if "rac_efficiency_mode" not in equipment:
+            defaults[equipment_key].pop("rac_efficiency_mode", None)
+            if equipment_key == "H_A" and "input_mode" not in equipment:
+                defaults[equipment_key].pop("input_mode", None)
+                defaults[equipment_key].pop("mode", None)
     supplemented: list[str] = []
     merged = _merge_mapping(defaults, imported, (), supplemented)
     return CompatibleInputData(merged, tuple(supplemented))

@@ -74,9 +74,9 @@ def test_heating_and_cooling_efficiency_classes_are_built_independently() -> Non
     data = build_input_data({
         "H_A_type__0": "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
         "C_A_type__0": "ルームエアコンディショナ活用型全館空調（現行省エネ法ルームエアコンモデル）",
-        "H_A_input_mode__0": "入力する",
+        "H_A_input_mode__0": "効率区分を指定",
         "H_A_mode__0": "い",
-        "C_A_input_mode__0": "入力する",
+        "C_A_input_mode__0": "効率区分を指定",
         "C_A_mode__0": "は",
     })
 

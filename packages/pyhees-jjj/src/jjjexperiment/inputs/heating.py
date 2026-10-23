@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from ._parsing import parse_airflow_correction
+from .rac_efficiency import resolve_efficiency, validate_capacity
 
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
@@ -22,29 +23,22 @@ class CRACSpecification:
     @classmethod
     def from_dict(cls, data: dict, q_rtd_C: float, q_max_C: float, e_rtd_C: float) -> 'CRACSpecification':
         # 機器性能
-        from pyhees.section4_3_a import get_e_rtd_C, get_e_rtd_H, get_q_rtd_H, get_q_max_H
+        from pyhees.section4_3_a import get_e_rtd_H, get_q_rtd_H, get_q_max_H
         if data.get('type') == 2 and int(data.get('input_rac_performance', 1)) == 2:
             q_rtd = float(data['q_rac_rtd_H'])
             q_max = float(data['q_rac_max_H'])
-            e_rtd = float(data['e_rac_rtd_H'])
         elif data.get('type') == 4:
             q_rtd = float(data['q_rac_pub_rtd']) * 1000
             q_max = float(data['q_rac_pub_max']) * 1000
-            e_rtd = get_e_rtd_H(e_rtd_C)
         else:
             q_rtd = get_q_rtd_H(q_rtd_C)
             q_max = get_q_max_H(q_rtd, q_max_C)
-            if data.get('type') == 2 and 'input_mode' in data:
-                e_class = None
-                if int(data.get('input_mode', 1)) == 2:
-                    e_class = {1: 'い', 2: 'ろ', 3: 'は'}.get(
-                        int(data.get('mode', 1))
-                    )
-                e_rtd = get_e_rtd_H(get_e_rtd_C(e_class, q_rtd_C))
-            else:
-                # 旧JSONは暖房側の効率区分を持たないため、従来どおり
-                # 冷房側で算定済みの定格効率から暖房効率を換算する。
-                e_rtd = get_e_rtd_H(e_rtd_C)
+
+        if data.get('type') == 2:
+            validate_capacity(data, 'H', q_rtd, q_max)
+            e_rtd = resolve_efficiency(data, 'H', q_rtd_C, e_rtd_C)
+        else:
+            e_rtd = get_e_rtd_H(e_rtd_C)
 
         dualcompressor = data.get('type') == 2 and int(data.get('dualcompressor', 1)) == 2
 

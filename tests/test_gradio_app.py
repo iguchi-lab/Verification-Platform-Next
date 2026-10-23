@@ -173,8 +173,8 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         for value in markdown_values
     )
     assert origin_classes == {
-        "input-origin-bri-web": 47,
-        "input-origin-verification-platform": 182,
+        "input-origin-bri-web": 45,
+        "input-origin-verification-platform": 184,
     }
     assert tuple(accordions) == (
         "JSONファイルから計算",

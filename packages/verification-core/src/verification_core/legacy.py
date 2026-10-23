@@ -68,6 +68,8 @@ def _condition_from_dict(value: dict[str, Any] | None) -> Condition | None:
 
 def _field_override_from_dict(value: dict[str, Any]) -> dict[str, Any]:
     override = dict(value)
+    if "choices" in override:
+        override["choices"] = tuple(override["choices"])
     if "kind" in override:
         override["kind"] = FieldKind(override["kind"])
     if "enabled_when" in override:
@@ -93,7 +95,7 @@ def _field_from_dict(item: dict[str, Any]) -> LegacyFieldDefinition:
     )
 
 
-def load_legacy_inventory(version: str = "261021_2") -> LegacyInputInventory:
+def load_legacy_inventory(version: str = "261023") -> LegacyInputInventory:
     file_name = f"input_fields_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:
