@@ -206,7 +206,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
         "input-origin-verification-platform": 184,
     }
     assert tuple(accordions) == (
-        "JSONファイルから計算",
+        "JSONファイルの読込み",
         "① 計算条件・外部データ",
         "② 住宅基本情報",
         "③ 外皮性能",

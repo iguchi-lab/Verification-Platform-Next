@@ -53,6 +53,11 @@ Gradio部品と切替イベントは [`form_app.py`](../apps/gradio/src/verifica
 暖房の効率設定方法を省略した旧入力も、従来の冷房COPからの換算を維持します。
 互換処理の正本は [`json_compat.py`](../packages/verification-core/src/verification_core/json_compat.py)です。
 
+JSONを入力画面へ復元する場合は、`verification-core.form_import` が同じバインディングを逆にたどり、
+再生成したJSONとの整合を確認します。旧RAC効率から編集可能な設定への移行は
+`verification_app.json_form_import` で処理します。表示欄への反映は全項目の変換成功後に行い、
+途中で失敗した場合は入力欄を変更しません。
+
 ## 製品版と計算成果物
 
 製品版の正本は`jjjexperiment.release`です。UI、入力契約、計算エンジンを
