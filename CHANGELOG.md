@@ -5,6 +5,33 @@
 
 ## Unreleased
 
+正式タグ未発行の更新です。公開Web版への反映状況は手動デプロイの記録で確認します。
+日付は日本時間のマージ日です。変更の背景・利用上の注意・関連PRをまとめた
+[更新履歴の詳細](docs/update_history.md)も参照してください。
+
+### 2026-10-23
+
+- RAC活用型（省エネ法モデル）の能力と効率を独立して選択できるようにしました。
+  効率は「規定値を使用」「効率区分を指定」「定格COPを直接入力〔検証用〕」の3方式とし、
+  必要な入力欄だけ表示します。暖房・冷房で異なる設定が可能です。
+  旧JSONのCOP優先ルールとTG専用設定は維持します。
+  [PR #211](https://github.com/iguchi-lab/Verification-Platform-Next/pull/211)
+
+### 2026-10-22
+
+- 非表示項目だけになった行も隠し、暖房設備などの不要な余白を解消しました。
+  出力ファイルのチェックボックス選択、全選択・全解除、ZIP一括ダウンロードを追加しました。
+  年間結果にピーク負荷・最大処理熱量と発生日時、代表期間のグラフに室内の相対・絶対湿度を追加しました。
+  [PR #208](https://github.com/iguchi-lab/Verification-Platform-Next/pull/208)
+- 小数入力時のブラウザー警告を解消し、整数型に誤分類されていた96項目の小数切捨てを修正しました。
+  該当項目で小数を入力した場合は、入力値を保持するため従来と結果が変わることがあります。
+  [PR #209](https://github.com/iguchi-lab/Verification-Platform-Next/pull/209)
+- プルダウンの配色改善後にも残っていた、背面ラベルが選択肢に重なる表示不具合を修正しました。
+  [PR #210](https://github.com/iguchi-lab/Verification-Platform-Next/pull/210)
+- 自立を基本とする修正内容別の設定手順と、RAC活用型の比較手順を文書化しました。
+  [PR #206](https://github.com/iguchi-lab/Verification-Platform-Next/pull/206)、
+  [PR #207](https://github.com/iguchi-lab/Verification-Platform-Next/pull/207)
+
 ## [1.6.0] - 2026-10-21
 
 - TGに「比較する修正内容」を追加し、出口温度・最低風量のみ・送風機特性・全般換気なしの各条件・間仕切り熱移動を個別に検証できるようにしました。
