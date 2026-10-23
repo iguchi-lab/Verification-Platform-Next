@@ -1,0 +1,105 @@
+{
+  "version": "261023",
+  "base_version": "261021_2",
+  "field_count": 229,
+  "verification_platform_field_ids": [
+    "H_A_input_mode__0",
+    "C_A_input_mode__0"
+  ],
+  "field_overrides": {
+    "H_A_input_mode__0": {
+      "label": "効率の設定方法",
+      "default": "規定値を使用",
+      "choices": [
+        "規定値を使用",
+        "効率区分を指定",
+        "定格COPを直接入力〔検証用〕"
+      ],
+      "description": "規定値は区分「は」相当です。能力の設定方法とは独立して選択します。直接入力では区分を使わず、入力した定格COPを使用します。"
+    },
+    "H_A_mode__0": {
+      "enabled_when": {
+        "path": [
+          "H_A_input_mode__0"
+        ],
+        "allowed_values": [
+          "効率区分を指定"
+        ]
+      },
+      "description": "機器の定格冷房能力・定格冷房COPから判定した区分を選択します。暖房COPは冷房側で設定・算定した定格冷房能力と、この区分から換算します。"
+    },
+    "e_rac_rtd_H__0": {
+      "label": "定格暖房COP [-]",
+      "group": "エネルギー消費効率の入力",
+      "default": 3.855424,
+      "enabled_when": {
+        "path": [
+          "H_A_input_mode__0"
+        ],
+        "allowed_values": [
+          "定格COPを直接入力〔検証用〕"
+        ]
+      },
+      "description": "実機の定格暖房能力 ÷ 定格暖房消費電力を入力します。APFではありません。正の値を指定してください。"
+    },
+    "H_A_input_rac_performance__0": {
+      "label": "暖房能力の設定方法",
+      "description": "自動算定では冷房側の定格・最大能力から暖房能力を求めます。「性能を直接入力」では定格・最大能力のみを指定します。COPは「効率の設定方法」で設定してください。"
+    },
+    "H_A_q_rac_rtd_H__0": {
+      "default": 6685.3,
+      "description": "単位はWです（5.6 kWなら5600）。実機の仕様値へ変更してください。最大能力は定格能力以上にしてください。"
+    },
+    "H_A_q_rac_max_H__0": {
+      "default": 10047.047814,
+      "description": "単位はWです（5.6 kWなら5600）。実機の仕様値へ変更してください。最大能力は定格能力以上にしてください。"
+    },
+    "C_A_input_mode__0": {
+      "label": "効率の設定方法",
+      "default": "規定値を使用",
+      "choices": [
+        "規定値を使用",
+        "効率区分を指定",
+        "定格COPを直接入力〔検証用〕"
+      ],
+      "description": "規定値は区分「は」相当です。能力の設定方法とは独立して選択します。直接入力では区分を使わず、入力した定格COPを使用します。"
+    },
+    "C_A_mode__0": {
+      "enabled_when": {
+        "path": [
+          "C_A_input_mode__0"
+        ],
+        "allowed_values": [
+          "効率区分を指定"
+        ]
+      },
+      "description": "機器の定格冷房能力・定格冷房COPから判定した区分を選択します。冷房COPは設定・算定した定格冷房能力と、この区分から算定します。"
+    },
+    "e_rac_rtd_C__0": {
+      "label": "定格冷房COP [-]",
+      "group": "エネルギー消費効率の入力",
+      "default": 2.8512,
+      "enabled_when": {
+        "path": [
+          "C_A_input_mode__0"
+        ],
+        "allowed_values": [
+          "定格COPを直接入力〔検証用〕"
+        ]
+      },
+      "description": "実機の定格冷房能力 ÷ 定格冷房消費電力を入力します。APFではありません。正の値を指定してください。"
+    },
+    "C_A_input_rac_performance__0": {
+      "label": "冷房能力の設定方法",
+      "description": "自動算定では住宅全体の床面積から冷房能力を求めます。「性能を直接入力」では定格・最大能力のみを指定します。COPは「効率の設定方法」で設定してください。"
+    },
+    "C_A_q_rac_rtd_C__0": {
+      "default": 5600,
+      "description": "単位はWです（5.6 kWなら5600）。実機の仕様値へ変更してください。最大能力は定格能力以上にしてください。"
+    },
+    "C_A_q_rac_max_C__0": {
+      "default": 5944.62,
+      "description": "単位はWです（5.6 kWなら5600）。実機の仕様値へ変更してください。最大能力は定格能力以上にしてください。"
+    }
+  }
+}

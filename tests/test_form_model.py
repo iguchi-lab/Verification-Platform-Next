@@ -159,6 +159,7 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     assert tuple(field.key for field in heating_group.fields) == (
         "H_A_input_mode__0",
         "H_A_mode__0",
+        "e_rac_rtd_H__0",
     )
     assert not any(field.visible for field in heating_group.fields)
 
@@ -172,6 +173,7 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     assert tuple(field.key for field in cooling_group.fields) == (
         "C_A_input_mode__0",
         "C_A_mode__0",
+        "e_rac_rtd_C__0",
     )
     assert not any(field.visible for field in cooling_group.fields)
 
@@ -188,8 +190,8 @@ def test_rac_efficiency_classes_are_grouped_by_season_like_bri_web() -> None:
     assert not visibility["H_A_input__0"]
     assert not visibility["C_A_input__0"]
 
-    values["H_A_input_mode__0"] = "入力する"
-    values["C_A_input_mode__0"] = "入力する"
+    values["H_A_input_mode__0"] = "効率区分を指定"
+    values["C_A_input_mode__0"] = "効率区分を指定"
     selected_efficiency = model.visibility(values)
     assert selected_efficiency["H_A_mode__0"]
     assert selected_efficiency["C_A_mode__0"]

@@ -1,0 +1,79 @@
+{
+  "version": "261023",
+  "base_version": "261021_2",
+  "binding_count": 280,
+  "append_bindings": [
+    {
+      "line": 11010,
+      "target_path": [
+        "H_A",
+        "rac_efficiency_mode"
+      ],
+      "expression": "'default' if H_A_input_mode == '規定値を使用' else 'class' if H_A_input_mode == '効率区分を指定' else 'direct'",
+      "conditions": [
+        {
+          "kind": "if",
+          "expression": "input_data['H_A']['type'] == 2",
+          "line": 11000
+        }
+      ],
+      "source_ids": [
+        "H_A_input_mode__0"
+      ]
+    },
+    {
+      "line": 11011,
+      "target_path": [
+        "H_A",
+        "input_mode"
+      ],
+      "expression": "2 if H_A_input_mode == '効率区分を指定' else 1",
+      "conditions": [
+        {
+          "kind": "if",
+          "expression": "input_data['H_A']['type'] == 2",
+          "line": 11000
+        }
+      ],
+      "source_ids": [
+        "H_A_input_mode__0"
+      ]
+    },
+    {
+      "line": 11012,
+      "target_path": [
+        "C_A",
+        "rac_efficiency_mode"
+      ],
+      "expression": "'default' if C_A_input_mode == '規定値を使用' else 'class' if C_A_input_mode == '効率区分を指定' else 'direct'",
+      "conditions": [
+        {
+          "kind": "if",
+          "expression": "input_data['C_A']['type'] == 2",
+          "line": 11001
+        }
+      ],
+      "source_ids": [
+        "C_A_input_mode__0"
+      ]
+    },
+    {
+      "line": 11013,
+      "target_path": [
+        "C_A",
+        "input_mode"
+      ],
+      "expression": "2 if C_A_input_mode == '効率区分を指定' else 1",
+      "conditions": [
+        {
+          "kind": "if",
+          "expression": "input_data['C_A']['type'] == 2",
+          "line": 11001
+        }
+      ],
+      "source_ids": [
+        "C_A_input_mode__0"
+      ]
+    }
+  ]
+}

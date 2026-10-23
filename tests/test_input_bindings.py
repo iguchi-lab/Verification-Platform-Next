@@ -12,7 +12,7 @@ def test_active_catalog_covers_every_ui_field() -> None:
     inventory = load_legacy_inventory()
     catalog = load_input_bindings()
 
-    assert len(catalog.bindings) == 276
+    assert len(catalog.bindings) == 280
     assert catalog.source_ids == frozenset(field.id for field in inventory.fields)
 
 
@@ -66,9 +66,9 @@ def test_efficiency_classes_are_bound_to_each_season() -> None:
     catalog = load_input_bindings()
     values = default_ui_values()
 
-    heating_input, = catalog.for_target("H_A", "input_mode")
+    heating_input = catalog.for_target("H_A", "input_mode")[-1]
     heating_mode, = catalog.for_target("H_A", "mode")
-    values["H_A_input_mode__0"] = "入力する"
+    values["H_A_input_mode__0"] = "効率区分を指定"
     values["H_A_mode__0"] = "ろ"
 
     assert heating_input.evaluate(values) == 2

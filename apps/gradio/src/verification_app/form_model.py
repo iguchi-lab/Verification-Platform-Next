@@ -87,7 +87,7 @@ class FormModel:
 
 
 def load_form_model(
-    version: str = "261021_2",
+    version: str = "261023",
     values: Mapping[str, Any] | None = None,
 ) -> FormModel:
     schema = load_input_schema(version)

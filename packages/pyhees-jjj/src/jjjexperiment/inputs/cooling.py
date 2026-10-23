@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from ._parsing import parse_airflow_correction
+from .rac_efficiency import resolve_efficiency, validate_capacity
 
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
@@ -23,7 +24,7 @@ class CRACSpecification:
     def from_dict(cls, data: dict, A_A: float) -> 'CRACSpecification':
         # 冷房側のエネルギー消費効率入力
         e_class = None
-        if int(data.get('input_mode', 1)) == 2:
+        if data.get('type') != 2 and int(data.get('input_mode', 1)) == 2:
             mode = int(data.get('mode', 1))
             e_class = {1: 'い', 2: 'ろ', 3: 'は'}.get(mode)
 
@@ -32,14 +33,17 @@ class CRACSpecification:
         if data.get('type') == 2 and int(data.get('input_rac_performance', 1)) == 2:
             q_rtd = float(data['q_rac_rtd_C'])
             q_max = float(data['q_rac_max_C'])
-            e_rtd = float(data['e_rac_rtd_C'])
         elif data.get('type') == 4:
             q_rtd = float(data['q_rac_pub_rtd']) * 1000
             q_max = float(data['q_rac_pub_max']) * 1000
-            e_rtd = get_e_rtd_C(e_class, q_rtd)
         else:
             q_rtd = get_q_rtd_C(A_A)
             q_max = get_q_max_C(q_rtd)
+
+        if data.get('type') == 2:
+            validate_capacity(data, 'C', q_rtd, q_max)
+            e_rtd = resolve_efficiency(data, 'C', q_rtd)
+        else:
             e_rtd = get_e_rtd_C(e_class, q_rtd)
 
         dualcompressor = data.get('type') == 2 and int(data.get('dualcompressor', 1)) == 2
