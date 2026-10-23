@@ -15,20 +15,13 @@
 
 ## 依存方向
 
-```text
-apps/gradio
-  ├── verification-core
-  └── pyhees-jjj
+| 呼出し側 | 主な依存先・役割 |
+|---|---|
+| `apps/gradio` | `verification-core`（入力契約）、`pyhees-jjj`（計算API・結果・表示用メタデータ） |
+| `verification-core` | 標準ライブラリ |
+| `jjjexperiment` | `pyhees`（建研由来の計算関数） |
 
-verification-core
-  └── 標準ライブラリのみ
-
-pyhees-jjj
-  ├── jjjexperiment（検証用プラットフォーム独自コード）
-  └── pyhees（建築研究所由来コード）
-```
-
-UIから計算エンジンの内部モジュールを直接参照せず、公開された計算APIと結果モデルだけを使用します。
+UIの計算実行は計算APIを通します。表示用には、製品版やTG比較モードなどのエンジン側メタデータも参照します。
 
 計算エンジン内の依存方向は `jjjexperiment -> pyhees` の一方向です。PR #140で移行前から残っていた `pyhees -> jjjexperiment` の逆依存をすべて除去しました。Verification Platform固有の定数、共有Enum、ログ、実行コンテキストは、上流由来ではない `pyhees.jjj_runtime` 接続アダプターへ `jjjexperiment` 側から登録します。契約テストで逆依存0件を固定し、新しい逆依存は追加しません。
 
@@ -42,7 +35,11 @@ Phase 5 完了後は、このモノレポがUI、入力契約、計算エンジ�
 
 ## 入力スキーマ
 
-入力項目の正本は `verification-core` に置きます。Gradio部品、JSONデフォルト値、入力検証、方式別の有効・無効条件、マニュアルの項目表は同じスキーマから生成します。
+入力キー・初期値・型・基本的な表示条件の正本は `verification-core` のスキーマです。
+画面上の文言と配置は [`form_presentation.py`](../apps/gradio/src/verification_app/form_presentation.py)、
+グループ構成とTGなどの追加表示条件は [`form_model.py`](../apps/gradio/src/verification_app/form_model.py)、
+Gradio部品と切替イベントは [`form_app.py`](../apps/gradio/src/verification_app/form_app.py)で扱います。
+ドキュメントは自動生成ではありません。入力や配置を変更するときは、関連する操作ガイドも更新します。
 
 製品の入力JSONは宣言的な入力バインディングから生成します。旧NotebookのPythonフォームを
 解釈する評価器は製品APIではなく、Phase 5で旧版との一致を確認するための非公開回帰専用
@@ -52,6 +49,9 @@ Phase 5 完了後は、このモノレポがUI、入力契約、計算エンジ�
 暖房・冷房方式に対応する現行デフォルトを不足キーだけへ補完します。これにより、
 旧JSONを旧フォーム評価器へ戻さず、現行の入力契約と計算サービスへ直接合流させます。
 未知の旧キーは比較・後方互換のため保持し、配列と単一値は部分的に書き換えません。
+ただし、旧RAC入力へ `rac_efficiency_mode` を補完すると意味が変わるため、このキーは追加しません。
+暖房の効率設定方法を省略した旧入力も、従来の冷房COPからの換算を維持します。
+互換処理の正本は [`json_compat.py`](../packages/verification-core/src/verification_core/json_compat.py)です。
 
 ## 製品版と計算成果物
 

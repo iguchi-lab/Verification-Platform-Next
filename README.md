@@ -36,7 +36,7 @@
 ## 主な機能
 
 - 229項目の正規入力スキーマと方式別の表示・検証条件
-- Next／TG計算方式の切替（TG＋床下空調は未対応）
+- 自立／TG計算方式の切替（TG＋床下空調は未対応）
 - JSON入力とGradio Web UI
 - ダクト式セントラル空調、ルームエアコン、床下空調などの計算
 - 暖冷房別の年間結果、8760時間系列、グラフ、計算ログの出力
@@ -134,19 +134,14 @@ docker run --rm -p 8080:8080 verification-platform-next
 
 ## ドキュメント
 
-- [アーキテクチャ](docs/ARCHITECTURE.md)
-- [リリースと成果物の版管理](docs/RELEASING.md)
-- [変更履歴（版ごとの要約）](CHANGELOG.md)
-- [更新履歴の詳細（日付・関連PR・利用者への影響）](docs/update_history.md)
-- [入力画面ガイド](docs/input_guide.md)
+[目的別ドキュメント一覧](docs/README.md)から、操作説明・計算根拠・開発資料を選べます。
+
+- [入力画面ガイド（RAC効率・結果確認・一括ダウンロード）](docs/input_guide.md)
+- [自立・TG方式の切替と計算範囲](docs/tg_calculation_method.md)
+- [修正内容ごとの設定方法](docs/calculation_settings_from_default.md)
 - [床下関連設定の入力ガイド](docs/underfloor_ac_input_guide.md)
-- [Next・TG方式の切替と計算範囲](docs/tg_calculation_method.md)
-- [修正内容ごとの設定方法（自立を基本とする）](docs/calculation_settings_from_default.md)
-- [床下空調計算の7つの変更点](docs/underfloor_ac_seven_changes.md)
-- [Excelとの床下計算整合](docs/underfloor_ac_excel_alignment.md)
-- [建研本家・旧Verification Platformとの計算差分](docs/calculation_differences.md)
+- [更新履歴の詳細](docs/update_history.md)／[版ごとの変更要約](CHANGELOG.md)
 - [計算エンジン](packages/pyhees-jjj/README.md)
-- [上流`pyhees`の追跡方針](packages/pyhees-jjj/UPSTREAM.md)
 
 ## コントリビューション
 
