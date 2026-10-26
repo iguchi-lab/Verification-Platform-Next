@@ -1,4 +1,4 @@
-from . import get_C, inputs, section4_2_jjj
+from . import get_C, inputs, section4_2_jjj, temperature_policy
 from .get_C import Array5x1, get_C_BR_i, get_C_NR, jjj_consts, ld, np
 from .section4_2_jjj import (
     Array5,
@@ -31,4 +31,5 @@ __all__ = (
     "log_res",
     "np",
     "section4_2_jjj",
+    "temperature_policy",
 )

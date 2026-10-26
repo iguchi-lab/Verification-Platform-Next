@@ -48,6 +48,7 @@ from jjjexperiment.v_supply_cap.inputs.v_supply_cap_dto import VSupplyCapDto
 import jjjexperiment.v_supply_cap.cap_V_supply_d_t_i as jjj_vsupcap
 # F24-4 過剰熱量繰越
 from jjjexperiment.carryover_heat.inputs.carryover_heat_dto import CarryoverHeatDto
+from jjjexperiment.carryover_heat.temperature_policy import compensate_room_temperature
 import jjjexperiment.carryover_heat as jjj_carryover_heat
 # F24-5 床下空調
 import jjjexperiment.underfloor_ac.section4_2_jjj as jjj_ufac_dc
@@ -321,6 +322,7 @@ class _CarryoverCalculationPhaseInputs(NamedTuple):
     v_supply_cap_dto: object
     load: object
     pre_branch: object
+    carryover_temperature_policy: str = "signed"
 
 class _NoCarryoverCalculationInputs(NamedTuple):
     ac_setting: object
@@ -563,6 +565,7 @@ class _CarryoverActualTemperatureInputs(NamedTuple):
     V_vent_l_NR_d_t: object
     V_dash_supply_d_t_i: object
     Theta_NR_d_t: object
+    carryover_temperature_policy: str = "signed"
 
 
 class _CommonOutletSupplyOutputInputs(NamedTuple):
@@ -4129,6 +4132,12 @@ def _update_carryover_actual_temperature_state(inputs: _CarryoverActualTemperatu
         t, H, C, M, Theta_star_HBR_d_t, V_supply_d_t_i,
         Theta_supply_d_t_i, U_prt, A_prt_i, Q, A_HCZ_i,
         L_star_H_d_t_i, L_star_CS_d_t_i, Theta_HBR_d_t_i))
+    if inputs.carryover_temperature_policy == "setpoint":
+        # Evaluate unmet load against the compensated room temperature later in
+        # _get_actual_loads / _get_unprocessed_loads; do not erase that load.
+        # Non-room balance and next-hour carryover must use this same state.
+        Theta_HBR_d_t_i[:, t:t + 1] = compensate_room_temperature(
+            Theta_HBR_d_t_i[:, t:t + 1], Theta_star_HBR_d_t[t], H[t], C[t])
     Theta_NR_d_t[t] = _get_actual_non_room_temperature_at_hour(_ActualNonRoomTemperatureHourInputs(
         t, isFirst, H, C, M, Theta_star_NR_d_t, Theta_star_HBR_d_t,
         Theta_HBR_d_t_i, A_NR, V_vent_l_NR_d_t, V_dash_supply_d_t_i,
@@ -4693,7 +4702,8 @@ def _run_carryover_calculation(inputs: _CarryoverCalculationPhaseInputs):
                     L_star_CS_d_t_i, Theta_HBR_d_t_i,
                     inputs.pre_branch.Theta_star_NR_d_t, preparation.A_NR,
                     preparation.V_vent_l_NR_d_t,
-                    pre_vav_state.V_dash_supply_d_t_i, Theta_NR_d_t))
+                    pre_vav_state.V_dash_supply_d_t_i, Theta_NR_d_t,
+                    inputs.carryover_temperature_policy))
 
     return _CalculationBranchResult(
         capacity_state,
@@ -4819,6 +4829,9 @@ def _finalize_calculation_outputs(inputs: _CalculationOutputPhaseInputs):
     # not emit one pandas fragmentation warning per added column.
     df_output = _consolidate_output_frame(pre_vav_state.df_output)
     df_output3 = preparation.df_output3
+    if getattr(inputs.carryover_heat_dto, "carry_over_heat", None) == 過剰熱量繰越計算.行う:
+        df_output3['carryover_temperature_policy'] = getattr(
+            inputs.carryover_heat_dto, 'carryover_temperature_policy', 'signed')
 
     # NOTE: 繰越の有無によってCSV出力が異ならないよう df_output の処理は以降に限定する
     _log_actual_temperature_state(
@@ -5115,6 +5128,7 @@ def _calc_Q_UT_A_once(
                 v_supply_cap_dto,
                 load,
                 pre_branch,
+                getattr(carryover_heat_dto, "carryover_temperature_policy", "signed"),
             )
         )
     else:

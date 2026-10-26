@@ -1,0 +1,18 @@
+{
+  "version": "261027",
+  "base_version": "261023",
+  "binding_count": 281,
+  "append_bindings": [
+    {
+      "line": 12000,
+      "target_path": [
+        "carryover_temperature_policy"
+      ],
+      "expression": "'setpoint' if carryover_temperature_policy == '未処理負荷を計上し、設定温度で補完する' else 'signed'",
+      "conditions": [],
+      "source_ids": [
+        "carryover_temperature_policy__0"
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ from typing import Any
 from urllib.request import urlopen
 
 import gradio as gr
+from jjjexperiment.carryover_heat.temperature_policy import TEMPERATURE_POLICIES
 from jjjexperiment.release import DISPLAY_VERSION
 from jjjexperiment.calculation_method import TG_PROFILES
 from verification_core import FieldDefinition, FieldKind, FieldOrigin
@@ -1337,6 +1338,8 @@ def _annual_summary_html(summary: AnnualSummary | None) -> str:
         + (f'<div class="annual-summary__note">比較条件：{escape(TG_PROFILES.get(summary.tg_profile, summary.tg_profile))}'
            + ('。比較対象は暖冷房合計です。' if summary.tg_total_mj is None else '。暖冷房合計と換気を含む比較合計を表示します。')
            + '</div>' if summary.calculation_method == 'tg' else '')
+        + (f'<div class="annual-summary__note">過剰熱量持越し：{escape(TEMPERATURE_POLICIES[summary.carryover_temperature_policy])}</div>'
+           if summary.carryover_temperature_policy is not None else '')
         + '<div class="annual-summary__note">'
         '一次エネルギー消費量には未処理負荷の一次エネルギー相当分を含みます。'
         'エアコンの消費電力量は、熱源機とファンの合計からファン分を除いた値です。'

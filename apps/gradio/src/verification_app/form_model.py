@@ -15,6 +15,7 @@ from .form_presentation import (
 
 
 TG_NEXT_ONLY_FIELDS = frozenset({
+    "carryover_temperature_policy__0",
     "change_supply_volume_before_vav_adjust__0", "change_V_supply_d_t_i_max__0",
     "correct_no_general_ventilation_airflow__0", "C_df_H_d_t_defrost_rac__0",
     "defrost_temp_rac__0", "defrost_humid_rac__0", "C_hm_C__0", "q_rtd_C_limit__0",
@@ -95,7 +96,7 @@ class FormModel:
 
 
 def load_form_model(
-    version: str = "261023",
+    version: str = "261027",
     values: Mapping[str, Any] | None = None,
 ) -> FormModel:
     schema = load_input_schema(version)

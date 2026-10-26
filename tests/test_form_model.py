@@ -7,7 +7,7 @@ from verification_app.form_model import load_form_model
 def test_form_model_preserves_schema_order_and_groups() -> None:
     model = load_form_model()
 
-    assert len(model.fields) == 229
+    assert len(model.fields) == 230
     assert tuple(section.name for section in model.sections) == (
         "① 計算条件・外部データ",
         "② 住宅基本情報",
@@ -384,7 +384,7 @@ def test_form_values_are_mapped_by_schema_order() -> None:
 def test_form_value_count_is_validated() -> None:
     model = load_form_model()
 
-    with pytest.raises(ValueError, match="Expected 229 form values, found 1"):
+    with pytest.raises(ValueError, match="Expected 230 form values, found 1"):
         model.values_from_sequence(("only-one",))
 
 

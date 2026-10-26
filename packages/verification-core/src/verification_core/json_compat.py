@@ -20,7 +20,7 @@ class CompatibleInputData:
 
 def load_compatible_input_json(
     payload: str | bytes,
-    version: str = "261023",
+    version: str = "261027",
 ) -> CompatibleInputData:
     """Load old or current input JSON and fill fields added in newer versions.
 

@@ -4423,7 +4423,7 @@ def test_carryover_actual_temperature_inputs_preserve_field_order():
     values = tuple(object() for _ in range(20))
     inputs = sut._CarryoverActualTemperatureInputs(*values)
 
-    assert tuple(inputs) == values
+    assert tuple(inputs) == (*values, "signed")
     assert inputs._fields == (
         "t",
         "isFirst",
@@ -4445,6 +4445,7 @@ def test_carryover_actual_temperature_inputs_preserve_field_order():
         "V_vent_l_NR_d_t",
         "V_dash_supply_d_t_i",
         "Theta_NR_d_t",
+        "carryover_temperature_policy",
     )
 
 

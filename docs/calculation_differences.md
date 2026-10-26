@@ -1,7 +1,7 @@
 # 建研本家・旧Verification Platformとの計算差分
 
 本書は**自立方式の計算差分と、検証当時の比較記録**である。数値表は記載した固定条件の結果を保持する。
-現行mainの入力仕様は `261023`（2026-10-23確認）。下表の `260812` は検証時の基準であり、最新版の入力仕様番号ではない。
+この改修版の入力仕様は `261027`。下表の `260812` は検証時の基準であり、最新版の入力仕様番号ではない。
 TGやRAC効率入力の追加を含む現在の操作は、[入力画面ガイド](input_guide.md)、
 [TGの計算範囲](tg_calculation_method.md)、[更新履歴](update_history.md)を参照する。
 
@@ -383,12 +383,31 @@ Phase 5のRAC代表ケースでは、年間暖房値と、デフロスト影響�
 [`underfloor_ac_seven_changes.md`](underfloor_ac_seven_changes.md)および
 [`underfloor_ac_excel_alignment.md`](underfloor_ac_excel_alignment.md)に記録している。
 
+### 6.3 過剰熱量持越し時の室温評価（入力仕様261027）
+
+未処理負荷を一次エネルギー相当量に計上する際、設定温度まで仮想的に補ったと扱う
+評価方法を選択可能にした。従来方式を誤りと断定する変更ではなく、初期値は従来の
+`signed`を維持する。建研由来コードは変更しない。
+
+持越しONかつ`carryover_temperature_policy=setpoint`の場合に限り、独自拡張の
+居室温度式(46)の直後で、暖房は`max(室温, 暖房設定温度)`、冷房は
+`min(室温, 冷房設定温度)`を適用する。中間期・余剰側の室温は変更しない。
+補完した室温を非居室温度式(48)、処理負荷・未処理負荷、次時刻の持越しへ渡す。
+未処理負荷の一次エネルギー計上を保持し、熱源機出力へ補完分を重複加算しない。
+非居室自体の設定温度への強制と、冷房潜熱式の変更は行わない。
+
+実装は[`temperature_policy.py`](../packages/pyhees-jjj/src/jjjexperiment/carryover_heat/temperature_policy.py)と
+[`section4_2_jjj.py`](../packages/pyhees-jjj/src/jjjexperiment/section4_2_jjj.py)の
+`_update_carryover_actual_temperature_state`。
+操作と保存JSONは[入力画面ガイド](input_guide.md#過剰熱量持越し時の室温未処理負荷)を参照する。
+
 ## 7. 回帰試験
 
 | 対象 | テスト |
 | --- | --- |
 | 非床下のBRI-01OFF/ON | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
 | 過剰熱量繰越のBRI-01OFF/ON | [`test_4_2_formula_8_9.py`](../packages/pyhees-jjj/src/tests/carryover_heat/test_4_2_formula_8_9.py) |
+| 暖冷房の室温補完・非居室への反映・未処理負荷・翌時刻持越し・旧JSON互換 | [`test_carryover_temperature_policy.py`](../tests/test_carryover_temperature_policy.py) |
 | 新床下のBRI-01OFF/ON | [`test_4_2_f8.py`](../packages/pyhees-jjj/src/tests/underfloor_ac/test_4_2_f8.py) |
 | 全般換気なし・最低風量160/420 m3/h | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
 | VAVあり・全般換気なし | [`test_section4_2_preparation.py`](../tests/test_section4_2_preparation.py) |
