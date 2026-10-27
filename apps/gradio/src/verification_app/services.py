@@ -17,6 +17,7 @@ from typing import Any, Callable, ContextManager, Mapping
 from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from jjjexperiment.carryover_heat.temperature_policy import TEMPERATURE_POLICIES
 from verification_core import build_input_data, load_compatible_input_json
 
 CalculationFunction = Callable[[dict[str, Any]], Any]
@@ -86,6 +87,7 @@ class AnnualSummary:
     chapter5_ventilation_mj: float | None = None
     tg_total_mj: float | None = None
     tg_profile: str = 'standard'
+    carryover_temperature_policy: str | None = None
 
 
 class CalculationService:
@@ -463,6 +465,10 @@ class CalculationService:
 
             return AnnualSummary(
                 heating=metrics("H"), cooling=metrics("C"),
+                carryover_temperature_policy=(
+                    str(input_data.get('carryover_temperature_policy', 'signed'))
+                    if str(input_data.get('carry_over_heat')) == '2' else None
+                ),
                 calculation_method=str(input_data.get("calculation_method", "next")),
                 tg_profile=str(annual.get('tg_profile', input_data.get('tg_profile', 'standard'))),
                 fan_ventilation_mj=(float(annual["E_fan_vent [MJ/year]"])
@@ -546,6 +552,10 @@ def _format_input_summary(input_data: Mapping[str, Any] | None) -> list[str]:
         "床下換気 / 床下空調: "
         f"{_enabled_when_two(input_data.get('underfloor_ventilation'))} / "
         f"{_enabled_when_two(input_data.get('change_underfloor_temperature'))}",
+        "過剰熱量持越し: " + (
+            TEMPERATURE_POLICIES.get(input_data.get('carryover_temperature_policy', 'signed'), '不正な設定')
+            if str(input_data.get('carry_over_heat')) == '2' else '使用しない'
+        ),
         f"気象データ: {_file_source(input_data.get('climateFile'))}",
         f"暖冷房負荷データ: {_file_source(input_data.get('loadFile'))}",
         f"入力項目数（エンジン入力）: {len(input_data)}",

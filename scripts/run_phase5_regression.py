@@ -39,6 +39,7 @@ def _legacy_input_projection(input_data: dict[str, Any]) -> dict[str, Any]:
     """Remove only default-valued options that did not exist in the legacy form."""
     projected = copy.deepcopy(input_data)
     for key, expected in {
+        "carryover_temperature_policy": "signed",
         "calculation_method": "next", "tg_profile": "standard", "tg_fan_exponent": 1.0,
         "tg_q_rtd_H": 6700, "tg_q_rtd_C": 5600, "tg_rac_class": "い",
     }.items():

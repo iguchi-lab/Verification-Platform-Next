@@ -39,7 +39,7 @@ def _equal(left, right):
         return False
 
 
-def restore_form_values(data: Mapping[str, Any], version: str = "261023") -> RestoredForm:
+def restore_form_values(data: Mapping[str, Any], version: str = "261027") -> RestoredForm:
     """Invert current bindings; report input that cannot be represented faithfully.
 
     Callers first supplement missing keys and migrate legacy efficiency semantics.

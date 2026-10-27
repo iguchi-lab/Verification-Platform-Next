@@ -1,0 +1,33 @@
+{
+  "version": "261027",
+  "base_version": "261023",
+  "field_count": 230,
+  "append_fields": [
+    {
+      "id": "carryover_temperature_policy__0",
+      "source_name": "carryover_temperature_policy",
+      "source_occurrence": 0,
+      "label": "未処理負荷を計上する場合の室温・持越し",
+      "section": "⑥ その他",
+      "group": "過剰熱量持越し",
+      "category": "基本設定",
+      "kind": "select",
+      "default": "過剰分と不足分を持ち越す（現行）",
+      "choices": [
+        "過剰分と不足分を持ち越す（現行）",
+        "未処理負荷を計上し、設定温度で補完する"
+      ],
+      "enabled_when": {
+        "path": [
+          "carry_over_heat__0"
+        ],
+        "allowed_values": [
+          true
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "暖冷房共通。補完方式は未処理負荷を一次エネルギーに計上し、暖房は設定温度以上、冷房は設定温度以下に居室温度を制限します。不足分は翌時刻へ持ち越しません。初期値・旧JSONは現行方式です。",
+      "insert_after_field_id": "carry_over_heat__0"
+    }
+  ]
+}

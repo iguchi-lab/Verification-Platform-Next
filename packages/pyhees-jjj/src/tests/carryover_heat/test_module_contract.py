@@ -59,6 +59,7 @@ EXPECTED_PACKAGE_PUBLIC_NAMES = {
     "log_res",
     "np",
     "section4_2_jjj",
+    "temperature_policy",
 }
 
 
