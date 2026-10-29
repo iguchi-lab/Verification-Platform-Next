@@ -198,10 +198,10 @@ def test_import_profile_lock_is_released_by_next_import(tmp_path):
     fields = dict(zip((f.key for f in SCHEMA.fields), result[1:1 + len(SCHEMA.fields)], strict=True))
     assert fields['change_heat_source_outlet_required_temperature__0']['value'] is True
     assert fields['change_heat_source_outlet_required_temperature__0']['interactive'] is False
-    path.write_text(json.dumps(build_input_data({'change_underfloor_temperature__0': True})))
+    path.write_text(json.dumps(build_input_data({'change_underfloor_temperature_H__0': True})))
     result = fn(str(path))
     fields = dict(zip((f.key for f in SCHEMA.fields), result[1:1 + len(SCHEMA.fields)], strict=True))
-    assert fields['change_underfloor_temperature__0']['value'] is True
+    assert fields['change_underfloor_temperature_H__0']['value'] is True
     assert fields['change_heat_source_outlet_required_temperature__0']['interactive'] is True
     assert fields['H_A_type__0']['choices'] == list(FIELDS['H_A_type__0'].choices)
     assert all(update['interactive'] for update in callbacks['reset_inputs']()[:len(SCHEMA.fields)])

@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 from ._parsing import parse_present_fields
+from jjjexperiment.underfloor_ac.selection import underfloor_enabled
 
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
@@ -94,6 +95,16 @@ class OuterSkin:
     """暖房期の日射取得係数"""
     mu_C: Optional[float] = None
     """冷房期の日射取得係数"""
+    underfloor_heating: bool = False
+    underfloor_cooling: bool = False
+    r_A_ufvnt_without_ac: Optional[float] = None
+
+    def for_season(self, season: str) -> 'OuterSkin':
+        enabled = self.underfloor_heating if season == 'H' else self.underfloor_cooling
+        if not (self.underfloor_heating or self.underfloor_cooling) or enabled:
+            return self
+        # Building insulation remains common; only the air path changes.
+        return replace(self, r_A_ufvnt=self.r_A_ufvnt_without_ac, r_A_ufac=None)
 
     @classmethod
     def from_dict(cls, data: dict) -> 'OuterSkin':
@@ -121,10 +132,10 @@ class OuterSkin:
             kwargs['underfloor_insulation'] = int(data['underfloor_insulation']) == 2
 
         # 床下空調がオンの場合は、床下換気なし・床下断熱状態となります
-        if (
-            'change_underfloor_temperature' in data
-            and int(data['change_underfloor_temperature']) == 2
-        ):
+        kwargs['underfloor_heating'] = underfloor_enabled(data, 'H')
+        kwargs['underfloor_cooling'] = underfloor_enabled(data, 'C')
+        kwargs['r_A_ufvnt_without_ac'] = kwargs.get('r_A_ufvnt')
+        if kwargs['underfloor_heating'] or kwargs['underfloor_cooling']:
             kwargs['underfloor_insulation'] = True
             kwargs['r_A_ufvnt'] = 0.0
             kwargs['r_A_ufac'] = float(data['r_A_ufac']) / 100

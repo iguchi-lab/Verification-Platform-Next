@@ -32,6 +32,9 @@ TG_RAC_EQUIPMENT_CONTROLS = {
     "tg_q_rtd_C__0": ("C_A_type__0",),
     "tg_rac_class__0": ("H_A_type__0", "C_A_type__0"),
 }
+UNDERFLOOR_SEASON_CONTROLS = (
+    "change_underfloor_temperature_H__0", "change_underfloor_temperature_C__0",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +99,7 @@ class FormModel:
 
 
 def load_form_model(
-    version: str = "261027",
+    version: str = "261029",
     values: Mapping[str, Any] | None = None,
 ) -> FormModel:
     schema = load_input_schema(version)
@@ -181,6 +184,8 @@ def _visibility(
                 values.get(key, fields_by_key[key].default) == fields_by_key[key].choices[1]
                 for key in TG_RAC_EQUIPMENT_CONTROLS[field.key]
             )
+        if field.key == "input_ufac_consts__0" and UNDERFLOOR_SEASON_CONTROLS[0] in fields_by_key:
+            visible = visible and any(values.get(key, False) for key in UNDERFLOOR_SEASON_CONTROLS)
         resolving.remove(field.key)
         resolved[field.key] = visible
         return visible

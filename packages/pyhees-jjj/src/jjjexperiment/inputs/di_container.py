@@ -96,7 +96,7 @@ class JJJExperimentModule(Module):
     def _validate_feature_inputs(self) -> tuple[bool, bool]:
         """機能フラグを読み取り、更新前に組み合わせを検証する。"""
         # まだプロバイダーは使用しない書き方にする(できるけど)
-        new_ufac_flg = self._input.get('change_underfloor_temperature', None)
+        from jjjexperiment.underfloor_ac.selection import underfloor_enabled
         removed_ufac_flg = self._input.get(
             'underfloor_air_conditioning_air_supply', None)
         if removed_ufac_flg is not None and int(removed_ufac_flg) == 2:
@@ -107,10 +107,7 @@ class JJJExperimentModule(Module):
             )
 
         carry_over_heat = self._input.get('carry_over_heat', None)
-        new_ufac_enabled = (
-            new_ufac_flg is not None
-            and int(new_ufac_flg) == 床下空調ロジック.変更する.value
-        )
+        new_ufac_enabled = underfloor_enabled(self._input)
         carry_over_enabled = (
             carry_over_heat is not None
             and int(carry_over_heat) == 過剰熱量繰越計算.行う.value

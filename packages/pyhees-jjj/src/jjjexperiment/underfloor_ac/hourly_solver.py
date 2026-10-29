@@ -302,11 +302,13 @@ def _floor_balance_coefficients(
     inputs: SequentialGroundModeInputs,
     hour: int,
     response: float,
+    *,
+    supply_enabled: bool = True,
 ) -> tuple[float, float, float]:
     theta_star, h_star = _floor_reference_state(
         float(inputs.theta_ex_d_t[hour])
     )
-    airflow = float(np.sum(inputs.v_dash_supply_d_t_i[:2, hour]))
+    airflow = float(np.sum(inputs.v_dash_supply_d_t_i[:2, hour])) if supply_enabled else 0.0
     air_heat_capacity = appendix_e.get_ro_air() * appendix_e.get_c_p_air() * airflow
     room_conductance = inputs.u_s_supply * inputs.a_s_ufac_a * h_star
     exterior_conductance = inputs.phi * inputs.l_uf
@@ -620,8 +622,8 @@ def _mode_floor_temperature(
 
 
 def solve_shared_ground_sequential(
-    heating: SequentialGroundModeInputs,
-    cooling: SequentialGroundModeInputs,
+    heating: SequentialGroundModeInputs | None,
+    cooling: SequentialGroundModeInputs | None,
     heating_mask: ArrayLike,
     cooling_mask: ArrayLike,
     underfloor_insulation: bool,
@@ -629,33 +631,42 @@ def solve_shared_ground_sequential(
     """Advance Pass 1, controls, Pass 2, and ground state exactly once per hour."""
     heating_hours = np.asarray(heating_mask, dtype=bool)
     cooling_hours = np.asarray(cooling_mask, dtype=bool)
+    reference = heating if heating is not None else cooling
+    if reference is None:
+        raise ValueError('At least one underfloor season must be enabled')
     state = run_up_ground_response(
         get_runup_floor_temperature(
-            underfloor_insulation, heating.theta_ex_d_t
+            underfloor_insulation, reference.theta_ex_d_t
         ),
-        heating.theta_g_avg,
-        heating.r_g,
+        reference.theta_g_avg,
+        reference.r_g,
     )
     floor_d_t = np.zeros(HOURS_PER_YEAR, dtype=float)
     response_d_t = np.zeros(HOURS_PER_YEAR, dtype=float)
-    heating.theta_supply_d_t = np.zeros(HOURS_PER_YEAR, dtype=float)
-    cooling.theta_supply_d_t = np.zeros(HOURS_PER_YEAR, dtype=float)
-    heating.active_load_d_t = np.zeros(HOURS_PER_YEAR, dtype=bool)
-    cooling.active_load_d_t = np.zeros(HOURS_PER_YEAR, dtype=bool)
+    for mode in (heating, cooling):
+        if mode is not None:
+            mode.theta_supply_d_t = np.zeros(HOURS_PER_YEAR, dtype=float)
+            mode.active_load_d_t = np.zeros(HOURS_PER_YEAR, dtype=bool)
     for hour in range(HOURS_PER_YEAR):
         response = state.response_terms()
         response_d_t[hour] = float(np.sum(response))
-        if heating_hours[hour]:
+        if heating_hours[hour] and heating is not None:
             floor_d_t[hour] = _mode_floor_temperature(
                 heating, hour, response_d_t[hour]
             )
-        elif cooling_hours[hour]:
+        elif cooling_hours[hour] and cooling is not None:
             floor_d_t[hour] = _mode_floor_temperature(
                 cooling, hour, response_d_t[hour]
             )
-        else:
+        elif heating is not None and cooling is not None:
             floor_d_t[hour] = _floor_temperature_from_supply(
                 heating, hour, response_d_t[hour], 20.0
             )
+        else:
+            # A bypassed season (and the mid-season for seasonal use) has no
+            # HVAC airflow through the floor. Keep conductive ground memory.
+            _, weighted, denominator = _floor_balance_coefficients(
+                reference, hour, response_d_t[hour], supply_enabled=False)
+            floor_d_t[hour] = 3.6 * weighted / denominator
         state.commit(floor_d_t[hour], response)
     return floor_d_t, response_d_t

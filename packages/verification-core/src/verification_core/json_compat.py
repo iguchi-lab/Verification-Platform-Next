@@ -20,7 +20,7 @@ class CompatibleInputData:
 
 def load_compatible_input_json(
     payload: str | bytes,
-    version: str = "261027",
+    version: str = "261029",
 ) -> CompatibleInputData:
     """Load old or current input JSON and fill fields added in newer versions.
 
@@ -49,6 +49,10 @@ def load_compatible_input_json(
         _equipment_type_defaults(imported, version),
         version=version,
     )
+    for season in ('H', 'C'):
+        key = f'change_underfloor_temperature_{season}'
+        if key in defaults:
+            defaults[key] = imported.get('change_underfloor_temperature', '1')
     # Absence is significant for saved RAC inputs: old direct capacity also meant
     # direct COP, and old heating without input_mode inherited the cooling COP.
     for equipment_key in ("H_A", "C_A"):

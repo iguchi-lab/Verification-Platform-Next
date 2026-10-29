@@ -1,0 +1,68 @@
+{
+  "version": "261029",
+  "base_version": "261027",
+  "field_count": 231,
+  "remove_field_ids": [
+    "change_underfloor_temperature__0"
+  ],
+  "append_fields": [
+    {
+      "id": "change_underfloor_temperature_H__0",
+      "source_name": "change_underfloor_temperature_H",
+      "source_occurrence": 0,
+      "label": "暖房時に床下空調を使用する",
+      "section": "⑥ その他",
+      "group": "床下空調（Verification Platform）",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "next"
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "暖房の空調給気を床下経由にします。床下利用面積100%・断熱区画内で計算します。地盤・基礎の物性値は暖冷房共通です。",
+      "insert_after_field_id": "hs_CAV__0"
+    },
+    {
+      "id": "change_underfloor_temperature_C__0",
+      "source_name": "change_underfloor_temperature_C",
+      "source_occurrence": 0,
+      "label": "冷房時に床下空調を使用する",
+      "section": "⑥ その他",
+      "group": "床下空調（Verification Platform）",
+      "category": "基本設定",
+      "kind": "boolean",
+      "default": false,
+      "choices": null,
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "next"
+        ]
+      },
+      "origin": "verification_platform",
+      "description": "冷房の空調給気を床下経由にします。床下利用面積100%・断熱区画内で計算します。地盤・基礎の物性値は暖冷房共通です。",
+      "insert_after_field_id": "change_underfloor_temperature_H__0"
+    }
+  ],
+  "field_overrides": {
+    "input_ufac_consts__0": {
+      "enabled_when": {
+        "path": [
+          "calculation_method__0"
+        ],
+        "allowed_values": [
+          "next"
+        ]
+      }
+    }
+  }
+}

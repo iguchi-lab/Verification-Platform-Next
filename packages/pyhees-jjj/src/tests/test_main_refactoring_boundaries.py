@@ -72,7 +72,7 @@ def test_calc_standard_heating_load_preserves_argument_order(monkeypatch):
     calls = []
     monkeypatch.setattr(experiment_main, 'calc_heating_load', lambda *args: calls.append(args) or ('H', 'dash-H', 'dash-CS'))
     house = SimpleNamespace(region=6, sol_region=3, A_A=120.0, A_MR=30.0, A_OR=50.0)
-    skin = SimpleNamespace(
+    skin = experiment_main.OuterSkin(
         Q=2.0, mu_H=0.1, mu_C=0.2, NV_MR=1.0, NV_OR=2.0, TS='TS',
         r_A_ufvnt='ratio', underfloor_insulation='insulation', SHC='SHC',
     )
@@ -112,7 +112,7 @@ def test_calc_standard_cooling_load_preserves_argument_order(monkeypatch):
     calls = []
     monkeypatch.setattr(experiment_main, 'calc_cooling_load', lambda *args: calls.append(args) or ('CS', 'CL'))
     house = SimpleNamespace(region=6, A_A=120.0, A_MR=30.0, A_OR=50.0)
-    skin = SimpleNamespace(
+    skin = experiment_main.OuterSkin(
         Q=2.0, mu_H=0.1, mu_C=0.2, NV_MR=1.0, NV_OR=2.0,
         r_A_ufvnt='ratio', underfloor_insulation='insulation', TS='TS',
     )

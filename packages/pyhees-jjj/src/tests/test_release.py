@@ -22,7 +22,7 @@ def test_source_commit_prefers_deployment_metadata(monkeypatch):
 def test_write_artifact_manifest_records_release_and_input(tmp_path, monkeypatch):
     monkeypatch.setenv("VERIFICATION_SOURCE_COMMIT", "0123456789abcdef")
     input_data = {"case_name": "case", "region": 6}
-    path = tmp_path / "case_v1.7.0_manifest.json"
+    path = tmp_path / "case_v1.8.0_manifest.json"
 
     release.write_artifact_manifest(path, input_data)
 
@@ -33,10 +33,10 @@ def test_write_artifact_manifest_records_release_and_input(tmp_path, monkeypatch
         "tg_specification": None,
         "tg_profile": None,
         "product": "Verification Platform Next",
-        "version": "1.7.0",
-        "display_version": "ver.1.7.0",
-        "release_date": "2026-10-27",
-        "artifact_version": "_v1.7.0",
+        "version": "1.8.0",
+        "display_version": "ver.1.8.0",
+        "release_date": "2026-10-29",
+        "artifact_version": "_v1.8.0",
         "source_commit": "0123456789abcdef",
         "upstream_pyhees_version": "3.10.0",
         "upstream_pyhees_commit": "d5224c4a01def00a8421bcd2fcc0d4b4a5b88644",
@@ -85,7 +85,7 @@ def test_calc_writes_manifest_only_after_success(tmp_path, monkeypatch):
 
     assert actual is result
     assert json.loads(
-        (tmp_path / "release-case_v1.7.0_input.json").read_text(encoding="utf-8")
+        (tmp_path / "release-case_v1.8.0_input.json").read_text(encoding="utf-8")
     ) == input_data
     assert events == [
         ("constants", input_data),
@@ -93,7 +93,7 @@ def test_calc_writes_manifest_only_after_success(tmp_path, monkeypatch):
         ("calculate", experiment_main.calc_main),
         (
             "manifest",
-            Path("release-case_v1.7.0_manifest.json"),
+            Path("release-case_v1.8.0_manifest.json"),
             input_data,
         ),
     ]

@@ -18,6 +18,7 @@ from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
 from .form_model import (
     TG_NEXT_ONLY_FIELDS, TG_RAC_EQUIPMENT_CONTROLS, FormField, FormModel, load_form_model,
+    UNDERFLOOR_SEASON_CONTROLS,
 )
 from .json_form_import import load_json_into_form
 from .graphs import GRAPH_LABELS
@@ -629,7 +630,8 @@ def build_app(
             field for field in form.schema.fields if field.enabled_when is not None
         )
         control_keys = tuple(dict.fromkeys(
-            field.enabled_when.path[0] for field in conditional_fields
+            [field.enabled_when.path[0] for field in conditional_fields]
+            + [key for key in UNDERFLOOR_SEASON_CONTROLS if key in components]
         ))
         control_inputs = [components[key] for key in control_keys]
 
@@ -684,7 +686,10 @@ def build_app(
             )
 
         if "calculation_method__0" in components:
-            unsupported_keys = ("change_underfloor_temperature__0", "carry_over_heat__0", "hs_CAV__0")
+            unsupported_keys = tuple(key for key in (
+                "change_underfloor_temperature__0", *UNDERFLOOR_SEASON_CONTROLS,
+                "carry_over_heat__0", "hs_CAV__0",
+            ) if key in components)
 
             equipment_keys = ("H_A_type__0", "C_A_type__0")
             equipment_choices = {
@@ -884,6 +889,8 @@ def _visibility_descendants(
                     controls.intersection(TG_RAC_EQUIPMENT_CONTROLS[field.key])
                     or "tg_profile__0" in controls
                 ))
+                or (field.key == "input_ufac_consts__0"
+                    and controls.intersection(UNDERFLOOR_SEASON_CONTROLS))
             )
         )
         if not added:
@@ -1004,6 +1011,7 @@ def _install_default_highlight_js(
   const conditions = {conditions};
   const nextOnlyFields = {json.dumps(sorted(TG_NEXT_ONLY_FIELDS))};
   const racControls = {json.dumps(TG_RAC_EQUIPMENT_CONTROLS)};
+  const underfloorControls = {json.dumps(UNDERFLOOR_SEASON_CONTROLS)};
   const racEquipment = {json.dumps({field.key: field.choices[1] for field in fields if field.key in ('H_A_type__0', 'C_A_type__0')}, ensure_ascii=True)};
   const sectionTargets = {section_targets};
   const groupTargets = {group_targets_json};
@@ -1050,6 +1058,11 @@ def _install_default_highlight_js(
     const visibility = {{}};
     const isVisible = (key) => {{
       if (key in visibility) return visibility[key];
+      if (key === 'input_ufac_consts__0' && underfloorControls[0] in fieldIndexes &&
+          !underfloorControls.some((control) => values[control] === true)) {{
+        visibility[key] = false;
+        return false;
+      }}
       if (racControls[key] && ((values.tg_profile__0 ?? 'standard') !== 'standard' ||
           !racControls[key].some((control) => values[control] === racEquipment[control]))) {{
         visibility[key] = false;

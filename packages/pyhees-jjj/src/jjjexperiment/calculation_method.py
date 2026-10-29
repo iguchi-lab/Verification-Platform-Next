@@ -95,8 +95,10 @@ def prepare_input(data):
         return data
     result = deepcopy(data)
     _prepare_profile(result)
+    from jjjexperiment.underfloor_ac.selection import underfloor_enabled
+    if underfloor_enabled(data):
+        raise ValueError('TG方式と床下空調の併用は未対応です。')
     for key, label in (
-        ('change_underfloor_temperature', '床下空調'),
         ('carry_over_heat', '熱の繰越'),
         ('hs_CAV', 'Next方式の熱源機定風量制御'),
     ):

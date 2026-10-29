@@ -45,7 +45,10 @@ def test_old_json_and_default_dto_keep_signed_convention():
     assert 'carryover_temperature_policy' not in data
     assert CarryoverHeatDto.from_dict(data).carryover_temperature_policy == 'signed'
     compatible = load_compatible_input_json(json.dumps(data)).input_data
-    assert compatible == data | {'carryover_temperature_policy': 'signed'}
+    assert compatible == data | {
+        'carryover_temperature_policy': 'signed',
+        'change_underfloor_temperature_H': '1', 'change_underfloor_temperature_C': '1',
+    }
 
 
 @pytest.mark.parametrize('bad', ('unknown', None, 0, True, []))
