@@ -108,7 +108,7 @@ def _binding_from_dict(item: Mapping[str, Any]) -> InputBinding:
     )
 
 
-def load_input_bindings(version: str = "261027") -> InputBindingCatalog:
+def load_input_bindings(version: str = "261029") -> InputBindingCatalog:
     file_name = f"input_bindings_{version}.json"
     data_file = resources.files("verification_core.data").joinpath(file_name)
     with data_file.open(encoding="utf-8") as stream:
@@ -121,7 +121,10 @@ def load_input_bindings(version: str = "261027") -> InputBindingCatalog:
             for item in payload.get("binding_overrides", ())
         }
         bindings = []
+        removed_paths = {tuple(path) for path in payload.get("remove_target_paths", ())}
         for binding in base.bindings:
+            if binding.target_path in removed_paths:
+                continue
             override = overrides.get((binding.line, binding.target_path))
             if override is None:
                 bindings.append(binding)

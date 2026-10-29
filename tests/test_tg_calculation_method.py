@@ -26,12 +26,16 @@ def test_old_json_defaults_to_next_and_next_input_is_unchanged():
 
 @pytest.mark.parametrize('key', [
     'change_underfloor_temperature', 'underfloor_air_conditioning_air_supply',
+    'change_underfloor_temperature_H', 'change_underfloor_temperature_C',
     'carry_over_heat', 'hs_CAV',
 ])
 def test_tg_rejects_unsupported_combinations_before_writing(key, tmp_path, monkeypatch):
     from jjjexperiment.main import calc
     monkeypatch.chdir(tmp_path)
     data = tg_input()
+    if key == 'change_underfloor_temperature':
+        data.pop('change_underfloor_temperature_H')
+        data.pop('change_underfloor_temperature_C')
     data[key] = '2'
     with pytest.raises(ValueError, match='未対応'):
         calc(data)
@@ -131,16 +135,16 @@ def test_tg_minimum_supply_is_area_based_and_clipped_per_room():
 def test_tg_visibility_hides_next_only_controls_and_underfloor_descendants():
     model = load_form_model()
     values = model.schema.defaults()
-    values.update(calculation_method__0='tg', change_underfloor_temperature__0=True,
+    values.update(calculation_method__0='tg', change_underfloor_temperature_H__0=True,
                   input_ufac_consts__0=True)
     visible = model.visibility(values)
     assert visible['tg_fan_exponent__0']
-    for key in ('change_underfloor_temperature__0', 'input_ufac_consts__0', 'R_g__0',
+    for key in ('change_underfloor_temperature_H__0', 'input_ufac_consts__0', 'R_g__0',
                 'phi__0', 'H_A_input_E_E_fan_min__0', 'correct_no_general_ventilation_airflow__0'):
         assert not visible[key]
     values['calculation_method__0'] = 'next'
     assert not model.visibility(values)['tg_fan_exponent__0']
-    assert model.visibility(values)['change_underfloor_temperature__0']
+    assert model.visibility(values)['change_underfloor_temperature_H__0']
 
 
 @pytest.mark.parametrize('kind, ventilation, minimum, vav', [
@@ -193,7 +197,7 @@ def test_tg_full_year_accounting_and_metadata(kind, ventilation, minimum, vav, t
     from jjjexperiment.release import input_sha256
     saved = json.loads((tmp_path / artifact_paths.input_json_path('default')).read_text())
     assert manifest['input_sha256'] == input_sha256(saved)
-    service = CalculationService(lambda data: None, lambda: '_v1.7.0')
+    service = CalculationService(lambda data: None, lambda: '_v1.8.0')
     summary = service._annual_summary(data, tmp_path, exports)
     assert summary.tg_total_mj == annual['E_total_TG [MJ/year]']
     assert 'TG比較合計' in _annual_summary_html(summary)
@@ -211,13 +215,13 @@ def test_mode_switch_resets_unsupported_inputs_and_restores_equipment_choices():
     heat_choices = fields['H_A_type__0'].choices
     cool_choices = fields['C_A_type__0'].choices
     tg = callback('tg', heat_choices[3], cool_choices[1])
-    assert all(update['value'] is False for update in tg[:3])
-    assert tg[3]['choices'] == list(heat_choices[:2])
-    assert tg[3]['value'] == heat_choices[0]
-    assert tg[4]['value'] == cool_choices[1]
+    assert all(update['value'] is False for update in tg[:4])
+    assert tg[4]['choices'] == list(heat_choices[:2])
+    assert tg[4]['value'] == heat_choices[0]
+    assert tg[5]['value'] == cool_choices[1]
     next_updates = callback('next', heat_choices[0], cool_choices[1])
-    assert next_updates[3]['choices'] == list(heat_choices)
-    assert next_updates[4]['choices'] == list(cool_choices)
+    assert next_updates[4]['choices'] == list(heat_choices)
+    assert next_updates[5]['choices'] == list(cool_choices)
 
 
 def test_tg_rejects_unknown_method_model_and_mismatched_ventilation():
@@ -344,7 +348,7 @@ def test_isolated_minimum_at_original_flow_preserves_hvac_energy_and_ventilation
     assert saved['tg_profile'] == 'minimum_airflow'
     manifest = json.loads((tmp_path / artifact_paths.metadata_json_path('default')).read_text())
     assert manifest['tg_profile'] == 'minimum_airflow'
-    service = CalculationService(lambda data: None, lambda: '_v1.7.0')
+    service = CalculationService(lambda data: None, lambda: '_v1.8.0')
     summary = service._annual_summary(isolated, tmp_path, comparison)
     assert summary.tg_profile == 'minimum_airflow'
     assert summary.tg_total_mj is None

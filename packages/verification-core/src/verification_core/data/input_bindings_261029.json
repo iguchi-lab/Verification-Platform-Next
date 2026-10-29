@@ -1,0 +1,34 @@
+{
+  "version": "261029",
+  "base_version": "261027",
+  "binding_count": 282,
+  "remove_target_paths": [
+    [
+      "change_underfloor_temperature"
+    ]
+  ],
+  "append_bindings": [
+    {
+      "line": 13000,
+      "target_path": [
+        "change_underfloor_temperature_H"
+      ],
+      "expression": "'2' if change_underfloor_temperature_H else '1'",
+      "conditions": [],
+      "source_ids": [
+        "change_underfloor_temperature_H__0"
+      ]
+    },
+    {
+      "line": 13001,
+      "target_path": [
+        "change_underfloor_temperature_C"
+      ],
+      "expression": "'2' if change_underfloor_temperature_C else '1'",
+      "conditions": [],
+      "source_ids": [
+        "change_underfloor_temperature_C__0"
+      ]
+    }
+  ]
+}

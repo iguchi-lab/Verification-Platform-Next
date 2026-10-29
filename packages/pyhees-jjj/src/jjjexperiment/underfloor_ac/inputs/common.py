@@ -1,8 +1,9 @@
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 # JJJ
 from jjjexperiment.inputs.options import 床下空調ロジック
 from jjjexperiment.csv_artifacts import write_dataframe_csv
+from jjjexperiment.underfloor_ac.selection import underfloor_enabled
 # NOTE: データクラスからどうしてもロジックを参照するときは遅延インポートする
 
 __all__ = ['UnderfloorAc', 'UfVarsDataFrame']
@@ -28,19 +29,28 @@ class UnderfloorAc:
     """床断熱の熱貫流率 [W/(m2・K)]"""
     explicit_constants: bool = False
     """True when optional user-entered underfloor constants are used."""
+    heating_enabled: bool | None = None
+    cooling_enabled: bool | None = None
+
+    def enabled_for(self, season: str) -> bool:
+        enabled = self.heating_enabled if season == "H" else self.cooling_enabled
+        return self.new_ufac_flg == 床下空調ロジック.変更する if enabled is None else enabled
+
+    def for_season(self, season: str) -> 'UnderfloorAc':
+        return replace(self, new_ufac_flg=床下空調ロジック(
+            2 if self.enabled_for(season) else 1))
 
     @classmethod
     def from_dict(cls, data: dict) -> 'UnderfloorAc':
-        kwargs = {}
-        if 'change_underfloor_temperature' in data:
-            new_ufac_flg = 床下空調ロジック(int(data['change_underfloor_temperature']))
-            kwargs['new_ufac_flg'] = new_ufac_flg
-
-            if new_ufac_flg == 床下空調ロジック.変更する:
-                # 実行条件: 明示的な上書き宣言が必要
-                if 'input_ufac_consts' in data and int(data['input_ufac_consts']) == 2:
-                    kwargs['explicit_constants'] = True
-                    kwargs['phi'] = float(data['phi'])
+        enabled = underfloor_enabled(data)
+        kwargs = dict(
+            new_ufac_flg=床下空調ロジック(2 if enabled else 1),
+            heating_enabled=underfloor_enabled(data, 'H'),
+            cooling_enabled=underfloor_enabled(data, 'C'),
+        )
+        if enabled and int(data.get('input_ufac_consts', 1)) == 2:
+            kwargs['explicit_constants'] = True
+            kwargs['phi'] = float(data['phi'])
         return cls(**kwargs)
 
 class UfVarsDataFrame:

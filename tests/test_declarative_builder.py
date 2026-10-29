@@ -30,10 +30,10 @@ def test_representative_outputs_match_legacy_builder() -> None:
 
 
 def test_removed_legacy_underfloor_input_is_always_disabled() -> None:
-    data = build_input_data({"change_underfloor_temperature__0": True})
+    data = build_input_data({"change_underfloor_temperature_H__0": True})
 
     assert data["underfloor_air_conditioning_air_supply"] == "1"
-    assert data["change_underfloor_temperature"] == "2"
+    assert data["change_underfloor_temperature_H"] == "2"
 
 
 def test_underfloor_automatic_values_are_not_editable_from_the_ui() -> None:
@@ -48,13 +48,13 @@ def test_underfloor_automatic_values_are_not_editable_from_the_ui() -> None:
 
 def test_underfloor_manual_ground_constants_use_ui_values() -> None:
     data = build_input_data({
-        "change_underfloor_temperature__0": True,
+        "change_underfloor_temperature_H__0": True,
         "input_ufac_consts__0": True,
         "R_g__0": 0.2,
         "phi__0": 0.9,
     })
 
-    assert data["change_underfloor_temperature"] == "2"
+    assert data["change_underfloor_temperature_H"] == "2"
     assert data["input_ufac_consts"] == 2
     assert data["R_g"] == 0.2
     assert data["phi"] == 0.9

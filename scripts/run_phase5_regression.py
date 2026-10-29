@@ -38,6 +38,11 @@ class RegressionMismatch(AssertionError):
 def _legacy_input_projection(input_data: dict[str, Any]) -> dict[str, Any]:
     """Remove only default-valued options that did not exist in the legacy form."""
     projected = copy.deepcopy(input_data)
+    for season in ('H', 'C'):
+        key = f'change_underfloor_temperature_{season}'
+        if str(projected.pop(key, '1')) != '1':
+            raise RegressionMismatch(f'Phase 5 legacy projection requires {key}=OFF')
+    projected.setdefault('change_underfloor_temperature', '1')
     for key, expected in {
         "carryover_temperature_policy": "signed",
         "calculation_method": "next", "tg_profile": "standard", "tg_fan_exponent": 1.0,

@@ -310,13 +310,15 @@ def _get_virtual_heating_devices_and_modes(region):
     return spec_MR, spec_OR, mode_MR, mode_OR
 
 def _calc_standard_heating_load(house, skin, hex, heat_ac_setting, cool_ac_setting, spec_MR, spec_OR, mode_MR, mode_OR):
-    return calc_heating_load(
-        house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR,
-        skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.TS,
-        skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation,
-        heat_ac_setting.mode.name, cool_ac_setting.mode.name,
-        spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC,
-    )
+    skin = skin.for_season('H')
+    with jjj_common.underfloor_season_context('H'):
+        return calc_heating_load(
+            house.region, house.sol_region, house.A_A, house.A_MR, house.A_OR,
+            skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR, skin.TS,
+            skin.r_A_ufvnt, hex.to_dict(), skin.underfloor_insulation,
+            heat_ac_setting.mode.name, cool_ac_setting.mode.name,
+            spec_MR, spec_OR, mode_MR, mode_OR, skin.SHC,
+        )
 
 def _override_heating_load_from_csv(L_H_d_t_i, loadFile):
     if loadFile != '-':
@@ -325,13 +327,15 @@ def _override_heating_load_from_csv(L_H_d_t_i, loadFile):
     return L_H_d_t_i
 
 def _calc_standard_cooling_load(house, skin, hex, cool_ac_setting, heat_ac_setting, mode_MR, mode_OR):
-    return calc_cooling_load(
-        house.region, house.A_A, house.A_MR, house.A_OR,
-        skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR,
-        skin.r_A_ufvnt, skin.underfloor_insulation,
-        cool_ac_setting.mode.name, heat_ac_setting.mode.name,
-        mode_MR, mode_OR, skin.TS, hex.to_dict(),
-    )
+    skin = skin.for_season('C')
+    with jjj_common.underfloor_season_context('C'):
+        return calc_cooling_load(
+            house.region, house.A_A, house.A_MR, house.A_OR,
+            skin.Q, skin.mu_H, skin.mu_C, skin.NV_MR, skin.NV_OR,
+            skin.r_A_ufvnt, skin.underfloor_insulation,
+            cool_ac_setting.mode.name, heat_ac_setting.mode.name,
+            mode_MR, mode_OR, skin.TS, hex.to_dict(),
+        )
 
 def _load_cooling_load_from_csv(loadFile):
     load = pd.read_csv(loadFile, nrows=24 * 365)

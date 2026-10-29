@@ -5175,6 +5175,60 @@ def _calc_Q_UT_A_once(
     return result, sequential_inputs
 
 
+def _prepare_annual_underfloor_feedback(context, args, house, skin, new_ufac):
+    common_args = {
+        key: value
+        for key, value in args.items()
+        if key not in {
+            "ac_setting",
+            "V_hs_dsgn_H",
+            "V_hs_dsgn_C",
+            "new_ufac_df",
+            "skin",
+            "new_ufac",
+        }
+    }
+    mode_inputs = {}
+    for mode, setting in (('H', context.heat_ac_setting), ('C', context.cool_ac_setting)):
+        mode_inputs[mode] = None
+        if not new_ufac.enabled_for(mode):
+            continue
+        _, sequential = _calc_Q_UT_A_once(
+            **common_args,
+            ac_setting=setting,
+            skin=skin.for_season(mode),
+            new_ufac=new_ufac.for_season(mode),
+            V_hs_dsgn_H=context.V_hs_dsgn_H if mode == 'H' else 0.0,
+            V_hs_dsgn_C=context.V_hs_dsgn_C if mode == 'C' else 0.0,
+            new_ufac_df=UfVarsDataFrame(),
+            export_outputs=False,
+        )
+        if sequential is None:
+            raise RuntimeError("Sequential underfloor inputs were not prepared")
+        mode_inputs[mode] = sequential
+    heating_mask, cooling_mask, _ = dc.get_season_array_d_t(house.region)
+    feedback, response = solve_shared_ground_sequential(
+        mode_inputs['H'],
+        mode_inputs['C'],
+        heating_mask,
+        cooling_mask,
+        skin.underfloor_insulation,
+    )
+    context.Theta_uf_feedback_d_t = feedback
+    for mode, sequential in mode_inputs.items():
+        if sequential is None:
+            continue
+        setattr(context, f'V_dash_supply_{mode}_d_t_i', sequential.v_dash_supply_d_t_i.copy())
+        setattr(context, f'Theta_hs_out_{mode}_d_t', sequential.theta_hs_out_d_t.copy())
+        setattr(context, f'Theta_supply_{mode}_d_t', sequential.theta_supply_d_t.copy())
+        setattr(context, 'Heating_active_d_t' if mode == 'H' else 'Cooling_active_d_t',
+                sequential.active_load_d_t.copy())
+    _logger.info(
+        "Calculated shared chronological underfloor ground response: "
+        f"hours={len(response)}"
+    )
+
+
 @inject
 def calc_Q_UT_A(
         case_name: CaseName,
@@ -5195,15 +5249,16 @@ def calc_Q_UT_A(
         load: Load_DTI,
     ):
     """Calculate one mode using a shared chronological annual ground state."""
+    season = 'H' if isinstance(ac_setting, HeatingAcSetting) else 'C'
     args = dict(
         case_name=case_name,
         climateFile=climateFile,
         house=house,
         ac_setting=ac_setting,
-        skin=skin,
+        skin=skin.for_season(season),
         heat_CRAC=heat_CRAC,
         cool_CRAC=cool_CRAC,
-        new_ufac=new_ufac,
+        new_ufac=new_ufac.for_season(season),
         new_ufac_df=new_ufac_df,
         v_min_heat_input=v_min_heat_input,
         v_min_cool_input=v_min_cool_input,
@@ -5213,7 +5268,7 @@ def calc_Q_UT_A(
         carryover_heat_dto=carryover_heat_dto,
         load=load,
     )
-    if getattr(getattr(new_ufac, "new_ufac_flg", None), "value", None) != 2:
+    if not new_ufac.enabled_for(season):
         result, _ = _calc_Q_UT_A_once(**args)
         return result
 
@@ -5226,63 +5281,7 @@ def calc_Q_UT_A(
 
     context = annual_ground_feedback_context
     if context.Theta_uf_feedback_d_t is None:
-        common_args = {
-            key: value
-            for key, value in args.items()
-            if key not in {
-                "ac_setting",
-                "V_hs_dsgn_H",
-                "V_hs_dsgn_C",
-                "new_ufac_df",
-            }
-        }
-        _, heating_inputs = _calc_Q_UT_A_once(
-            **common_args,
-            ac_setting=context.heat_ac_setting,
-            V_hs_dsgn_H=context.V_hs_dsgn_H,
-            V_hs_dsgn_C=0.0,
-            new_ufac_df=UfVarsDataFrame(),
-            export_outputs=False,
-        )
-        _, cooling_inputs = _calc_Q_UT_A_once(
-            **common_args,
-            ac_setting=context.cool_ac_setting,
-            V_hs_dsgn_H=0.0,
-            V_hs_dsgn_C=context.V_hs_dsgn_C,
-            new_ufac_df=UfVarsDataFrame(),
-            export_outputs=False,
-        )
-        if heating_inputs is None or cooling_inputs is None:
-            raise RuntimeError("Sequential underfloor inputs were not prepared")
-        heating_mask, cooling_mask, _ = dc.get_season_array_d_t(house.region)
-        feedback, response = solve_shared_ground_sequential(
-            heating_inputs,
-            cooling_inputs,
-            heating_mask,
-            cooling_mask,
-            skin.underfloor_insulation,
-        )
-        context.Theta_uf_feedback_d_t = feedback
-        context.V_dash_supply_H_d_t_i = (
-            heating_inputs.v_dash_supply_d_t_i.copy()
-        )
-        context.V_dash_supply_C_d_t_i = (
-            cooling_inputs.v_dash_supply_d_t_i.copy()
-        )
-        context.Theta_hs_out_H_d_t = heating_inputs.theta_hs_out_d_t.copy()
-        context.Theta_hs_out_C_d_t = cooling_inputs.theta_hs_out_d_t.copy()
-        assert heating_inputs.theta_supply_d_t is not None
-        assert cooling_inputs.theta_supply_d_t is not None
-        context.Theta_supply_H_d_t = heating_inputs.theta_supply_d_t.copy()
-        context.Theta_supply_C_d_t = cooling_inputs.theta_supply_d_t.copy()
-        assert heating_inputs.active_load_d_t is not None
-        assert cooling_inputs.active_load_d_t is not None
-        context.Heating_active_d_t = heating_inputs.active_load_d_t.copy()
-        context.Cooling_active_d_t = cooling_inputs.active_load_d_t.copy()
-        _logger.info(
-            "Calculated shared chronological underfloor ground response: "
-            f"hours={len(response)}"
-        )
+        _prepare_annual_underfloor_feedback(context, args, house, skin, new_ufac)
 
     result, _ = _calc_Q_UT_A_once(
         **args,

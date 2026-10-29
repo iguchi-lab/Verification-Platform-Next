@@ -41,6 +41,16 @@ _current_injector: ContextVar[Optional[Injector]] = ContextVar(
     'jjjexperiment_current_injector',
     default=None,
 )
+_underfloor_season: ContextVar[str | None] = ContextVar('underfloor_season', default=None)
+
+@contextmanager
+def underfloor_season_context(season: str):
+    """Select the floor air path for nested Appendix D/E load calculations."""
+    token = _underfloor_season.set(season)
+    try:
+        yield
+    finally:
+        _underfloor_season.reset(token)
 
 def set_current_injector(injector: Injector) -> None:
     """現在の実行コンテキストにDIコンテナをセット"""
@@ -75,6 +85,8 @@ def _resolve_underfloor_context(new_ufac, new_ufac_df):
 
     if new_ufac is None:
         new_ufac = injector.get(UnderfloorAc)
+        if _underfloor_season.get() is not None:
+            new_ufac = new_ufac.for_season(_underfloor_season.get())
     if new_ufac_df is None:
         new_ufac_df = injector.get(UfVarsDataFrame)
     return new_ufac, new_ufac_df

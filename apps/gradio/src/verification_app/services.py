@@ -549,9 +549,12 @@ def _format_input_summary(input_data: Mapping[str, Any] | None) -> list[str]:
         f"{_yes_no(heating.get('VAV'))} / {_yes_no(heating.get('general_ventilation'))}",
         "冷房VAV / 全般換気: "
         f"{_yes_no(cooling.get('VAV'))} / {_yes_no(cooling.get('general_ventilation'))}",
-        "床下換気 / 床下空調: "
-        f"{_enabled_when_two(input_data.get('underfloor_ventilation'))} / "
-        f"{_enabled_when_two(input_data.get('change_underfloor_temperature'))}",
+        f"床下換気: {_enabled_when_two(input_data.get('underfloor_ventilation'))}",
+        "床下空調（暖房 / 冷房）: " + " / ".join(
+            _enabled_when_two(input_data.get(f'change_underfloor_temperature_{season}',
+                                           input_data.get('change_underfloor_temperature', 1)))
+            for season in ('H', 'C')
+        ),
         "過剰熱量持越し: " + (
             TEMPERATURE_POLICIES.get(input_data.get('carryover_temperature_policy', 'signed'), '不正な設定')
             if str(input_data.get('carry_over_heat')) == '2' else '使用しない'

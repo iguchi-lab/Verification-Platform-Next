@@ -39,7 +39,7 @@ def _equal(left, right):
         return False
 
 
-def restore_form_values(data: Mapping[str, Any], version: str = "261027") -> RestoredForm:
+def restore_form_values(data: Mapping[str, Any], version: str = "261029") -> RestoredForm:
     """Invert current bindings; report input that cannot be represented faithfully.
 
     Callers first supplement missing keys and migrate legacy efficiency semantics.
@@ -47,6 +47,12 @@ def restore_form_values(data: Mapping[str, Any], version: str = "261027") -> Res
     """
     schema = load_input_schema(version)
     fields = {field.key: field for field in schema.fields}
+    if 'change_underfloor_temperature_H__0' in fields:
+        data = dict(data)
+        for season in ('H', 'C'):
+            data.setdefault(f'change_underfloor_temperature_{season}',
+                            data.get('change_underfloor_temperature', '1'))
+        data.pop('change_underfloor_temperature', None)
     values = schema.defaults()
     catalog = load_input_bindings(version)
     branches = _branch_predicates(catalog)
