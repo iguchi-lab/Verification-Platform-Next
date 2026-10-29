@@ -23,7 +23,7 @@ from pyhees.jjj_runtime import resolve_underfloor_context
 from pyhees.section3_1 import calc_L_H_d_t_i
 
 
-@pytest.mark.parametrize('heating,cooling', product((False, True), repeat=2))
+@pytest.mark.parametrize('heating,cooling', tuple(product((False, True), repeat=2)))
 def test_form_json_roundtrip_and_manual_constants(heating, cooling, tmp_path):
     values = {f'change_underfloor_temperature_{s}__0': value
               for s, value in (('H', heating), ('C', cooling))}
