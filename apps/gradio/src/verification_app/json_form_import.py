@@ -72,7 +72,7 @@ def load_json_into_form(path: str | Path | None) -> ImportedForm:
         checked_cold = CoolingRAC.from_dict(data['C_A'], float(data['A_A']))
         HeatingRAC.from_dict(data['H_A'], checked_cold.q_rtd, checked_cold.q_max, checked_cold.e_rtd)
     if any(data.get(key, '-') != '-' for key in ('climateFile', 'loadFile')):
-        notes.append("外部の気象・負荷ファイル本体はJSONに含まれません。①のファイル指定を確認してください。")
+        notes.append("外部の気象・負荷ファイル本体はJSONに含まれません。①で対応するCSVを添付してください。")
     restored = restore_form_values(data)
     if restored.unrepresented_paths:
         paths = '、'.join(restored.unrepresented_paths[:8])

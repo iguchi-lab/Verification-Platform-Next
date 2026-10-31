@@ -49,6 +49,17 @@ def load_compatible_input_json(
         _equipment_type_defaults(imported, version),
         version=version,
     )
+    # Some saved cases use one key per room. Migrate before filling missing
+    # fields so a supplied room capacity cannot be hidden by the default list.
+    capacities = list(defaults['C1_BR_R_i'])
+    has_individual = False
+    for i in range(5):
+        value = imported.pop(f'C1_BR_R_{i + 1}', None)
+        if value is not None:
+            capacities[i] = value
+            has_individual = True
+    if has_individual:
+        imported.setdefault('C1_BR_R_i', capacities)
     for season in ('H', 'C'):
         key = f'change_underfloor_temperature_{season}'
         if key in defaults:

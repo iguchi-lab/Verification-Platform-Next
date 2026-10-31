@@ -20,7 +20,6 @@ from jjjexperiment.inputs.di_container import create_injector_from_json
 from jjjexperiment.main import calc
 from jjjexperiment.underfloor_ac.inputs.common import UnderfloorAc
 from pyhees.jjj_runtime import resolve_underfloor_context
-from pyhees.section3_1 import calc_L_H_d_t_i
 
 
 @pytest.mark.parametrize('heating,cooling', tuple(product((False, True), repeat=2)))
@@ -160,9 +159,6 @@ def annual_cases(tmp_path_factory):
                 data.pop('change_underfloor_temperature')
                 data.update(change_underfloor_temperature_H='2' if heating else '1',
                             change_underfloor_temperature_C='2' if cooling else '1')
-            # The BRI load cache suppresses intermediate diagnostic exports on
-            # repeated runs; compare both paths with the same cold cache.
-            calc_L_H_d_t_i.cache_clear()
             with capture_csv_exports() as exports:
                 result = calc(deepcopy(data), test_mode=True)
             results[name] = (result['TValue'], exports, data)

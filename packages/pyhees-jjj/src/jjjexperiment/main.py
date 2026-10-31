@@ -259,8 +259,8 @@ class _MainLoadPreparationResult(NamedTuple):
 
 
 def calc(input_data: dict, test_mode=False):
-    input_data = method.prepare_input(input_data)
-    with method.calculation_scope(input_data):
+    input_data = method.prepare_input(deepcopy(input_data))
+    with method.calculation_scope(input_data), jjj_consts.calculation_constants(input_data):
         return _calc_with_method(input_data, test_mode)
 
 
@@ -270,11 +270,7 @@ def _calc_with_method(input_data, test_mode):
     with open(artifact_paths.input_json_path(case_name), 'w') as f:
         json.dump(input_data, f, indent=4)
 
-    manifest_input = deepcopy(input_data) if method.current() is not None else input_data
-
-    # グローバル定数の設定
-    # NOTE: 必要最小限に留めること
-    jjj_consts.set_constants(input_data)
+    manifest_input = deepcopy(input_data)
 
     injector = jjj_ipt_di.create_injector_from_json(input_data, test_mode)
     # NOTE: 引数全てを型解決できるようにする必要があった

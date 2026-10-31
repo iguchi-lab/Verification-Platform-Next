@@ -5,10 +5,10 @@
 Verification Platform Nextは、製品全体を1つの
 [Semantic Versioning](https://semver.org/) で管理します。
 
-- Pythonパッケージ版: `1.8.0`
-- 表示名: `ver.1.8.0`
-- Gitタグ: `v1.8.0`
-- 成果物接尾辞: `_v1.8.0`
+- Pythonパッケージ版: `1.8.1`
+- 表示名: `ver.1.8.1`
+- Gitタグ: `v1.8.1`
+- 成果物接尾辞: `_v1.8.1`
 
 製品版の正本は
 `packages/pyhees-jjj/src/jjjexperiment/release.py`です。ルート、
@@ -27,10 +27,10 @@ Verification Platform Nextは、製品全体を1つの
 成果物名には安定した版接尾辞を付けます。
 
 ```text
-<case_name>_v1.8.0_input.json
-<case_name>_v1.8.0_output1.csv
-<case_name>_v1.8.0_output2.csv
-<case_name>_v1.8.0_manifest.json
+<case_name>_v1.8.1_input.json
+<case_name>_v1.8.1_output1.csv
+<case_name>_v1.8.1_output2.csv
+<case_name>_v1.8.1_manifest.json
 ```
 
 計算が正常終了すると、マニフェストへ次を記録します。
@@ -67,15 +67,15 @@ python -m pytest src/tests -q -o addopts=""
 成功扱いにせず、理由と意図をリリースPRへ記録します。
 
 GitHub Actionsがすべて成功した後、PRをマージし、マージコミットへ注釈付き
-タグを作成します。以下の `v1.8.0` は書式例です。実行時は新しいリリース対象版へ
+タグを作成します。以下の `v1.8.1` は書式例です。実行時は新しいリリース対象版へ
 置き換え、既存の正式タグは再作成しません。
 
 ```bash
 git switch main
 git pull --ff-only
-git tag -a v1.8.0 -m "Verification Platform Next ver.1.8.0"
-git push origin v1.8.0
-gh release create v1.8.0 --title "Verification Platform Next ver.1.8.0"
+git tag -a v1.8.1 -m "Verification Platform Next ver.1.8.1"
+git push origin v1.8.1
+gh release create v1.8.1 --title "Verification Platform Next ver.1.8.1"
 ```
 
 GitHub Releaseには`CHANGELOG.md`の該当版、試験結果、既知の制約を記載します。

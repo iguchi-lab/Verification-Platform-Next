@@ -1,3 +1,8 @@
+from contextlib import contextmanager
+from copy import deepcopy
+from threading import RLock
+
+from jjjexperiment.underfloor_ac.selection import underfloor_enabled
 from jjjexperiment.inputs.options import (
   VAVありなしの吹出風量,
   Vサプライの上限キャップ,
@@ -163,16 +168,21 @@ Alpha_NR = 12.6
 """壁床天井材の容積比熱 [kJ/(m3・K)]"""
 
 # SimHeatモデルの熱容量 - 熱容量1(空間・什器のみ)
-C1_BR_R_i = [893676, 500835, 400667, 325488, 325598]
+C1_BR_R_i: list[float] = [893676, 500835, 400667, 325488, 325598]
 """区画i毎の居室の熱容量 [J/K]"""
-C1_NR_R = 1195534
+C1_NR_R: float = 1195534
 """非居室の熱容量の総和 [J/K]"""
 
 # SimHeatモデルの熱容量 - 熱容量2(壁・床・天井を含む)
 # 現時点では使用しないため削除
 
 def _set_C1_BR_R_i(input: dict):
-  global C1_BR_R_i
+  if 'C1_BR_R_i' in input:
+    values = input['C1_BR_R_i']
+    if not isinstance(values, (list, tuple)) or len(values) != 5:
+      raise ValueError('C1_BR_R_i には5区画の居室熱容量を指定してください。')
+    C1_BR_R_i[:] = [float(value) for value in values]
+    return
 
   for i in range(1, 6):
     key = f'C1_BR_R_{i}'  # C1_BR_R_1, ..., C1_BR_R_5
@@ -284,7 +294,7 @@ def _set_change_heat_source_outlet_required_temperature(input: dict):
     change_heat_source_outlet_required_temperature = int(input['change_heat_source_outlet_required_temperature'])
 
 
-R_g = 0.15
+R_g: float = 0.15
 
 
 def _set_R_g(input: dict):
@@ -525,3 +535,32 @@ def set_constants(input: dict):
     _set_C_A_airvolume_coeff(input)
     _set_C_A_fan_coeff(input)
   override_CR(input)
+
+
+# The annotated module variables are the configurable engine constants. Keep the
+# low-level partial setter for its callers, but start every simulation from defaults.
+_CALCULATION_DEFAULTS = {key: deepcopy(globals()[key]) for key in __annotations__}
+_CALCULATION_LOCK = RLock()
+
+
+@contextmanager
+def calculation_constants(input_data: dict):
+  from pyhees.section3_1 import calc_L_H_d_t_i
+
+  with _CALCULATION_LOCK:
+    previous = {key: globals()[key] for key in _CALCULATION_DEFAULTS}
+    globals().update(deepcopy(_CALCULATION_DEFAULTS))
+    # Appendix D/E depends on these constants and writes per-case diagnostics,
+    # neither of which is included in the upstream heating-load cache key.
+    calc_L_H_d_t_i.cache_clear()
+    try:
+      overrides = input_data
+      if 'R_g' in input_data and not (
+          underfloor_enabled(input_data) and int(input_data.get('input_ufac_consts', 1)) == 2
+      ):
+        overrides = {**input_data, 'R_g': _CALCULATION_DEFAULTS['R_g']}
+      set_constants(overrides)
+      yield
+    finally:
+      calc_L_H_d_t_i.cache_clear()
+      globals().update(previous)
