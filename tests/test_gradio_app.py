@@ -136,7 +136,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     )
 
     assert gradio.__version__.startswith("6.")
-    assert config["title"] == "Verification Platform Next ver.1.8.0"
+    assert config["title"] == "Verification Platform Next ver.1.8.1"
     assert component_types["accordion"] == 9
     assert component_types["number"] == 158
     assert component_types["dropdown"] == 59
@@ -191,7 +191,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert "CSVファイルを出力" in buttons
     assert buttons["CSVファイルを出力"]["props"]["interactive"] is False
     assert "JSONファイルをアップロードして計算" in buttons
-    assert component_types["file"] == 3
+    assert component_types["file"] == 5
     assert component_types["checkboxgroup"] == 1
     assert "全選択" in buttons
     assert "全解除" in buttons
@@ -235,7 +235,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     reset_inputs = next(
         dependency
         for dependency in dependencies
-        if len(dependency["outputs"]) == 231 and dependency.get("js")
+        if len(dependency["outputs"]) == 233 and dependency.get("js")
     )
     install_default_highlights = next(
         dependency
@@ -250,7 +250,10 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert calculation_started["queue"] is False
     assert len(calculation_started["inputs"]) == 0
     assert len(calculation_started["outputs"]) == 18
-    assert len(calculation["inputs"]) == 231
+    assert len(calculation["inputs"]) == 233
+    api = demo.get_api_info()["named_endpoints"]
+    assert len(api["/calculate"]["parameters"]) == 231
+    assert len(api["/calculate_uploaded_json"]["parameters"]) == 1
     assert len(calculation["outputs"]) == 13
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
@@ -271,7 +274,7 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
             for dependency in visibility_dependencies
         )
     assert len(reset_inputs["inputs"]) == 0
-    assert len(reset_inputs["outputs"]) == 231
+    assert len(reset_inputs["outputs"]) == 233
     assert len(install_default_highlights["inputs"]) == 0
     assert len(install_default_highlights["outputs"]) == 0
     assert install_default_highlights["queue"] is False
@@ -483,6 +486,7 @@ def test_colab_launch_uses_publicly_reachable_server_and_debugging(
         "debug": False,
         "show_error": True,
         "prevent_thread_lock": True,
+        "max_file_size": 20 * 1024 * 1024,
     }
     assert recorder.blocked
 
@@ -516,6 +520,7 @@ def test_launch_environment_overrides_are_respected(
         "debug": False,
         "show_error": False,
         "prevent_thread_lock": True,
+        "max_file_size": 20 * 1024 * 1024,
     }
     assert recorder.blocked
 

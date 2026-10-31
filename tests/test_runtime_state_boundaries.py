@@ -122,7 +122,6 @@ def test_concurrent_calculation_requests_are_serialized(tmp_path):
 
 
 _EXPECTED_GLOBAL_SETTERS = {
-    "_set_C1_BR_R_i",
     "_set_C1_NR_R",
     "_set_C_A_A_e_hex_large",
     "_set_C_A_A_e_hex_small",

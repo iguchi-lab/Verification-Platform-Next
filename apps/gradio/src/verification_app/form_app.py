@@ -11,11 +11,14 @@ from typing import Any
 from urllib.request import urlopen
 
 import gradio as gr
+from gradio.utils import get_upload_folder
+from gradio_client import utils as client_utils
 from jjjexperiment.carryover_heat.temperature_policy import TEMPERATURE_POLICIES
 from jjjexperiment.release import DISPLAY_VERSION
 from jjjexperiment.calculation_method import TG_PROFILES
 from verification_core import FieldDefinition, FieldKind, FieldOrigin
 
+from .external_csv import CSV_SLOTS, MAX_CSV_BYTES
 from .form_model import (
     TG_NEXT_ONLY_FIELDS, TG_RAC_EQUIPMENT_CONTROLS, FormField, FormModel, load_form_model,
     UNDERFLOOR_SEASON_CONTROLS,
@@ -232,6 +235,22 @@ div.block.input-value-modified {
 """
 
 
+class UploadedFilesOnlyBlocks(gr.Blocks):
+    """Reject remote file descriptors before Gradio can fetch them into its cache."""
+
+    async def preprocess_data(self, block_fn, inputs, state, explicit_call=False):
+        upload_root = Path(get_upload_folder()).resolve()
+
+        def require_local_file(file):
+            path = Path(file['path'])
+            if not path.is_absolute() or not path.resolve().is_relative_to(upload_root):
+                raise ValueError('アップロード済みのファイルを選んでください。URLやサーバー上のパスは使用できません。')
+            return file
+
+        client_utils.traverse(inputs, require_local_file, client_utils.is_file_obj_with_meta)
+        return await super().preprocess_data(block_fn, inputs, state, explicit_call)
+
+
 def build_app(
     service: CalculationService | None = None,
     model: FormModel | None = None,
@@ -239,7 +258,7 @@ def build_app(
     form = model or load_form_model()
     calculation_service = service or _default_service()
 
-    with gr.Blocks(
+    with UploadedFilesOnlyBlocks(
         title=f"Verification Platform Next {DISPLAY_VERSION}",
         fill_width=True,
     ) as demo:
@@ -299,6 +318,7 @@ def build_app(
                 )
             json_import_status = gr.Markdown("")
 
+        csv_uploads: dict[str, gr.File] = {}
         components: dict[str, Any] = {}
         containers: dict[str, Any] = {}
         field_dom_ids: dict[str, str] = {}
@@ -379,6 +399,14 @@ def build_app(
                                 containers[form_field.key] = component
                                 field_dom_ids[form_field.key] = field_dom_id
 
+                if section_index == 0:
+                    with gr.Row():
+                        for key, (label, _) in CSV_SLOTS.items():
+                            csv_uploads[key] = gr.File(
+                                label=f'{label}CSV（任意・20 MiBまで）', file_types=['.csv'],
+                                type='binary', file_count='single',
+                            )
+
         run = gr.Button("▶ 計算を実行", variant="primary", size="lg")
         status = gr.Markdown("**状態: 未実行**")
         annual_summary = gr.HTML(
@@ -435,13 +463,17 @@ def build_app(
         ordered_components = [components[field.key] for field in form.schema.fields]
 
         def calculate(*raw_values: Any) -> tuple[Any, ...]:
-            values = form.values_from_sequence(raw_values)
-            result = calculation_service.run(values, include_graphs=False)
+            split = len(ordered_components)
+            values = form.values_from_sequence(raw_values[:split])
+            climate_csv, load_csv = raw_values[split:] or (None, None)
+            result = calculation_service.run(
+                values, include_graphs=False, climate_csv=climate_csv, load_csv=load_csv,
+            )
             return _calculation_outputs(result)
 
-        def calculate_uploaded_json(uploaded_file: str | None) -> tuple[Any, ...]:
+        def calculate_uploaded_json(uploaded_file: str | None, climate_csv=None, load_csv=None) -> tuple[Any, ...]:
             result = calculation_service.run_uploaded_json(
-                uploaded_file,
+                uploaded_file, climate_csv=climate_csv, load_csv=load_csv,
                 include_graphs=False,
             )
             return _calculation_outputs(result)
@@ -491,21 +523,14 @@ def build_app(
             queue=False,
             api_visibility="private",
         )
+        calculation_outputs = [
+            result_state, status, annual_summary, preview, log, graph_status,
+            csv_status, export_csv_button, files, *download_outputs,
+        ]
         calculation_finished = calculation_started.then(
-            calculate,
-            inputs=ordered_components,
-            outputs=[
-                result_state,
-                status,
-                annual_summary,
-                preview,
-                log,
-                graph_status,
-                csv_status,
-                export_csv_button,
-                files,
-                *download_outputs,
-            ],
+            calculate, api_name='calculate_with_csv',
+            inputs=[*ordered_components, *csv_uploads.values()],
+            outputs=calculation_outputs,
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -553,20 +578,9 @@ def build_app(
             api_visibility="private",
         )
         json_calculation_finished = json_calculation_started.then(
-            calculate_uploaded_json,
-            inputs=json_upload,
-            outputs=[
-                result_state,
-                status,
-                annual_summary,
-                preview,
-                log,
-                graph_status,
-                csv_status,
-                export_csv_button,
-                files,
-                *download_outputs,
-            ],
+            calculate_uploaded_json, api_name='calculate_uploaded_json_with_csv',
+            inputs=[json_upload, *csv_uploads.values()],
+            outputs=calculation_outputs,
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -579,6 +593,16 @@ def build_app(
             concurrency_id="calculation",
             show_progress="full",
         )
+
+        # Preserve the existing Gradio API signatures for clients without CSV attachments.
+        for endpoint, callback, api_inputs in (
+            ('calculate', calculate, ordered_components),
+            ('calculate_uploaded_json', calculate_uploaded_json, [json_upload]),
+        ):
+            gr.on(
+                triggers=[], fn=callback, inputs=api_inputs, outputs=calculation_outputs,
+                api_name=endpoint, concurrency_limit=1, concurrency_id='calculation',
+            )
 
         def select_all_files(result: CalculationResult | None) -> list[str]:
             return [Path(path).name for path in result.files] if result else []
@@ -761,7 +785,7 @@ def build_app(
             field_updates = tuple(
                 gr.update(
                     value=field.default,
-                    interactive=True,
+                    interactive=field.key.removesuffix("__0") not in CSV_SLOTS,
                     visible=visibility[field.key],
                     **({"choices": list(field.choices)}
                        if field.key in ("H_A_type__0", "C_A_type__0") else {}),
@@ -778,7 +802,7 @@ def build_app(
                 )
                 for section_name in equipment_section_names
             )
-            return (*field_updates, *section_updates)
+            return (*field_updates, *section_updates, None, None)
 
         import_result_outputs = [
             status, annual_summary, preview, log, graph_status, *graphs,
@@ -787,7 +811,7 @@ def build_app(
         import_targets = [
             *ordered_components,
             *(section_containers[name] for name in equipment_section_names),
-            *import_result_outputs,
+            *csv_uploads.values(), *import_result_outputs,
         ]
 
         def import_uploaded_json(uploaded_file: str | None) -> tuple[Any, ...]:
@@ -803,7 +827,8 @@ def build_app(
                 updates = []
                 for field in ordered_fields:
                     options = dict(
-                        value=values[field.key], visible=visibility[field.key], interactive=True,
+                        value=values[field.key], visible=visibility[field.key],
+                        interactive=field.key.removesuffix("__0") not in CSV_SLOTS,
                     )
                     if field.key in equipment_keys:
                         choices = equipment_choices[field.key]
@@ -824,7 +849,7 @@ def build_app(
                 message = '✅ JSONを①～⑧へ読み込みました。まだ計算は実行していません。'
                 if imported.notes:
                     message += '\n\n' + '\n\n'.join(imported.notes)
-                return (message, *updates, *cleared)
+                return (message, *updates, None, None, *cleared)
             except (OSError, ValueError, TypeError, KeyError) as error:
                 return (f'❌ {error}', *(gr.skip() for _ in import_targets))
 
@@ -840,6 +865,7 @@ def build_app(
             outputs=[
                 *ordered_components,
                 *(section_containers[name] for name in equipment_section_names),
+                *csv_uploads.values(),
             ],
             queue=False,
             api_visibility="private",
@@ -853,6 +879,11 @@ def build_app(
                 tuple(group_targets),
             ),
         )
+
+        for key, (_, stem) in CSV_SLOTS.items():
+            field = components[f'{key}__0']
+            csv_uploads[key].upload(lambda name=f'{stem}.csv': name, inputs=[], outputs=field, queue=False, api_visibility='private')
+            csv_uploads[key].clear(lambda: '-', inputs=[], outputs=field, queue=False, api_visibility='private')
 
         demo.load(
             fn=None,
@@ -935,7 +966,7 @@ def _input_component(
         "elem_classes": elem_classes,
     }
     if field.kind is FieldKind.TEXT:
-        return gr.Textbox(**common)
+        return gr.Textbox(interactive=field.key.removesuffix("__0") not in CSV_SLOTS, **common)
     if field.kind is FieldKind.NUMBER:
         # HTML's default step=1 rejects decimals even when Gradio preserves them.
         # "any" allows all decimal places without rounding the submitted value.
@@ -1429,6 +1460,7 @@ def main() -> None:
         "server_port": server_port,
         "debug": debug,
         "show_error": show_error,
+        "max_file_size": MAX_CSV_BYTES,
     }
     if not share:
         build_app().queue(**queue_options).launch(

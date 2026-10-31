@@ -20,6 +20,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from jjjexperiment.carryover_heat.temperature_policy import TEMPERATURE_POLICIES
 from verification_core import build_input_data, load_compatible_input_json
 
+from .external_csv import prepare_external_csv
+
 CalculationFunction = Callable[[dict[str, Any]], Any]
 VersionFunction = Callable[[], str]
 GraphFunction = Callable[[Mapping[str, Any], Path, str, Any | None], tuple[Any, ...]]
@@ -116,6 +118,8 @@ class CalculationService:
         include_graphs: bool = True,
         prepared_input_data: Mapping[str, Any] | None = None,
         input_source: str = "画面入力",
+        climate_csv: bytes | None = None,
+        load_csv: bytes | None = None,
     ) -> CalculationResult:
         input_data: dict[str, Any] | None = None
         run_id: str | None = None
@@ -129,6 +133,10 @@ class CalculationService:
                 else build_input_data(values)
             )
             _validate_case_name(input_data.get("case_name", "default"))
+            external_files = prepare_external_csv(
+                input_data, {'climateFile': climate_csv, 'loadFile': load_csv},
+                from_json=prepared_input_data is not None,
+            )
             csv_session = (
                 self._csv_export_session()
                 if self._csv_export_session is not None
@@ -144,6 +152,8 @@ class CalculationService:
                 output_root.mkdir(parents=True, exist_ok=True)
                 self._remove_expired_results(output_root)
                 run_id, artifact_dir = self._create_artifact_dir(output_root)
+                for name, payload in external_files.items():
+                    (artifact_dir / name).write_bytes(payload)
                 previous_cwd = Path.cwd()
                 try:
                     os.chdir(artifact_dir)
@@ -220,6 +230,8 @@ class CalculationService:
         uploaded_file: str | Path | None,
         *,
         include_graphs: bool = True,
+        climate_csv: bytes | None = None,
+        load_csv: bytes | None = None,
     ) -> CalculationResult:
         """Run an input JSON saved by an old or current platform version."""
 
@@ -243,6 +255,7 @@ class CalculationService:
                 include_graphs=include_graphs,
                 prepared_input_data=compatible.input_data,
                 input_source=input_source,
+                climate_csv=climate_csv, load_csv=load_csv,
             )
         except Exception:
             return CalculationResult(
@@ -364,8 +377,8 @@ class CalculationService:
         prefix = f"{input_data.get('case_name', 'default')}{self._version_info()}"
         return tuple(
             str(path.resolve())
-            for path in sorted(artifact_dir.glob(prefix + "*"))
-            if path.is_file()
+            for path in sorted(artifact_dir.iterdir())
+            if path.name.startswith(prefix) and path.is_file()
         )
 
     def _annual_summary(
