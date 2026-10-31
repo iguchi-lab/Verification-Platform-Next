@@ -87,7 +87,8 @@ def test_capacity_arrays_and_individual_keys_are_isolated_at_engine_entry(tmp_pa
     fail = False
     engine.calc(defaults)
     assert observed[-1] == tuple(defaults['C1_BR_R_i'])
-    assert load_compatible_input_json(json.dumps(edited | old)).input_data['C1_BR_R_i'] == edited['C1_BR_R_i']
+    combined = load_compatible_input_json(json.dumps(edited | old)).input_data
+    assert combined['C1_BR_R_i'][:2] == [1787352, 712345]
 
 
 @pytest.mark.parametrize('key', ['climateFile', 'loadFile'])

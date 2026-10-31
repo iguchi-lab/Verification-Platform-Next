@@ -105,6 +105,7 @@ JSONはUTF-8形式、5 MB以下にしてください。外部の気象・負荷�
 暖冷房負荷データには、①の対応するCSV欄から各20 MiBまでのファイルを添付します。通常の画面入力では、添付を解除すると標準データ「-」に戻ります。
 気象CSVは従来のShift-JIS形式、負荷CSVは8760行・暖房12列、冷房顕熱12列、冷房潜熱12列の形式です。
 外部CSVを使用する保存JSONを再計算する場合は、同じCSVを対応する欄に添付してください。
+既存のGradio API `/calculate` と `/calculate_uploaded_json` は従来の引数で実行できます。CSVを添付するAPIは `/calculate_with_csv` と `/calculate_uploaded_json_with_csv` です。
 新しい保存JSONはCSVの内容を識別できるファイル名を記録します。URL・サーバー上のパスは使用できません。
 
 ### ② 住宅基本情報

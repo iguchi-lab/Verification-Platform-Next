@@ -523,21 +523,14 @@ def build_app(
             queue=False,
             api_visibility="private",
         )
+        calculation_outputs = [
+            result_state, status, annual_summary, preview, log, graph_status,
+            csv_status, export_csv_button, files, *download_outputs,
+        ]
         calculation_finished = calculation_started.then(
-            calculate,
+            calculate, api_name='calculate_with_csv',
             inputs=[*ordered_components, *csv_uploads.values()],
-            outputs=[
-                result_state,
-                status,
-                annual_summary,
-                preview,
-                log,
-                graph_status,
-                csv_status,
-                export_csv_button,
-                files,
-                *download_outputs,
-            ],
+            outputs=calculation_outputs,
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -585,20 +578,9 @@ def build_app(
             api_visibility="private",
         )
         json_calculation_finished = json_calculation_started.then(
-            calculate_uploaded_json,
+            calculate_uploaded_json, api_name='calculate_uploaded_json_with_csv',
             inputs=[json_upload, *csv_uploads.values()],
-            outputs=[
-                result_state,
-                status,
-                annual_summary,
-                preview,
-                log,
-                graph_status,
-                csv_status,
-                export_csv_button,
-                files,
-                *download_outputs,
-            ],
+            outputs=calculation_outputs,
             concurrency_limit=1,
             concurrency_id="calculation",
             show_progress="full",
@@ -611,6 +593,16 @@ def build_app(
             concurrency_id="calculation",
             show_progress="full",
         )
+
+        # Preserve the existing Gradio API signatures for clients without CSV attachments.
+        for endpoint, callback, api_inputs in (
+            ('calculate', calculate, ordered_components),
+            ('calculate_uploaded_json', calculate_uploaded_json, [json_upload]),
+        ):
+            gr.on(
+                triggers=[], fn=callback, inputs=api_inputs, outputs=calculation_outputs,
+                api_name=endpoint, concurrency_limit=1, concurrency_id='calculation',
+            )
 
         def select_all_files(result: CalculationResult | None) -> list[str]:
             return [Path(path).name for path in result.files] if result else []
@@ -890,8 +882,8 @@ def build_app(
 
         for key, (_, stem) in CSV_SLOTS.items():
             field = components[f'{key}__0']
-            csv_uploads[key].upload(lambda name=f'{stem}.csv': name, inputs=[], outputs=field, queue=False)
-            csv_uploads[key].clear(lambda: '-', inputs=[], outputs=field, queue=False)
+            csv_uploads[key].upload(lambda name=f'{stem}.csv': name, inputs=[], outputs=field, queue=False, api_visibility='private')
+            csv_uploads[key].clear(lambda: '-', inputs=[], outputs=field, queue=False, api_visibility='private')
 
         demo.load(
             fn=None,

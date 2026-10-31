@@ -182,7 +182,6 @@ def _set_C1_BR_R_i(input: dict):
     if not isinstance(values, (list, tuple)) or len(values) != 5:
       raise ValueError('C1_BR_R_i には5区画の居室熱容量を指定してください。')
     C1_BR_R_i[:] = [float(value) for value in values]
-    return
 
   for i in range(1, 6):
     key = f'C1_BR_R_{i}'  # C1_BR_R_1, ..., C1_BR_R_5

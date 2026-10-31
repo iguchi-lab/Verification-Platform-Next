@@ -348,6 +348,9 @@ def test_isolated_minimum_at_original_flow_preserves_hvac_energy_and_ventilation
     assert saved['tg_profile'] == 'minimum_airflow'
     manifest = json.loads((tmp_path / artifact_paths.metadata_json_path('default')).read_text())
     assert manifest['tg_profile'] == 'minimum_airflow'
+    from jjjexperiment.release import input_sha256
+    saved = json.loads((tmp_path / artifact_paths.input_json_path('default')).read_text())
+    assert manifest['input_sha256'] == input_sha256(saved)
     service = CalculationService(lambda data: None, lambda: '_v1.8.1')
     summary = service._annual_summary(isolated, tmp_path, comparison)
     assert summary.tg_profile == 'minimum_airflow'

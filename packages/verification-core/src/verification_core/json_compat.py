@@ -51,15 +51,17 @@ def load_compatible_input_json(
     )
     # Some saved cases use one key per room. Migrate before filling missing
     # fields so a supplied room capacity cannot be hidden by the default list.
-    capacities = list(defaults['C1_BR_R_i'])
-    has_individual = False
-    for i in range(5):
-        value = imported.pop(f'C1_BR_R_{i + 1}', None)
-        if value is not None:
-            capacities[i] = value
-            has_individual = True
-    if has_individual:
-        imported.setdefault('C1_BR_R_i', capacities)
+    room_keys = [f'C1_BR_R_{i}' for i in range(1, 6)]
+    if any(key in imported for key in room_keys):
+        rooms = imported.get('C1_BR_R_i', defaults['C1_BR_R_i'])
+        if not isinstance(rooms, list) or len(rooms) != 5:
+            raise ValueError('C1_BR_R_i には5区画の居室熱容量を指定してください。')
+        capacities = rooms.copy()
+        for i, key in enumerate(room_keys):
+            value = imported.pop(key, None)
+            if value is not None:
+                capacities[i] = value
+        imported['C1_BR_R_i'] = capacities
     for season in ('H', 'C'):
         key = f'change_underfloor_temperature_{season}'
         if key in defaults:

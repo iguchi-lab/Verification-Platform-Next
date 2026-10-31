@@ -251,6 +251,9 @@ def test_gradio_app_builds_all_schema_inputs_and_events() -> None:
     assert len(calculation_started["inputs"]) == 0
     assert len(calculation_started["outputs"]) == 18
     assert len(calculation["inputs"]) == 233
+    api = demo.get_api_info()["named_endpoints"]
+    assert len(api["/calculate"]["parameters"]) == 231
+    assert len(api["/calculate_uploaded_json"]["parameters"]) == 1
     assert len(calculation["outputs"]) == 13
     assert len(graph_generation["inputs"]) == 1
     assert len(graph_generation["outputs"]) == 7
