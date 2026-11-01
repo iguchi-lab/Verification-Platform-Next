@@ -22,7 +22,7 @@
 │   │   │   ├── ac_setting.py  # 【共通】空調（暖房、冷房）の入力項目
 │   │   │   └── common.py      # 【共通】地域区分、床面積、外皮性能等のその他の入力項目
 │   │   ├── main.py            # 【共通】モジュール利用時 最初に呼び出される関数
-│   │   └── section4_2.py      # 【共通】改変ロジックのメインとなる 未処理負荷計算
+│   │   └── section4_2_jjj.py  # 【共通】改変ロジックのメインとなる 未処理負荷計算
 │   └── pyhees            # 建築研究所のpyhees由来コード。新しい独自変更は直接追加しません。
 ├── README.md             # このファイルです。
 ├── pyproject.toml        # プロジェクトの設定ファイルです。ライブラリを追加・変更する際に編集します。
@@ -33,53 +33,12 @@
 
 ## 入力パラメータの追加方法
 
-1. 検証用PFのColabファイルに、入力パラメータを追加
+画面と保存JSONの入力契約は `verification-core` で管理する。Colabノートブックは同じGradioアプリを起動する入口である。
 
-2. inputsフォルダ以下に、入力パラメータを入れるクラス（DTO）を作成
-
-    ```python
-    @dataclass
-    class MaxPowerConsumption:
-        max: float  # デフォルト値を指定することもできる
-        """電力の最大値"""
-
-        @classmethod
-        def from_dict(cls, data: dict) -> 'MaxPowerConsumption':
-            # 対応する JSON のキーを指定
-            cls(max = data['max_power_consumption'])
-    ```
-
-3. jjjexperiment/inputs/di_container.py に、データを登録する
-
-    ```python
-    @singleton  # 必須のおまじない
-    @provider   # 必須のおまじない
-    # 関数名は任意
-    def create_max_power_consumption(self) -> MaxPowerConsumption:  # 戻り値の型として上記を指定
-        return MaxPowerConsumption.from_dict(self._input if self._input is not None else {})
-    ```
-
-4. データを取得する
-
-   トップで呼び出している下記関数の定義に、型指定した引数を追加する必要があります。
-
-    ```python
-    # ファイル main.py > calc_main()
-    def calc_main(
-        ...
-        max_power_consumption: MaxPowerConsumption  # 追加
-    ) -> dict | None:
-
-    # ファイル section4_2.py > calc_Q_UT_A()
-    @jjj_cloning
-    @inject
-    def calc_Q_UT_A(
-        ...
-        max_power_consumption: MaxPowerConsumption  # 追加
-    ):
-    ```
-
-    これ以降の関数では、通常通り引数に渡す 呼び出しコードになります。
+1. **入力項目と保存先を定義する。** 入力仕様を更新するときは既存版を残し、新しい版の項目定義とバインディングを対で追加する。項目定義にID、型、初期値、選択肢、表示条件を書き、バインディングで画面の値を保存JSONのどのキーへ変換するか決める。読込み・生成側の既定仕様も新しい版にそろえる。床下空調の暖冷房別設定が差分追加の例である。[項目定義](../verification-core/src/verification_core/data/input_fields_261029.json)・[バインディング](../verification-core/src/verification_core/data/input_bindings_261029.json)
+2. **計算で値を受け取る。** 対応する入力クラスの `from_dict` で値を読み取り、計算で使用する。新しい入力クラスが依存注入を必要とする場合は `di_container.py` に登録し、利用する計算関数で受け取る。[入力クラスと登録処理](src/jjjexperiment/inputs)
+3. **画面と旧JSONの扱いをそろえる。** 項目の配置や表示条件をGradioに反映する。旧JSONに新しいキーがない場合の値と、新旧両方のキーがある場合の優先順位を決める。画面への読込みとJSON直接計算の両方で、同じ条件が再現されることを確認する。[画面構成と入力の流れ](../../docs/ARCHITECTURE.md)・[旧JSONの互換処理](../verification-core/src/verification_core/json_compat.py)
+4. **試験と利用者ガイドを更新する。** 初期値、変更した値、旧JSONの復元、保存後の再読込みを試験し、計算への反映は年間値と対象の時間別出力で確かめる。計算や入力対応を変えた場合はエンジン試験とPhase 5数値回帰も実行する。[検証手順](../../CONTRIBUTING.md)・[入力画面ガイド](../../docs/input_guide.md)
 
 ## 建築研究所由来ロジックの変更
 

@@ -81,3 +81,37 @@ gh release create v1.8.1 --title "Verification Platform Next ver.1.8.1"
 GitHub Releaseには`CHANGELOG.md`の該当版、試験結果、既知の制約を記載します。
 Cloud Runへのデプロイはリリースとは別の手動操作であり、明示的な依頼がある
 場合だけ実施します。
+
+## Cloud Runへの本番反映と完了判定
+
+対象はサービス `verification-platform-next` です。`GCP_PROJECT_ID` と `GCP_REGION` には、
+デプロイワークフローのGitHub変数と同じ本番プロジェクトID・リージョンを設定してから以下を使用します。
+
+1. **現在の配信先を控える。** 次の読取りコマンドで `status.traffic` のリビジョン名と割合を確認します。更新前に正常動作を確認した配信先を、切り戻し先としてリリースPRに記録します。
+
+   ```bash
+   gcloud run services describe verification-platform-next \
+     --project="${GCP_PROJECT_ID:?}" --region="${GCP_REGION:?}" \
+     --format='yaml(status.url,status.traffic)'
+   ```
+
+2. **リリースタグからデプロイする。** `RELEASE_TAG` に対象の正式タグを設定し、`git rev-parse "${RELEASE_TAG:?}^{commit}"` の出力がリリースPRのマージコミットと一致することを確認します。続いて `gh workflow run deploy-cloud-run.yml --ref "${RELEASE_TAG:?}"` で手動実行します。[Deploy to Cloud Run](https://github.com/iguchi-lab/Verification-Platform-Next/actions/workflows/deploy-cloud-run.yml)
+3. **配信先を確認する。** ワークフローの成功後、手順1のコマンドを再実行します。今回作成したリビジョンがトラフィックの100%を受けていることを確認します。
+4. **公開画面で計算する。** サービスURLを開き、画面の版番号を確認します。確認用の既知の入力で計算し、暖房・冷房それぞれの年間値を同じ条件の参照値と照合します。出力ファイルから入力JSONとマニフェストを取得し、`version` が対象版、`source_commit` が手順2の完全なSHAであることを確認します。入力の照合には、保存JSONを読み込んで [`input_sha256`](../packages/pyhees-jjj/src/jjjexperiment/release.py) を計算し、マニフェストの `input_sha256` と比較します。
+5. **結果を記録する。** デプロイ実行のリンク、配信リビジョン、計算ID、参照値との照合結果をリリースPRに残して本番反映を完了とします。v1.8.1の例では、同じ画面で地盤抵抗を変更し、手動設定をOFFに戻した後の年間値まで確認しました。[v1.8.1の本番確認記録](https://github.com/iguchi-lab/Verification-Platform-Next/pull/219)
+
+## 直前の正常版への切り戻し
+
+新しい配信先で計算エラーや説明できない数値差が再現し、旧版へ戻すと判断した場合は、
+`PREVIOUS_REVISION` に手順1で記録した**正常稼働時のリビジョン名**を設定し、旧版に100%のトラフィックを戻します。
+
+```bash
+gcloud run services update-traffic verification-platform-next \
+  --project="${GCP_PROJECT_ID:?}" --region="${GCP_REGION:?}" \
+  --to-revisions="${PREVIOUS_REVISION:?}=100"
+```
+
+手順1の読取りコマンドで旧リビジョンが100%であることを確認し、同じ確認用入力で旧版の年間値とマニフェストを照合します。
+切り戻した時刻、配信先、原因となった計算IDまたはエラーをリリースPRに記録してください。
+リビジョン名を指定した配信設定は次のデプロイにも引き継がれます。修正版の公開時には配信先を確認し、
+修正版が最新の正常なリビジョンであることを確かめてから、最新リビジョンへの自動配信を再開する場合に `--to-latest` を使います。[Cloud Run公式のトラフィック切替手順](https://docs.cloud.google.com/run/docs/rollouts-rollbacks-traffic-migration)
